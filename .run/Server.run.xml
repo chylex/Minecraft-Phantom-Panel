@@ -5,13 +5,13 @@
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Server/Phantom.Server.Application/bin/Debug/net6.0" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
-      <env name="ASPNETCORE_URLS" value="https://localhost:7101;http://localhost:5101" />
       <env name="ASPNETCORE_ENVIRONMENT" value="Development" />
-      <env name="PG_HOST" value="localhost" />
-      <env name="PG_PORT" value="5432" />
-      <env name="PG_USER" value="postgres" />
-      <env name="PG_PASS" value="development" />
+      <env name="ASPNETCORE_URLS" value="http://localhost:9400" />
       <env name="PG_DATABASE" value="postgres" />
+      <env name="PG_HOST" value="localhost" />
+      <env name="PG_PASS" value="development" />
+      <env name="PG_PORT" value="9401" />
+      <env name="PG_USER" value="postgres" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />

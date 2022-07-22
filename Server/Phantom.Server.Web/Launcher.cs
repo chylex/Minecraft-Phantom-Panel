@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Web.Areas.Identity;
 using Phantom.Server.Web.Data;
 
-namespace Phantom.Server.Web; 
+namespace Phantom.Server.Web;
 
 public static class Launcher {
 	public static void Launch(Action<DbContextOptionsBuilder> dbOptionsBuilder) {
@@ -34,6 +34,10 @@ public static class Launcher {
 		builder.Services.AddSingleton<WeatherForecastService>();
 
 		var app = builder.Build();
+
+		using (var scope = app.Services.CreateScope()) {
+			scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+		}
 
 		if (app.Environment.IsDevelopment()) {
 			app.UseMigrationsEndPoint();
