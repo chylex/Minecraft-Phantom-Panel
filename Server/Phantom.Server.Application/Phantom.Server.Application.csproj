@@ -8,6 +8,7 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Terminal\Phantom.Utils.Terminal.csproj" />
     <ProjectReference Include="..\Phantom.Server.Web\Phantom.Server.Web.csproj" />
   </ItemGroup>
 

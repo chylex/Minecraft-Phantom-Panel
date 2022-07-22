@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Phantom.Server.Web;
+using Phantom.Utils.Terminal;
 
 static string RequireEnv(string variableName) {
 	return Environment.GetEnvironmentVariable(variableName) ?? throw new Exception("Missing environment variable: " + variableName);
@@ -18,5 +19,7 @@ try {
 	Environment.Exit(1);
 }
 
-Console.WriteLine("Launching Phantom Panel...");
+Terminal.PrintDelimiter();
+Terminal.PrintLine("Launching Phantom Panel web server...");
+Terminal.PrintDelimiter();
 Launcher.Launch(options => options.UseNpgsql(connectionStringBuilder.ToString()));
