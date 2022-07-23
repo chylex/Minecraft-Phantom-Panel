@@ -15,23 +15,27 @@ public sealed class InstanceSession {
 		this.process.ErrorDataReceived += HandleOutputLine;
 	}
 
-	private void HandleOutputLine(object sender, DataReceivedEventArgs args) {
-		if (args.Data is {} line) {
-			outputBuffer.Add(line);
-			OutputEvent?.Invoke(this, line);
-		}
+	public void SendCommand(string command) {
+		process.StandardInput.WriteLine(command);
 	}
 
-	public void AddOutputListener(EventHandler<string> listener, uint maxLinesToReadFromHistory) {
+	public void AddOutputListener(EventHandler<string> listener, uint maxLinesToReadFromHistory = uint.MaxValue) {
 		OutputEvent += listener;
 		
-		foreach (var line in outputBuffer.GetLast(maxLinesToReadFromHistory)) {
+		foreach (var line in outputBuffer.EnumerateLast(maxLinesToReadFromHistory)) {
 			listener(this, line);
 		}
 	}
 
 	public void RemoveOutputListener(EventHandler<string> listener) {
 		OutputEvent -= listener;
+	}
+
+	private void HandleOutputLine(object sender, DataReceivedEventArgs args) {
+		if (args.Data is {} line) {
+			outputBuffer.Add(line);
+			OutputEvent?.Invoke(this, line);
+		}
 	}
 
 	public void WaitForExit() {

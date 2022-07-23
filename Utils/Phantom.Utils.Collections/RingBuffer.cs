@@ -1,29 +1,47 @@
-﻿using Phantom.Utils.Math;
-
-namespace Phantom.Utils.Collections; 
+﻿namespace Phantom.Utils.Collections; 
 
 public sealed class RingBuffer<T> {
 	private readonly T[] buffer;
-	private int index;
-	private long written;
 	
+	private int writeIndex;
+
 	public RingBuffer(int capacity) {
 		this.buffer = new T[capacity];
 	}
+	
+	public int Capacity => buffer.Length;
+	public int Count { get; private set; }
+
+	public T Last => Count == 0 ? throw new InvalidOperationException("Ring buffer is empty.") : buffer[IndexOfItemFromEnd(1)];
 
 	public void Add(T item) {
-		buffer[index] = item;
-		index = (index + 1) % buffer.Length;
-		++written;
+		buffer[writeIndex++] = item;
+		Count = Math.Max(writeIndex, Count);
+		writeIndex %= Capacity;
 	}
 
-	public IEnumerable<T> GetLast(uint maximumItems) {
-		int capacity = buffer.Length;
-		long count = Numbers.Min(written, capacity, maximumItems);
-		int start = (int) (index - count + capacity);
+	public IEnumerable<T> EnumerateLast(uint maximumItems) {
+		int totalItemsToReturn = (int) Math.Min(maximumItems, Count);
 		
-		for (int i = 0; i < count; i++) {
-			yield return buffer[(start + i) % capacity];
+		// Yield items until we hit the end of the buffer.
+		
+		int startIndex = IndexOfItemFromEnd(totalItemsToReturn);
+		int endOrMaxIndex = Math.Min(startIndex + totalItemsToReturn, Count);
+		
+		for (int i = startIndex; i < endOrMaxIndex; i++) {
+			yield return buffer[i];
 		}
+		
+		// Wrap around and yield remaining items.
+		
+		int remainingItemsToReturn = totalItemsToReturn - (endOrMaxIndex - startIndex);
+		
+		for (int i = 0; i < remainingItemsToReturn; i++) {
+			yield return buffer[i];
+		}
+	}
+
+	private int IndexOfItemFromEnd(int offset) {
+		return (writeIndex - offset + Capacity) % Capacity;
 	}
 }

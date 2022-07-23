@@ -13,7 +13,9 @@ const string InstanceFolder = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game
 VanillaLauncher launcher = new VanillaLauncher(new MinecraftServerLaunchProperties {
 	JreFolder = JreFolder,
 	InstanceFolder = InstanceFolder,
-	ServerJarPath = ServerJar
+	ServerJarPath = ServerJar,
+	InitialHeapMegabytes = 512,
+	MaximumHeapMegabytes = 1024
 });
 
 InstanceSession session;
@@ -23,6 +25,16 @@ try {
 	Terminal.PrintLine("Error launching server: " + e.Message);
 	Environment.Exit(1);
 	return;
+}
+
+session.AddOutputListener(static (_, line) => Terminal.PrintLine(line), uint.MaxValue);
+
+while (Console.ReadLine() is {} line) {
+	session.SendCommand(line);
+	
+	if (line == "stop") {
+		break;
+	}
 }
 
 session.WaitForExit();
