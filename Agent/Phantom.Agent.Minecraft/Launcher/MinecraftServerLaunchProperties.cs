@@ -9,4 +9,6 @@ public sealed class MinecraftServerLaunchProperties {
 
 	public uint? InitialHeapMegabytes { get; init; }
 	public uint? MaximumHeapMegabytes { get; init; }
+
+	public ushort? Port { get; init; }
 }

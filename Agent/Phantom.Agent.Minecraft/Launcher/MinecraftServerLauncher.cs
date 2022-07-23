@@ -16,6 +16,8 @@ public abstract class MinecraftServerLauncher {
 
 	private readonly uint initialHeapMegabytes;
 	private readonly uint maximumHeapMegabytes;
+	
+	private readonly ushort port;
 
 	private protected MinecraftServerLauncher(MinecraftServerLaunchProperties properties) {
 		this.javaRuntime = properties.JavaRuntime ?? throw PropertyNotSet(nameof(properties.JavaRuntime));
@@ -24,6 +26,8 @@ public abstract class MinecraftServerLauncher {
 
 		this.initialHeapMegabytes = properties.InitialHeapMegabytes ?? throw PropertyNotSet(nameof(properties.InitialHeapMegabytes));
 		this.maximumHeapMegabytes = properties.MaximumHeapMegabytes ?? throw PropertyNotSet(nameof(properties.MaximumHeapMegabytes));
+
+		this.port = properties.Port ?? throw PropertyNotSet(nameof(properties.Port));
 	}
 
 	public InstanceSession Launch() {
@@ -49,6 +53,10 @@ public abstract class MinecraftServerLauncher {
 		processArguments.Add("-jar");
 		processArguments.Add(serverJarPath);
 		processArguments.Add("nogui");
+		
+		// TODO
+		processArguments.Add("--port");
+		processArguments.Add(port.ToString());
 
 		var process = new Process { StartInfo = startInfo };
 		var session = new InstanceSession(process);
