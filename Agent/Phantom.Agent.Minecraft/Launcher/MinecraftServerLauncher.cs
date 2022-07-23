@@ -10,15 +10,15 @@ public abstract class MinecraftServerLauncher {
 		return new InvalidOperationException("Launcher property '" + propertyName + "' must be set!");
 	}
 
+	private readonly JavaRuntime javaRuntime;
 	private readonly string instanceFolder;
 	private readonly string serverJarPath;
-	private readonly string jreFolder;
 
 	private readonly uint initialHeapMegabytes;
 	private readonly uint maximumHeapMegabytes;
 
 	private protected MinecraftServerLauncher(MinecraftServerLaunchProperties properties) {
-		this.jreFolder = properties.JreFolder ?? throw PropertyNotSet(nameof(properties.JreFolder));
+		this.javaRuntime = properties.JavaRuntime ?? throw PropertyNotSet(nameof(properties.JavaRuntime));
 		this.instanceFolder = properties.InstanceFolder ?? throw PropertyNotSet(nameof(properties.InstanceFolder));
 		this.serverJarPath = properties.ServerJarPath ?? throw PropertyNotSet(nameof(properties.ServerJarPath));
 
@@ -28,7 +28,7 @@ public abstract class MinecraftServerLauncher {
 
 	public InstanceSession Launch() {
 		var startInfo = new ProcessStartInfo {
-			FileName = jreFolder + "/bin/java",
+			FileName = javaRuntime.JavaExecutablePath,
 			WorkingDirectory = instanceFolder,
 			RedirectStandardInput = true,
 			RedirectStandardOutput = true,

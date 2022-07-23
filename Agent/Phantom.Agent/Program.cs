@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
+using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Utils.Terminal;
 
@@ -11,7 +12,7 @@ const string ServerJar = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\serv
 const string InstanceFolder = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\instance";
 
 VanillaLauncher launcher = new VanillaLauncher(new MinecraftServerLaunchProperties {
-	JreFolder = JreFolder,
+	JavaRuntime = new JavaRuntime(JreFolder),
 	InstanceFolder = InstanceFolder,
 	ServerJarPath = ServerJar,
 	InitialHeapMegabytes = 512,
@@ -20,6 +21,7 @@ VanillaLauncher launcher = new VanillaLauncher(new MinecraftServerLaunchProperti
 
 InstanceSession session;
 try {
+	Terminal.PrintLine("Launching server...");
 	session = launcher.Launch();
 } catch (Exception e) {
 	Terminal.PrintLine("Error launching server: " + e.Message);

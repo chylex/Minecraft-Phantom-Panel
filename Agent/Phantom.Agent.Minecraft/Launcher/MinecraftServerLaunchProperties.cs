@@ -1,7 +1,9 @@
-﻿namespace Phantom.Agent.Minecraft.Launcher; 
+﻿using Phantom.Agent.Minecraft.Java;
+
+namespace Phantom.Agent.Minecraft.Launcher; 
 
 public sealed class MinecraftServerLaunchProperties {
-	public string? JreFolder { get; init; }
+	public JavaRuntime? JavaRuntime { get; init; }
 	public string? InstanceFolder { get; init; }
 	public string? ServerJarPath { get; init; }
 

@@ -3,7 +3,7 @@ using Phantom.Utils.Collections;
 
 namespace Phantom.Agent.Minecraft.Instance; 
 
-public sealed class InstanceSession {
+public sealed class InstanceSession : IDisposable {
 	private readonly RingBuffer<string> outputBuffer = new (10000);
 	private event EventHandler<string>? OutputEvent;
 
@@ -11,6 +11,7 @@ public sealed class InstanceSession {
 
 	internal InstanceSession(Process process) {
 		this.process = process;
+		this.process.Exited += ProcessOnExited;
 		this.process.OutputDataReceived += HandleOutputLine;
 		this.process.ErrorDataReceived += HandleOutputLine;
 	}
@@ -38,7 +39,15 @@ public sealed class InstanceSession {
 		}
 	}
 
+	private void ProcessOnExited(object? sender, EventArgs e) {
+		OutputEvent = null;
+	}
+
 	public void WaitForExit() {
 		process.WaitForExit();
+	}
+
+	public void Dispose() {
+		process.Dispose();
 	}
 }
