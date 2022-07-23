@@ -14,6 +14,10 @@ public sealed class RingBuffer<T> {
 
 	public T Last => Count == 0 ? throw new InvalidOperationException("Ring buffer is empty.") : buffer[IndexOfItemFromEnd(1)];
 
+	private int IndexOfItemFromEnd(int offset) {
+		return (writeIndex - offset + Capacity) % Capacity;
+	}
+	
 	public void Add(T item) {
 		buffer[writeIndex++] = item;
 		Count = Math.Max(writeIndex, Count);
@@ -39,9 +43,5 @@ public sealed class RingBuffer<T> {
 		for (int i = 0; i < remainingItemsToReturn; i++) {
 			yield return buffer[i];
 		}
-	}
-
-	private int IndexOfItemFromEnd(int offset) {
-		return (writeIndex - offset + Capacity) % Capacity;
 	}
 }

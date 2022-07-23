@@ -57,25 +57,25 @@ public sealed class RingBufferTests {
 
 	public sealed class EnumerateLast {
 		[Test]
-		public void AddOneItemAndRequestOne() {
+		public void AddOneItemAndEnumerateOne() {
 			var buffer = PrepareRingBuffer(10, "a");
 			Assert.That(buffer.EnumerateLast(1), Is.EquivalentTo(new [] { "a" }));
 		}
 
 		[Test]
-		public void AddOneItemAndRequestMaxValue() {
+		public void AddOneItemAndEnumerateMaxValue() {
 			var buffer = PrepareRingBuffer(10, "a");
 			Assert.That(buffer.EnumerateLast(uint.MaxValue), Is.EquivalentTo(new [] { "a" }));
 		}
 
 		[Test]
-		public void AddMultipleItemsWithinCapacityAndRequestFewer() {
+		public void AddMultipleItemsWithinCapacityAndEnumerateFewer() {
 			var buffer = PrepareRingBuffer(10, "a", "b", "c");
 			Assert.That(buffer.EnumerateLast(2), Is.EquivalentTo(new [] { "b", "c" }));
 		}
 
 		[Test]
-		public void AddMultipleItemsWithinCapacityAndRequestMaxValue() {
+		public void AddMultipleItemsWithinCapacityAndEnumerateMaxValue() {
 			var buffer = PrepareRingBuffer(10, "a", "b", "c");
 			Assert.That(buffer.EnumerateLast(uint.MaxValue), Is.EquivalentTo(new [] { "a", "b", "c" }));
 		}
@@ -83,7 +83,7 @@ public sealed class RingBufferTests {
 		[TestCase(3)]
 		[TestCase(4)]
 		[TestCase(5)]
-		public void AddMultipleItemsOverflowingCapacityAndRequestFewer(int capacity) {
+		public void AddMultipleItemsOverflowingCapacityAndEnumerateFewer(int capacity) {
 			var buffer = PrepareRingBuffer(capacity, "a", "b", "c", "d", "e", "f");
 			Assert.That(buffer.EnumerateLast(2), Is.EquivalentTo(new [] { "e", "f" }));
 		}
@@ -91,7 +91,7 @@ public sealed class RingBufferTests {
 		[TestCase(3, ExpectedResult = new [] { "d", "e", "f" })]
 		[TestCase(4, ExpectedResult = new [] { "c", "d", "e", "f" })]
 		[TestCase(5, ExpectedResult = new [] { "b", "c", "d", "e", "f" })]
-		public string[] AddMultipleItemsOverflowingCapacityAndRequestMaxValue(int capacity) {
+		public string[] AddMultipleItemsOverflowingCapacityAndEnumerateMaxValue(int capacity) {
 			var buffer = PrepareRingBuffer(capacity, "a", "b", "c", "d", "e", "f");
 			return buffer.EnumerateLast(uint.MaxValue).ToArray();
 		}
