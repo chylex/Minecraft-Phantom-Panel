@@ -13,7 +13,7 @@ sealed class AgentServices : IAgent<AgentServices, CommandListener> {
 	}
 
 	public async Task Shutdown() {
-		await InstanceManager.StopAll();
 		await CommandQueue.Shutdown();
+		await InstanceManager.StopAll();
 	}
 }

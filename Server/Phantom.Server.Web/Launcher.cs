@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Web.Areas.Identity;
 using Phantom.Server.Web.Data;
+using Phantom.Utils.Logging;
+using Serilog;
 
 namespace Phantom.Server.Web;
 
@@ -12,7 +14,9 @@ public static class Launcher {
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = typeof(Launcher).Assembly.GetName().Name
 		});
-
+		
+		builder.Host.UseSerilog(PhantomLogger.Base, dispose: true);
+		
 		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder);
 		builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -46,6 +50,8 @@ public static class Launcher {
 			app.UseExceptionHandler("/Error");
 		}
 
+		app.UseSerilogRequestLogging();
+		
 		app.UseStaticFiles();
 		app.UseRouting();
 		app.UseAuthentication();

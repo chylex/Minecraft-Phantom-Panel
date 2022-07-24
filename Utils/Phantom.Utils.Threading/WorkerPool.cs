@@ -4,33 +4,31 @@ namespace Phantom.Utils.Threading;
 
 public sealed class WorkerPool {
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
-	private readonly Channel<Action> workItemsChannel = Channel.CreateUnbounded<Action>();
-	private readonly SemaphoreSlim workDoneSemaphore;
+	private readonly Channel<Func<Task>> workItemsChannel = Channel.CreateUnbounded<Func<Task>>();
+	private readonly Task[] workTasks;
 
 	public WorkerPool(int workerCount) {
-		workDoneSemaphore = new SemaphoreSlim(workerCount);
+		workTasks = new Task[workerCount];
 		
 		for (int i = 0; i < workerCount; i++) {
-			Task.Run(RunWorker);
+			workTasks[i] = Task.Run(RunWorker);
 		}
 	}
 
 	private async Task RunWorker() {
 		await foreach (var action in workItemsChannel.Reader.ReadAllAsync(cancellationTokenSource.Token)) {
-			action();
+			await action();
 		}
-		
-		workDoneSemaphore.Release();
 	}
 	
-	public void AddWork(Action action) {
+	public void AddWork(Func<Task> action) {
 		workItemsChannel.Writer.TryWrite(action);
 	}
 	
 	public async Task Stop() {
 		workItemsChannel.Writer.Complete();
 		cancellationTokenSource.Cancel();
-		await workDoneSemaphore.WaitAsync();
+		await Task.WhenAll(workTasks);
 		cancellationTokenSource.Dispose();
 	}
 }
