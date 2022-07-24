@@ -3,25 +3,22 @@
 namespace Phantom.Agent.Minecraft.Java; 
 
 sealed class JvmArgumentBuilder {
-	public uint? InitialHeapMegabytes { get; init; }
-	public uint? MaximumHeapMegabytes { get; init; }
-	
-	private readonly List<string> properties = new ();
+	private readonly JvmProperties basicProperties;
+	private readonly List<string> customProperties = new ();
+
+	public JvmArgumentBuilder(JvmProperties basicProperties) {
+		this.basicProperties = basicProperties;
+	}
 
 	public void AddProperty(string key, string value) {
-		properties.Add("-D" + key + "=\"" + value + "\""); // TODO test quoting?
+		customProperties.Add("-D" + key + "=\"" + value + "\""); // TODO test quoting?
 	}
 	
 	public void Build(Collection<string> target) {
-		if (InitialHeapMegabytes != null) {
-			target.Add("-Xms" + InitialHeapMegabytes + "M");
-		}
-
-		if (MaximumHeapMegabytes != null) {
-			target.Add("-Xmx" + MaximumHeapMegabytes + "M");
-		}
+		target.Add("-Xms" + basicProperties.InitialHeapMegabytes + "M");
+		target.Add("-Xmx" + basicProperties.MaximumHeapMegabytes + "M");
 		
-		foreach (var property in properties) {
+		foreach (var property in customProperties) {
 			target.Add(property);
 		}
 	}

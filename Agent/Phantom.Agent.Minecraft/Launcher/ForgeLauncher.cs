@@ -1,11 +1,12 @@
-﻿using Phantom.Agent.Minecraft.Java;
+﻿using Phantom.Agent.Minecraft.Instance;
+using Phantom.Agent.Minecraft.Java;
 
 namespace Phantom.Agent.Minecraft.Launcher; 
 
-public class ForgeLauncher : MinecraftServerLauncher {
-	public ForgeLauncher(MinecraftServerLaunchProperties properties) : base(properties) {}
+public class ForgeLauncher : BaseLauncher {
+	public ForgeLauncher(InstanceProperties instanceProperties) : base(instanceProperties) {}
 	
 	private protected override void CustomizeJvmArguments(JvmArgumentBuilder arguments) {
-		arguments.AddProperty("terminal.ansi", "true");
+		arguments.AddProperty("terminal.ansi", "true"); // TODO
 	}
 }

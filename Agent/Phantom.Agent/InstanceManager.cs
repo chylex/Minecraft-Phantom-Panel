@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Minecraft.Properties;
 
 namespace Phantom.Agent;
 
@@ -9,24 +10,34 @@ sealed class InstanceManager {
 	private const string ServerJarPath = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\server.jar";
 	private const string InstanceBasePath = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\";
 
-	private readonly Dictionary<Guid, MinecraftServerLauncher> instanceLaunchers = new ();
+	private readonly Dictionary<Guid, BaseLauncher> instanceLaunchers = new ();
 	private readonly Dictionary<Guid, InstanceSession> instanceSessions = new ();
 
 	public Guid Create(ushort port) {
 		var sessionId = Guid.NewGuid();
 		var instanceFolder = Path.Combine(InstanceBasePath, sessionId.ToString());
-		
-		Directory.CreateDirectory(instanceFolder);
-		
-		VanillaLauncher launcher = new VanillaLauncher(new MinecraftServerLaunchProperties {
-			JavaRuntime = new JavaRuntime(JavaHomePath),
-			InstanceFolder = instanceFolder,
-			ServerJarPath = ServerJarPath,
-			InitialHeapMegabytes = 512,
-			MaximumHeapMegabytes = 1024,
-			Port = port
-		});
 
+		Directory.CreateDirectory(instanceFolder);
+
+		var jvmProperties = new JvmProperties(
+			InitialHeapMegabytes: 512,
+			MaximumHeapMegabytes: 512
+		);
+		
+		var serverProperties = new ServerProperties(
+			ServerPort: port,
+			RconPort: (ushort) (port + 1)
+		);
+		
+		var instanceProperties = new InstanceProperties(
+			new JavaRuntime(JavaHomePath),
+			jvmProperties,
+			instanceFolder,
+			ServerJarPath,
+			serverProperties
+		);
+		
+		VanillaLauncher launcher = new VanillaLauncher(instanceProperties);
 		instanceLaunchers.Add(sessionId, launcher);
 		return sessionId;
 	}
@@ -35,7 +46,7 @@ sealed class InstanceManager {
 		if (!instanceLaunchers.TryGetValue(guid, out var launcher)) {
 			throw new ArgumentException("Instance not found.", nameof(guid));
 		}
-		
+
 		if (instanceSessions.ContainsKey(guid)) {
 			throw new ArgumentException("Instance is already running.", nameof(guid));
 		}
@@ -49,7 +60,7 @@ sealed class InstanceManager {
 		if (!instanceSessions.TryGetValue(guid, out var session)) {
 			throw new ArgumentException("Instance is not running.", nameof(guid));
 		}
-		
+
 		session.SendCommand(command);
 	}
 

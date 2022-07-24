@@ -1,5 +1,7 @@
-﻿namespace Phantom.Agent.Minecraft.Launcher; 
+﻿using Phantom.Agent.Minecraft.Instance;
 
-public sealed class VanillaLauncher : MinecraftServerLauncher {
-	public VanillaLauncher(MinecraftServerLaunchProperties properties) : base(properties) {}
+namespace Phantom.Agent.Minecraft.Launcher; 
+
+public sealed class VanillaLauncher : BaseLauncher {
+	public VanillaLauncher(InstanceProperties instanceProperties) : base(instanceProperties) {}
 }
