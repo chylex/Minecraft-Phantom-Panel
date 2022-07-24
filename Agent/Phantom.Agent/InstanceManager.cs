@@ -13,7 +13,7 @@ sealed class InstanceManager {
 	private readonly Dictionary<Guid, BaseLauncher> instanceLaunchers = new ();
 	private readonly Dictionary<Guid, InstanceSession> instanceSessions = new ();
 
-	public Guid Create(ushort port) {
+	public Guid Create(ServerProperties serverProperties) {
 		var sessionId = Guid.NewGuid();
 		var instanceFolder = Path.Combine(InstanceBasePath, sessionId.ToString());
 
@@ -23,12 +23,7 @@ sealed class InstanceManager {
 			InitialHeapMegabytes: 512,
 			MaximumHeapMegabytes: 512
 		);
-		
-		var serverProperties = new ServerProperties(
-			ServerPort: port,
-			RconPort: (ushort) (port + 1)
-		);
-		
+
 		var instanceProperties = new InstanceProperties(
 			new JavaRuntime(JavaHomePath),
 			jvmProperties,
@@ -36,37 +31,68 @@ sealed class InstanceManager {
 			ServerJarPath,
 			serverProperties
 		);
-		
+
 		VanillaLauncher launcher = new VanillaLauncher(instanceProperties);
 		instanceLaunchers.Add(sessionId, launcher);
 		return sessionId;
 	}
 
-	public InstanceSession Launch(Guid guid) {
+	public LaunchResult Start(Guid guid) {
 		if (!instanceLaunchers.TryGetValue(guid, out var launcher)) {
-			throw new ArgumentException("Instance not found.", nameof(guid));
+			return new LaunchResult.InstanceNotFound();
 		}
 
 		if (instanceSessions.ContainsKey(guid)) {
-			throw new ArgumentException("Instance is already running.", nameof(guid));
+			return new LaunchResult.InstanceAlreadyRunning();
 		}
 
-		var session = launcher.Launch();
+		InstanceSession session;
+		try {
+			session = launcher.Launch();
+		} catch (Exception e) {
+			return new LaunchResult.UnknownError(e);
+		}
+		
 		instanceSessions.Add(guid, session);
-		return session;
+		return new LaunchResult.Success(guid, session);
 	}
 
-	public void SendCommand(Guid guid, string command) {
+	public abstract record LaunchResult {
+		private LaunchResult() {}
+
+		public sealed record Success(Guid InstanceGuid, InstanceSession Session) : LaunchResult;
+
+		public sealed record UnknownError(Exception Exception) : LaunchResult;
+		
+		public sealed record InstanceNotFound : LaunchResult;
+
+		public sealed record InstanceAlreadyRunning : LaunchResult;
+	}
+
+	public async Task<SendCommandResult> SendCommand(Guid guid, string command) {
 		if (!instanceSessions.TryGetValue(guid, out var session)) {
-			throw new ArgumentException("Instance is not running.", nameof(guid));
+			return new SendCommandResult.InstanceNotRunning();
 		}
 
-		session.SendCommand(command);
+		await session.SendCommand(command);
+		return new SendCommandResult.Success();
 	}
 
-	public void StopAll() {
+	public abstract record SendCommandResult {
+		private SendCommandResult() {}
+		
+		public sealed record Success : SendCommandResult;
+		
+		public sealed record InstanceNotRunning : SendCommandResult;
+	}
+
+	public async Task StopAll() {
 		foreach (var session in instanceSessions.Values) {
-			session.SendCommand("stop");
+			try {
+				await session.SendCommand("stop");
+			} catch (Exception) {
+				session.Kill();
+			}
 		}
 
 		foreach (var session in instanceSessions.Values) {

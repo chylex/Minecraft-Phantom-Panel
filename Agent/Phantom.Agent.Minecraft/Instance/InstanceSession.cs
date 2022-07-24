@@ -16,8 +16,8 @@ public sealed class InstanceSession : IDisposable {
 		this.process.ErrorDataReceived += HandleOutputLine;
 	}
 
-	public void SendCommand(string command) {
-		process.StandardInput.WriteLine(command);
+	public async Task SendCommand(string command) {
+		await process.StandardInput.WriteLineAsync(command);
 	}
 
 	public void AddOutputListener(EventHandler<string> listener, uint maxLinesToReadFromHistory = uint.MaxValue) {
@@ -41,6 +41,10 @@ public sealed class InstanceSession : IDisposable {
 
 	private void ProcessOnExited(object? sender, EventArgs e) {
 		OutputEvent = null;
+	}
+
+	public void Kill() {
+		process.Kill(true);
 	}
 
 	public void WaitForExit() {
