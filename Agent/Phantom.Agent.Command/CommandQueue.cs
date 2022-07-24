@@ -4,15 +4,15 @@ using Serilog;
 
 namespace Phantom.Agent.Command;
 
-public sealed class CommandQueue<TAgent, TCommandListener> where TAgent : IAgent<TAgent, TCommandListener> {
+public sealed class CommandQueue<TAgent, TCommandListener> where TAgent : IAgent<TAgent, TCommandListener> where TCommandListener : notnull {
+	private static readonly ILogger Logger = PhantomLogger.Create<CommandQueue<TAgent, TCommandListener>>();
+	
 	private readonly TAgent agent;
 	private readonly WorkerPool workerPool;
-	private readonly ILogger logger;
 
 	public CommandQueue(TAgent agent, int workerCount) {
 		this.agent = agent;
 		this.workerPool = new WorkerPool(workerCount);
-		this.logger = PhantomLogger.Create<CommandQueue<TAgent, TCommandListener>>();
 	}
 
 	public void Add(ICommand<TAgent, TCommandListener> command) {
@@ -20,12 +20,12 @@ public sealed class CommandQueue<TAgent, TCommandListener> where TAgent : IAgent
 	}
 
 	private async Task RunCommand(ICommand<TAgent, TCommandListener> command) {
-		logger.Debug("Running command: {Command}", command);
+		Logger.Debug("Running command: {Command}", command);
 		
 		try {
 			await command.Run(agent);
 		} catch (Exception e) {
-			logger.Error(e, "Caught exception while running command {Command}. Commands are not supposed to throw exceptions!", command);
+			Logger.Error(e, "Caught exception while running command {Command}. Commands are not supposed to throw exceptions!", command);
 		}
 	}
 

@@ -32,10 +32,10 @@ try {
 				break;
 			}
 			else {
-				Console.WriteLine((string) "Invalid command.");
+				Console.WriteLine("Invalid command.");
 			}
 		} catch (Exception e) {
-			Console.WriteLine((string) ("Error: " + e.Message));
+			Console.WriteLine("Error: " + e.Message);
 		}
 	}
 } finally {
