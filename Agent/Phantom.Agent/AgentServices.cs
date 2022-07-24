@@ -2,14 +2,14 @@
 
 namespace Phantom.Agent;
 
-sealed class AgentServices : IAgent<AgentServices, CommandListener> {
+sealed class AgentServices {
 	public InstanceManager InstanceManager { get; } = new ();
 
-	public CommandListenerList<AgentServices, CommandListener> CommandListenerList { get; } = new ();
+	public CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();
 	public CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
 
 	public AgentServices() {
-		CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, workerCount: 4);
+		CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
 	}
 
 	public async Task Shutdown() {

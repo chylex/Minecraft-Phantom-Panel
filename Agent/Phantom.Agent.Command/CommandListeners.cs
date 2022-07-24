@@ -3,8 +3,8 @@ using Serilog;
 
 namespace Phantom.Agent.Command;
 
-public sealed class CommandListenerList<TAgent, TCommandListener> where TAgent : IAgent<TAgent, TCommandListener> where TCommandListener : notnull {
-	private static readonly ILogger Logger = PhantomLogger.Create<CommandListenerList<TAgent, TCommandListener>>();
+public sealed class CommandListeners<TAgent, TCommandListener> where TCommandListener : notnull {
+	private static readonly ILogger Logger = PhantomLogger.Create<CommandListeners<TAgent, TCommandListener>>();
 
 	private readonly List<TCommandListener> listeners = new ();
 	private readonly ReaderWriterLock listenerLock = new ();

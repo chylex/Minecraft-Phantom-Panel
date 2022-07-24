@@ -6,7 +6,7 @@ try {
 	PhantomLogger.Base.InformationHeading("Launching Phantom Agent...");
 
 	AgentServices agent = new AgentServices();
-	agent.CommandListenerList.Add(new TestCommandListener());
+	agent.CommandListeners.Add(new TestCommandListener());
 
 	PhantomLogger.Base.InformationHeading("Console interface ready!");
 
