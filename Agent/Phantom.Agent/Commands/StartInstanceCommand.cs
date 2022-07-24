@@ -2,15 +2,9 @@
 
 namespace Phantom.Agent.Commands; 
 
-sealed class StartInstanceCommand : BaseCommand<InstanceManager.LaunchResult> {
-	private readonly Guid instanceGuid;
-	
-	public StartInstanceCommand(Guid instanceGuid) {
-		this.instanceGuid = instanceGuid;
-	}
-
+sealed record StartInstanceCommand(Guid InstanceGuid) : BaseCommand<InstanceManager.LaunchResult> {
 	protected override Task<InstanceManager.LaunchResult> Run(AgentServices agent) {
-		return Task.FromResult(agent.InstanceManager.Start(instanceGuid));
+		return Task.FromResult(agent.InstanceManager.Start(InstanceGuid));
 	}
 
 	protected override void Report(CommandListener listener, InstanceManager.LaunchResult result) {

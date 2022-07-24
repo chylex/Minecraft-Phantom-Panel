@@ -3,17 +3,9 @@ using Phantom.Agent.Minecraft.Properties;
 
 namespace Phantom.Agent.Commands; 
 
-sealed class CreateInstanceCommand : BaseCommand<Guid> {
-	private readonly ushort serverPort;
-	private readonly ushort rconPort;
-	
-	public CreateInstanceCommand(ushort serverPort, ushort rconPort) {
-		this.serverPort = serverPort;
-		this.rconPort = rconPort;
-	}
-
+sealed record CreateInstanceCommand(ushort ServerPort, ushort RconPort) : BaseCommand<Guid> {
 	protected override Task<Guid> Run(AgentServices agent) {
-		var serverProperties = new ServerProperties(serverPort, rconPort);
+		var serverProperties = new ServerProperties(ServerPort, RconPort);
 		var guid = agent.InstanceManager.Create(serverProperties);
 
 		return Task.FromResult(guid);

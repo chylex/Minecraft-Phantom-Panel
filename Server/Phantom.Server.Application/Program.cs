@@ -1,25 +1,27 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Phantom.Server.Web;
-using Phantom.Utils.Terminal;
+using Phantom.Utils.Logging;
 
 static string RequireEnv(string variableName) {
 	return Environment.GetEnvironmentVariable(variableName) ?? throw new Exception("Missing environment variable: " + variableName);
 }
 
-var connectionStringBuilder = new NpgsqlConnectionStringBuilder();
 try {
-	connectionStringBuilder.Host = RequireEnv("PG_HOST");
-	connectionStringBuilder.Port = int.Parse(RequireEnv("PG_PORT"));
-	connectionStringBuilder.Username = RequireEnv("PG_USER");
-	connectionStringBuilder.Password = RequireEnv("PG_PASS");
-	connectionStringBuilder.Database = RequireEnv("PG_DATABASE");
-} catch (Exception e) {
-	Console.WriteLine(e.Message);
-	Environment.Exit(1);
-}
+	var connectionStringBuilder = new NpgsqlConnectionStringBuilder();
+	try {
+		connectionStringBuilder.Host = RequireEnv("PG_HOST");
+		connectionStringBuilder.Port = int.Parse(RequireEnv("PG_PORT"));
+		connectionStringBuilder.Username = RequireEnv("PG_USER");
+		connectionStringBuilder.Password = RequireEnv("PG_PASS");
+		connectionStringBuilder.Database = RequireEnv("PG_DATABASE");
+	} catch (Exception e) {
+		PhantomLogger.Base.Fatal(e.Message);
+		Environment.Exit(1);
+	}
 
-Terminal.PrintDelimiter();
-Terminal.PrintLine("Launching Phantom Panel web server...");
-Terminal.PrintDelimiter();
-Launcher.Launch(options => options.UseNpgsql(connectionStringBuilder.ToString()));
+	PhantomLogger.Base.InformationHeading("Launching Phantom Panel web server...");
+	Launcher.Launch(PhantomLogger.Create("Web"), options => options.UseNpgsql(connectionStringBuilder.ToString()));
+} finally {
+	PhantomLogger.Base.Dispose();
+}

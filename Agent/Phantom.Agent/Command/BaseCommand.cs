@@ -1,3 +1,3 @@
 ﻿namespace Phantom.Agent.Command; 
 
-abstract class BaseCommand<TResult> : Command<AgentServices, CommandListener, TResult> {}
+abstract record BaseCommand<TResult> : Command<AgentServices, CommandListener, TResult>;

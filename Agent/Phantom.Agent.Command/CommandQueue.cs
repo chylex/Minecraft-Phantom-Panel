@@ -20,12 +20,12 @@ public sealed class CommandQueue<TAgent, TCommandListener> where TAgent : IAgent
 	}
 
 	private async Task RunCommand(ICommand<TAgent, TCommandListener> command) {
-		logger.Debug("Running command: {Name}", command.GetType());
+		logger.Debug("Running command: {Command}", command);
 		
 		try {
 			await command.Run(agent);
 		} catch (Exception e) {
-			logger.Error(e, "Caught exception while running command {Name}. Commands are not supposed to throw exceptions!", command.GetType());
+			logger.Error(e, "Caught exception while running command {Command}. Commands are not supposed to throw exceptions!", command);
 		}
 	}
 
