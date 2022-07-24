@@ -37,7 +37,7 @@ sealed class InstanceManager {
 		return sessionId;
 	}
 
-	public LaunchResult Start(Guid guid) {
+	public async Task<LaunchResult> Start(Guid guid) {
 		if (!instanceLaunchers.TryGetValue(guid, out var launcher)) {
 			return new LaunchResult.InstanceNotFound();
 		}
@@ -48,7 +48,7 @@ sealed class InstanceManager {
 
 		InstanceSession session;
 		try {
-			session = launcher.Launch();
+			session = await launcher.Launch();
 		} catch (Exception e) {
 			return new LaunchResult.UnknownError(e);
 		}

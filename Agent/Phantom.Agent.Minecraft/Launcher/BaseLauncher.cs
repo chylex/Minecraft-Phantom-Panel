@@ -13,7 +13,7 @@ public abstract class BaseLauncher {
 		this.instanceProperties = instanceProperties;
 	}
 
-	public InstanceSession Launch() {
+	public async Task<InstanceSession> Launch() {
 		var startInfo = new ProcessStartInfo {
 			FileName = instanceProperties.JavaRuntime.JavaExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
@@ -36,8 +36,8 @@ public abstract class BaseLauncher {
 		var process = new Process { StartInfo = startInfo };
 		var session = new InstanceSession(process);
 
-		AcceptEula(instanceProperties);
-		UpdateServerProperties(instanceProperties);
+		await AcceptEula(instanceProperties);
+		await UpdateServerProperties(instanceProperties);
 
 		process.Start();
 		process.BeginOutputReadLine();
@@ -48,17 +48,17 @@ public abstract class BaseLauncher {
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}
 
-	private static void AcceptEula(InstanceProperties instanceProperties) {
+	private static async Task AcceptEula(InstanceProperties instanceProperties) {
 		var eulaFilePath = Path.Combine(instanceProperties.InstanceFolder, "eula.txt");
-		File.WriteAllLines(eulaFilePath, new [] { "# EULA", "eula=true" }, Encoding.UTF8);
+		await File.WriteAllLinesAsync(eulaFilePath, new [] { "# EULA", "eula=true" }, Encoding.UTF8);
 	}
 
-	private static void UpdateServerProperties(InstanceProperties instanceProperties) {
+	private static async Task UpdateServerProperties(InstanceProperties instanceProperties) {
 		var serverPropertiesFilePath = Path.Combine(instanceProperties.InstanceFolder, "server.properties");
 		var serverPropertiesData = new JavaProperties();
 
 		try {
-			using var readStream = new FileStream(serverPropertiesFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			await using var readStream = new FileStream(serverPropertiesFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 			serverPropertiesData.Load(readStream);
 		} catch (FileNotFoundException) {
 			// ignore
@@ -66,7 +66,7 @@ public abstract class BaseLauncher {
 		
 		instanceProperties.ServerProperties.SetTo(serverPropertiesData);
 
-		using var writeStream = new FileStream(serverPropertiesFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
+		await using var writeStream = new FileStream(serverPropertiesFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
 		serverPropertiesData.Store(writeStream, true);
 	}
 }
