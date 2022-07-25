@@ -12,5 +12,9 @@
     <ProjectReference Include="..\Phantom.Agent.Command\Phantom.Agent.Command.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Minecraft\Phantom.Agent.Minecraft.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Grpc.Net.Client" Version="2.47.0" />
+  </ItemGroup>
 
 </Project>

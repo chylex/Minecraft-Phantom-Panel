@@ -3,12 +3,12 @@ using Phantom.Agent.Commands;
 using Phantom.Utils.Logging;
 
 try {
-	PhantomLogger.Base.InformationHeading("Launching Phantom Agent...");
+	PhantomLogger.Root.InformationHeading("Launching Phantom Agent...");
 
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
 
-	PhantomLogger.Base.InformationHeading("Console interface ready!");
+	PhantomLogger.Root.InformationHeading("Console interface ready!");
 
 	while (Console.ReadLine() is {} line) {
 		var command = line.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
@@ -39,5 +39,5 @@ try {
 		}
 	}
 } finally {
-	PhantomLogger.Base.Dispose();
+	PhantomLogger.Dispose();
 }

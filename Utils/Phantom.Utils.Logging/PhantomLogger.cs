@@ -7,7 +7,8 @@ using Serilog.Sinks.SystemConsole.Themes;
 namespace Phantom.Utils.Logging;
 
 public static class PhantomLogger {
-	public static Logger Base { get; } = CreateBaseLogger();
+	public static Logger Root { get; } = CreateBaseLogger("[{Timestamp:HH:mm:ss} {Level:u}] {Message:lj}{NewLine}{Exception}");
+	private static Logger Base { get; } = CreateBaseLogger("[{Timestamp:HH:mm:ss} {Level:u}] [{Category}] {Message:lj}{NewLine}{Exception}");
 
 	private static LogEventLevel GetDefaultLevel() {
 		#if DEBUG
@@ -17,13 +18,13 @@ public static class PhantomLogger {
 		#endif
 	}
 
-	private static Logger CreateBaseLogger() =>
+	private static Logger CreateBaseLogger(string template) =>
 		new LoggerConfiguration()
 			.MinimumLevel.Is(GetDefaultLevel())
 			.MinimumLevel.Override("Microsoft", LogEventLevel.Information)
 			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
 			.Enrich.FromLogContext()
-			.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u}] {Message:lj}{NewLine}{Exception}", formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
+			.WriteTo.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
 			.CreateLogger();
 
 	public static ILogger Create<T>() {
@@ -31,6 +32,11 @@ public static class PhantomLogger {
 	}
 
 	public static ILogger Create(string name) {
-		return Base.ForContext(Constants.SourceContextPropertyName, name);
+		return Base.ForContext("Category", name);
+	}
+
+	public static void Dispose() {
+		Root.Dispose();
+		Base.Dispose();
 	}
 }

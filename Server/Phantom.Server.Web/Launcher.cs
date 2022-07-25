@@ -10,13 +10,16 @@ using ILogger = Serilog.ILogger;
 namespace Phantom.Server.Web;
 
 public static class Launcher {
-	public static void Launch(ILogger logger, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
+	public static async Task Launch(ILogger logger, ushort port, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = typeof(Launcher).Assembly.GetName().Name
 		});
-		
+
 		builder.Host.UseSerilog(logger, dispose: true);
-		
+
+		builder.WebHost.UseUrls("http://0.0.0.0:" + port);
+		builder.WebHost.UseSetting(WebHostDefaults.DetailedErrorsKey, builder.Environment.IsDevelopment() ? "true" : "false");
+
 		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder);
 		builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -38,20 +41,21 @@ public static class Launcher {
 		builder.Services.AddSingleton<WeatherForecastService>();
 
 		var app = builder.Build();
+		var environment = app.Environment;
+
+		app.UseSerilogRequestLogging();
 
 		using (var scope = app.Services.CreateScope()) {
-			scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.Migrate();
+			await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
 		}
 
-		if (app.Environment.IsDevelopment()) {
+		if (environment.IsDevelopment()) {
 			app.UseMigrationsEndPoint();
 		}
 		else {
 			app.UseExceptionHandler("/Error");
 		}
 
-		app.UseSerilogRequestLogging();
-		
 		app.UseStaticFiles();
 		app.UseRouting();
 		app.UseAuthentication();
@@ -61,6 +65,7 @@ public static class Launcher {
 		app.MapBlazorHub();
 		app.MapFallbackToPage("/_Host");
 
-		app.Run();
+		logger.Information("Starting Web server on port {Port}...", port);
+		await app.RunAsync();
 	}
 }

@@ -8,16 +8,8 @@
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
   
-  <PropertyGroup>
-    <UserSecretsId>aspnet-Phantom.Server.Web-DF4010C9-78FB-43F0-89AE-24296A3DAEF7</UserSecretsId>
-  </PropertyGroup>
-  
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.47.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="6.0.7" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.7" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.7" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.5" />
     <PackageReference Include="Serilog.AspNetCore" Version="6.0.1" />
   </ItemGroup>
   
