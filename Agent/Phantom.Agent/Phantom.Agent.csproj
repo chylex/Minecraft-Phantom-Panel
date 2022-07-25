@@ -8,7 +8,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Phantom.Common.Messaging\Phantom.Common.Messaging.csproj" />
+    <ProjectReference Include="..\..\Phantom.Common.Rpc\Phantom.Common.Rpc.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Threading\Phantom.Utils.Threading.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Command\Phantom.Agent.Command.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Minecraft\Phantom.Agent.Minecraft.csproj" />

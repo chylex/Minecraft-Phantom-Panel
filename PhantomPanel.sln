@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Server.Rpc", "Serve
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{01CB1A81-8950-471C-BFDF-F135FDDB2C18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Common.Messaging", "Phantom.Common.Messaging\Phantom.Common.Messaging.csproj", "{BB112660-7A20-45E6-9195-65363B74027F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Common.Rpc", "Phantom.Common.Rpc\Phantom.Common.Rpc.csproj", "{BB112660-7A20-45E6-9195-65363B74027F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Utils.Runtime", "Utils\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj", "{6D03AEE5-B40F-4FC5-84C0-C9643E4EF8BD}"
 EndProject
