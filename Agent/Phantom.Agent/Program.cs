@@ -1,4 +1,6 @@
-﻿using Phantom.Agent;
+﻿using NetMQ;
+using NetMQ.Sockets;
+using Phantom.Agent;
 using Phantom.Agent.Commands;
 using Phantom.Utils.Logging;
 
@@ -8,6 +10,12 @@ try {
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
 
+	var socket = new ClientSocket();
+	socket.Connect("tcp://localhost:9401");
+	await socket.SendAsync("test");
+	string response = await socket.ReceiveStringAsync();
+	PhantomLogger.Root.Debug("Test: {r}", response);
+	
 	PhantomLogger.Root.InformationHeading("Console interface ready!");
 
 	while (Console.ReadLine() is {} line) {

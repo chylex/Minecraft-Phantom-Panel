@@ -1,7 +1,7 @@
 ﻿using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Web;
+namespace Phantom.Server.Rpc;
 
 public sealed record Configuration(ILogger Logger, string Host, ushort Port, CancellationToken CancellationToken) {
-	internal string HttpUrl => "http://" + Host + ":" + Port;
+	internal string TcpUrl => "tcp://" + Host + ":" + Port;
 }
