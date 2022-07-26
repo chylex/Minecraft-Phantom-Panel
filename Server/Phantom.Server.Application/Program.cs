@@ -7,10 +7,6 @@ using RpcLauncher = Phantom.Server.Rpc.Launcher;
 using WebConfiguration = Phantom.Server.Web.Configuration;
 using WebLauncher = Phantom.Server.Web.Launcher;
 
-static string RequireEnv(string variableName) {
-	return Environment.GetEnvironmentVariable(variableName) ?? throw new Exception("Missing environment variable: " + variableName);
-}
-
 var cancellationTokenSource = new CancellationTokenSource();
 
 PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
@@ -18,13 +14,19 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 });
 
 try {
+	const string RpcServerHost = "0.0.0.0";
+	const string WebServerHost = "0.0.0.0";
+	
+	ushort webServerPort = EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").OrDefault(9400);
+	ushort rpcServerPort = EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").OrDefault(9401);
+	
 	var connectionStringBuilder = new NpgsqlConnectionStringBuilder();
 	try {
-		connectionStringBuilder.Host = RequireEnv("PG_HOST");
-		connectionStringBuilder.Port = int.Parse(RequireEnv("PG_PORT"));
-		connectionStringBuilder.Username = RequireEnv("PG_USER");
-		connectionStringBuilder.Password = RequireEnv("PG_PASS");
-		connectionStringBuilder.Database = RequireEnv("PG_DATABASE");
+		connectionStringBuilder.Host = EnvironmentVariables.GetString("PG_HOST").OrThrow;
+		connectionStringBuilder.Port = EnvironmentVariables.GetPortNumber("PG_PORT").OrThrow;
+		connectionStringBuilder.Username = EnvironmentVariables.GetString("PG_USER").OrThrow;
+		connectionStringBuilder.Password = EnvironmentVariables.GetString("PG_PASS").OrThrow;
+		connectionStringBuilder.Database = EnvironmentVariables.GetString("PG_DATABASE").OrThrow;
 	} catch (Exception e) {
 		PhantomLogger.Root.Fatal(e.Message);
 		Environment.Exit(1);
@@ -33,8 +35,8 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 
 	await Task.WhenAll(
-		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), Host: "0.0.0.0", Port: 9401, cancellationTokenSource.Token)),
-		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), Host: "0.0.0.0", Port: 9400, cancellationTokenSource.Token), options => options.UseNpgsql(connectionStringBuilder.ToString()))
+		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, cancellationTokenSource.Token)),
+		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), WebServerHost, webServerPort, cancellationTokenSource.Token), options => options.UseNpgsql(connectionStringBuilder.ToString()))
 	);
 } finally {
 	cancellationTokenSource.Dispose();
