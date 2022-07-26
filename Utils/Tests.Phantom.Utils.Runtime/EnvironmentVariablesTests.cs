@@ -10,7 +10,11 @@ public class EnvironmentVariablesTests {
 	private const string VariableNameExistingPrefix = "PhantomTest_";
 
 	private readonly HashSet<string> createdVariables = new ();
-	
+
+	private static void Discard<T>(T value) {
+		var _ = value;
+	}
+
 	private string CreateVariable(string value) {
 		string name = VariableNameExistingPrefix + Guid.NewGuid();
 		Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.Process);
@@ -25,56 +29,64 @@ public class EnvironmentVariablesTests {
 		}
 	}
 
-	public abstract class Get<T> : EnvironmentVariablesTests where T : notnull {
+	public abstract class Base<T> : EnvironmentVariablesTests where T : notnull {
 		protected abstract T ExampleValue { get; }
+		protected abstract string ExampleValueString { get; }
+
 		protected abstract EnvironmentVariables.Value<T> GetValue(string variableName);
+
+		protected Action CallGetValueOrThrow(string variableName) {
+			return () => Discard(GetValue(variableName).OrThrow);
+		}
 
 		[Test]
 		public void MissingOrThrowThrows() {
-			Assert.That(() => {
-				var _ = GetValue(VariableNameMissing).OrThrow;
-			}, Throws.Exception.Message.EqualTo("Missing environment variable: " + VariableNameMissing));
+			Assert.That(CallGetValueOrThrow(VariableNameMissing), Throws.Exception.Message.EqualTo("Missing environment variable: " + VariableNameMissing));
 		}
 
 		[Test]
 		public void MissingOrDefaultReturnsDefault() {
 			Assert.That(GetValue(VariableNameMissing).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
 		}
-	}
-
-	public sealed class GetString : Get<string> {
-		protected override string ExampleValue => "abc";
-
-		protected override EnvironmentVariables.Value<string> GetValue(string variableName) {
-			return EnvironmentVariables.GetString(variableName);
-		}
 
 		[Test]
 		public void ExistingOrThrowReturnsActualValue() {
-			Assert.That(GetValue(CreateVariable("abc")).OrThrow, Is.EqualTo("abc"));
+			Assume.That(ExampleValue, Is.Not.EqualTo(default));
+			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrThrow, Is.EqualTo(ExampleValue));
 		}
 
 		[Test]
 		public void ExistingOrDefaultReturnsActualValue() {
-			Assert.That(GetValue(CreateVariable("abc")).OrDefault("def"), Is.EqualTo("abc"));
+			Assume.That(ExampleValue, Is.Not.EqualTo(default));
+			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrDefault(default!), Is.EqualTo(ExampleValue));
 		}
 	}
 
-	public sealed class GetPortNumber : Get<ushort> {
+	public sealed class GetString : Base<string> {
+		protected override string ExampleValue => "abc";
+		protected override string ExampleValueString => ExampleValue;
+
+		protected override EnvironmentVariables.Value<string> GetValue(string variableName) {
+			return EnvironmentVariables.GetString(variableName);
+		}
+	}
+
+	public sealed class GetPortNumber : Base<ushort> {
 		protected override ushort ExampleValue => 12345;
+		protected override string ExampleValueString => "12345";
 
 		protected override EnvironmentVariables.Value<ushort> GetValue(string variableName) {
 			return EnvironmentVariables.GetPortNumber(variableName);
 		}
 
 		[Test]
-		public void ExistingOrThrowReturnsActualValue() {
-			Assert.That(GetValue(CreateVariable("12345")).OrThrow, Is.EqualTo(12345));
+		public void UnparseableOrThrowThrows() {
+			Assert.That(CallGetValueOrThrow(CreateVariable("654321")), Throws.Exception.Message.StartsWith("Environment variable must be a port number: " + VariableNameExistingPrefix));
 		}
 
 		[Test]
-		public void ExistingOrDefaultReturnsActualValue() {
-			Assert.That(GetValue(CreateVariable("12345")).OrDefault(54321), Is.EqualTo(12345));
+		public void UnparseableOrDefaultReturnsDefaultValue() {
+			Assert.That(GetValue(CreateVariable("654321")).OrDefault(12345), Is.EqualTo(12345));
 		}
 	}
 }
