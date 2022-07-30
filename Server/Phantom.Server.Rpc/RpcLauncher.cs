@@ -1,6 +1,7 @@
 using NetMQ;
 using NetMQ.Sockets;
 using Phantom.Common.Rpc;
+using Phantom.Common.Rpc.Messages;
 
 namespace Phantom.Server.Rpc;
 
@@ -10,9 +11,11 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	}
 
 	private readonly RpcConfiguration config;
+	private readonly IMessageToServerListener listener;
 	
 	private RpcLauncher(RpcConfiguration config) {
 		this.config = config;
+		this.listener = new MessageListener();
 	}
 
 	protected override void Connect(ServerSocket socket) {
@@ -25,10 +28,9 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	}
 	
 	protected override async Task Run(ServerSocket socket) {
-		await foreach (var (routingId, data) in socket.ReceiveStringAsyncEnumerable(config.CancellationToken)) {
-			// TODO
+		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(config.CancellationToken)) {
 			config.Logger.Verbose("Received message from {RoutingId}.", routingId);
-			await socket.SendAsync(routingId, data + data);
+			MessageRegistries.ToServer.Handle(bytes, listener);
 		}
 	}
 }
