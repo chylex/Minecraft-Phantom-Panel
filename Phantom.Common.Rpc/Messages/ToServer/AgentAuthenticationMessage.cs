@@ -1,14 +1,14 @@
-﻿using BinaryPack.Attributes;
+﻿using MessagePack;
 using Phantom.Common.Rpc.Message;
 
-namespace Phantom.Common.Rpc.Messages.ToServer; 
+namespace Phantom.Common.Rpc.Messages.ToServer;
 
-[BinarySerialization]
-public sealed class AgentAuthenticationMessage : IMessageToServer {
-	public Guid AgentGuid { get; set; }
-	public int AgentVersion { get; set; }
-	public string AuthToken { get; set; }
-
+[MessagePackObject]
+public sealed record AgentAuthenticationMessage(
+	[property: Key(0)] Guid AgentGuid,
+	[property: Key(1)] int AgentVersion,
+	[property: Key(2)] string AuthToken
+) : IMessageToServer {
 	public void Accept(IMessageToServerListener listener) {
 		listener.HandleAgentAuthentication(this);
 	}

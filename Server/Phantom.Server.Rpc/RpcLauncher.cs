@@ -28,6 +28,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	}
 	
 	protected override async Task Run(ServerSocket socket) {
+		// TODO optimize msg
 		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(config.CancellationToken)) {
 			config.Logger.Verbose("Received message from {RoutingId}.", routingId);
 			MessageRegistries.ToServer.Handle(bytes, listener);

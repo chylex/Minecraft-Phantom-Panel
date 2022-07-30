@@ -1,14 +1,15 @@
-﻿using BinaryPack;
+﻿using MessagePack;
 using Phantom.Common.Rpc.Message;
 using Phantom.Common.Rpc.Messages.ToServer;
+using Phantom.Utils.Logging;
 
 namespace Phantom.Common.Rpc.Messages; 
 
 public static class MessageRegistries {
-	public static MessageRegistry<IMessageToAgentListener, IMessageToAgent> ToAgent { get; } = new ();
-	public static MessageRegistry<IMessageToServerListener, IMessageToServer> ToServer { get; } = new ();
+	public static MessageRegistry<IMessageToAgentListener, IMessageToAgent> ToAgent { get; } = new (PhantomLogger.Create("MessageRegistry:ToAgent"));
+	public static MessageRegistry<IMessageToServerListener, IMessageToServer> ToServer { get; } = new (PhantomLogger.Create("MessageRegistry:ToServer"));
 
 	static MessageRegistries() {
-		ToServer.Add<AgentAuthenticationMessage>(0, BinaryConverter.Deserialize<AgentAuthenticationMessage>);
+		ToServer.Add<AgentAuthenticationMessage>(0, MessagePackSerializer.Deserialize<AgentAuthenticationMessage>);
 	}
 }
