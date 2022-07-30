@@ -11,11 +11,9 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	}
 
 	private readonly RpcConfiguration config;
-	private readonly IMessageToServerListener listener;
 	
 	private RpcLauncher(RpcConfiguration config) {
 		this.config = config;
-		this.listener = new MessageListener();
 	}
 
 	protected override void Connect(ServerSocket socket) {
@@ -28,11 +26,17 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	}
 	
 	protected override async Task Run(ServerSocket socket) {
-		// TODO optimize msg
 		var cancellationToken = config.CancellationToken;
+		var listeners = new Dictionary<ulong, MessageListener>();
 		
+		// TODO optimize msg
 		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
-			config.Logger.Verbose("Received message from {RoutingId}.", routingId);
+			config.Logger.Verbose("Received {Bytes} B message from {RoutingId}.", bytes.Length, routingId);
+			
+			if (!listeners.TryGetValue(routingId, out var listener)) {
+				listeners[routingId] = listener = new MessageListener(socket, routingId);
+			}
+			
 			MessageRegistries.ToServer.Handle(bytes, listener, cancellationToken);
 		}
 	}

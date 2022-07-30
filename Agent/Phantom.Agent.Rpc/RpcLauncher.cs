@@ -22,17 +22,19 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var url = config.TcpUrl;
 
 		logger.Information("Starting ZeroMQ client on {Url}...", url);
-
 		socket.Options.HelloMessage = MessageRegistries.ToServer.Write(new AgentAuthenticationMessage(AgentGuid: Guid.NewGuid(), AgentVersion: 1, AuthToken: "test")).ToArray();
-
 		socket.Connect(url);
 		logger.Information("ZeroMQ client connected.");
 	}
 
 	protected override async Task Run(ClientSocket socket) {
-		await foreach (var data in socket.ReceiveStringAsyncEnumerable(config.CancellationToken)) {
-			// TODO
-			config.Logger.Verbose("Received message from server: {data}", data);
+		var cancellationToken = config.CancellationToken;
+		var listener = new MessageListener(socket);
+
+		// TODO optimize msg
+		await foreach (var bytes in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
+			config.Logger.Verbose("Received {Bytes} B message from server.", bytes.Length);
+			MessageRegistries.ToAgent.Handle(bytes, listener, cancellationToken);
 		}
 	}
 }

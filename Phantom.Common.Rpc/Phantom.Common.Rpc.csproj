@@ -13,10 +13,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Folder Include="Messages\ToAgent" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <ProjectReference Include="..\Utils\Phantom.Utils.Logging\Phantom.Utils.Logging.csproj" />
   </ItemGroup>
 

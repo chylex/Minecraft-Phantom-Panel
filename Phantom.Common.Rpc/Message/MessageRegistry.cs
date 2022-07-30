@@ -23,7 +23,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		}
 
 		var stream = new MemoryStream();
-		
+
 		try {
 			MessageSerializer.Serialize<T, TListener>(stream, code, message, cancellationToken);
 			return new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int) stream.Length);
@@ -35,7 +35,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 
 	public void Handle(byte[] bytes, TListener listener, CancellationToken cancellationToken) {
 		var memory = new ReadOnlyMemory<byte>(bytes);
-		
+
 		ushort code;
 		try {
 			code = MessageSerializer.ReadCode(ref memory);
@@ -48,7 +48,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 			logger.Error("Unknown message code {Code}.", code);
 			return;
 		}
-		
+
 		TMessage message;
 		try {
 			message = deserialize(memory, cancellationToken);
@@ -57,10 +57,14 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 			return;
 		}
 
-		try {
-			message.Accept(listener);
-		} catch (Exception e) {
-			logger.Error(e, "Failed to handle message {Type}.", message.GetType());
+		async Task HandleMessage() {
+			await message.Accept(listener);
 		}
+
+		void OnException(Task task) {
+			logger.Error(task.Exception, "Failed to handle message {Type}.", message.GetType());
+		}
+
+		Task.Run(HandleMessage, cancellationToken).ContinueWith(OnException, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.RunContinuationsAsynchronously);
 	}
 }

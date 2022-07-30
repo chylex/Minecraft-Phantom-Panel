@@ -9,7 +9,7 @@ public sealed record AgentAuthenticationMessage(
 	[property: Key(1)] int AgentVersion,
 	[property: Key(2)] string AuthToken
 ) : IMessageToServer {
-	public void Accept(IMessageToServerListener listener) {
-		listener.HandleAgentAuthentication(this);
+	public Task Accept(IMessageToServerListener listener) {
+		return listener.HandleAgentAuthentication(this);
 	}
 }

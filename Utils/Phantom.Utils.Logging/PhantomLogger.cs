@@ -27,12 +27,12 @@ public static class PhantomLogger {
 			.WriteTo.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
 			.CreateLogger();
 
-	public static ILogger Create<T>() {
-		return Base.ForContext<T>();
-	}
-
 	public static ILogger Create(string name) {
 		return Base.ForContext("Category", name);
+	}
+
+	public static ILogger Create<T>() {
+		return Create(typeof(T).Name);
 	}
 
 	public static void Dispose() {

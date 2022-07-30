@@ -1,3 +1,7 @@
-﻿namespace Phantom.Common.Rpc.Messages; 
+﻿using Phantom.Common.Rpc.Messages.ToAgent;
 
-public interface IMessageToAgentListener {}
+namespace Phantom.Common.Rpc.Messages;
+
+public interface IMessageToAgentListener {
+	Task HandleAgentAuthenticationResult(AgentAuthenticationResultMessage message);
+}
