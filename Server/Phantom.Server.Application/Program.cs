@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Phantom.Common.Rpc;
+using Phantom.Server.Rpc;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
-using RpcConfiguration = Phantom.Server.Rpc.Configuration;
-using RpcLauncher = Phantom.Server.Rpc.Launcher;
 using WebConfiguration = Phantom.Server.Web.Configuration;
 using WebLauncher = Phantom.Server.Web.Launcher;
 

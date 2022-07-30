@@ -12,7 +12,7 @@ public static class PhantomLogger {
 
 	private static LogEventLevel GetDefaultLevel() {
 		#if DEBUG
-		return LogEventLevel.Debug;
+		return LogEventLevel.Verbose;
 		#else
 		return LogEventLevel.Information;
 		#endif
