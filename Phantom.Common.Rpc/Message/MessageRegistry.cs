@@ -1,23 +1,19 @@
-﻿using MessagePack;
-using Serilog;
+﻿using Serilog;
 
 namespace Phantom.Common.Rpc.Message;
 
 public sealed class MessageRegistry<TListener, TMessage> where TMessage : class, IMessage<TListener> {
 	private readonly ILogger logger;
-	private readonly MessagePackSerializerOptions serializerOptions;
-	
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
-	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, MessagePackSerializerOptions, CancellationToken, TMessage>> codeToDeserializerMapping = new ();
+	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessage>> codeToDeserializerMapping = new ();
 
 	internal MessageRegistry(ILogger logger) {
 		this.logger = logger;
-		this.serializerOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.None).WithSecurity(MessagePackSecurity.UntrustedData.WithMaximumObjectGraphDepth(10));
 	}
 
-	internal void Add<T>(ushort code, Func<ReadOnlyMemory<byte>, MessagePackSerializerOptions, CancellationToken, TMessage> deserializer) where T : TMessage {
+	internal void Add<T>(ushort code) where T : TMessage {
 		typeToCodeMapping.Add(typeof(T), code);
-		codeToDeserializerMapping.Add(code, deserializer);
+		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<T, TMessage, TListener>());
 	}
 
 	public ReadOnlySpan<byte> Write<T>(T message, CancellationToken cancellationToken = default) where T : TMessage {
@@ -29,8 +25,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		var stream = new MemoryStream();
 		
 		try {
-			WriteUshort(stream, code);
-			MessagePackSerializer.Serialize(stream, message, serializerOptions, cancellationToken);
+			MessageSerializer.Serialize<T, TListener>(stream, code, message, cancellationToken);
 			return new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int) stream.Length);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to serialize message {Type}.", typeof(T));
@@ -43,7 +38,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		
 		ushort code;
 		try {
-			code = ReadUshort(ref memory);
+			code = MessageSerializer.ReadCode(ref memory);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to deserialize message code.");
 			return;
@@ -56,7 +51,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		
 		TMessage message;
 		try {
-			message = deserialize(memory, serializerOptions, cancellationToken);
+			message = deserialize(memory, cancellationToken);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to deserialize message with code {Code}.", code);
 			return;
@@ -67,16 +62,5 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		} catch (Exception e) {
 			logger.Error(e, "Failed to handle message {Type}.", message.GetType());
 		}
-	}
-
-	private static void WriteUshort(MemoryStream stream, ushort value) {
-		stream.WriteByte((byte) (value & 0xFF));
-		stream.WriteByte((byte) ((value >> 8) & 0xFF));
-	}
-
-	private static ushort ReadUshort(ref ReadOnlyMemory<byte> memory) {
-		ushort value = (ushort) (memory.Span[0] | (memory.Span[1] << 8));
-		memory = memory[2..];
-		return value;
 	}
 }

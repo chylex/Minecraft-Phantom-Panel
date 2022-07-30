@@ -1,5 +1,4 @@
-﻿using MessagePack;
-using Phantom.Common.Rpc.Message;
+﻿using Phantom.Common.Rpc.Message;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Utils.Logging;
 
@@ -10,6 +9,6 @@ public static class MessageRegistries {
 	public static MessageRegistry<IMessageToServerListener, IMessageToServer> ToServer { get; } = new (PhantomLogger.Create("MessageRegistry:ToServer"));
 
 	static MessageRegistries() {
-		ToServer.Add<AgentAuthenticationMessage>(0, MessagePackSerializer.Deserialize<AgentAuthenticationMessage>);
+		ToServer.Add<AgentAuthenticationMessage>(0);
 	}
 }
