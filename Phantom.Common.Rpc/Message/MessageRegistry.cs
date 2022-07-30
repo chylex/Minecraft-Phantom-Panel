@@ -12,7 +12,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 
 	internal MessageRegistry(ILogger logger) {
 		this.logger = logger;
-		this.serializerOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.None).WithSecurity(MessagePackSecurity.UntrustedData);
+		this.serializerOptions = MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.None).WithSecurity(MessagePackSecurity.UntrustedData.WithMaximumObjectGraphDepth(10));
 	}
 
 	internal void Add<T>(ushort code, Func<ReadOnlyMemory<byte>, MessagePackSerializerOptions, CancellationToken, TMessage> deserializer) where T : TMessage {
@@ -20,7 +20,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		codeToDeserializerMapping.Add(code, deserializer);
 	}
 
-	public ReadOnlySpan<byte> Write<T>(T message) where T : TMessage {
+	public ReadOnlySpan<byte> Write<T>(T message, CancellationToken cancellationToken = default) where T : TMessage {
 		if (!typeToCodeMapping.TryGetValue(typeof(T), out ushort code)) {
 			logger.Error("Unknown message type {Type}.", typeof(T));
 			return new ReadOnlySpan<byte>();
@@ -30,7 +30,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		
 		try {
 			WriteUshort(stream, code);
-			MessagePackSerializer.Serialize(stream, message, serializerOptions);
+			MessagePackSerializer.Serialize(stream, message, serializerOptions, cancellationToken);
 			return new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int) stream.Length);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to serialize message {Type}.", typeof(T));
@@ -38,7 +38,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		}
 	}
 
-	public void Handle(byte[] bytes, TListener listener) {
+	public void Handle(byte[] bytes, TListener listener, CancellationToken cancellationToken) {
 		var memory = new ReadOnlyMemory<byte>(bytes);
 		
 		ushort code;
@@ -56,7 +56,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 		
 		TMessage message;
 		try {
-			message = deserialize(memory, serializerOptions, CancellationToken.None);
+			message = deserialize(memory, serializerOptions, cancellationToken);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to deserialize message with code {Code}.", code);
 			return;
