@@ -3,5 +3,5 @@
 namespace Phantom.Common.Rpc.Messages; 
 
 public interface IMessageToServerListener {
-	Task HandleAgentAuthentication(AgentAuthenticationMessage message);
+	Task HandleAgentAuthentication(RegisterAgentMessage message);
 }

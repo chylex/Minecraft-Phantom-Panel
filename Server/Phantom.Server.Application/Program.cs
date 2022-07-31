@@ -2,6 +2,7 @@
 using Npgsql;
 using Phantom.Common.Rpc;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 using WebConfiguration = Phantom.Server.Web.Configuration;
@@ -35,7 +36,7 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 
 	await Task.WhenAll(
-		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, cancellationTokenSource.Token)),
+		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
 		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), WebServerHost, webServerPort, cancellationTokenSource.Token), options => options.UseNpgsql(connectionStringBuilder.ToString()))
 	);
 } finally {

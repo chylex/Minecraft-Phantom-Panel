@@ -15,7 +15,7 @@ sealed class MessageListener : IMessageToAgentListener {
 		this.socket = socket;
 	}
 
-	public Task HandleAgentAuthenticationResult(AgentAuthenticationResultMessage message) {
+	public Task HandleAgentAuthenticationResult(RegisterAgentResultMessage message) {
 		if (message.Success) {
 			Logger.Information("Agent authentication successful.");
 		}

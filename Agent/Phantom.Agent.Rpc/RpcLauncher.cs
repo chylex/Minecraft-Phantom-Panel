@@ -22,7 +22,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var url = config.TcpUrl;
 
 		logger.Information("Starting ZeroMQ client on {Url}...", url);
-		socket.Options.HelloMessage = MessageRegistries.ToServer.Write(new AgentAuthenticationMessage(AgentGuid: Guid.NewGuid(), AgentVersion: 1, AuthToken: "test")).ToArray();
+		socket.Options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(AgentGuid: Guid.NewGuid(), AgentVersion: 1, AuthToken: "test")).ToArray();
 		socket.Connect(url);
 		logger.Information("ZeroMQ client connected.");
 	}

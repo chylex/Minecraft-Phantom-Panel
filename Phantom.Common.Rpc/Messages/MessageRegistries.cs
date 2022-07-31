@@ -10,8 +10,8 @@ public static class MessageRegistries {
 	public static MessageRegistry<IMessageToServerListener, IMessageToServer> ToServer { get; } = new (PhantomLogger.Create("MessageRegistry:ToServer"));
 
 	static MessageRegistries() {
-		ToAgent.Add<AgentAuthenticationResultMessage>(0);
+		ToAgent.Add<RegisterAgentResultMessage>(0);
 		
-		ToServer.Add<AgentAuthenticationMessage>(0);
+		ToServer.Add<RegisterAgentMessage>(0);
 	}
 }
