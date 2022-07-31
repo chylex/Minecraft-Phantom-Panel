@@ -1,4 +1,6 @@
-﻿using Phantom.Common.Rpc.Messages;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Phantom.Common.Rpc.Messages;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
@@ -17,7 +19,17 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		RegisterAgentResultMessage result;
 		
 		lock (this) {
-			if (agentGuid != null) {
+			byte[]? authTokenBytes;
+			try {
+				authTokenBytes = Encoding.ASCII.GetBytes(message.AuthToken);
+			} catch (Exception) {
+				authTokenBytes = null;
+			}
+			
+			if (authTokenBytes == null || !CryptographicOperations.FixedTimeEquals(authTokenBytes, Services.AgentManager.AuthTokenSpan)) {
+				result = RegisterAgentResultMessage.WithError("Invalid auth token.");
+			}
+			else if (agentGuid != null) {
 				result = RegisterAgentResultMessage.WithError("An agent is already registered on this connection.");
 			}
 			else if (!Services.AgentManager.RegisterAgent(message.AgentGuid, new AgentInfo(connection, message.AgentVersion))) {

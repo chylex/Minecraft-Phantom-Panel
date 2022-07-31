@@ -3,7 +3,7 @@
 namespace Phantom.Utils.Cryptography; 
 
 public static class TokenGenerator {
-	private const string AllowedCharacters = "25679bcdfghjkmnpqrstwxyz";
+	private const string AllowedCharacters = "25679BCDFGHJKMNPQRSTWXYZ";
 	
 	public static string Create(int length) {
 		char[] result = new char[length];

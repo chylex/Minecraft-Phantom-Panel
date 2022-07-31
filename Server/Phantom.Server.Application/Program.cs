@@ -4,6 +4,7 @@ using Phantom.Common.Rpc;
 using Phantom.Server.Application;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services;
+using Phantom.Utils.Cryptography;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 using WebConfiguration = Phantom.Server.Web.Configuration;
@@ -35,6 +36,10 @@ try {
 	}
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
+	
+	// TODO store and show in web ui
+	ServiceConfiguration.AuthToken = TokenGenerator.Create(30);
+	PhantomLogger.Root.Information("Auth token for agents: {AuthToken}", Services.AgentManager.AuthToken);
 	
 	string certificatePath = Path.GetFullPath("./certificates");
 	var certificate = await Certificates.CreateOrLoad(certificatePath);
