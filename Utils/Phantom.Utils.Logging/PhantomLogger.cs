@@ -31,6 +31,10 @@ public static class PhantomLogger {
 		return Base.ForContext("Category", name);
 	}
 
+	public static ILogger Create(Type type) {
+		return Create(type.Name);
+	}
+
 	public static ILogger Create<T>() {
 		return Create(typeof(T).Name);
 	}

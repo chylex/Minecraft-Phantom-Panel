@@ -2,7 +2,7 @@
   <configuration default="false" name="Agent" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/Agent/Phantom.Agent/bin/Debug/net7.0/Phantom.Agent.exe" />
     <option name="PROGRAM_PARAMETERS" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Agent/Phantom.Agent/bin/Debug/net7.0" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Agent" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
       <env name="SERVER_HOST" value="localhost" />
@@ -13,7 +13,7 @@
     <option name="PROJECT_PATH" value="$PROJECT_DIR$/Agent/Phantom.Agent/Phantom.Agent.csproj" />
     <option name="PROJECT_EXE_PATH_TRACKING" value="1" />
     <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
-    <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
+    <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="0" />
     <option name="PROJECT_KIND" value="DotNetCore" />
     <option name="PROJECT_TFM" value="net7.0" />
     <method v="2">

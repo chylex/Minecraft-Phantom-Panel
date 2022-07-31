@@ -8,7 +8,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Phantom.Common.Rpc\Phantom.Common.Rpc.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Threading\Phantom.Utils.Threading.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Command\Phantom.Agent.Command.csproj" />

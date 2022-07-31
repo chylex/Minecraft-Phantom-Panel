@@ -8,6 +8,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Phantom.Common.Rpc\Phantom.Common.Rpc.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Rpc\Phantom.Common.Rpc.csproj" />
   </ItemGroup>
+  
 </Project>

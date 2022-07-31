@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Phantom.Common.Rpc;
+using Phantom.Server.Application;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services;
 using Phantom.Utils.Logging;
@@ -34,6 +35,11 @@ try {
 	}
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
+	
+	string certificatePath = Path.GetFullPath("./certificates");
+	if (!await Certificates.CreateIfNeeded(certificatePath)) {
+		Environment.Exit(1);
+	}
 
 	await Task.WhenAll(
 		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
