@@ -6,24 +6,42 @@ using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 
 var cancellationTokenSource = new CancellationTokenSource();
-	
+
 PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 });
 
 try {
 	string serverHost;
-	ushort serverPort = EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401);
+	ushort serverPort;
+	AuthTokenSource authTokenSource;
 	try {
 		serverHost = EnvironmentVariables.GetString("SERVER_HOST").OrThrow;
+		serverPort = EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401);
+
+		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
+
+		authTokenSource = new AuthTokenSource {
+			Token = authToken,
+			TokenFilePath = authTokenFilePath
+		};
 	} catch (Exception e) {
 		PhantomLogger.Root.Fatal(e.Message);
 		Environment.Exit(1);
 		return;
 	}
 
+	string serverAuthToken;
+	try {
+		serverAuthToken = authTokenSource.Read();
+	} catch (Exception e) {
+		PhantomLogger.Root.Fatal(e, "Error reading auth token.");
+		Environment.Exit(1);
+		return;
+	}
+
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
-	
+
 	string serverPublicKeyPath = Path.GetFullPath("./certificates/agent.key");
 	var serverCertificate = await Certificates.LoadPublicKey(serverPublicKeyPath);
 	if (serverCertificate is null) {
@@ -32,14 +50,10 @@ try {
 
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
-	
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token));
 
-	
-	
-	
-	
-	
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), serverAuthToken);
+
+
 	void Ignore() {
 		PhantomLogger.Root.InformationHeading("Console interface ready!");
 
