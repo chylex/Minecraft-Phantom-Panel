@@ -7,13 +7,19 @@ namespace Phantom.Server.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	public static async Task Launch(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) {
-		await new RpcLauncher(config, listenerFactory).Launch();
+		var socket = new ServerSocket();
+		var options = socket.Options;
+		
+		options.CurveServer = true;
+		options.CurveCertificate = config.ServerCertificate;
+		
+		await new RpcLauncher(config, socket, listenerFactory).Launch();
 	}
 
 	private readonly RpcConfiguration config;
 	private readonly Func<RpcClientConnection, IMessageToServerListener> listenerFactory;
 
-	private RpcLauncher(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) {
+	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) : base(socket) {
 		this.config = config;
 		this.listenerFactory = listenerFactory;
 	}

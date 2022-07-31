@@ -8,12 +8,19 @@ namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	public static async Task Launch(RpcConfiguration config) {
-		await new RpcLauncher(config).Launch();
+		var socket = new ClientSocket();
+		var options = socket.Options;
+		
+		options.CurveServerCertificate = config.ServerCertificate;
+		options.CurveCertificate = new NetMQCertificate();
+		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(AgentGuid: Guid.NewGuid(), AgentVersion: 1, AuthToken: "test")).ToArray();
+		
+		await new RpcLauncher(config, socket).Launch();
 	}
 
 	private readonly RpcConfiguration config;
 
-	private RpcLauncher(RpcConfiguration config) {
+	private RpcLauncher(RpcConfiguration config, ClientSocket socket) : base(socket) {
 		this.config = config;
 	}
 
@@ -22,7 +29,6 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var url = config.TcpUrl;
 
 		logger.Information("Starting ZeroMQ client on {Url}...", url);
-		socket.Options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(AgentGuid: Guid.NewGuid(), AgentVersion: 1, AuthToken: "test")).ToArray();
 		socket.Connect(url);
 		logger.Information("ZeroMQ client connected.");
 	}

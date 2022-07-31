@@ -14,8 +14,10 @@ public readonly struct RpcClientConnection {
 		this.routingId = routingId;
 	}
 
-	public async Task Send(IMessageToAgent message) {
+	public async Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
 		byte[] bytes = MessageRegistries.ToAgent.Write(message).ToArray();
-		await socket.SendAsync(routingId, bytes);
+		if (bytes.Length > 0) {
+			await socket.SendAsync(routingId, bytes);
+		}
 	}
 }

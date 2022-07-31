@@ -37,12 +37,13 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
 	string certificatePath = Path.GetFullPath("./certificates");
-	if (!await Certificates.CreateIfNeeded(certificatePath)) {
+	var certificate = await Certificates.CreateOrLoad(certificatePath);
+	if (certificate is null) {
 		Environment.Exit(1);
 	}
 
 	await Task.WhenAll(
-		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
+		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
 		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), WebServerHost, webServerPort, cancellationTokenSource.Token), options => options.UseNpgsql(connectionStringBuilder.ToString()))
 	);
 } finally {

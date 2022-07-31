@@ -11,15 +11,13 @@ static class Certificates {
 	private const string SecretKeyFileName = "secret.key";
 	private const string PublicKeyFileName = "agent.key";
 
-	public static async Task<bool> CreateIfNeeded(string folderPath) {
+	public static async Task<NetMQCertificate?> CreateOrLoad(string folderPath) {
 		if (!Directory.Exists(folderPath)) {
-			Logger.Information("Creating folder for certificates: {FolderPath}", folderPath);
-			
 			try {
 				Directories.Create(folderPath, Chmod.URW_GR);
 			} catch (Exception e) {
 				Logger.Fatal(e, "Error creating certificate folder.");
-				return false;
+				return null;
 			}
 		}
 
@@ -30,28 +28,47 @@ static class Certificates {
 		var publicKeyFileExists = File.Exists(publicKeyFilePath);
 
 		if (secretKeyFileExists && publicKeyFileExists) {
-			return true;
+			try {
+				return await LoadCertificateFiles(secretKeyFilePath, publicKeyFilePath);
+			} catch (Exception e) {
+				Logger.Fatal(e, "Error reading certificate files.");
+				return null;
+			}
 		}
-		else if (secretKeyFileExists || publicKeyFileExists) {
+
+		if (secretKeyFileExists || publicKeyFileExists) {
 			string existingKeyFilePath = secretKeyFileExists ? secretKeyFilePath : publicKeyFilePath;
 			string missingKeyFileName = secretKeyFileExists ? PublicKeyFileName : SecretKeyFileName;
 			Logger.Fatal("The certificate folder contains {ExistingKeyFilePath} but no {MissingKeyFileName} file. Please delete it to regenerate both certificate files.", existingKeyFilePath, missingKeyFileName);
-			return false;
+			return null;
 		}
 
 		Logger.Information("Generating certificate files in: {FolderPath}", folderPath);
 		
-		var certificate = new NetMQCertificate();
-
 		try {
-			await Files.WriteBytesAsync(secretKeyFilePath, certificate.SecretKey, FileMode.Create, Chmod.URW_GR);
-			await Files.WriteBytesAsync(publicKeyFilePath, certificate.PublicKey, FileMode.Create, Chmod.URW_GR);
+			return await GenerateCertificateFiles(secretKeyFilePath, publicKeyFilePath);
 		} catch (Exception e) {
 			Logger.Fatal(e, "Error creating certificate files.");
-			return false;
+			return null;
 		}
+	}
 
-		Logger.Information("Certificates created! Agents will need {PublicKeyFilePath} to connect.", publicKeyFilePath);
-		return true;
+	private static async Task<NetMQCertificate?> LoadCertificateFiles(string secretKeyFilePath, string publicKeyFilePath) {
+		byte[] secretKey = await File.ReadAllBytesAsync(secretKeyFilePath);
+		byte[] publicKey = await File.ReadAllBytesAsync(publicKeyFilePath);
+
+		var certificate = new NetMQCertificate(secretKey, publicKey);
+		Logger.Information("Loaded existing certificates. Remember that agents will need {PublicKeyFilePath} to connect.", publicKeyFilePath);
+		return certificate;
+	}
+
+	private static async Task<NetMQCertificate?> GenerateCertificateFiles(string secretKeyFilePath, string publicKeyFilePath) {
+		var certificate = new NetMQCertificate();
+
+		await Files.WriteBytesAsync(secretKeyFilePath, certificate.SecretKey, FileMode.Create, Chmod.URW_GR);
+		await Files.WriteBytesAsync(publicKeyFilePath, certificate.PublicKey, FileMode.Create, Chmod.URW_GR);
+
+		Logger.Information("Certificates created. Agents will need {PublicKeyFilePath} to connect.", publicKeyFilePath);
+		return certificate;
 	}
 }

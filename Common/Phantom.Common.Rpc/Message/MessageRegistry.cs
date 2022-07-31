@@ -2,33 +2,33 @@
 
 namespace Phantom.Common.Rpc.Message;
 
-public sealed class MessageRegistry<TListener, TMessage> where TMessage : class, IMessage<TListener> {
+public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase : class, IMessage<TListener> {
 	private readonly ILogger logger;
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
-	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessage>> codeToDeserializerMapping = new ();
+	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessageBase>> codeToDeserializerMapping = new ();
 
 	internal MessageRegistry(ILogger logger) {
 		this.logger = logger;
 	}
 
-	internal void Add<T>(ushort code) where T : TMessage {
-		typeToCodeMapping.Add(typeof(T), code);
-		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<T, TMessage, TListener>());
+	internal void Add<TMessage>(ushort code) where TMessage : TMessageBase {
+		typeToCodeMapping.Add(typeof(TMessage), code);
+		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<TMessage, TMessageBase, TListener>());
 	}
 
-	public ReadOnlySpan<byte> Write<T>(T message, CancellationToken cancellationToken = default) where T : TMessage {
-		if (!typeToCodeMapping.TryGetValue(typeof(T), out ushort code)) {
-			logger.Error("Unknown message type {Type}.", typeof(T));
+	public ReadOnlySpan<byte> Write<TMessage>(TMessage message, CancellationToken cancellationToken = default) where TMessage : TMessageBase {
+		if (!typeToCodeMapping.TryGetValue(typeof(TMessage), out ushort code)) {
+			logger.Error("Unknown message type {Type}.", typeof(TMessage));
 			return new ReadOnlySpan<byte>();
 		}
 
 		var stream = new MemoryStream();
 
 		try {
-			MessageSerializer.Serialize<T, TListener>(stream, code, message, cancellationToken);
+			MessageSerializer.Serialize<TMessage, TListener>(stream, code, message, cancellationToken);
 			return new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int) stream.Length);
 		} catch (Exception e) {
-			logger.Error(e, "Failed to serialize message {Type}.", typeof(T));
+			logger.Error(e, "Failed to serialize message {Type}.", typeof(TMessage));
 			return new ReadOnlySpan<byte>();
 		}
 	}
@@ -49,7 +49,7 @@ public sealed class MessageRegistry<TListener, TMessage> where TMessage : class,
 			return;
 		}
 
-		TMessage message;
+		TMessageBase message;
 		try {
 			message = deserialize(memory, cancellationToken);
 		} catch (Exception e) {

@@ -23,11 +23,17 @@ try {
 	}
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
+	
+	string serverPublicKeyPath = Path.GetFullPath("./certificates/agent.key");
+	var serverCertificate = await Certificates.LoadPublicKey(serverPublicKeyPath);
+	if (serverCertificate is null) {
+		Environment.Exit(1);
+	}
 
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
 	
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, cancellationTokenSource.Token));
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token));
 
 	
 	

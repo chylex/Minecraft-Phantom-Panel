@@ -13,7 +13,7 @@ static class RpcRuntime {
 		HasRuntime = true;
 	}
 
-	internal static void ConfigureSocket(this ThreadSafeSocketOptions options) {
+	internal static void SetDefaultSocketOptions(ThreadSafeSocketOptions options) {
 		options.DelayAttachOnConnect = true;
 		options.ReceiveHighWatermark = 10_000;
 		options.SendHighWatermark = 10_000;
@@ -23,10 +23,10 @@ static class RpcRuntime {
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new() {
 	private readonly TSocket socket;
 	
-	protected RpcRuntime() {
+	protected RpcRuntime(TSocket socket) {
 		RpcRuntime.MarkRuntimeCreated();
-		this.socket = new TSocket();
-		this.socket.Options.ConfigureSocket();
+		RpcRuntime.SetDefaultSocketOptions(socket.Options);
+		this.socket = socket;
 	}
 
 	protected async Task Launch() {
