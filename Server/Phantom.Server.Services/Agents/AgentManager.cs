@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
 
-namespace Phantom.Server.Services; 
+namespace Phantom.Server.Services.Agents; 
 
 public sealed class AgentManager {
 	public string AuthToken { get; }

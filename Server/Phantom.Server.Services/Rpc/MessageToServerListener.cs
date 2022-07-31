@@ -4,8 +4,9 @@ using Phantom.Common.Rpc.Messages;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services.Agents;
 
-namespace Phantom.Server.Services;
+namespace Phantom.Server.Services.Rpc;
 
 public sealed class MessageToServerListener : IMessageToServerListener {
 	private readonly RpcClientConnection connection;

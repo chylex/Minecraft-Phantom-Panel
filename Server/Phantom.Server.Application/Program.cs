@@ -4,6 +4,7 @@ using Phantom.Common.Rpc;
 using Phantom.Server.Application;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services;
+using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;

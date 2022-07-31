@@ -1,6 +1,6 @@
 ﻿using Phantom.Server.Rpc;
 
-namespace Phantom.Server.Services; 
+namespace Phantom.Server.Services.Agents; 
 
 public sealed class AgentInfo {
 	private readonly RpcClientConnection connection;
