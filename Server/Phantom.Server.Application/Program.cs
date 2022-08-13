@@ -18,8 +18,8 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 });
 
 try {
-	const string RpcServerHost = "0.0.0.0";
-	const string WebServerHost = "0.0.0.0";
+	string webServerHost = EnvironmentVariables.GetString("WEB_SERVER_HOST").OrDefault("0.0.0.0");
+	string rpcServerHost = EnvironmentVariables.GetString("RPC_SERVER_HOST").OrDefault("0.0.0.0");
 	
 	ushort webServerPort = EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").OrDefault(9400);
 	ushort rpcServerPort = EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").OrDefault(9401);
@@ -49,8 +49,8 @@ try {
 	}
 
 	await Task.WhenAll(
-		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), RpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
-		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), WebServerHost, webServerPort, cancellationTokenSource.Token), options => options.UseNpgsql(connectionStringBuilder.ToString()))
+		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
+		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, cancellationTokenSource.Token), options => options.UseNpgsql(connectionStringBuilder.ToString()))
 	);
 } finally {
 	cancellationTokenSource.Dispose();

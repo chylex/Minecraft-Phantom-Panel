@@ -5,12 +5,14 @@
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Server" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
+      <env name="ASPNETCORE_ENVIRONMENT" value="Development" />
+      <env name="PG_DATABASE" value="postgres" />
+      <env name="PG_HOST" value="localhost" />
       <env name="PG_PASS" value="development" />
       <env name="PG_PORT" value="9402" />
-      <env name="ASPNETCORE_ENVIRONMENT" value="Development" />
-      <env name="PG_HOST" value="localhost" />
-      <env name="PG_DATABASE" value="postgres" />
       <env name="PG_USER" value="postgres" />
+      <env name="WEB_SERVER_HOST" value="localhost" />
+      <env name="RPC_SERVER_HOST" value="localhost" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />
