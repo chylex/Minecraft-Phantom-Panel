@@ -20,6 +20,10 @@ public static class Launcher {
 		builder.WebHost.UseUrls(config.HttpUrl);
 		builder.WebHost.UseSetting(WebHostDefaults.DetailedErrorsKey, builder.Environment.IsDevelopment() ? "true" : "false");
 
+		if (builder.Environment.IsEnvironment("Local")) {
+			builder.WebHost.UseStaticWebAssets();
+		}
+
 		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder);
 		builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

@@ -18,11 +18,11 @@ public class EventSubscribers<T> {
 
 	internal void Publish(T eventData) {
 		subscribersLock.EnterReadLock();
-
-		foreach (var subscriber in subscribers.Values) {
+		var subs = subscribers.Values.ToArray(); // TODO optimize
+		subscribersLock.ExitReadLock();
+		
+		foreach (var subscriber in subs) {
 			subscriber(eventData);
 		}
-
-		subscribersLock.ExitReadLock();
 	}
 }
