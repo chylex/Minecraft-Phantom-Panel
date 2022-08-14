@@ -16,4 +16,11 @@ public static class Files {
 		await using var stream = new FileStream(path, options);
 		await stream.WriteAsync(bytes);
 	}
+
+	public static void RequireMaximumFileSize(string path, long maximumBytes) {
+		var actualBytes = new FileInfo(path).Length;
+		if (actualBytes > maximumBytes) {
+			throw new IOException("Expected file size to be at most " + maximumBytes + " B, actual size is " + actualBytes + " B.");
+		}
+	}
 }

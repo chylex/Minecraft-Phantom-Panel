@@ -42,7 +42,7 @@ try {
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 
-	string serverPublicKeyPath = Path.GetFullPath("./certificates/agent.key");
+	string serverPublicKeyPath = Path.GetFullPath("./secrets/agent.key");
 	var serverCertificate = await Certificates.LoadPublicKey(serverPublicKeyPath);
 	if (serverCertificate is null) {
 		Environment.Exit(1);

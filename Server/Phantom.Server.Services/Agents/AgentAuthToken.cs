@@ -4,7 +4,7 @@ using Phantom.Utils.Cryptography;
 namespace Phantom.Server.Services.Agents;
 
 public sealed class AgentAuthToken {
-	public static AgentAuthToken From(string? authToken) {
+	internal static AgentAuthToken From(string? authToken) {
 		if (string.IsNullOrEmpty(authToken)) {
 			throw new Exception("Agent authentication token is not set.");
 		}
