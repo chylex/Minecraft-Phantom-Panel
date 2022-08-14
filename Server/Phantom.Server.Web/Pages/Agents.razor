@@ -2,8 +2,6 @@
 
 <h1>Agents</h1>
 
-<p>Register new agents using the token: <code>@Services.AgentManager.AuthToken</code></p>
-
 <table class="table table-sm">
   <thead>
     <tr>
@@ -12,19 +10,20 @@
     </tr>
   </thead>
   <tbody>
-    @if (agents.IsEmpty) {
-      <tr>
-        <td colspan="2">No agents registered</td>
-      </tr>
-    }
-    else {
+    @if (!agents.IsEmpty) {
       @foreach (var agent in agents) {
         <tr>
-          <td>@agent.Guid</td>
+          <td>@agent.Guid.ToString().ToUpperInvariant()</td>
           <td>@agent.Name</td>
         </tr>
       }
     }
+    <tr>
+      <td colspan="2">
+        @(agents.IsEmpty ? "No agents registered." : "")
+        Register new agents using the token: <code>@Services.AgentManager.AuthToken</code>
+      </td>
+    </tr>
   </tbody>
 </table>
 @using Phantom.Server.Services.Agents
