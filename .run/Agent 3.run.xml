@@ -1,8 +1,8 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Agent" type="DotNetProject" factoryName=".NET Project">
+  <configuration default="false" name="Agent 3" type="DotNetProject" factoryName=".NET Project">
     <option name="EXE_PATH" value="$PROJECT_DIR$/Agent/Phantom.Agent/bin/Debug/net7.0/Phantom.Agent.exe" />
     <option name="PROGRAM_PARAMETERS" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Agent" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Agent3" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
       <env name="SERVER_AUTH_TOKEN_FILE" value="./secrets/agent.token" />
