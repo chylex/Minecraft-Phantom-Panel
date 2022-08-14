@@ -2,17 +2,39 @@
 
 <h1>Agents</h1>
 
-@foreach (var agent in agents) {
-  <p>@agent.Guid - @agent.Name</p>
-}
+<p>Register new agents using the token: <code>@Services.AgentManager.AuthToken</code></p>
 
+<table class="table table-sm">
+  <thead>
+    <tr>
+      <th>Identifier</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    @if (agents.IsEmpty) {
+      <tr>
+        <td colspan="2">No agents registered</td>
+      </tr>
+    }
+    else {
+      @foreach (var agent in agents) {
+        <tr>
+          <td>@agent.Guid</td>
+          <td>@agent.Name</td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>
 @using Phantom.Server.Services.Agents
 @using System.Collections.Immutable
 @using Phantom.Server.Services
 @implements IDisposable
+
 @code {
   private ImmutableList<AgentInfo> agents = ImmutableList<AgentInfo>.Empty;
-  
+
   protected override void OnInitialized() {
     Services.AgentManager.AgentInfoChanged.Subscribe(this, agents => {
       this.agents = agents;
@@ -23,4 +45,5 @@
   void IDisposable.Dispose() {
     Services.AgentManager.AgentInfoChanged.Unsubscribe(this);
   }
+
 }
