@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Web.Areas.Identity;
-using Phantom.Server.Web.Data;
+using Phantom.Server.Web.Database;
 using Serilog;
 
 namespace Phantom.Server.Web;

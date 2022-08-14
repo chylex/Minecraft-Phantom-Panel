@@ -5,6 +5,7 @@ using Phantom.Server.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Phantom.Server.Web.Database;
 
 namespace Phantom.Server.Web.Data.Migrations {
 	[DbContext(typeof(ApplicationDbContext))]

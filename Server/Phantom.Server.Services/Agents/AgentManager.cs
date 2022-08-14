@@ -4,10 +4,14 @@ using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
 using Phantom.Utils.Events;
+using Phantom.Utils.Logging;
+using Serilog;
 
 namespace Phantom.Server.Services.Agents;
 
 public sealed class AgentManager {
+	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
+	
 	private readonly ObservableAgents agents = new ();
 
 	public AgentAuthToken AuthToken { get; }
@@ -25,6 +29,7 @@ public sealed class AgentManager {
 			return RegisterAgentResultMessage.WithError("Agent registration failed.");
 		}
 		else {
+			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", message.AgentInfo.Name, message.AgentInfo.Guid);
 			return RegisterAgentResultMessage.WithSuccess;
 		}
 	}
