@@ -7,32 +7,41 @@
     <tr>
       <th>Identifier</th>
       <th>Name</th>
+      <th class="text-end">Instances</th>
+      <th class="text-end">Memory</th>
     </tr>
   </thead>
   <tbody>
     @if (!agents.IsEmpty) {
       @foreach (var agent in agents) {
         <tr>
-          <td>@agent.Guid.ToString().ToUpperInvariant()</td>
+          <td>
+            <code class="text-uppercase">@agent.Guid.ToString()</code>
+          </td>
           <td>@agent.Name</td>
+          <td class="text-end">? / @agent.MaxInstances</td>
+          <td class="text-end">? / @agent.MaxMemory.InMegabytes MB</td>
         </tr>
       }
     }
+  </tbody>
+  <tfoot>
     <tr>
-      <td colspan="2">
+      <td colspan="4">
         @(agents.IsEmpty ? "No agents registered." : "")
         Register new agents using the token: <code>@Services.AgentManager.AuthToken</code>
       </td>
     </tr>
-  </tbody>
+  </tfoot>
 </table>
-@using Phantom.Server.Services.Agents
-@using System.Collections.Immutable
+@using Phantom.Common.Data
 @using Phantom.Server.Services
+@using System.Collections.Immutable
 @implements IDisposable
 
 @code {
-  private ImmutableList<AgentInfo> agents = ImmutableList<AgentInfo>.Empty;
+
+  private ImmutableArray<AgentInfo> agents = ImmutableArray<AgentInfo>.Empty;
 
   protected override void OnInitialized() {
     Services.AgentManager.AgentInfoChanged.Subscribe(this, agents => {

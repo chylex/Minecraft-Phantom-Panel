@@ -14,6 +14,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Logging\Phantom.Utils.Logging.csproj" />
+    <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
   </ItemGroup>
 
 </Project>

@@ -26,7 +26,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 			}
 
 			if (result.Success) {
-				agentGuid = message.AgentGuid;
+				agentGuid = message.AgentInfo.Guid;
 			}
 		}
 

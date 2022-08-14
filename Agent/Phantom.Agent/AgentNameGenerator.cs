@@ -1,4 +1,4 @@
-﻿namespace Phantom.Agent.Rpc.Fun;
+﻿namespace Phantom.Agent;
 
 internal static class AgentNameGenerator {
 	private static readonly string[] Prefixes = {

@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent;
 using Phantom.Agent.Commands;
 using Phantom.Agent.Rpc;
+using Phantom.Common.Data;
 using Phantom.Common.Rpc;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
@@ -49,11 +50,14 @@ try {
 	}
 	
 	Guid agentGuid = Guid.NewGuid();
+	
+	// TODO
+	AgentInfo agentInfo = new AgentInfo(agentGuid, Version: 1, Name: AgentNameGenerator.GenerateFrom(agentGuid), MaxInstances: 5, MaxMemory: RamAllocationUnits.FromMegabytesFloored(2048));
 
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
 
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), serverAuthToken, agentGuid);
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), serverAuthToken, agentInfo);
 
 
 	void Ignore() {

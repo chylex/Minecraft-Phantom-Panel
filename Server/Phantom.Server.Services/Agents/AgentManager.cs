@@ -1,5 +1,5 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
@@ -11,7 +11,7 @@ public sealed class AgentManager {
 	private readonly ObservableAgents agents = new ();
 
 	public AgentAuthToken AuthToken { get; }
-	public EventSubscribers<ImmutableList<AgentInfo>> AgentInfoChanged => agents.Subs;
+	public EventSubscribers<ImmutableArray<AgentInfo>> AgentInfoChanged => agents.Subs;
 
 	internal AgentManager(AgentAuthToken authToken) {
 		this.AuthToken = authToken;
@@ -21,7 +21,7 @@ public sealed class AgentManager {
 		if (!AuthToken.Check(message.AuthToken)) {
 			return RegisterAgentResultMessage.WithError("Invalid auth token.");
 		}
-		else if (!agents.TryRegister(new AgentInfo(message.AgentGuid, connection, message.AgentVersion, message.AgentName))) {
+		else if (!agents.TryRegister(new AgentConnection(connection, message.AgentInfo))) {
 			return RegisterAgentResultMessage.WithError("Agent registration failed.");
 		}
 		else {
@@ -29,21 +29,29 @@ public sealed class AgentManager {
 		}
 	}
 
-	private sealed class ObservableAgents : ObservableState<ImmutableList<AgentInfo>> {
-		private readonly ConcurrentDictionary<Guid, AgentInfo> agents = new ();
+	private sealed class ObservableAgents : ObservableState<ImmutableArray<AgentInfo>> {
+		private readonly Dictionary<Guid, AgentConnection> agents = new ();
+		private readonly ReaderWriterLockSlim agentsLock = new (LockRecursionPolicy.NoRecursion);
 
-		public bool TryRegister(AgentInfo agentInfo) {
-			if (agents.TryAdd(agentInfo.Guid, agentInfo)) {
+		public bool TryRegister(AgentConnection agentConnection) {
+			agentsLock.EnterWriteLock();
+			bool success = agents.TryAdd(agentConnection.Info.Guid, agentConnection);
+			agentsLock.ExitWriteLock();
+
+			if (success) {
 				Update();
-				return true;
 			}
-			else {
-				return false;
-			}
+
+			return success;
 		}
 
-		protected override ImmutableList<AgentInfo> GetData() {
-			return ImmutableList.CreateRange(agents.Values);
+		protected override ImmutableArray<AgentInfo> GetData() {
+			agentsLock.EnterReadLock();
+			try {
+				return agents.Values.Select(static agent => agent.Info).ToImmutableArray();
+			} finally {
+				agentsLock.ExitReadLock();
+			}
 		}
 	}
 }

@@ -1,6 +1,6 @@
 using NetMQ;
 using NetMQ.Sockets;
-using Phantom.Agent.Rpc.Fun;
+using Phantom.Common.Data;
 using Phantom.Common.Rpc;
 using Phantom.Common.Rpc.Messages;
 using Phantom.Common.Rpc.Messages.ToServer;
@@ -8,13 +8,13 @@ using Phantom.Common.Rpc.Messages.ToServer;
 namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
-	public static async Task Launch(RpcConfiguration config, string authToken, Guid agentGuid) {
+	public static async Task Launch(RpcConfiguration config, string authToken, AgentInfo agentInfo) {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 
 		options.CurveServerCertificate = config.ServerCertificate;
 		options.CurveCertificate = new NetMQCertificate();
-		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(authToken, agentGuid, AgentVersion: 1, AgentName: AgentNameGenerator.GenerateFrom(agentGuid))).ToArray();
+		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(authToken, agentInfo)).ToArray();
 		
 		await new RpcLauncher(config, socket).Launch();
 	}

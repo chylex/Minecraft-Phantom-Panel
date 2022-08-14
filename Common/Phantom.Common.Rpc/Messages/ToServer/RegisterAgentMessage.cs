@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using Phantom.Common.Data;
 using Phantom.Common.Rpc.Message;
 
 namespace Phantom.Common.Rpc.Messages.ToServer;
@@ -6,9 +7,7 @@ namespace Phantom.Common.Rpc.Messages.ToServer;
 [MessagePackObject]
 public sealed record RegisterAgentMessage(
 	[property: Key(0)] string AuthToken,
-	[property: Key(1)] Guid AgentGuid,
-	[property: Key(2)] int AgentVersion,
-	[property: Key(3)] string AgentName
+	[property: Key(1)] AgentInfo AgentInfo
 ) : IMessageToServer {
 	public Task Accept(IMessageToServerListener listener) {
 		return listener.HandleAgentAuthentication(this);

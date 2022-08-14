@@ -54,7 +54,6 @@ try {
 	}
 
 	ServiceConfiguration.AgentToken = agentToken;
-	PhantomLogger.Root.Information("Auth token for agents: {AuthToken}", agentToken);
 
 	var certificate = await CertificateFiles.CreateOrLoad(secretsPath);
 	if (certificate is null) {

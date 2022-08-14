@@ -51,6 +51,7 @@ static class AgentTokenFile {
 		}
 
 		TokenGenerator.GetBytesOrThrow(agentToken);
+		Logger.Information("Loaded existing agent token file.");
 		return agentToken;
 	}
 }
