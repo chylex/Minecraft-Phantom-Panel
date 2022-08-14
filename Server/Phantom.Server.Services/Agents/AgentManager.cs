@@ -10,6 +10,8 @@ public sealed class AgentManager {
 
 	public AgentAuthToken AuthToken { get; }
 	
+	public ICollection<AgentInfo> Agents => agents.Values;
+
 	internal AgentManager(AgentAuthToken authToken) {
 		this.AuthToken = authToken;
 	}
@@ -18,7 +20,7 @@ public sealed class AgentManager {
 		if (!AuthToken.Check(message.AuthToken)) {
 			return RegisterAgentResultMessage.WithError("Invalid auth token.");
 		}
-		else if (!agents.TryAdd(message.AgentGuid, new AgentInfo(connection, message.AgentVersion))) {
+		else if (!agents.TryAdd(message.AgentGuid, new AgentInfo(message.AgentGuid, connection, message.AgentVersion, message.AgentName))) {
 			return RegisterAgentResultMessage.WithError("Agent registration failed.");
 		}
 		else {

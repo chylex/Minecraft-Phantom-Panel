@@ -47,11 +47,13 @@ try {
 	if (serverCertificate is null) {
 		Environment.Exit(1);
 	}
+	
+	Guid agentGuid = Guid.NewGuid();
 
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
 
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), serverAuthToken);
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), serverAuthToken, agentGuid);
 
 
 	void Ignore() {

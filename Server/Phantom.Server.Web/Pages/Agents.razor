@@ -1,0 +1,12 @@
+﻿@page "/agents"
+@using Phantom.Server.Services
+
+<h1>Agents (@Services.AgentManager.Agents.Count)</h1>
+
+@foreach (var agent in Services.AgentManager.Agents) {
+  <p>@agent.Guid - @agent.Name</p>
+}
+
+@code {
+
+}
