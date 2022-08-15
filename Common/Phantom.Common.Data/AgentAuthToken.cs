@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using System.Text;
 using MessagePack;
 using Phantom.Utils.Cryptography;
@@ -7,6 +8,7 @@ using Phantom.Utils.IO;
 namespace Phantom.Common.Data;
 
 [MessagePackObject]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed class AgentAuthToken {
 	private const int MinimumTokenLength = 30;
 	private const int MaximumTokenLength = 100;
@@ -17,7 +19,7 @@ public sealed class AgentAuthToken {
 	[IgnoreMember]
 	private readonly byte[] bytes;
 
-	private AgentAuthToken(string? value) {
+	public AgentAuthToken(string? value) {
 		if (value == null) {
 			throw new ArgumentNullException(nameof(value));
 		}
@@ -46,10 +48,6 @@ public sealed class AgentAuthToken {
 		Files.RequireMaximumFileSize(filePath, MaximumTokenLength + 1);
 		string contents = await File.ReadAllTextAsync(filePath, Encoding.ASCII);
 		return new AgentAuthToken(contents.Trim());
-	}
-
-	public static AgentAuthToken FromString(string? authToken) {
-		return new AgentAuthToken(authToken);
 	}
 
 	public static AgentAuthToken Generate() {

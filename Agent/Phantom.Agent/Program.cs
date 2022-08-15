@@ -29,7 +29,7 @@ try {
 		(authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
 		agentName = EnvironmentVariables.GetString("AGENT_NAME").OrGetDefault(() => AgentNameGenerator.GenerateFrom(agentGuid));
 		maxInstances = (ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES").OrThrow; // TODO
-		maxMemory = RamAllocationUnits.FromMegabytes(EnvironmentVariables.GetInteger("MAX_MEMORY").OrThrow);
+		maxMemory = RamAllocationUnits.FromString(EnvironmentVariables.GetString("MAX_MEMORY").OrThrow);
 	} catch (Exception e) {
 		PhantomLogger.Root.Fatal(e.Message);
 		Environment.Exit(1);

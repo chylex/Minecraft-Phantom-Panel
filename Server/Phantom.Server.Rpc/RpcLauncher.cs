@@ -40,6 +40,10 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		// TODO optimize msg
 		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
 			config.Logger.Verbose("Received {Bytes} B message from {RoutingId}.", bytes.Length, routingId);
+
+			if (bytes.Length == 0) {
+				continue;
+			}
 			
 			if (!listeners.TryGetValue(routingId, out var listener)) {
 				listeners[routingId] = listener = listenerFactory(new RpcClientConnection(socket, routingId));
