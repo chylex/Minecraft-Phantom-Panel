@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Server.Web", "Serve
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Agent", "Agent\Phantom.Agent\Phantom.Agent.csproj", "{418BE1BF-9F63-4B46-B4E4-DF64C3B3DDA7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Server.Application", "Server\Phantom.Server.Application\Phantom.Server.Application.csproj", "{A0F1C595-96B6-4DBF-8C16-6B99223F8F35}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Server", "Server\Phantom.Server\Phantom.Server.csproj", "{A0F1C595-96B6-4DBF-8C16-6B99223F8F35}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utils", "Utils", "{AA217EB8-E480-456B-BDF3-39419EF2AD85}"
 EndProject

@@ -3,7 +3,7 @@ using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Serilog;
 
-namespace Phantom.Server.Application;
+namespace Phantom.Server;
 
 static class CertificateFiles {
 	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(CertificateFiles));

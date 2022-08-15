@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Phantom.Common.Rpc;
-using Phantom.Server.Application;
+using Phantom.Server;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Rpc;
