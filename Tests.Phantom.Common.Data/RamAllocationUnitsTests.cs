@@ -42,4 +42,48 @@ public sealed class RamAllocationUnitsTests {
 			Assert.That(RamAllocationUnits.FromMegabytes(value).InMegabytes, Is.EqualTo(value));
 		}
 	}
+
+	public sealed class FromString {
+		private Action CallFromString(string definition) {
+			return () => RamAllocationUnits.FromString(definition);
+		}
+
+		[Test]
+		public void EmptyThrows() {
+			Assert.That(CallFromString(""), Throws.Exception.TypeOf<ArgumentOutOfRangeException>().With.Message.StartsWith("Must not be empty."));
+		}
+
+		[Test]
+		public void MissingUnitThrows() {
+			Assert.That(CallFromString("256"), Throws.Exception.TypeOf<ArgumentOutOfRangeException>().With.Message.StartsWith("Must end with "));
+		}
+		
+		[Test]
+		public void InvalidUnitThrows() {
+			Assert.That(CallFromString("256R"), Throws.Exception.TypeOf<ArgumentOutOfRangeException>().With.Message.StartsWith("Must end with "));
+		}
+		
+		[Test]
+		public void UnparseableValueThrows() {
+			Assert.That(CallFromString("123A5M"), Throws.Exception.TypeOf<ArgumentOutOfRangeException>().With.Message.StartsWith("Must begin with a number."));
+		}
+
+		[TestCase("256m", 256)]
+		[TestCase("256M", 256)]
+		[TestCase("512M", 512)]
+		[TestCase("65536M", 65536)]
+		[TestCase("16777216M", 16777216)]
+		public void ValidDefinitionInMegabytesIsParsedCorrectly(string definition, int megabytes) {
+			Assert.That(RamAllocationUnits.FromString(definition).InMegabytes, Is.EqualTo(megabytes));
+		}
+
+		[TestCase("1g", 1024)]
+		[TestCase("1G", 1024)]
+		[TestCase("8G", 8192)]
+		[TestCase("64G", 65536)]
+		[TestCase("16384G", 16777216)]
+		public void ValidDefinitionInGigabytesIsParsedCorrectly(string definition, int megabytes) {
+			Assert.That(RamAllocationUnits.FromString(definition).InMegabytes, Is.EqualTo(megabytes));
+		}
+	}
 }
