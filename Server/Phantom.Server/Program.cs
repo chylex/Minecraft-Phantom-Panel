@@ -48,7 +48,7 @@ try {
 		}
 	}
 
-	string? agentToken = await AgentTokenFile.CreateOrLoad(secretsPath);
+	var agentToken = await AgentTokenFile.CreateOrLoad(secretsPath);
 	if (agentToken == null) {
 		Environment.Exit(1);
 	}

@@ -14,28 +14,31 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 });
 
 try {
+	Guid agentGuid = Guid.NewGuid();
+
 	string serverHost;
 	ushort serverPort;
-	AuthTokenSource authTokenSource;
+	string? authToken;
+	string? authTokenFilePath;
+	string agentName;
+	ushort maxInstances;
+	RamAllocationUnits maxMemory;
 	try {
 		serverHost = EnvironmentVariables.GetString("SERVER_HOST").OrThrow;
 		serverPort = EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401);
-
-		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
-
-		authTokenSource = new AuthTokenSource {
-			Token = authToken,
-			TokenFilePath = authTokenFilePath
-		};
+		(authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
+		agentName = EnvironmentVariables.GetString("AGENT_NAME").OrGetDefault(() => AgentNameGenerator.GenerateFrom(agentGuid));
+		maxInstances = (ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES").OrThrow; // TODO
+		maxMemory = RamAllocationUnits.FromMegabytes(EnvironmentVariables.GetInteger("MAX_MEMORY").OrThrow);
 	} catch (Exception e) {
 		PhantomLogger.Root.Fatal(e.Message);
 		Environment.Exit(1);
 		return;
 	}
 
-	string serverAuthToken;
+	AgentAuthToken agentAuthToken;
 	try {
-		serverAuthToken = authTokenSource.Read();
+		agentAuthToken = await AgentTokenSource.Read(authToken, authTokenFilePath);
 	} catch (Exception e) {
 		PhantomLogger.Root.Fatal(e, "Error reading auth token.");
 		Environment.Exit(1);
@@ -49,16 +52,14 @@ try {
 	if (serverCertificate is null) {
 		Environment.Exit(1);
 	}
-	
-	Guid agentGuid = Guid.NewGuid();
-	
+
 	// TODO
-	AgentInfo agentInfo = new AgentInfo(agentGuid, Version: 1, Name: AgentNameGenerator.GenerateFrom(agentGuid), MaxInstances: 5, MaxMemory: RamAllocationUnits.FromMegabytesFloored(2048));
+	AgentInfo agentInfo = new AgentInfo(agentGuid, Version: 1, agentName, maxInstances, maxMemory);
 
 	AgentServices agent = new AgentServices();
 	agent.CommandListeners.Add(new TestCommandListener());
 
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), serverAuthToken, agentInfo);
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo);
 
 
 	void Ignore() {

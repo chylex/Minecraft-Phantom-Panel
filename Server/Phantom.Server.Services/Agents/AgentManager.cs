@@ -22,7 +22,7 @@ public sealed class AgentManager {
 	}
 
 	internal RegisterAgentResultMessage RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
-		if (!AuthToken.Check(message.AuthToken)) {
+		if (!AuthToken.FixedTimeEquals(message.AuthToken)) {
 			return RegisterAgentResultMessage.WithError("Invalid auth token.");
 		}
 		else if (!agents.TryRegister(new AgentConnection(connection, message.AgentInfo))) {

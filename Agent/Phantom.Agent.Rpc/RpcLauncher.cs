@@ -8,7 +8,7 @@ using Phantom.Common.Rpc.Messages.ToServer;
 namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
-	public static async Task Launch(RpcConfiguration config, string authToken, AgentInfo agentInfo) {
+	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo) {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 

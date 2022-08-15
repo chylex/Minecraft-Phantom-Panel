@@ -9,5 +9,10 @@
   <ItemGroup>
     <PackageReference Include="MessagePack.Annotations" Version="2.4.35" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Cryptography\Phantom.Utils.Cryptography.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
+  </ItemGroup>
 
 </Project>
