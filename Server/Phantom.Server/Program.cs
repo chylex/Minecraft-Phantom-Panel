@@ -56,7 +56,7 @@ try {
 	ServiceConfiguration.AgentToken = agentToken;
 
 	var certificate = await CertificateFiles.CreateOrLoad(secretsPath);
-	if (certificate is null) {
+	if (certificate == null) {
 		Environment.Exit(1);
 	}
 

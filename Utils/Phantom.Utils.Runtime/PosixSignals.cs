@@ -3,12 +3,12 @@
 namespace Phantom.Utils.Runtime;
 
 public static class PosixSignals {
-	public static void RegisterCancellation(CancellationTokenSource cancellationTokenSource, Action callback) {
+	public static void RegisterCancellation(CancellationTokenSource cancellationTokenSource, Action? callback = null) {
 		void Shutdown(PosixSignalContext context) {
 			context.Cancel = true;
 			if (!cancellationTokenSource.IsCancellationRequested) {
 				cancellationTokenSource.Cancel();
-				callback();
+				callback?.Invoke();
 			}
 		}
 

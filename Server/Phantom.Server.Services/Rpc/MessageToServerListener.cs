@@ -13,7 +13,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		this.connection = connection;
 	}
 
-	public async Task HandleAgentAuthentication(RegisterAgentMessage message) {
+	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
 		RegisterAgentResultMessage result;
 		
 		lock (this) {
@@ -31,5 +31,11 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		}
 
 		await connection.Send(result);
+	}
+
+	public Task HandleUnregisterAgent(UnregisterAgentMessage message) {
+		Services.AgentManager.UnregisterAgent(message, connection);
+		connection.Dispose();
+		return Task.CompletedTask;
 	}
 }

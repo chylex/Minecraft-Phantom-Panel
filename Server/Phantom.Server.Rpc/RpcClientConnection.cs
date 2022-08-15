@@ -5,7 +5,7 @@ using Phantom.Common.Rpc.Messages;
 
 namespace Phantom.Server.Rpc; 
 
-public readonly struct RpcClientConnection {
+public readonly struct RpcClientConnection : IDisposable {
 	private readonly ServerSocket socket;
 	private readonly uint routingId;
 
@@ -14,10 +14,18 @@ public readonly struct RpcClientConnection {
 		this.routingId = routingId;
 	}
 
+	public bool IsSame(RpcClientConnection other) {
+		return this.routingId == other.routingId;
+	}
+	
 	public async Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
 		byte[] bytes = MessageRegistries.ToAgent.Write(message).ToArray();
 		if (bytes.Length > 0) {
 			await socket.SendAsync(routingId, bytes);
 		}
+	}
+
+	public void Dispose() {
+		socket.Dispose();
 	}
 }

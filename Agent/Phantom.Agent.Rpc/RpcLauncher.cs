@@ -8,7 +8,7 @@ using Phantom.Common.Rpc.Messages.ToServer;
 namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
-	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo) {
+	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 
@@ -16,13 +16,15 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		options.CurveCertificate = new NetMQCertificate();
 		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(authToken, agentInfo)).ToArray();
 		
-		await new RpcLauncher(config, socket).Launch();
+		await new RpcLauncher(config, socket, messageListenerFactory).Launch();
 	}
 
 	private readonly RpcConfiguration config;
+	private readonly Func<ClientSocket, IMessageToAgentListener> messageListenerFactory;
 
-	private RpcLauncher(RpcConfiguration config, ClientSocket socket) : base(socket) {
+	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) : base(socket) {
 		this.config = config;
+		this.messageListenerFactory = messageListenerFactory;
 	}
 
 	protected override void Connect(ClientSocket socket) {
@@ -36,7 +38,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 
 	protected override async Task Run(ClientSocket socket) {
 		var cancellationToken = config.CancellationToken;
-		var listener = new MessageListener(socket);
+		var listener = messageListenerFactory(socket);
 
 		// TODO optimize msg
 		await foreach (var bytes in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {

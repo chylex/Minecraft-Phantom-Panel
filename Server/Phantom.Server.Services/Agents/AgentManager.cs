@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
+using Phantom.Common.Rpc.Message;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
@@ -34,6 +35,18 @@ public sealed class AgentManager {
 		}
 	}
 
+	internal void UnregisterAgent(UnregisterAgentMessage message, RpcClientConnection connection) {
+		agents.TryUnregister(message.AgentGuid, connection);
+	}
+
+	public async Task SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
+		var connection = agents.GetConnection(guid);
+		if (connection != null) {
+			await connection.SendMessage(message);
+		}
+		// TODO handle missing agent?
+	}
+
 	private sealed class ObservableAgents : ObservableState<ImmutableArray<AgentInfo>> {
 		private readonly Dictionary<Guid, AgentConnection> agents = new ();
 		private readonly ReaderWriterLockSlim agentsLock = new (LockRecursionPolicy.NoRecursion);
@@ -48,6 +61,25 @@ public sealed class AgentManager {
 			}
 
 			return success;
+		}
+
+		public bool TryUnregister(Guid guid, RpcClientConnection connection) {
+			agentsLock.EnterWriteLock();
+			bool success = agents.TryGetValue(guid, out var agentConnection) && agentConnection.IsSame(connection) && agents.Remove(guid);
+			agentsLock.ExitWriteLock();
+
+			if (success) {
+				Update();
+			}
+			
+			return success;
+		}
+
+		public AgentConnection? GetConnection(Guid guid) {
+			agentsLock.EnterReadLock();
+			var connection = agents.TryGetValue(guid, out var c) ? c : null;
+			agentsLock.ExitReadLock();
+			return connection;
 		}
 
 		protected override ImmutableArray<AgentInfo> GetData() {

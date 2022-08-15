@@ -1,4 +1,5 @@
 ﻿using Phantom.Common.Data;
+using Phantom.Common.Rpc.Message;
 using Phantom.Server.Rpc;
 
 namespace Phantom.Server.Services.Agents; 
@@ -11,5 +12,13 @@ internal sealed class AgentConnection {
 	internal AgentConnection(RpcClientConnection connection, AgentInfo info) {
 		this.connection = connection;
 		this.Info = info;
+	}
+
+	public bool IsSame(RpcClientConnection connection) {
+		return this.connection.IsSame(connection);
+	}
+
+	public async Task SendMessage<TMessage>(TMessage message) where TMessage : IMessageToAgent {
+		await connection.Send(message);
 	}
 }

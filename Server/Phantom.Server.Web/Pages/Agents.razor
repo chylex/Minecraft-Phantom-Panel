@@ -2,7 +2,7 @@
 
 <h1>Agents</h1>
 
-<table class="table">
+<table class="table align-middle">
   <thead>
     <tr>
       <th>Name</th>
@@ -10,6 +10,7 @@
       <th class="text-end">Memory</th>
       <th class="text-end">Version</th>
       <th>Identifier</th>
+      <th>Actions</th>
     </tr>
   </thead>
   @if (!agents.IsEmpty) {
@@ -23,13 +24,16 @@
           <td>
             <code class="text-uppercase">@agent.Guid.ToString()</code>
           </td>
+          <td>
+            <button type="button" class="btn btn-danger btn-sm" @onclick="@(_ => ShutdownAgent(agent.Guid))">Shutdown</button>
+          </td>
         </tr>
       }
     </tbody>
   }
   <tfoot>
     <tr>
-      <td colspan="5">
+      <td colspan="6">
         @(agents.IsEmpty ? "No agents registered." : "")
         Register agents using the token: <code>@Services.AgentManager.AuthToken</code>
       </td>
@@ -37,6 +41,7 @@
   </tfoot>
 </table>
 @using Phantom.Common.Data
+@using Phantom.Common.Rpc.Messages.ToAgent
 @using Phantom.Server.Services
 @using System.Collections.Immutable
 @implements IDisposable
@@ -47,9 +52,13 @@
 
   protected override void OnInitialized() {
     Services.AgentManager.AgentInfoChanged.Subscribe(this, agents => {
-      this.agents = agents;
+      this.agents = agents.Sort(static(a1, a2) => a1.Name.CompareTo(a2.Name));
       InvokeAsync(StateHasChanged);
     });
+  }
+
+  private async Task ShutdownAgent(Guid guid) {
+    await Services.AgentManager.SendMessage(guid, new ShutdownAgentMessage());
   }
 
   void IDisposable.Dispose() {

@@ -10,7 +10,7 @@ public sealed class AgentServices {
 	public CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
 
 	public AgentServices() {
-		CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
+		this.CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
 	}
 
 	public async Task Shutdown() {

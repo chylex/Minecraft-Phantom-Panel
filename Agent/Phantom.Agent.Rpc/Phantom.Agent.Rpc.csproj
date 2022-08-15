@@ -12,6 +12,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Rpc\Phantom.Common.Rpc.csproj" />
+    <ProjectReference Include="..\Phantom.Agent.Services\Phantom.Agent.Services.csproj" />
   </ItemGroup>
 
 </Project>

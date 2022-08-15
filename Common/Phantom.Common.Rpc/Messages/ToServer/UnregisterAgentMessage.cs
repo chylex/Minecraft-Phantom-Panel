@@ -1,15 +1,13 @@
 ﻿using MessagePack;
-using Phantom.Common.Data;
 using Phantom.Common.Rpc.Message;
 
 namespace Phantom.Common.Rpc.Messages.ToServer;
 
 [MessagePackObject]
-public sealed record RegisterAgentMessage(
-	[property: Key(0)] AgentAuthToken AuthToken,
-	[property: Key(1)] AgentInfo AgentInfo
+public sealed record UnregisterAgentMessage(
+	[property: Key(0)] Guid AgentGuid
 ) : IMessageToServer {
 	public Task Accept(IMessageToServerListener listener) {
-		return listener.HandleRegisterAgent(this);
+		return listener.HandleUnregisterAgent(this);
 	}
 }
