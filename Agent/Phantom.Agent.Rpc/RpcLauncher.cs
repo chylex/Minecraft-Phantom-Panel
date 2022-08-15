@@ -16,14 +16,16 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		options.CurveCertificate = new NetMQCertificate();
 		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(authToken, agentInfo)).ToArray();
 		
-		await new RpcLauncher(config, socket, messageListenerFactory).Launch();
+		await new RpcLauncher(config, socket, agentInfo, messageListenerFactory).Launch();
 	}
 
 	private readonly RpcConfiguration config;
+	private readonly AgentInfo agentInfo;
 	private readonly Func<ClientSocket, IMessageToAgentListener> messageListenerFactory;
 
-	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) : base(socket) {
+	private RpcLauncher(RpcConfiguration config, ClientSocket socket, AgentInfo agentInfo, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) : base(socket) {
 		this.config = config;
+		this.agentInfo = agentInfo;
 		this.messageListenerFactory = messageListenerFactory;
 	}
 
@@ -45,5 +47,9 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 			config.Logger.Verbose("Received {Bytes} B message from server.", bytes.Length);
 			MessageRegistries.ToAgent.Handle(bytes, listener, cancellationToken);
 		}
+	}
+
+	protected override async Task Disconnect(ClientSocket socket) {
+		await socket.SendMessage(new UnregisterAgentMessage(agentInfo.Guid));
 	}
 }

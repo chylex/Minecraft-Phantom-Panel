@@ -58,6 +58,7 @@
   }
 
   private async Task ShutdownAgent(Guid guid) {
+    // TODO disable button
     await Services.AgentManager.SendMessage(guid, new ShutdownAgentMessage());
   }
 

@@ -37,6 +37,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 		} catch (OperationCanceledException) {
 			// ignore
 		} finally {
+			await Disconnect(socket);
 			socket.Dispose();
 			NetMQConfig.Cleanup();
 		}
@@ -44,4 +45,8 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 	
 	protected abstract void Connect(TSocket socket);
 	protected abstract Task Run(TSocket socket);
+	
+	protected virtual Task Disconnect(TSocket socket) {
+		return Task.CompletedTask;
+	}
 }

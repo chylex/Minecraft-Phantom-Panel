@@ -30,7 +30,6 @@ sealed class MessageListener : IMessageToAgentListener {
 	}
 
 	public Task HandleShutdownAgent(ShutdownAgentMessage message) {
-		
 		shutdownTokenSource.Cancel();
 		return Task.CompletedTask;
 	}
