@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@namespace Phantom.Server.Web.Layout
+
+<div class="top-row ps-3 navbar navbar-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="">Phantom Panel</a>
     <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -11,17 +13,14 @@
   <nav class="flex-column">
     <div class="nav-item">
       <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-        <span class="oi oi-home" aria-hidden="true"></span><span class="nav-label">Home</span>
+        <span class="oi oi-home" aria-hidden="true"></span>
+        <span class="nav-label">Home</span>
       </NavLink>
     </div>
     <div class="nav-item">
       <NavLink class="nav-link" href="agents">
-        <span class="oi oi-plus" aria-hidden="true"></span><span class="nav-label">Agents</span>
-      </NavLink>
-    </div>
-    <div class="nav-item">
-      <NavLink class="nav-link" href="fetchdata">
-        <span class="oi oi-list-rich" aria-hidden="true"></span><span class="nav-label">Fetch data</span>
+        <span class="oi oi-plus" aria-hidden="true"></span>
+        <span class="nav-label">Agents</span>
       </NavLink>
     </div>
   </nav>

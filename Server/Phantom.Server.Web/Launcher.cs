@@ -29,7 +29,7 @@ public static class Launcher {
 
 		builder.Services.AddAuthentication(ConfigureAuthentication).AddIdentityCookies(static _ => {});
 		builder.Services.AddIdentityCore<IdentityUser>(ConfigureIdentity).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
-		builder.Services.AddRazorPages();
+		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
 		builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 
