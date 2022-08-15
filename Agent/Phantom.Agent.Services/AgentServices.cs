@@ -1,8 +1,9 @@
 ﻿using Phantom.Agent.Command;
+using Phantom.Agent.Services.Command;
 
-namespace Phantom.Agent;
+namespace Phantom.Agent.Services;
 
-sealed class AgentServices {
+public sealed class AgentServices {
 	public InstanceManager InstanceManager { get; } = new ();
 
 	public CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();

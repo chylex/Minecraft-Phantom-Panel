@@ -1,8 +1,8 @@
-﻿using Phantom.Agent.Command;
+﻿using Phantom.Agent.Services.Command;
 
-namespace Phantom.Agent.Commands; 
+namespace Phantom.Agent.Services.Commands; 
 
-sealed record SendCommandToInstanceCommand(Guid InstanceGuid, string Command) : BaseCommand<InstanceManager.SendCommandResult> {
+public sealed record SendCommandToInstanceCommand(Guid InstanceGuid, string Command) : BaseCommand<InstanceManager.SendCommandResult> {
 	protected override async Task<InstanceManager.SendCommandResult> Run(AgentServices agent) {
 		return await agent.InstanceManager.SendCommand(InstanceGuid, Command);
 	}

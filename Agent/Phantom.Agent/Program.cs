@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent;
-using Phantom.Agent.Commands;
 using Phantom.Agent.Rpc;
+using Phantom.Agent.Services;
+using Phantom.Agent.Services.Commands;
 using Phantom.Common.Data;
 using Phantom.Common.Rpc;
 using Phantom.Utils.Logging;
@@ -44,7 +45,7 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 
 	string serverPublicKeyPath = Path.GetFullPath("./secrets/agent.key");
-	var serverCertificate = await Certificates.LoadPublicKey(serverPublicKeyPath);
+	var serverCertificate = await CertificateFiles.LoadPublicKey(serverPublicKeyPath);
 	if (serverCertificate is null) {
 		Environment.Exit(1);
 	}

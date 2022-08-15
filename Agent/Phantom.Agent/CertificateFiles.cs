@@ -1,11 +1,12 @@
 ﻿using NetMQ;
+using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent;
 
-static class Certificates {
-	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(Certificates));
+static class CertificateFiles {
+	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(CertificateFiles));
 
 	public static async Task<NetMQCertificate?> LoadPublicKey(string publicKeyFilePath) {
 		if (!File.Exists(publicKeyFilePath)) {
@@ -14,6 +15,7 @@ static class Certificates {
 		}
 
 		try {
+			Files.RequireMaximumFileSize(publicKeyFilePath, 1024);
 			byte[] publicKey = await File.ReadAllBytesAsync(publicKeyFilePath);
 			return NetMQCertificate.FromPublicKey(publicKey);
 		} catch (Exception e) {

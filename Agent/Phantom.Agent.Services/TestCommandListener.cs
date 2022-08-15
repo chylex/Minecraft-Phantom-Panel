@@ -1,8 +1,8 @@
-﻿using Phantom.Agent.Command;
+﻿using Phantom.Agent.Services.Command;
 
-namespace Phantom.Agent;
+namespace Phantom.Agent.Services;
 
-sealed class TestCommandListener : CommandListener {
+public sealed class TestCommandListener : CommandListener {
 	public override void OnCreateInstance(Guid instanceGuid) {
 		Console.WriteLine("Created instance: " + instanceGuid);
 	}

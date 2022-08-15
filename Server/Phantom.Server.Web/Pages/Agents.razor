@@ -8,8 +8,8 @@
       <th>Name</th>
       <th class="text-end">Instances</th>
       <th class="text-end">Memory</th>
-      <th>Identifier</th>
       <th>Version</th>
+      <th>Identifier</th>
     </tr>
   </thead>
   @if (!agents.IsEmpty) {
@@ -19,10 +19,10 @@
           <td>@agent.Name</td>
           <td class="text-end">? / @agent.MaxInstances</td>
           <td class="text-end">? / @agent.MaxMemory.InMegabytes MB</td>
+          <td>@agent.Version</td>
           <td>
             <code class="text-uppercase">@agent.Guid.ToString()</code>
           </td>
-          <td>@agent.Version</td>
         </tr>
       }
     </tbody>

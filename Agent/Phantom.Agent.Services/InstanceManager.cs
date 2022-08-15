@@ -3,9 +3,9 @@ using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Properties;
 
-namespace Phantom.Agent;
+namespace Phantom.Agent.Services;
 
-sealed class InstanceManager {
+public sealed class InstanceManager {
 	private const string JavaHomePath = @"C:\Users\Dan\.jdks\openjdk-17.0.1";
 	private const string ServerJarPath = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\server.jar";
 	private const string InstanceBasePath = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\";
