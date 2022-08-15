@@ -8,6 +8,7 @@ internal sealed class AgentConnection {
 	private readonly RpcClientConnection connection;
 
 	public AgentInfo Info { get; }
+	public bool IsClosed => connection.IsClosed;
 
 	internal AgentConnection(RpcClientConnection connection, AgentInfo info) {
 		this.connection = connection;

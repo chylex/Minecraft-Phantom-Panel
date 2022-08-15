@@ -5,9 +5,11 @@ using Phantom.Common.Rpc.Messages;
 
 namespace Phantom.Server.Rpc; 
 
-public readonly struct RpcClientConnection : IDisposable {
+public sealed class RpcClientConnection {
 	private readonly ServerSocket socket;
 	private readonly uint routingId;
+
+	public bool IsClosed { get; internal set; }
 
 	internal RpcClientConnection(ServerSocket socket, uint routingId) {
 		this.socket = socket;
@@ -19,13 +21,13 @@ public readonly struct RpcClientConnection : IDisposable {
 	}
 	
 	public async Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
+		if (IsClosed) {
+			return; // TODO
+		}
+		
 		byte[] bytes = MessageRegistries.ToAgent.Write(message).ToArray();
 		if (bytes.Length > 0) {
 			await socket.SendAsync(routingId, bytes);
 		}
-	}
-
-	public void Dispose() {
-		socket.Dispose();
 	}
 }

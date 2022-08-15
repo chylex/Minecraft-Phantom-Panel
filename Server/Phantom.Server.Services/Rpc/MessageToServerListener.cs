@@ -8,6 +8,8 @@ namespace Phantom.Server.Services.Rpc;
 public sealed class MessageToServerListener : IMessageToServerListener {
 	private readonly RpcClientConnection connection;
 	private Guid? agentGuid;
+	
+	public bool IsDisposed { get; private set; }
 
 	public MessageToServerListener(RpcClientConnection connection) {
 		this.connection = connection;
@@ -34,8 +36,8 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	}
 
 	public Task HandleUnregisterAgent(UnregisterAgentMessage message) {
+		IsDisposed = true;
 		Services.AgentManager.UnregisterAgent(message, connection);
-		connection.Dispose();
 		return Task.CompletedTask;
 	}
 }

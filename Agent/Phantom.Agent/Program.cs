@@ -55,7 +55,7 @@ try {
 	
 	agentServices.CommandListeners.Add(new TestCommandListener());
 
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, clientSocket => new MessageListener(clientSocket, cancellationTokenSource));
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, cancellationTokenSource));
 	
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 	await agentServices.Shutdown();

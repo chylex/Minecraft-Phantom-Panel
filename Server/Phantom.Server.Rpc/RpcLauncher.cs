@@ -35,7 +35,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	
 	protected override async Task Run(ServerSocket socket) {
 		var cancellationToken = config.CancellationToken;
-		var listeners = new Dictionary<ulong, IMessageToServerListener>();
+		var listeners = new Dictionary<ulong, (RpcClientConnection, IMessageToServerListener)>();
 		
 		// TODO optimize msg
 		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
@@ -45,11 +45,18 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 				continue;
 			}
 			
-			if (!listeners.TryGetValue(routingId, out var listener)) {
-				listeners[routingId] = listener = listenerFactory(new RpcClientConnection(socket, routingId));
+			if (!listeners.TryGetValue(routingId, out var tuple)) {
+				var clientConnection = new RpcClientConnection(socket, routingId);
+				listeners[routingId] = tuple = (clientConnection, listenerFactory(clientConnection));
 			}
 			
+			var listener = tuple.Item2;
 			MessageRegistries.ToServer.Handle(bytes, listener, cancellationToken);
+
+			if (listener.IsDisposed) {
+				listeners.Remove(routingId);
+				tuple.Item1.IsClosed = true;
+			}
 		}
 	}
 }

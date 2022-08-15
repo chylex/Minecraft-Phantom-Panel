@@ -8,7 +8,7 @@ using Phantom.Common.Rpc.Messages.ToServer;
 namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
-	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) {
+	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo, Func<ClientSocket, IMessageToAgentListener> listenerFactory) {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 
@@ -16,7 +16,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		options.CurveCertificate = new NetMQCertificate();
 		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(authToken, agentInfo)).ToArray();
 		
-		await new RpcLauncher(config, socket, agentInfo, messageListenerFactory).Launch();
+		await new RpcLauncher(config, socket, agentInfo, listenerFactory).Launch();
 	}
 
 	private readonly RpcConfiguration config;

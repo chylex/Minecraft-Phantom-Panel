@@ -53,7 +53,13 @@ public sealed class AgentManager {
 
 		public bool TryRegister(AgentConnection agentConnection) {
 			agentsLock.EnterWriteLock();
-			bool success = agents.TryAdd(agentConnection.Info.Guid, agentConnection);
+			
+			var guid = agentConnection.Info.Guid;
+			bool success = !agents.TryGetValue(guid, out var oldConnection) || oldConnection.IsClosed;
+			if (success) {
+				agents[guid] = agentConnection;
+			}
+			
 			agentsLock.ExitWriteLock();
 
 			if (success) {
@@ -77,9 +83,11 @@ public sealed class AgentManager {
 
 		public AgentConnection? GetConnection(Guid guid) {
 			agentsLock.EnterReadLock();
-			var connection = agents.TryGetValue(guid, out var c) ? c : null;
-			agentsLock.ExitReadLock();
-			return connection;
+			try {
+				return agents.TryGetValue(guid, out var connection) ? connection : null;
+			} finally {
+				agentsLock.ExitReadLock();
+			}
 		}
 
 		protected override ImmutableArray<AgentInfo> GetData() {
