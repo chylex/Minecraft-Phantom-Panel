@@ -34,8 +34,9 @@ public static class EnvironmentVariables {
 			this.errorMessage = errorMessage;
 		}
 
-		public T OrThrow                   => HasValue ? value! : throw new Exception(errorMessage + ": " + variableName);
-		public T OrDefault(T defaultValue) => HasValue ? value! : defaultValue;
+		public T OrThrow                               => HasValue ? value! : throw new Exception(errorMessage + ": " + variableName);
+		public T OrDefault(T defaultValue)             => HasValue ? value! : defaultValue;
+		public T OrGetDefault(Func<T> getDefaultValue) => HasValue ? value! : getDefaultValue();
 
 		internal Value<TResult> Map<TResult>(Func<T, TResult> mapper, string mapperThrowingErrorMessage) where TResult : notnull {
 			if (kind is ValueKind.Missing or ValueKind.HasError) {
@@ -68,6 +69,10 @@ public static class EnvironmentVariables {
 		}
 		
 		return Value<(string?, string?)>.Of((leftValue, rightValue), leftValue == null ? rightVariableName : leftVariableName);
+	}
+
+	public static Value<int> GetInteger(string variableName) {
+		return GetString(variableName).Map(int.Parse, "Environment variable must be a 32-bit integer");
 	}
 
 	public static Value<ushort> GetPortNumber(string variableName) {

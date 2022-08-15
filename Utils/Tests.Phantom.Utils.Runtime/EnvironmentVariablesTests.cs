@@ -45,10 +45,15 @@ public class EnvironmentVariablesTests {
 		}
 
 		[Test]
-		public void MissingOrDefaultReturnsDefault() {
+		public void MissingOrDefaultReturnsDefaultValue() {
 			Assert.That(GetValue(VariableNameMissing).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
 		}
 
+		[Test]
+		public void MissingOrGetDefaultReturnsDefaultValue() {
+			Assert.That(GetValue(VariableNameMissing).OrGetDefault(() => ExampleValue), Is.EqualTo(ExampleValue));
+		}
+		
 		[Test]
 		public void ExistingOrThrowReturnsActualValue() {
 			Assume.That(ExampleValue, Is.Not.EqualTo(default));
@@ -60,6 +65,20 @@ public class EnvironmentVariablesTests {
 			Assume.That(ExampleValue, Is.Not.EqualTo(default));
 			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrDefault(default!), Is.EqualTo(ExampleValue));
 		}
+
+		[Test]
+		public void ExistingOrGetDefaultReturnsActualValue() {
+			Assume.That(ExampleValue, Is.Not.EqualTo(default));
+			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrGetDefault(static () => default!), Is.EqualTo(ExampleValue));
+		}
+
+		[Test]
+		public void ExistingOrGetDefaultDoesNotCallDefaultGetter() {
+			GetValue(CreateVariable(ExampleValueString)).OrGetDefault(static () => {
+				Assert.Fail();
+				return default!;
+			});
+		}
 	}
 
 	public sealed class GetString : Base<string> {
@@ -68,6 +87,25 @@ public class EnvironmentVariablesTests {
 
 		protected override EnvironmentVariables.Value<string> GetValue(string variableName) {
 			return EnvironmentVariables.GetString(variableName);
+		}
+	}
+
+	public sealed class GetInteger : Base<int> {
+		protected override int ExampleValue => 2_147_483_647;
+		protected override string ExampleValueString => "2147483647";
+
+		protected override EnvironmentVariables.Value<int> GetValue(string variableName) {
+			return EnvironmentVariables.GetInteger(variableName);
+		}
+
+		[Test]
+		public void UnparseableOrThrowThrows() {
+			Assert.That(CallGetValueOrThrow(CreateVariable("2147483648")), Throws.Exception.Message.StartsWith("Environment variable must be a 32-bit integer: " + VariableNameExistingPrefix));
+		}
+
+		[Test]
+		public void UnparseableOrDefaultReturnsDefaultValue() {
+			Assert.That(GetValue(CreateVariable("2147483648")).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
 		}
 	}
 
@@ -86,7 +124,7 @@ public class EnvironmentVariablesTests {
 
 		[Test]
 		public void UnparseableOrDefaultReturnsDefaultValue() {
-			Assert.That(GetValue(CreateVariable("654321")).OrDefault(12345), Is.EqualTo(12345));
+			Assert.That(GetValue(CreateVariable("654321")).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
 		}
 	}
 }
