@@ -49,7 +49,11 @@
 @code {
 
   private ImmutableArray<AgentInfo> agents = ImmutableArray<AgentInfo>.Empty;
-  private readonly Dictionary<Guid, AgentRow> agentRows = new();
+  private readonly Dictionary<Guid, AgentRow> agentRows = new ();
+
+  private sealed class AgentRow {
+    public bool IsShutdownButtonDisabled { get; set; } = false;
+  }
 
   protected override void OnInitialized() {
     Services.AgentManager.AgentsChanged.Subscribe(this, agents => {
@@ -77,10 +81,6 @@
 
   void IDisposable.Dispose() {
     Services.AgentManager.AgentsChanged.Unsubscribe(this);
-  }
-
-  private sealed class AgentRow {
-    public bool IsShutdownButtonDisabled { get; set; } = false;
   }
 
 }

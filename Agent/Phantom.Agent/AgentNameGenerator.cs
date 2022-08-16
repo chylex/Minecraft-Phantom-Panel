@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Agent;
 
-internal static class AgentNameGenerator {
+static class AgentNameGenerator {
 	private static readonly string[] Prefixes = {
 		"Abundant",
 		"Ancient",
