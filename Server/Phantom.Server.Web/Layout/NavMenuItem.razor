@@ -1,0 +1,24 @@
+﻿<div class="nav-item">
+  <NavLink class="nav-link" href="@Href" Match="@Match">
+    @if (Icon != null) {
+      <span class="oi oi-@Icon" aria-hidden="true"></span>
+    }
+    <span class="nav-label">@Label</span>
+  </NavLink>
+</div>
+
+@code {
+
+  [Parameter]
+  public string Href { get; set; } = "";
+
+  [Parameter]
+  public NavLinkMatch Match { get; set; }
+
+  [Parameter]
+  public string? Icon { get; set; }
+
+  [Parameter]
+  public string Label { get; set; } = "";
+
+}
