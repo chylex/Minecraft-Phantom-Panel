@@ -5,5 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />
+  </ItemGroup>
 
 </Project>

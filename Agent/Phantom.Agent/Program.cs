@@ -2,6 +2,7 @@
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Commands;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Rpc;
 using Phantom.Utils.Logging;
@@ -38,8 +39,6 @@ try {
 
 	var agentInfo = new AgentInfo(agentGuid, Version: 1, agentName, maxInstances, maxMemory);
 	var agentServices = new AgentServices();
-
-	agentServices.CommandListeners.Add(new TestCommandListener());
 
 	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, cancellationTokenSource));
 

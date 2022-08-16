@@ -4,6 +4,7 @@ using Phantom.Common.Rpc.Message;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
+using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;
 using Serilog;
@@ -12,7 +13,7 @@ namespace Phantom.Server.Services.Agents;
 
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
-	
+
 	private readonly ObservableAgents agents = new ();
 
 	public AgentAuthToken AuthToken { get; }
@@ -36,7 +37,9 @@ public sealed class AgentManager {
 	}
 
 	internal void UnregisterAgent(UnregisterAgentMessage message, RpcClientConnection connection) {
-		agents.TryUnregister(message.AgentGuid, connection);
+		if (agents.TryUnregister(message.AgentGuid, connection)) {
+			Logger.Information("Unregistered agent with GUID {Guid}.", message.AgentGuid);
+		}
 	}
 
 	public async Task SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
@@ -48,55 +51,34 @@ public sealed class AgentManager {
 	}
 
 	private sealed class ObservableAgents : ObservableState<ImmutableArray<AgentInfo>> {
-		private readonly Dictionary<Guid, AgentConnection> agents = new ();
-		private readonly ReaderWriterLockSlim agentsLock = new (LockRecursionPolicy.NoRecursion);
+		private readonly RwLockedDictionary<Guid, AgentConnection> agents = new (LockRecursionPolicy.NoRecursion);
 
 		public bool TryRegister(AgentConnection agentConnection) {
-			agentsLock.EnterWriteLock();
-			
-			var guid = agentConnection.Info.Guid;
-			bool success = !agents.TryGetValue(guid, out var oldConnection) || oldConnection.IsClosed;
-			if (success) {
-				agents[guid] = agentConnection;
-			}
-			
-			agentsLock.ExitWriteLock();
-
-			if (success) {
+			if (agents.TryAddOrReplace(agentConnection.Info.Guid, agentConnection, static oldConnection => oldConnection.IsClosed)) {
 				Update();
+				return true;
 			}
-
-			return success;
+			else {
+				return false;
+			}
 		}
 
 		public bool TryUnregister(Guid guid, RpcClientConnection connection) {
-			agentsLock.EnterWriteLock();
-			bool success = agents.TryGetValue(guid, out var agentConnection) && agentConnection.IsSame(connection) && agents.Remove(guid);
-			agentsLock.ExitWriteLock();
-
-			if (success) {
+			if (agents.TryRemove(guid, oldConnection => oldConnection.IsSame(connection))) {
 				Update();
+				return true;
 			}
-			
-			return success;
+			else {
+				return false;
+			}
 		}
 
 		public AgentConnection? GetConnection(Guid guid) {
-			agentsLock.EnterReadLock();
-			try {
-				return agents.TryGetValue(guid, out var connection) ? connection : null;
-			} finally {
-				agentsLock.ExitReadLock();
-			}
+			return agents.TryGetValue(guid, out var connection) ? connection : null;
 		}
 
 		protected override ImmutableArray<AgentInfo> GetData() {
-			agentsLock.EnterReadLock();
-			try {
-				return agents.Values.Select(static agent => agent.Info).ToImmutableArray();
-			} finally {
-				agentsLock.ExitReadLock();
-			}
+			return agents.ValuesCopy.Select(static agent => agent.Info).ToImmutableArray();
 		}
 	}
 }

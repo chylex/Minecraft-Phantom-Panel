@@ -4,9 +4,9 @@ using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Utils.Logging;
 using Serilog;
 
-namespace Phantom.Agent; 
+namespace Phantom.Agent.Services.Rpc; 
 
-sealed class MessageListener : IMessageToAgentListener {
+public sealed class MessageListener : IMessageToAgentListener {
 	private static ILogger Logger { get; } = PhantomLogger.Create<MessageListener>();
 
 	private readonly ClientSocket socket;
