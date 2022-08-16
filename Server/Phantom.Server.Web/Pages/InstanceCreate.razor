@@ -11,21 +11,31 @@
   <DataAnnotationsValidator />
 
   <div class="row">
-    <div class="col-xl mb-3">
+    <div class="col-xl-6 mb-3">
       <label for="instance-agent" class="form-label">Agent</label>
       <InputSelect id="instance-agent" class="form-select" @bind-Value="form.SelectedAgentGuid">
         <option value="" selected>Select agent that will run the instance...</option>
         @foreach (var agent in agentsByGuid.Values.OrderBy(static agent => agent.Guid)) {
-          <option value="@agent.Guid">@agent.Name (Maximum @agent.MaxInstances Instances, @agent.MaxMemory.InMegabytes MB RAM)</option>
+          <option value="@agent.Guid">@agent.Name (Max @agent.MaxInstances @(agent.MaxInstances == 1 ? "Instance" : "Instances"), @agent.MaxMemory.InMegabytes MB RAM)</option>
         }
       </InputSelect>
       <ValidationMessage For="() => form.SelectedAgentGuid" class="invalid-feedback" />
     </div>
 
-    <div class="col-xl mb-3">
+    <div class="col-xl-4 mb-3">
       <label for="instance-name" class="form-label">Instance Name</label>
       <InputText id="instance-name" class="form-control" type="text" @bind-Value="form.InstanceName" />
       <ValidationMessage For="() => form.InstanceName" class="invalid-feedback" />
+    </div>
+
+    <div class="col-xl-2 mb-3">
+      <label for="instance-server-kind" class="form-label">Server Software</label>
+      <InputSelect id="instance-server-kind" class="form-select" @bind-Value="form.MinecraftServerKind">
+        @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
+          <option value="@kind">@kind</option>
+        }
+      </InputSelect>
+      <ValidationMessage For="() => form.MinecraftServerKind" class="invalid-feedback" />
     </div>
   </div>
 
@@ -58,6 +68,8 @@
     [Required(ErrorMessage = "Instance name is required.")]
     [StringLength(100, ErrorMessage = "Instance name must be at most 100 characters.")]
     public string InstanceName { get; set; } = string.Empty;
+
+    public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
 
     public ushort MemoryUnits { get; set; } = 0;
     public uint MemoryInMegabytes => new RamAllocationUnits(MemoryUnits).InMegabytes;
