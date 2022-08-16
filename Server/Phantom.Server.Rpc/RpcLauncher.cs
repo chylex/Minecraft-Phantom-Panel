@@ -57,6 +57,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 			if (client.Listener.IsDisposed) {
 				client.Connection.IsClosed = true;
 				clients.Remove(routingId);
+				config.Logger.Verbose("Closed connection to {RoutingId}.", routingId);
 			}
 		}
 	}

@@ -12,26 +12,12 @@ PosixSignals.RegisterCancellation(cancellationTokenSource);
 
 try {
 	Guid agentGuid = Guid.NewGuid();
-
-	string serverHost;
-	ushort serverPort;
-	string? authToken;
-	string? authTokenFilePath;
-	string agentName;
-	ushort maxInstances;
-	RamAllocationUnits maxMemory;
-	try {
-		serverHost = EnvironmentVariables.GetString("SERVER_HOST").OrThrow;
-		serverPort = EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401);
-		(authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
-		agentName = EnvironmentVariables.GetString("AGENT_NAME").OrGetDefault(() => AgentNameGenerator.GenerateFrom(agentGuid));
-		maxInstances = (ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES").OrThrow; // TODO
-		maxMemory = RamAllocationUnits.FromString(EnvironmentVariables.GetString("MAX_MEMORY").OrThrow);
-	} catch (Exception e) {
-		PhantomLogger.Root.Fatal(e.Message);
-		Environment.Exit(1);
-		return;
+	
+	string DefaultAgentName() {
+		return AgentNameGenerator.GenerateFrom(agentGuid);
 	}
+
+	var (serverHost, serverPort, authToken, authTokenFilePath, agentName, maxInstances, maxMemory) = Variables.LoadOrExit(DefaultAgentName);
 
 	AgentAuthToken agentAuthToken;
 	try {
@@ -52,11 +38,11 @@ try {
 
 	var agentInfo = new AgentInfo(agentGuid, Version: 1, agentName, maxInstances, maxMemory);
 	var agentServices = new AgentServices();
-	
+
 	agentServices.CommandListeners.Add(new TestCommandListener());
 
 	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, cancellationTokenSource));
-	
+
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 	await agentServices.Shutdown();
 
