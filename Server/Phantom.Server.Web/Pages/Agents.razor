@@ -1,4 +1,9 @@
 ﻿@page "/agents"
+@using System.Collections.Immutable
+@using Phantom.Common.Data
+@using Phantom.Common.Rpc.Messages.ToAgent
+@using Phantom.Server.Services
+@implements IDisposable
 
 <h1>Agents</h1>
 
@@ -25,7 +30,7 @@
             <code class="text-uppercase">@agent.Guid.ToString()</code>
           </td>
           <td>
-            <button type="button" class="btn btn-danger btn-sm" @onclick="@(_ => ShutdownAgent(agent.Guid))" disabled="@GetOrAddAgentRow(agent.Guid).IsShutdownButtonDisabled">Shutdown</button>
+            <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@GetOrAddAgentRow(agent.Guid).IsShutdownButtonDisabled">Shutdown</button>
           </td>
         </tr>
       }
@@ -40,11 +45,6 @@
     </tr>
   </tfoot>
 </table>
-@using System.Collections.Immutable
-@using Phantom.Common.Data
-@using Phantom.Common.Rpc.Messages.ToAgent
-@using Phantom.Server.Services
-@implements IDisposable
 
 @code {
 
@@ -52,7 +52,7 @@
   private readonly Dictionary<Guid, AgentRow> agentRows = new();
 
   protected override void OnInitialized() {
-    Services.AgentManager.AgentInfoChanged.Subscribe(this, agents => {
+    Services.AgentManager.AgentsChanged.Subscribe(this, agents => {
       this.agents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
 
       var remainingGuids = agents.Select(static agent => agent.Guid).ToImmutableHashSet();
@@ -72,12 +72,11 @@
 
   private async Task ShutdownAgent(Guid guid) {
     GetOrAddAgentRow(guid).IsShutdownButtonDisabled = true;
-    StateHasChanged();
     await Services.AgentManager.SendMessage(guid, new ShutdownAgentMessage());
   }
 
   void IDisposable.Dispose() {
-    Services.AgentManager.AgentInfoChanged.Unsubscribe(this);
+    Services.AgentManager.AgentsChanged.Unsubscribe(this);
   }
 
   private sealed class AgentRow {

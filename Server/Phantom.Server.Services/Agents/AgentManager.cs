@@ -17,7 +17,7 @@ public sealed class AgentManager {
 	private readonly ObservableAgents agents = new ();
 
 	public AgentAuthToken AuthToken { get; }
-	public EventSubscribers<ImmutableArray<AgentInfo>> AgentInfoChanged => agents.Subs;
+	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsChanged => agents.Subs;
 
 	internal AgentManager(AgentAuthToken authToken) {
 		this.AuthToken = authToken;
@@ -40,6 +40,10 @@ public sealed class AgentManager {
 		if (agents.TryUnregister(message.AgentGuid, connection)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", message.AgentGuid);
 		}
+	}
+
+	public ImmutableDictionary<Guid, AgentInfo> GetAgents() {
+		return agents.GetAgents();
 	}
 
 	public async Task SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
@@ -75,6 +79,10 @@ public sealed class AgentManager {
 
 		public AgentConnection? GetConnection(Guid guid) {
 			return agents.TryGetValue(guid, out var connection) ? connection : null;
+		}
+
+		public ImmutableDictionary<Guid, AgentInfo> GetAgents() {
+			return agents.ValuesCopy.Select(static agent => agent.Info).ToImmutableDictionary(static agent => agent.Guid);
 		}
 
 		protected override ImmutableArray<AgentInfo> GetData() {

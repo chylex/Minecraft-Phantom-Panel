@@ -1,0 +1,52 @@
+﻿@page "/instance-create"
+@using Phantom.Common.Data
+@using Phantom.Server.Services
+@using System.Collections.Immutable
+@using System.ComponentModel.DataAnnotations
+
+<h1>New Instance</h1>
+
+<EditForm Model="@form" OnSubmit="Submit">
+  <div class="mb-3">
+    <label for="instance-agent" class="form-label">Agent</label>
+    <select id="instance-agent" class="form-select" @bind="form.SelectedAgentGuid">
+      <option value="" selected>Select agent that will run the instance...</option>
+      @foreach (var agent in agentsByGuid.Values.OrderBy(static agent => agent.Guid)) {
+        <option value="@agent.Guid">@agent.Name | @agent.MaxInstances Max Instances | @agent.MaxMemory.InMegabytes Max Memory</option>
+      }
+    </select>
+  </div>
+  
+  <div class="mb-3">
+    <label for="instance-name" class="form-label">Instance Name</label>
+    <InputText id="instance-name" class="form-control" type="text" @bind-Value="form.InstanceName" />
+  </div>
+
+  <input type="submit" class="btn btn-primary" value="Create Instance" disabled="@isSubmitting">
+</EditForm>
+
+@code {
+
+  private readonly ImmutableDictionary<Guid, AgentInfo> agentsByGuid = Services.AgentManager.GetAgents();
+  private readonly FormModel form = new ();
+  
+  private bool isSubmitting = false;
+
+  private sealed class FormModel {
+    [Required]
+    public Guid? SelectedAgentGuid { get; set; } = null;
+    
+    [Required]
+    public string InstanceName { get; set; } = string.Empty;
+  }
+
+  private async Task Submit(EditContext context) {
+    if (context.Validate()) {
+      // TODO
+    }
+    
+    isSubmitting = true;
+    await Task.Delay(2000);
+    isSubmitting = false;
+  }
+}
