@@ -1,9 +1,12 @@
 ﻿@page "/instances/create"
-@using Phantom.Common.Data
-@using Phantom.Server.Services
+@using Phantom.Server.Services.Agents
+@using Phantom.Server.Services.Instances
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
+@using Phantom.Server.Services
+@using Phantom.Common.Data
 @using Phantom.Server.Web.Utils
+@inject NavigationManager Nav
 
 <h1>New Instance</h1>
 
@@ -14,9 +17,15 @@
     <div class="col-xl-6 mb-3">
       <label for="instance-agent" class="form-label">Agent</label>
       <InputSelect id="instance-agent" class="form-select" @bind-Value="form.SelectedAgentGuid">
-        <option value="" selected>Select agent that will run the instance...</option>
-        @foreach (var agent in agentsByGuid.Values.OrderBy(static agent => agent.Guid)) {
-          <option value="@agent.Guid">@agent.Name (Max @agent.MaxInstances @(agent.MaxInstances == 1 ? "Instance" : "Instances"), @agent.MaxMemory.InMegabytes MB RAM)</option>
+        <option value="" selected>Select which agent will run the instance...</option>
+        @foreach (var (agent, usedInstances, usedMemory) in agentsByGuid.Values.OrderBy(static item => item.AgentInfo.Name)) {
+          <option value="@agent.Guid">
+            @agent.Name
+            &bullet;
+            @(usedInstances)/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
+            &bullet;
+            @(usedMemory.InMegabytes)/@(agent.MaxMemory.InMegabytes) MB RAM)
+          </option>
         }
       </InputSelect>
       <ValidationMessage For="() => form.SelectedAgentGuid" class="invalid-feedback" />
@@ -41,25 +50,36 @@
 
   <div class="row">
     <div class="col-xl mb-3">
-      <label for="instance-memory" class="form-label">RAM: @form.MemoryInMegabytes MB</label>
-      <input id="instance-memory" class="form-range" type="range" min="0" max="@MaximumMemoryUnits" @bind-value="form.MemoryUnits" @bind-value:event="oninput" disabled="@(SelectedAgentInfo == null)" />
+      <label for="instance-memory" class="form-label">
+        @if (MaximumMemoryUnits == 0) {
+          <text>RAM</text>
+        }
+        else {
+          <text>RAM: @(form.MemoryAllocation?.InMegabytes ?? 0) / @(SelectedAgent?.AvailableMemory.InMegabytes) MB</text>
+        }
+      </label>
+      <InputRange id="instance-memory" class="form-range" min="0" max="@(MaximumMemoryUnits)" @bind-Value="form.MemoryUnits" disabled="@(MaximumMemoryUnits == 0)" />
       <ValidationMessage For="() => form.MemoryUnits" class="invalid-feedback" />
     </div>
   </div>
 
   <input type="submit" class="btn btn-primary" value="Create Instance" disabled="@isSubmitting">
+  <span class="invalid-feedback">@submitError</span>
 </EditForm>
 
 @code {
 
-  private readonly ImmutableDictionary<Guid, AgentInfo> agentsByGuid = Services.AgentManager.GetAgents();
-  private readonly FormModel form = new();
+  private readonly ImmutableDictionary<Guid, AgentStats> agentsByGuid = Services.AgentManager.GetAgentStats();
+  
+  private readonly FormModel form = new ();
+  private readonly Guid instanceGuid = Guid.NewGuid();
 
   private EditContext editContext = null!;
   private bool isSubmitting = false;
+  private string submitError = string.Empty;
 
-  private AgentInfo? SelectedAgentInfo => form.SelectedAgentGuid == null || !agentsByGuid.TryGetValue(form.SelectedAgentGuid.Value, out var agentInfo) ? null : agentInfo;
-  private ushort MaximumMemoryUnits => SelectedAgentInfo?.MaxMemory.RawValue ?? 0;
+  private AgentStats? SelectedAgent => form.SelectedAgentGuid == null || !agentsByGuid.TryGetValue(form.SelectedAgentGuid.Value, out var agentInfo) ? null : agentInfo;
+  private ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
 
   private sealed class FormModel {
     [Required(ErrorMessage = "You must select an agent.")]
@@ -70,23 +90,52 @@
     public string InstanceName { get; set; } = string.Empty;
 
     public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
+    public string MinecraftVersion { get; set; } = "1.19";
 
+    [Range(minimum: 1, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory must not be 0 MB.")]
     public ushort MemoryUnits { get; set; } = 0;
-    public uint MemoryInMegabytes => new RamAllocationUnits(MemoryUnits).InMegabytes;
+
+    public RamAllocationUnits? MemoryAllocation => new RamAllocationUnits(MemoryUnits);
   }
 
   protected override void OnInitialized() {
     editContext = BootstrapEditContext.Create(form);
   }
 
-  private async Task Submit(EditContext context) {
+  private void Submit(EditContext context) {
     if (!context.Validate()) {
       return;
     }
 
+    var selectedAgent = SelectedAgent;
+    if (selectedAgent == null) {
+      return;
+    }
+
     isSubmitting = true;
-    await Task.Delay(2000);
+
+    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
+    var result = Services.InstanceManager.AddInstance(instance);
+    if (result == AddInstanceResult.Success) {
+      Nav.NavigateTo("/instances/show/" + instance.InstanceGuid);
+      return;
+    }
+
     isSubmitting = false;
+    submitError = GetResultError(result);
+  }
+
+  private static string GetResultError(AddInstanceResult result) {
+    return result switch {
+           AddInstanceResult.Success                     => string.Empty,
+           AddInstanceResult.GuidAlreadyExists           => "Instance was already created.",
+           AddInstanceResult.InstanceNameMustNotBeEmpty  => "Instance name must not be empty.",
+           AddInstanceResult.InstanceMemoryMustNotBeZero => "Memory must not be 0 MB.",
+           AddInstanceResult.AgentNotFound               => "Agent not found.",
+           AddInstanceResult.AgentInstanceLimitExceeded  => "Agent instance limit exceeded.",
+           AddInstanceResult.AgentMemoryLimitExceeded    => "Agent memory limit exceeded.",
+           _                                             => "Unknown error."
+           };
   }
 
 }

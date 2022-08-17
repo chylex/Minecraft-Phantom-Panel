@@ -7,5 +7,6 @@ public sealed record InstanceInfo(
 	Guid InstanceGuid,
 	string InstanceName,
 	string MinecraftVersion,
-	MinecraftServerKind MinecraftServerKind
+	MinecraftServerKind MinecraftServerKind,
+	RamAllocationUnits MemoryAllocation
 );

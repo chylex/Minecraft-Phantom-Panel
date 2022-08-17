@@ -4,33 +4,65 @@ using MessagePack;
 namespace Phantom.Common.Data;
 
 /// <summary>
-/// Represents a number of RAM allocation units, using the conversion factor of 256 MB per unit. Supports allocations from 256 MB (0 units) to 16 TB (65535 units).
+/// Represents a number of RAM allocation units, using the conversion factor of 256 MB per unit. Supports allocations up to 16 TB minus 256 MB (65535 units).
 /// </summary>
 [MessagePackObject]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public readonly record struct RamAllocationUnits(
 	[property: Key(0)] ushort RawValue
-) {
+) : IComparable<RamAllocationUnits> {
 	[IgnoreMember]
-	public uint InMegabytes => (uint) (RawValue + 1) * MegabytesPerUnit;
+	public uint InMegabytes => (uint) RawValue * MegabytesPerUnit;
+
+	public int CompareTo(RamAllocationUnits other) {
+		return RawValue.CompareTo(other.RawValue);
+	}
+
+	public static RamAllocationUnits operator +(RamAllocationUnits left, RamAllocationUnits right) {
+		ushort units = (ushort) Math.Min(left.RawValue + right.RawValue, MaximumUnits);
+		return new RamAllocationUnits(units);
+	}
+	
+	public static RamAllocationUnits operator -(RamAllocationUnits left, RamAllocationUnits right) {
+		ushort units = (ushort) Math.Max(left.RawValue - right.RawValue, 0);
+		return new RamAllocationUnits(units);
+	}
+
+	public static bool operator <(RamAllocationUnits left, RamAllocationUnits right) {
+		return left.CompareTo(right) < 0;
+	}
+
+	public static bool operator >(RamAllocationUnits left, RamAllocationUnits right) {
+		return left.CompareTo(right) > 0;
+	}
+
+	public static bool operator <=(RamAllocationUnits left, RamAllocationUnits right) {
+		return left.CompareTo(right) <= 0;
+	}
+
+	public static bool operator >=(RamAllocationUnits left, RamAllocationUnits right) {
+		return left.CompareTo(right) >= 0;
+	}
 
 	private const int MegabytesPerUnit = 256;
 	
-	private const ushort MaximumUnits = ushort.MaxValue;
-	private const int MaximumMegabytes = (MaximumUnits + 1) * MegabytesPerUnit;
+	public const ushort MaximumUnits = ushort.MaxValue;
+	private const int MaximumMegabytes = MaximumUnits * MegabytesPerUnit;
+	
+	public static readonly RamAllocationUnits Zero = new (0);
 
 	/// <summary>
 	/// Converts an amount of <paramref name="megabytes"/> to <see cref="RamAllocationUnits"/>.
 	/// </summary>
-	/// <exception cref="ArgumentOutOfRangeException">If the value of <paramref name="megabytes"/> is not positive, not a multiple of <see cref="MegabytesPerUnit"/>, or exceeds the hard limit.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">If the value of <paramref name="megabytes"/> is negative, not a multiple of <see cref="MegabytesPerUnit"/>, or exceeds the hard limit.</exception>
 	public static RamAllocationUnits FromMegabytes(int megabytes) {
 		if (megabytes % MegabytesPerUnit != 0) {
 			throw new ArgumentOutOfRangeException(nameof(megabytes), "Must be a multiple of " + MegabytesPerUnit + " MB.");
 		}
 
-		long units = ((long) megabytes - MegabytesPerUnit) / MegabytesPerUnit;
+		long units = (long) megabytes / MegabytesPerUnit;
 		if (units < 0) {
-			throw new ArgumentOutOfRangeException(nameof(megabytes), "Must be at least " + MegabytesPerUnit + " MB.");
+			throw new ArgumentOutOfRangeException(nameof(megabytes), "Must be at least 0 MB.");
 		}
 		else if (units > MaximumUnits) {
 			throw new ArgumentOutOfRangeException(nameof(megabytes), "Must be at most " + MaximumMegabytes + " MB.");

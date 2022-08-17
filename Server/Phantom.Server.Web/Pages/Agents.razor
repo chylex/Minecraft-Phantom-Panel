@@ -1,8 +1,8 @@
 ﻿@page "/agents"
 @using System.Collections.Immutable
-@using Phantom.Common.Data
-@using Phantom.Common.Rpc.Messages.ToAgent
+@using Phantom.Server.Services.Agents
 @using Phantom.Server.Services
+@using Phantom.Common.Rpc.Messages.ToAgent
 @implements IDisposable
 
 <h1>Agents</h1>
@@ -18,13 +18,13 @@
       <th>Actions</th>
     </tr>
   </thead>
-  @if (!agents.IsEmpty) {
+  @if (!agentStats.IsEmpty) {
     <tbody>
-      @foreach (var agent in agents) {
+      @foreach (var (agent, usedInstances, usedMemory) in agentStats) {
         <tr>
           <td>@agent.Name</td>
-          <td class="text-end">? / @agent.MaxInstances</td>
-          <td class="text-end">? / @agent.MaxMemory.InMegabytes MB</td>
+          <td class="text-end">@usedInstances / @agent.MaxInstances</td>
+          <td class="text-end">@usedMemory.InMegabytes / @agent.MaxMemory.InMegabytes MB</td>
           <td class="text-end">@agent.Version</td>
           <td>
             <code class="text-uppercase">@agent.Guid.ToString()</code>
@@ -39,7 +39,9 @@
   <tfoot>
     <tr>
       <td colspan="6">
-        @(agents.IsEmpty ? "No agents registered." : "")
+        @if (agentStats.IsEmpty) {
+          <text>No agents registered.</text>
+        }
         Register agents using the token: <code>@Services.AgentManager.AuthToken</code>
       </td>
     </tr>
@@ -48,7 +50,7 @@
 
 @code {
 
-  private ImmutableArray<AgentInfo> agents = ImmutableArray<AgentInfo>.Empty;
+  private ImmutableArray<AgentStats> agentStats = ImmutableArray<AgentStats>.Empty;
   private readonly Dictionary<Guid, AgentRow> agentRows = new ();
 
   private sealed class AgentRow {
@@ -56,10 +58,10 @@
   }
 
   protected override void OnInitialized() {
-    Services.AgentManager.AgentsChanged.Subscribe(this, agents => {
-      this.agents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
+    Services.AgentManager.AgentStatsChanged.Subscribe(this, agents => {
+      this.agentStats = agents.Sort(static (a1, a2) => a1.AgentInfo.Name.CompareTo(a2.AgentInfo.Name));
 
-      var remainingGuids = agents.Select(static agent => agent.Guid).ToImmutableHashSet();
+      var remainingGuids = agents.Select(static agent => agent.AgentInfo.Guid).ToImmutableHashSet();
       foreach (var guid in agentRows.Keys) {
         if (!remainingGuids.Contains(guid)) {
           agentRows.Remove(guid);
@@ -80,7 +82,7 @@
   }
 
   void IDisposable.Dispose() {
-    Services.AgentManager.AgentsChanged.Unsubscribe(this);
+    Services.AgentManager.AgentStatsChanged.Unsubscribe(this);
   }
 
 }

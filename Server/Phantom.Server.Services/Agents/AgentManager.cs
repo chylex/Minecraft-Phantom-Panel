@@ -4,6 +4,7 @@ using Phantom.Common.Rpc.Message;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services.Instances;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;
@@ -14,20 +15,25 @@ namespace Phantom.Server.Services.Agents;
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 
-	private readonly ObservableAgents agents = new ();
+	private readonly ObservableAgentInfos agentInfos = new ();
+	private readonly ObservableAgentStats agentStats = new ();
 
 	public AgentAuthToken AuthToken { get; }
-	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsChanged => agents.Subs;
+	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsInfosChanged => agentInfos.Subs;
+	public EventSubscribers<ImmutableArray<AgentStats>> AgentStatsChanged => agentStats.Subs;
 
-	internal AgentManager(AgentAuthToken authToken) {
+	internal AgentManager(AgentAuthToken authToken, InstanceManager instanceManager) {
 		this.AuthToken = authToken;
+
+		AgentsInfosChanged.Subscribe(this, agentStats.UpdateAgents);
+		instanceManager.InstancesChanged.Subscribe(this, agentStats.UpdateInstances);
 	}
 
 	internal RegisterAgentResultMessage RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
 		if (!AuthToken.FixedTimeEquals(message.AuthToken)) {
 			return RegisterAgentResultMessage.WithError("Invalid agent auth token.");
 		}
-		else if (!agents.TryRegister(new AgentConnection(connection, message.AgentInfo))) {
+		else if (!agentInfos.TryRegister(new AgentConnection(connection, message.AgentInfo))) {
 			return RegisterAgentResultMessage.WithError("Agent registration failed.");
 		}
 		else {
@@ -37,24 +43,28 @@ public sealed class AgentManager {
 	}
 
 	internal void UnregisterAgent(UnregisterAgentMessage message, RpcClientConnection connection) {
-		if (agents.TryUnregister(message.AgentGuid, connection)) {
+		if (agentInfos.TryUnregister(message.AgentGuid, connection)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", message.AgentGuid);
 		}
 	}
 
-	public ImmutableDictionary<Guid, AgentInfo> GetAgents() {
-		return agents.GetAgents();
+	public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
+		return agentStats.GetAgentStats();
+	}
+
+	public AgentStats? GetAgentStats(Guid agentGuid) {
+		return agentStats.GetAgentStats(agentGuid);
 	}
 
 	public async Task SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
-		var connection = agents.GetConnection(guid);
+		var connection = agentInfos.GetConnection(guid);
 		if (connection != null) {
 			await connection.SendMessage(message);
 		}
 		// TODO handle missing agent?
 	}
 
-	private sealed class ObservableAgents : ObservableState<ImmutableArray<AgentInfo>> {
+	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<AgentInfo>> {
 		private readonly RwLockedDictionary<Guid, AgentConnection> agents = new (LockRecursionPolicy.NoRecursion);
 
 		public bool TryRegister(AgentConnection agentConnection) {
@@ -81,12 +91,49 @@ public sealed class AgentManager {
 			return agents.TryGetValue(guid, out var connection) ? connection : null;
 		}
 
-		public ImmutableDictionary<Guid, AgentInfo> GetAgents() {
-			return agents.ValuesCopy.Select(static agent => agent.Info).ToImmutableDictionary(static agent => agent.Guid);
-		}
-
 		protected override ImmutableArray<AgentInfo> GetData() {
 			return agents.ValuesCopy.Select(static agent => agent.Info).ToImmutableArray();
+		}
+	}
+
+	private sealed class ObservableAgentStats : ObservableState<ImmutableArray<AgentStats>> {
+		private ImmutableDictionary<Guid, AgentInfo> agents = ImmutableDictionary<Guid, AgentInfo>.Empty;
+		private ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>>.Empty;
+
+		public void UpdateAgents(ImmutableArray<AgentInfo> newAgents) {
+			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid);
+			Update();
+		}
+
+		public void UpdateInstances(ImmutableArray<InstanceInfo> newInstances) {
+			instancesByAgentGuid = newInstances.GroupBy(static instance => instance.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
+			Update();
+		}
+
+		public AgentStats? GetAgentStats(Guid agentGuid) {
+			return agents.TryGetValue(agentGuid, out var agentInfo) ? ComputeAgentStats(instancesByAgentGuid, agentInfo) : null;
+		}
+
+		public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
+			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableDictionary(static stats => stats.AgentInfo.Guid);
+		}
+
+		protected override ImmutableArray<AgentStats> GetData() {
+			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableArray();
+		}
+
+		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid, AgentInfo agentInfo) {
+			int usedInstances = 0;
+			var usedMemory = RamAllocationUnits.Zero;
+
+			if (instancesByAgentGuid.TryGetValue(agentInfo.Guid, out var instances)) {
+				foreach (var instance in instances) {
+					usedInstances += 1;
+					usedMemory += instance.MemoryAllocation;
+				}
+			}
+
+			return new AgentStats(agentInfo, usedInstances, usedMemory);
 		}
 	}
 }

@@ -1,16 +1,25 @@
 ﻿using Phantom.Utils.Collections;
+using Phantom.Utils.Logging;
+using Serilog;
 
 namespace Phantom.Utils.Events;
 
 public class EventSubscribers<T> {
 	private readonly RwLockedDictionary<object, Action<T>> subscribers = new (1, LockRecursionPolicy.NoRecursion);
+	private readonly ILogger logger;
+
+	public EventSubscribers() {
+		this.logger = PhantomLogger.Create(GetType());
+	}
 
 	public virtual void Subscribe(object owner, Action<T> subscriber) {
 		subscribers[owner] = subscriber;
 	}
 
 	public virtual void Unsubscribe(object owner) {
-		subscribers.Remove(owner);
+		if (!subscribers.Remove(owner)) {
+			logger.Warning("Tried unsubscribing an object that was not subscribed: {Owner}", owner);
+		}
 	}
 
 	internal void Publish(T eventData) {

@@ -10,7 +10,7 @@ public static class Services {
 	static Services() {
 		var config = ServiceConfiguration.Validate();
 
-		AgentManager = new AgentManager(config.AuthToken);
 		InstanceManager = new InstanceManager();
+		AgentManager = new AgentManager(config.AuthToken, InstanceManager);
 	}
 }

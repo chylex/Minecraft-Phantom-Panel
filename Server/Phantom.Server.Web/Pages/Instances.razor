@@ -1,8 +1,70 @@
 ﻿@page "/instances"
+@using System.Collections.Immutable
+@using Phantom.Server.Services.Instances
+@using Phantom.Server.Services
+@implements IDisposable
 
 <h1>Instances</h1>
+
 <a href="/instances/create" class="btn btn-primary" role="button">New Instance</a>
 
+<table class="table align-middle">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Agent</th>
+      <th class="text-end">Memory</th>
+      <th>Identifier</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  @if (!instances.IsEmpty) {
+    <tbody>
+      @foreach (var instance in instances) {
+        <tr>
+          <td>@instance.InstanceName</td>
+          <td>@(agentNames.TryGetValue(instance.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
+          <td class="text-end">@instance.MemoryAllocation.InMegabytes MB</td>
+          <td>
+            <code class="text-uppercase">@instance.InstanceGuid.ToString()</code>
+          </td>
+          <td>
+            @* <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(instance.Guid)" disabled="@GetOrAddAgentRow(instance.Guid).IsShutdownButtonDisabled">Shutdown</button> *@
+          </td>
+        </tr>
+      }
+    </tbody>
+  }
+  <tfoot>
+    <tr>
+      <td colspan="5">
+        @if (instances.IsEmpty) {
+          <text>No instances.</text>
+        }
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
 @code {
-  
+
+  private ImmutableArray<InstanceInfo> instances = ImmutableArray<InstanceInfo>.Empty;
+  private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
+
+  protected override void OnInitialized() {
+    Services.AgentManager.AgentsInfosChanged.Subscribe(this, agents => {
+      this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
+    });
+    
+    Services.InstanceManager.InstancesChanged.Subscribe(this, instances => {
+      this.instances = instances;
+      InvokeAsync(StateHasChanged);
+    });
+  }
+
+  void IDisposable.Dispose() {
+    Services.AgentManager.AgentsInfosChanged.Unsubscribe(this);
+    Services.InstanceManager.InstancesChanged.Unsubscribe(this);
+  }
+
 }
