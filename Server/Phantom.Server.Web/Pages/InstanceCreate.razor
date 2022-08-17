@@ -18,7 +18,7 @@
       <label for="instance-agent" class="form-label">Agent</label>
       <InputSelect id="instance-agent" class="form-select" @bind-Value="form.SelectedAgentGuid">
         <option value="" selected>Select which agent will run the instance...</option>
-        @foreach (var (agent, usedInstances, usedMemory) in agentsByGuid.Values.OrderBy(static item => item.AgentInfo.Name)) {
+        @foreach (var (agent, usedInstances, usedMemory) in form.AgentsByGuid.Values.OrderBy(static item => item.AgentInfo.Name)) {
           <option value="@agent.Guid">
             @agent.Name
             &bullet;
@@ -50,39 +50,49 @@
 
   <div class="row">
     <div class="col-xl mb-3">
+      @{ var maximumMemoryUnits = form.MaximumMemoryUnits; }
       <label for="instance-memory" class="form-label">
-        @if (MaximumMemoryUnits == 0) {
+        @if (maximumMemoryUnits == 0) {
           <text>RAM</text>
         }
         else {
-          <text>RAM: @(form.MemoryAllocation?.InMegabytes ?? 0) / @(SelectedAgent?.AvailableMemory.InMegabytes) MB</text>
+          <text>RAM: @(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</text>
         }
       </label>
-      <InputRange id="instance-memory" class="form-range" min="0" max="@(MaximumMemoryUnits)" @bind-Value="form.MemoryUnits" disabled="@(MaximumMemoryUnits == 0)" />
+      <InputRange id="instance-memory" class="form-range" min="1" max="@(maximumMemoryUnits)" @bind-Value="form.MemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
       <ValidationMessage For="() => form.MemoryUnits" class="invalid-feedback" />
     </div>
   </div>
 
-  <input type="submit" class="btn btn-primary" value="Create Instance" disabled="@isSubmitting">
+  <input type="submit" class="btn btn-primary" value="Create Instance" disabled="@(isSubmitting || !IsSubmittable)">
   <span class="invalid-feedback">@submitError</span>
 </EditForm>
 
 @code {
 
-  private readonly ImmutableDictionary<Guid, AgentStats> agentsByGuid = Services.AgentManager.GetAgentStats();
-  
-  private readonly FormModel form = new ();
+  private readonly FormModel form = new();
   private readonly Guid instanceGuid = Guid.NewGuid();
 
   private EditContext editContext = null!;
   private bool isSubmitting = false;
   private string submitError = string.Empty;
 
-  private AgentStats? SelectedAgent => form.SelectedAgentGuid == null || !agentsByGuid.TryGetValue(form.SelectedAgentGuid.Value, out var agentInfo) ? null : agentInfo;
-  private ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
+  private bool IsSubmittable {
+    get {
+      var selectedAgent = form.SelectedAgent;
+      return selectedAgent != null && selectedAgent.UsedInstances < selectedAgent.AgentInfo.MaxInstances && selectedAgent.AvailableMemory.RawValue > 0;
+    }
+  }
 
   private sealed class FormModel {
+    public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid = Services.AgentManager.GetAgentStats();
+
+    public AgentStats? SelectedAgent => SelectedAgentGuid == null || !AgentsByGuid.TryGetValue(SelectedAgentGuid.Value, out var agentInfo) ? null : agentInfo;
+    public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
+
     [Required(ErrorMessage = "You must select an agent.")]
+    [AgentHasInstances(ErrorMessage = "This agent has no remaining instances.")]
+    [AgentHasMemory(ErrorMessage = "This agent has no remaining RAM.")]
     public Guid? SelectedAgentGuid { get; set; } = null;
 
     [Required(ErrorMessage = "Instance name is required.")]
@@ -96,6 +106,24 @@
     public ushort MemoryUnits { get; set; } = 0;
 
     public RamAllocationUnits? MemoryAllocation => new RamAllocationUnits(MemoryUnits);
+
+    public sealed class AgentHasInstancesAttribute : FormValidationAttribute {
+      protected override string FieldName => nameof(SelectedAgentGuid);
+
+      protected override bool IsValid(object model, object? value) {
+        var agent = ((FormModel) model).SelectedAgent;
+        return agent != null && agent.UsedInstances < agent.AgentInfo.MaxInstances;
+      }
+    }
+
+    public sealed class AgentHasMemoryAttribute : FormValidationAttribute {
+      protected override string FieldName => nameof(SelectedAgentGuid);
+
+      protected override bool IsValid(object model, object? value) {
+        var agent = ((FormModel) model).SelectedAgent;
+        return agent != null && agent.AvailableMemory > RamAllocationUnits.Zero;
+      }
+    }
   }
 
   protected override void OnInitialized() {
@@ -107,7 +135,7 @@
       return;
     }
 
-    var selectedAgent = SelectedAgent;
+    var selectedAgent = form.SelectedAgent;
     if (selectedAgent == null) {
       return;
     }
