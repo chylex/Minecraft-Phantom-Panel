@@ -4,10 +4,10 @@ using Phantom.Agent.Services.Command;
 namespace Phantom.Agent.Services;
 
 public sealed class AgentServices {
-	public InstanceManager InstanceManager { get; } = new ();
+	internal InstanceSessionManager InstanceSessionManager { get; } = new ();
 
-	public CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();
-	public CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
+	internal CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();
+	internal CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
 
 	public AgentServices() {
 		this.CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
@@ -15,6 +15,6 @@ public sealed class AgentServices {
 
 	public async Task Shutdown() {
 		await CommandQueue.Shutdown();
-		await InstanceManager.StopAll();
+		await InstanceSessionManager.StopAll();
 	}
 }

@@ -1,7 +1,6 @@
 ﻿using Phantom.Agent;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
-using Phantom.Agent.Services.Commands;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Rpc;
@@ -44,39 +43,6 @@ try {
 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 	await agentServices.Shutdown();
-
-	void Ignore() {
-		PhantomLogger.Root.InformationHeading("Console interface ready!");
-
-		while (Console.ReadLine() is {} line) {
-			var command = line.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-			if (command.Length == 0) {
-				continue;
-			}
-
-			try {
-				if (command[0] == "create-instance" && command.Length == 2 && ushort.TryParse(command[1], out ushort mcServerPort)) {
-					var rconPort = (ushort) (mcServerPort + 1);
-					agentServices.CommandQueue.Add(new CreateInstanceCommand(mcServerPort, rconPort));
-				}
-				else if (command[0] == "start-instance" && command.Length == 2 && Guid.TryParse(command[1], out var guid)) {
-					agentServices.CommandQueue.Add(new StartInstanceCommand(guid));
-				}
-				else if (command[0] == "send-command" && command.Length >= 3 && Guid.TryParse(command[1], out var guid2)) {
-					agentServices.CommandQueue.Add(new SendCommandToInstanceCommand(guid2, string.Join(' ', command.Skip(2))));
-				}
-				else if (command[0] == "shutdown") {
-					// await agent.Shutdown();
-					break;
-				}
-				else {
-					Console.WriteLine("Invalid command.");
-				}
-			} catch (Exception e) {
-				Console.WriteLine("Error: " + e.Message);
-			}
-		}
-	}
 } finally {
 	cancellationTokenSource.Dispose();
 	PhantomLogger.Dispose();

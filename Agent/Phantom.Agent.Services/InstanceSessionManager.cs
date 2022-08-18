@@ -2,10 +2,11 @@
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Properties;
+using Phantom.Common.Data;
 
 namespace Phantom.Agent.Services;
 
-public sealed class InstanceManager {
+sealed class InstanceSessionManager {
 	private const string JavaHomePath = @"C:\Users\Dan\.jdks\openjdk-17.0.1";
 	private const string ServerJarPath = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\server.jar";
 	private const string InstanceBasePath = @"C:\Dan\Projects\Web\Minecraft-Phantom-Panel\Game\";
@@ -13,15 +14,15 @@ public sealed class InstanceManager {
 	private readonly Dictionary<Guid, BaseLauncher> instanceLaunchers = new ();
 	private readonly Dictionary<Guid, InstanceSession> instanceSessions = new ();
 
-	public Guid Create(ServerProperties serverProperties) {
-		var sessionId = Guid.NewGuid();
-		var instanceFolder = Path.Combine(InstanceBasePath, sessionId.ToString());
+	public void Create(InstanceInfo instance, ServerProperties serverProperties) {
+		var instanceFolder = Path.Combine(InstanceBasePath, instance.InstanceGuid.ToString());
 
 		Directory.CreateDirectory(instanceFolder);
 
+		var heapMegabytes = instance.MemoryAllocation.InMegabytes;
 		var jvmProperties = new JvmProperties(
-			InitialHeapMegabytes: 512,
-			MaximumHeapMegabytes: 512
+			InitialHeapMegabytes: heapMegabytes / 2,
+			MaximumHeapMegabytes: heapMegabytes
 		);
 
 		var instanceProperties = new InstanceProperties(
@@ -33,8 +34,7 @@ public sealed class InstanceManager {
 		);
 
 		VanillaLauncher launcher = new VanillaLauncher(instanceProperties);
-		instanceLaunchers.Add(sessionId, launcher);
-		return sessionId;
+		instanceLaunchers.Add(instance.InstanceGuid, launcher);
 	}
 
 	public async Task<LaunchResult> Start(Guid guid) {

@@ -58,13 +58,13 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 		}
 
 		async Task HandleMessage() {
-			await message.Accept(listener);
+			try {
+				await message.Accept(listener);
+			} catch (Exception e) {
+				logger.Error(e, "Failed to handle message {Type}.", message.GetType());
+			}
 		}
 
-		void OnException(Task task) {
-			logger.Error(task.Exception, "Failed to handle message {Type}.", message.GetType());
-		}
-
-		Task.Run(HandleMessage, cancellationToken).ContinueWith(OnException, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.RunContinuationsAsynchronously);
+		Task.Run(HandleMessage, cancellationToken);
 	}
 }

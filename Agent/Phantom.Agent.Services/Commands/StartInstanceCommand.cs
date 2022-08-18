@@ -2,12 +2,12 @@
 
 namespace Phantom.Agent.Services.Commands;
 
-public sealed record StartInstanceCommand(Guid InstanceGuid) : BaseCommand<InstanceManager.LaunchResult> {
-	protected override async Task<InstanceManager.LaunchResult> Run(AgentServices agent) {
-		return await agent.InstanceManager.Start(InstanceGuid);
+sealed record StartInstanceCommand(Guid InstanceGuid) : BaseCommand<InstanceSessionManager.LaunchResult> {
+	protected override async Task<InstanceSessionManager.LaunchResult> Run(AgentServices agent) {
+		return await agent.InstanceSessionManager.Start(InstanceGuid);
 	}
 
-	protected override void Report(CommandListener listener, InstanceManager.LaunchResult result) {
+	protected override void Report(CommandListener listener, InstanceSessionManager.LaunchResult result) {
 		listener.OnStartInstance(result);
 	}
 }

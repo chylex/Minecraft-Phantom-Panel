@@ -33,4 +33,8 @@ public sealed class MessageListener : IMessageToAgentListener {
 		shutdownTokenSource.Cancel();
 		return Task.CompletedTask;
 	}
+
+	public Task HandleCreateInstance(CreateInstanceMessage message) {
+		return null;
+	}
 }
