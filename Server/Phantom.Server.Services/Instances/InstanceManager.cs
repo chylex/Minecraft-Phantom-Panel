@@ -1,21 +1,23 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
+using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;
 using Serilog;
 
-namespace Phantom.Server.Services.Instances; 
+namespace Phantom.Server.Services.Instances;
 
 public sealed class InstanceManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManager>();
-	
+
 	private readonly ObservableInstances instances = new ();
-	
+
 	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
 
 	internal InstanceManager() {}
 
-	public AddInstanceResult AddInstance(InstanceInfo instance) {
+	public async Task<AddInstanceResult> AddInstance(InstanceInfo instance) {
 		if (string.IsNullOrWhiteSpace(instance.InstanceName)) {
 			return AddInstanceResult.InstanceNameMustNotBeEmpty;
 		}
@@ -23,13 +25,14 @@ public sealed class InstanceManager {
 		if (instance.MemoryAllocation.RawValue == 0) {
 			return AddInstanceResult.InstanceMemoryMustNotBeZero;
 		}
-		
+
+		string agentName;
 		lock (this) {
 			var agentStats = Services.AgentManager.GetAgentStats(instance.AgentGuid);
 			if (agentStats == null) {
 				return AddInstanceResult.AgentNotFound;
 			}
-			
+
 			if (agentStats.UsedInstances >= agentStats.AgentInfo.MaxInstances) {
 				return AddInstanceResult.AgentInstanceLimitExceeded;
 			}
@@ -43,9 +46,17 @@ public sealed class InstanceManager {
 				return AddInstanceResult.GuidAlreadyExists;
 			}
 			
-			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\" (GUID {AgentGuid}).", instance.InstanceName, instance.InstanceGuid, agentStats.AgentInfo.Name, instance.AgentGuid);
-			return AddInstanceResult.Success;
+			agentName = agentStats.AgentInfo.Name;
 		}
+
+		await Services.AgentManager.SendMessage(instance.AgentGuid, new CreateInstanceMessage(instance));
+
+		Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instance.InstanceName, instance.InstanceGuid, agentName);
+		return AddInstanceResult.Success;
+	}
+
+	public InstanceInfo? GetInstance(Guid instanceGuid) {
+		return instances.GetInstance(instanceGuid);
 	}
 
 	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceInfo>> {
@@ -60,7 +71,11 @@ public sealed class InstanceManager {
 				return false;
 			}
 		}
-		
+
+		public InstanceInfo? GetInstance(Guid instanceGuid) {
+			return instances.TryGetValue(instanceGuid, out var instance) ? instance : null;
+		}
+
 		public ImmutableArray<InstanceInfo> GetInstances() {
 			return instances.ValuesCopy;
 		}

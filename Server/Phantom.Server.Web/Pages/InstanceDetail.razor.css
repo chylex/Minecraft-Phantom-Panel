@@ -1,0 +1,15 @@
+﻿#log {
+  min-height: 20rem;
+  height: 60vh;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #666666;
+  border-radius: 0.25rem;
+  color: #282828;
+  background-color: #f4f4f4;
+  overflow-y: auto;
+}
+
+#log > p {
+  margin: 0;
+}

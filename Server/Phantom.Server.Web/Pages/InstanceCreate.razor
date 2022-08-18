@@ -24,7 +24,7 @@
             &bullet;
             @(usedInstances)/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
             &bullet;
-            @(usedMemory.InMegabytes)/@(agent.MaxMemory.InMegabytes) MB RAM)
+            @(usedMemory.InMegabytes)/@(agent.MaxMemory.InMegabytes) MB RAM
           </option>
         }
       </InputSelect>
@@ -49,18 +49,24 @@
   </div>
 
   <div class="row">
-    <div class="col-xl mb-3">
+    <div class="col-xl-10 mb-3">
       @{ var maximumMemoryUnits = form.MaximumMemoryUnits; }
       <label for="instance-memory" class="form-label">
         @if (maximumMemoryUnits == 0) {
           <text>RAM</text>
         }
         else {
-          <text>RAM: @(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</text>
+          <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</code></text>
         }
       </label>
       <InputRange id="instance-memory" class="form-range" min="1" max="@(maximumMemoryUnits)" @bind-Value="form.MemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
       <ValidationMessage For="() => form.MemoryUnits" class="invalid-feedback" />
+    </div>
+    
+    <div class="col-xl-2 mb-3">
+      <label for="instance-port" class="form-label">Port</label>
+      <InputNumber id="instance-port" class="form-control" min="0" max="65535" @bind-Value="form.InstancePort" />
+      <ValidationMessage For="() => form.InstancePort" class="invalid-feedback" />
     </div>
   </div>
 
@@ -99,6 +105,9 @@
     [StringLength(100, ErrorMessage = "Instance name must be at most 100 characters.")]
     public string InstanceName { get; set; } = string.Empty;
 
+    [Range(minimum: 0, maximum: 65535, ErrorMessage = "Port must be between 0 and 65535")]
+    public int InstancePort { get; set; } = 25565;
+
     public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
     public string MinecraftVersion { get; set; } = "1.19";
 
@@ -130,7 +139,7 @@
     editContext = BootstrapEditContext.Create(form);
   }
 
-  private void Submit(EditContext context) {
+  private async Task Submit(EditContext context) {
     if (!context.Validate()) {
       return;
     }
@@ -142,10 +151,10 @@
 
     isSubmitting = true;
 
-    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
-    var result = Services.InstanceManager.AddInstance(instance);
+    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.InstancePort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
+    var result = await Services.InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
-      Nav.NavigateTo("/instances/show/" + instance.InstanceGuid);
+      Nav.NavigateTo("/instances/" + instance.InstanceGuid);
       return;
     }
 

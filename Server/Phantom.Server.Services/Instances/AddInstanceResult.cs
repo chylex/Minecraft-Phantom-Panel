@@ -7,5 +7,6 @@ public enum AddInstanceResult {
 	InstanceMemoryMustNotBeZero,
 	AgentNotFound,
 	AgentInstanceLimitExceeded,
-	AgentMemoryLimitExceeded
+	AgentMemoryLimitExceeded,
+	AgentCommunicationError
 }

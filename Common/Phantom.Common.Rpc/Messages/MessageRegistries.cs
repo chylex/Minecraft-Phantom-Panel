@@ -12,6 +12,7 @@ public static class MessageRegistries {
 	static MessageRegistries() {
 		ToAgent.Add<RegisterAgentResultMessage>(0);
 		ToAgent.Add<ShutdownAgentMessage>(1);
+		ToAgent.Add<CreateInstanceMessage>(2);
 		
 		ToServer.Add<RegisterAgentMessage>(0);
 		ToServer.Add<UnregisterAgentMessage>(1);

@@ -1,6 +1,6 @@
 ﻿@page "/instances"
 @using System.Collections.Immutable
-@using Phantom.Server.Services.Instances
+@using Phantom.Common.Data
 @using Phantom.Server.Services
 @implements IDisposable
 
@@ -13,6 +13,7 @@
     <tr>
       <th>Name</th>
       <th>Agent</th>
+      <th>Port</th>
       <th class="text-end">Memory</th>
       <th>Identifier</th>
       <th>Actions</th>
@@ -24,6 +25,7 @@
         <tr>
           <td>@instance.InstanceName</td>
           <td>@(agentNames.TryGetValue(instance.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
+          <td><code>@instance.InstancePort</code></td>
           <td class="text-end">@instance.MemoryAllocation.InMegabytes MB</td>
           <td>
             <code class="text-uppercase">@instance.InstanceGuid.ToString()</code>
@@ -37,7 +39,7 @@
   }
   <tfoot>
     <tr>
-      <td colspan="5">
+      <td colspan="6">
         @if (instances.IsEmpty) {
           <text>No instances.</text>
         }
