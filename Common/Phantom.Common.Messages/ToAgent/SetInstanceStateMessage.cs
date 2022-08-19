@@ -1,7 +1,6 @@
 ﻿using MessagePack;
-using Phantom.Common.Rpc.Message;
 
-namespace Phantom.Common.Rpc.Messages.ToAgent; 
+namespace Phantom.Common.Messages.ToAgent; 
 
 [MessagePackObject]
 public sealed record SetInstanceStateMessage(

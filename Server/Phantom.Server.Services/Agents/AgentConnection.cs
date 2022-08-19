@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Data;
-using Phantom.Common.Rpc.Message;
+using Phantom.Common.Messages;
 using Phantom.Server.Rpc;
 
 namespace Phantom.Server.Services.Agents; 

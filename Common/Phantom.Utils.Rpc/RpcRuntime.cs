@@ -1,6 +1,6 @@
 ﻿using NetMQ;
 
-namespace Phantom.Common.Rpc;
+namespace Phantom.Utils.Rpc;
 
 static class RpcRuntime {
 	private static bool HasRuntime { get; set; }

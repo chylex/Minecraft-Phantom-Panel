@@ -1,7 +1,7 @@
 using NetMQ;
 using NetMQ.Sockets;
-using Phantom.Common.Rpc;
-using Phantom.Common.Rpc.Messages;
+using Phantom.Common.Messages;
+using Phantom.Utils.Rpc;
 
 namespace Phantom.Server.Rpc;
 

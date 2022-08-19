@@ -1,7 +1,6 @@
 ﻿using MessagePack;
-using Phantom.Common.Rpc.Message;
 
-namespace Phantom.Common.Rpc.Messages.ToServer;
+namespace Phantom.Common.Messages.ToServer;
 
 [MessagePackObject]
 public sealed record UnregisterAgentMessage(

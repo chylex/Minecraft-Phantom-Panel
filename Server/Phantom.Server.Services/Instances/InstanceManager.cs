@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
-using Phantom.Common.Rpc.Messages.ToAgent;
+using Phantom.Common.Messages.ToAgent;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;

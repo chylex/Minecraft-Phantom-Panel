@@ -1,7 +1,7 @@
 ﻿using MessagePack;
 using MessagePack.Resolvers;
 
-namespace Phantom.Common.Rpc.Message;
+namespace Phantom.Utils.Rpc.Message;
 
 static class MessageSerializer {
 	private static readonly MessagePackSerializerOptions SerializerOptions =

@@ -1,17 +1,17 @@
 ﻿using Serilog;
 
-namespace Phantom.Common.Rpc.Message;
+namespace Phantom.Utils.Rpc.Message;
 
 public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase : class, IMessage<TListener> {
 	private readonly ILogger logger;
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
 	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessageBase>> codeToDeserializerMapping = new ();
 
-	internal MessageRegistry(ILogger logger) {
+	public MessageRegistry(ILogger logger) {
 		this.logger = logger;
 	}
 
-	internal void Add<TMessage>(ushort code) where TMessage : TMessageBase {
+	public void Add<TMessage>(ushort code) where TMessage : TMessageBase {
 		typeToCodeMapping.Add(typeof(TMessage), code);
 		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<TMessage, TMessageBase, TListener>());
 	}

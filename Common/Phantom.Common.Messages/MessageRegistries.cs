@@ -1,9 +1,9 @@
-﻿using Phantom.Common.Rpc.Message;
-using Phantom.Common.Rpc.Messages.ToAgent;
-using Phantom.Common.Rpc.Messages.ToServer;
+﻿using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Common.Rpc.Messages; 
+namespace Phantom.Common.Messages; 
 
 public static class MessageRegistries {
 	public static MessageRegistry<IMessageToAgentListener, IMessageToAgent> ToAgent { get; } = new (PhantomLogger.Create("MessageRegistry:ToAgent"));

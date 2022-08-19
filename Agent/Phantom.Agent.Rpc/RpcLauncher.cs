@@ -1,9 +1,9 @@
 using NetMQ;
 using NetMQ.Sockets;
 using Phantom.Common.Data;
-using Phantom.Common.Rpc;
-using Phantom.Common.Rpc.Messages;
-using Phantom.Common.Rpc.Messages.ToServer;
+using Phantom.Common.Messages;
+using Phantom.Common.Messages.ToServer;
+using Phantom.Utils.Rpc;
 
 namespace Phantom.Agent.Rpc;
 

@@ -1,7 +1,7 @@
 ﻿using NetMQ.Sockets;
 using Phantom.Common.Data;
-using Phantom.Common.Rpc.Messages;
-using Phantom.Common.Rpc.Messages.ToAgent;
+using Phantom.Common.Messages;
+using Phantom.Common.Messages.ToAgent;
 using Phantom.Utils.Logging;
 using Serilog;
 

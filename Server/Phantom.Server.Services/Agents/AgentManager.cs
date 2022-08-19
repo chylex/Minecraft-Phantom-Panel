@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
-using Phantom.Common.Rpc.Message;
-using Phantom.Common.Rpc.Messages.ToServer;
+using Phantom.Common.Messages;
+using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Instances;
 using Phantom.Utils.Collections;

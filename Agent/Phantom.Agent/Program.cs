@@ -3,8 +3,8 @@ using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
-using Phantom.Common.Rpc;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 
 var cancellationTokenSource = new CancellationTokenSource();
