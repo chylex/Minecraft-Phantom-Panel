@@ -2,19 +2,23 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Phantom.Server.Web.Areas.Identity;
 using Phantom.Server.Web.Database;
+using Phantom.Utils.Logging;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Web;
 
 public static class Launcher {
 	public static async Task Launch(Configuration config, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
+		var logger = config.Logger;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = typeof(Launcher).Assembly.GetName().Name
 		});
 
-		builder.Host.UseSerilog(config.Logger, dispose: true);
+		builder.Host.UseSerilog(logger, dispose: true);
 		builder.Host.ConfigureServices(static services => services.AddSingleton<IHostLifetime>(new NullLifetime()));
 
 		builder.WebHost.UseUrls(config.HttpUrl);
@@ -38,7 +42,13 @@ public static class Launcher {
 		app.UseSerilogRequestLogging();
 
 		using (var scope = app.Services.CreateScope()) {
-			await scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database.MigrateAsync();
+			var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database;
+
+			logger.Information("Connecting to database...");
+			await WaitForDatabaseConnection(logger, db);
+
+			logger.Information("Running database migrations...");
+			await db.MigrateAsync();
 		}
 
 		if (app.Environment.IsDevelopment()) {
@@ -57,8 +67,18 @@ public static class Launcher {
 		app.MapBlazorHub();
 		app.MapFallbackToPage("/_Host");
 
-		config.Logger.Information("Starting Web server on port {Port}...", config.Port);
+		logger.Information("Starting Web server on port {Port}...", config.Port);
 		await app.RunAsync(config.CancellationToken);
+	}
+
+	private sealed class NullLifetime : IHostLifetime {
+		public Task WaitForStartAsync(CancellationToken cancellationToken) {
+			return Task.CompletedTask;
+		}
+
+		public Task StopAsync(CancellationToken cancellationToken) {
+			return Task.CompletedTask;
+		}
 	}
 
 	private static void ConfigureAuthentication(AuthenticationOptions o) {
@@ -71,13 +91,12 @@ public static class Launcher {
 		o.SignIn.RequireConfirmedAccount = true;
 	}
 
-	private sealed class NullLifetime : IHostLifetime {
-		public Task WaitForStartAsync(CancellationToken cancellationToken) {
-			return Task.CompletedTask;
-		}
+	private static async Task WaitForDatabaseConnection(ILogger logger, DatabaseFacade db) {
+		var retry = new Throttler(TimeSpan.FromSeconds(15));
 
-		public Task StopAsync(CancellationToken cancellationToken) {
-			return Task.CompletedTask;
+		while (!await db.CanConnectAsync()) {
+			logger.Warning("Cannot connect to database, retrying...");
+			await retry.Wait();
 		}
 	}
 }
