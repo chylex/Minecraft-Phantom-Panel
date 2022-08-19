@@ -14,7 +14,7 @@ sealed class InstanceSessionManager {
 	private readonly Dictionary<Guid, BaseLauncher> instanceLaunchers = new ();
 	private readonly Dictionary<Guid, InstanceSession> instanceSessions = new ();
 
-	public void Create(InstanceInfo instance, ServerProperties serverProperties) {
+	public void Create(InstanceInfo instance) {
 		var instanceFolder = Path.Combine(InstanceBasePath, instance.InstanceGuid.ToString());
 
 		Directory.CreateDirectory(instanceFolder);
@@ -30,7 +30,7 @@ sealed class InstanceSessionManager {
 			jvmProperties,
 			instanceFolder,
 			ServerJarPath,
-			serverProperties
+			new ServerProperties(instance.ServerPort, instance.RconPort)
 		);
 
 		VanillaLauncher launcher = new VanillaLauncher(instanceProperties);

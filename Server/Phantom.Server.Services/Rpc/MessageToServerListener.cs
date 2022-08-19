@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Rpc.Messages;
+﻿using Phantom.Common.Data;
+using Phantom.Common.Rpc.Messages;
 using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
@@ -16,23 +17,23 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	}
 
 	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
-		RegisterAgentResultMessage result;
+		RegisterAgentResult result;
 		
 		lock (this) {
 			if (agentGuid != null) {
 				// TODO reconnection?
-				result = RegisterAgentResultMessage.WithError("This connection already has an associated agent.");
+				result = RegisterAgentResult.DuplicateConnection;
 			}
 			else {
 				result = Services.AgentManager.RegisterAgent(message, connection);
 			}
 
-			if (result.Success) {
+			if (result == RegisterAgentResult.Success) {
 				agentGuid = message.AgentInfo.Guid;
 			}
 		}
 
-		await connection.Send(result);
+		await connection.Send(new RegisterAgentResultMessage(result));
 	}
 
 	public Task HandleUnregisterAgent(UnregisterAgentMessage message) {

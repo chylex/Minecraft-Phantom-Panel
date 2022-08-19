@@ -25,7 +25,7 @@
         <tr>
           <td>@instance.InstanceName</td>
           <td>@(agentNames.TryGetValue(instance.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
-          <td><code>@instance.InstancePort</code></td>
+          <td><code>@instance.ServerPort</code></td>
           <td class="text-end">@instance.MemoryAllocation.InMegabytes MB</td>
           <td>
             <code class="text-uppercase">@instance.InstanceGuid.ToString()</code>

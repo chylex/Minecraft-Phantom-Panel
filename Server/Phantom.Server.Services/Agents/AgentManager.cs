@@ -1,7 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
 using Phantom.Common.Rpc.Message;
-using Phantom.Common.Rpc.Messages.ToAgent;
 using Phantom.Common.Rpc.Messages.ToServer;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Instances;
@@ -29,16 +28,16 @@ public sealed class AgentManager {
 		instanceManager.InstancesChanged.Subscribe(this, agentStats.UpdateInstances);
 	}
 
-	internal RegisterAgentResultMessage RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
+	internal RegisterAgentResult RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
 		if (!AuthToken.FixedTimeEquals(message.AuthToken)) {
-			return RegisterAgentResultMessage.WithError("Invalid agent auth token.");
+			return RegisterAgentResult.InvalidToken;
 		}
 		else if (!agentInfos.TryRegister(new AgentConnection(connection, message.AgentInfo))) {
-			return RegisterAgentResultMessage.WithError("Agent registration failed.");
+			return RegisterAgentResult.OldConnectionNotClosed;
 		}
 		else {
 			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", message.AgentInfo.Name, message.AgentInfo.Guid);
-			return RegisterAgentResultMessage.WithSuccess;
+			return RegisterAgentResult.Success;
 		}
 	}
 

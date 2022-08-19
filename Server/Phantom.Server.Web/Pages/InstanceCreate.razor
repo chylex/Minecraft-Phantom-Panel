@@ -49,7 +49,7 @@
   </div>
 
   <div class="row">
-    <div class="col-xl-10 mb-3">
+    <div class="col-xl-8 mb-3">
       @{ var maximumMemoryUnits = form.MaximumMemoryUnits; }
       <label for="instance-memory" class="form-label">
         @if (maximumMemoryUnits == 0) {
@@ -64,9 +64,15 @@
     </div>
     
     <div class="col-xl-2 mb-3">
-      <label for="instance-port" class="form-label">Port</label>
-      <InputNumber id="instance-port" class="form-control" min="0" max="65535" @bind-Value="form.InstancePort" />
-      <ValidationMessage For="() => form.InstancePort" class="invalid-feedback" />
+      <label for="instance-server-port" class="form-label">Server Port</label>
+      <InputNumber id="instance-server-port" class="form-control" min="0" max="65535" @bind-Value="form.ServerPort" />
+      <ValidationMessage For="() => form.ServerPort" class="invalid-feedback" />
+    </div>
+    
+    <div class="col-xl-2 mb-3">
+      <label for="instance-rcon-port" class="form-label">Rcon Port</label>
+      <InputNumber id="instance-rcon-port" class="form-control" min="0" max="65535" @bind-Value="form.RconPort" />
+      <ValidationMessage For="() => form.RconPort" class="invalid-feedback" />
     </div>
   </div>
 
@@ -105,8 +111,12 @@
     [StringLength(100, ErrorMessage = "Instance name must be at most 100 characters.")]
     public string InstanceName { get; set; } = string.Empty;
 
-    [Range(minimum: 0, maximum: 65535, ErrorMessage = "Port must be between 0 and 65535")]
-    public int InstancePort { get; set; } = 25565;
+    [Range(minimum: 0, maximum: 65535, ErrorMessage = "Server port must be between 0 and 65535")]
+    public int ServerPort { get; set; } = 25565;
+
+    [Range(minimum: 0, maximum: 65535, ErrorMessage = "Rcon port must be between 0 and 65535")]
+    [RconPortMustDifferFromInstancePort(ErrorMessage = "Rcon port must not be the same as Server port.")]
+    public int RconPort { get; set; } = 25575;
 
     public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
     public string MinecraftVersion { get; set; } = "1.19";
@@ -133,6 +143,14 @@
         return agent != null && agent.AvailableMemory > RamAllocationUnits.Zero;
       }
     }
+
+    public sealed class RconPortMustDifferFromInstancePort : FormValidationAttribute {
+      protected override string FieldName => nameof(RconPort);
+      
+      protected override bool IsValid(object model, object? value) {
+        return (ushort?) value != ((FormModel) model).ServerPort;
+      }
+    }
   }
 
   protected override void OnInitialized() {
@@ -151,7 +169,7 @@
 
     isSubmitting = true;
 
-    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.InstancePort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
+    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
     var result = await Services.InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);

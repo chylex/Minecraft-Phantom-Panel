@@ -6,8 +6,8 @@ namespace Phantom.Agent.Services.Commands;
 
 sealed record CreateInstanceCommand(InstanceInfo Instance, ushort RconPort) : BaseCommand<Guid> {
 	protected override Task<Guid> Run(AgentServices agent) {
-		var serverProperties = new ServerProperties(Instance.InstancePort, RconPort);
-		agent.InstanceSessionManager.Create(Instance, serverProperties);
+		var serverProperties = new ServerProperties(Instance.ServerPort, Instance.RconPort);
+		// agent.InstanceSessionManager.Create(Instance, serverProperties);
 
 		return Task.FromResult(Guid.Empty); // TODO
 	}
