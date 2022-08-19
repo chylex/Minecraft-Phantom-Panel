@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
+using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
-using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Server.Services.Instances;
@@ -11,7 +11,7 @@ namespace Phantom.Server.Services.Instances;
 public sealed class InstanceManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManager>();
 
-	private readonly ObservableInstances instances = new ();
+	private readonly ObservableInstances instances = new (PhantomLogger.Create<InstanceManager, ObservableInstances>());
 
 	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
 
@@ -61,6 +61,8 @@ public sealed class InstanceManager {
 
 	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceInfo>> {
 		private readonly RwLockedDictionary<Guid, InstanceInfo> instances = new (LockRecursionPolicy.NoRecursion);
+
+		public ObservableInstances(ILogger logger) : base(logger) {}
 
 		public bool TryAdd(InstanceInfo instance) {
 			if (instances.TryAdd(instance.InstanceGuid, instance)) {

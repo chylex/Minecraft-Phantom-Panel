@@ -3,7 +3,7 @@ using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
-using Phantom.Utils.Logging;
+using Phantom.Common.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 

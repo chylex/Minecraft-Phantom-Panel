@@ -1,4 +1,4 @@
-﻿using Phantom.Utils.Logging;
+﻿using Phantom.Common.Logging;
 using Phantom.Utils.Threading;
 using Serilog;
 

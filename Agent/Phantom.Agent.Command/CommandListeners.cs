@@ -1,5 +1,5 @@
-﻿using Phantom.Utils.Collections;
-using Phantom.Utils.Logging;
+﻿using Phantom.Common.Logging;
+using Phantom.Utils.Collections;
 using Serilog;
 
 namespace Phantom.Agent.Command;

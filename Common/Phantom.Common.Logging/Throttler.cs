@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.Logging; 
+﻿namespace Phantom.Common.Logging; 
 
 public sealed class Throttler {
 	private readonly TimeSpan interval;

@@ -1,10 +1,12 @@
-﻿namespace Phantom.Utils.Events; 
+﻿using Serilog;
+
+namespace Phantom.Utils.Events; 
 
 public abstract class ObservableState<T> {
 	public EventSubscribers<T> Subs { get; }
 
-	protected ObservableState() {
-		Subs = new Subscribers(this);
+	protected ObservableState(ILogger logger) {
+		Subs = new Subscribers(logger, this);
 	}
 
 	protected void Update() {
@@ -16,7 +18,7 @@ public abstract class ObservableState<T> {
 	private sealed class Subscribers : EventSubscribers<T> {
 		private readonly ObservableState<T> observer;
 		
-		public Subscribers(ObservableState<T> observer) {
+		public Subscribers(ILogger logger, ObservableState<T> observer) : base(logger) {
 			this.observer = observer;
 		}
 

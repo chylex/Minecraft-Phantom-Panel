@@ -1,5 +1,4 @@
 ﻿using Phantom.Utils.Collections;
-using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Utils.Events;
@@ -8,8 +7,8 @@ public class EventSubscribers<T> {
 	private readonly RwLockedDictionary<object, Action<T>> subscribers = new (1, LockRecursionPolicy.NoRecursion);
 	private readonly ILogger logger;
 
-	public EventSubscribers() {
-		this.logger = PhantomLogger.Create(GetType());
+	public EventSubscribers(ILogger logger) {
+		this.logger = logger;
 	}
 
 	public virtual void Subscribe(object owner, Action<T> subscriber) {

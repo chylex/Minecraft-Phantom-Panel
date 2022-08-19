@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Phantom.Common.Logging;
 using Phantom.Server.Web.Areas.Identity;
 using Phantom.Server.Web.Database;
-using Phantom.Utils.Logging;
 using Serilog;
 using ILogger = Serilog.ILogger;
 

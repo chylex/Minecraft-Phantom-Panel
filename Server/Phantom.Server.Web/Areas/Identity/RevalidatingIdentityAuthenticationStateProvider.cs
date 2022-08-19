@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Phantom.Server.Web.Areas.Identity;
 
-public class RevalidatingIdentityAuthenticationStateProvider<TUser>
+public sealed class RevalidatingIdentityAuthenticationStateProvider<TUser>
 	: RevalidatingServerAuthenticationStateProvider where TUser : class {
 	private readonly IServiceScopeFactory _scopeFactory;
 	private readonly IdentityOptions _options;

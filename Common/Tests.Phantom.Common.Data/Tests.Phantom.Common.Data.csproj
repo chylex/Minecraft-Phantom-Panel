@@ -17,7 +17,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+    <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
   </ItemGroup>
 
 </Project>

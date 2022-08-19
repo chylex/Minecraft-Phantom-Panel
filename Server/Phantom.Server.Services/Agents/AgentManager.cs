@@ -1,12 +1,12 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
+using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Instances;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
-using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Server.Services.Agents;
@@ -14,8 +14,8 @@ namespace Phantom.Server.Services.Agents;
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 
-	private readonly ObservableAgentInfos agentInfos = new ();
-	private readonly ObservableAgentStats agentStats = new ();
+	private readonly ObservableAgentInfos agentInfos = new (PhantomLogger.Create<AgentManager, ObservableAgentInfos>());
+	private readonly ObservableAgentStats agentStats = new (PhantomLogger.Create<AgentManager, ObservableAgentStats>());
 
 	public AgentAuthToken AuthToken { get; }
 	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsInfosChanged => agentInfos.Subs;
@@ -65,6 +65,8 @@ public sealed class AgentManager {
 
 	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<AgentInfo>> {
 		private readonly RwLockedDictionary<Guid, AgentConnection> agents = new (LockRecursionPolicy.NoRecursion);
+		
+		public ObservableAgentInfos(ILogger logger) : base(logger) {}
 
 		public bool TryRegister(AgentConnection agentConnection) {
 			if (agents.TryAddOrReplace(agentConnection.Info.Guid, agentConnection, static oldConnection => oldConnection.IsClosed)) {
@@ -98,6 +100,8 @@ public sealed class AgentManager {
 	private sealed class ObservableAgentStats : ObservableState<ImmutableArray<AgentStats>> {
 		private ImmutableDictionary<Guid, AgentInfo> agents = ImmutableDictionary<Guid, AgentInfo>.Empty;
 		private ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>>.Empty;
+
+		public ObservableAgentStats(ILogger logger) : base(logger) {}
 
 		public void UpdateAgents(ImmutableArray<AgentInfo> newAgents) {
 			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid);

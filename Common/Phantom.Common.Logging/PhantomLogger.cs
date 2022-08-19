@@ -4,7 +4,7 @@ using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 
-namespace Phantom.Utils.Logging;
+namespace Phantom.Common.Logging;
 
 public static class PhantomLogger {
 	public static Logger Root { get; } = CreateBaseLogger("[{Timestamp:HH:mm:ss} {Level:u}] {Message:lj}{NewLine}{Exception}");
@@ -38,6 +38,10 @@ public static class PhantomLogger {
 
 	public static ILogger Create<T>() {
 		return Create(typeof(T).Name);
+	}
+
+	public static ILogger Create<T1, T2>() {
+		return Create(typeof(T1).Name + ":" + typeof(T2).Name);
 	}
 
 	public static void Dispose() {

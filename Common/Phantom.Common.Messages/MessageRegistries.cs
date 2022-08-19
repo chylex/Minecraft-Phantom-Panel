@@ -1,6 +1,6 @@
-﻿using Phantom.Common.Messages.ToAgent;
+﻿using Phantom.Common.Logging;
+using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
-using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages; 

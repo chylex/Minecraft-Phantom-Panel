@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Data;
-using Phantom.Utils.Logging;
+using Phantom.Common.Logging;
 using Serilog;
 
 namespace Phantom.Server;
