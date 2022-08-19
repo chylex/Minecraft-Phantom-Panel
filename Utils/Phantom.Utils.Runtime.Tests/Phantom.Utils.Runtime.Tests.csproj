@@ -4,7 +4,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    
+    <RootNamespace>Tests.Phantom.Utils.Runtime</RootNamespace>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   
@@ -17,7 +20,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+    <ProjectReference Include="..\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
   </ItemGroup>
 
 </Project>
