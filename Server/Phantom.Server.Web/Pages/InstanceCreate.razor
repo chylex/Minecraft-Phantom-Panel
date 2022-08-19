@@ -89,12 +89,8 @@
   private bool isSubmitting = false;
   private string submitError = string.Empty;
 
-  private bool IsSubmittable {
-    get {
-      return form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
-    }
-  }
-
+  private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
+  
   private sealed class FormModel {
     public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid = Services.AgentManager.GetAgentStats();
 

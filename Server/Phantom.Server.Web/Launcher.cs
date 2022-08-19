@@ -55,7 +55,7 @@ public static class Launcher {
 			app.UseMigrationsEndPoint();
 		}
 		else {
-			app.UseExceptionHandler("/Error");
+			app.UseExceptionHandler("/_Error");
 		}
 
 		app.UseStaticFiles();
