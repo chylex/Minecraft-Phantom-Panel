@@ -6,6 +6,8 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 	private readonly ILogger logger;
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
 	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessageBase>> codeToDeserializerMapping = new ();
+	private readonly HashSet<ushort> codesWithReplies = new ();
+	private uint sequenceId;
 
 	public MessageRegistry(ILogger logger) {
 		this.logger = logger;
@@ -14,6 +16,11 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 	public void Add<TMessage>(ushort code) where TMessage : TMessageBase {
 		typeToCodeMapping.Add(typeof(TMessage), code);
 		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<TMessage, TMessageBase, TListener>());
+	}
+
+	public void Add<TMessage, TReply>(ushort code) where TMessage : TMessageBase, IMessageWithReply<TListener, TReply> {
+		Add<TMessage>(code);
+		codesWithReplies.Add(code);
 	}
 
 	public ReadOnlySpan<byte> Write<TMessage>(TMessage message, CancellationToken cancellationToken = default) where TMessage : TMessageBase {
@@ -25,6 +32,12 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 		var stream = new MemoryStream();
 
 		try {
+			MessageSerializer.WriteCode(stream, code);
+
+			if (codesWithReplies.Contains(code)) {
+				MessageSerializer.WriteSequenceId(stream, Interlocked.Add(ref sequenceId, 1)); // TODO
+			}
+			
 			MessageSerializer.Serialize<TMessage, TListener>(stream, code, message, cancellationToken);
 			return new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int) stream.Length);
 		} catch (Exception e) {

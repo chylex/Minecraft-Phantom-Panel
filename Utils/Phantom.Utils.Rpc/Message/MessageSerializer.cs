@@ -20,14 +20,27 @@ static class MessageSerializer {
 		return static (memory, cancellationToken) => MessagePackSerializer.Deserialize<TMessage>(memory, SerializerOptions, cancellationToken);
 	}
 
-	private static void WriteCode(Stream stream, ushort value) {
+	public static void WriteCode(Stream stream, ushort value) {
 		stream.WriteByte((byte) (value & 0xFF));
 		stream.WriteByte((byte) ((value >> 8) & 0xFF));
+	}
+
+	public static void WriteSequenceId(Stream stream, uint value) {
+		stream.WriteByte((byte) (value & 0xFF));
+		stream.WriteByte((byte) ((value >> 8) & 0xFF));
+		stream.WriteByte((byte) ((value >> 16) & 0xFF));
+		stream.WriteByte((byte) ((value >> 24) & 0xFF));
 	}
 
 	public static ushort ReadCode(ref ReadOnlyMemory<byte> memory) {
 		ushort value = (ushort) (memory.Span[0] | (memory.Span[1] << 8));
 		memory = memory[2..];
+		return value;
+	}
+
+	public static uint ReadSequenceId(ref ReadOnlyMemory<byte> memory) {
+		uint value = (uint) (memory.Span[0] | (memory.Span[1] << 8) | (memory.Span[2] << 16) | (memory.Span[3] << 24));
+		memory = memory[4..];
 		return value;
 	}
 }
