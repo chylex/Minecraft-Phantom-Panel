@@ -2,9 +2,12 @@
   
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-    <OutputType>Library</OutputType>
-    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
   </PropertyGroup>
   
   <ItemGroup>

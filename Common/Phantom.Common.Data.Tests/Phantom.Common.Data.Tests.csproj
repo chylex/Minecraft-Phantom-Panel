@@ -4,10 +4,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <IsPackable>false</IsPackable>
-    
-    <RootNamespace>Tests.Phantom.Common.Data</RootNamespace>
   </PropertyGroup>
   
   <ItemGroup>
