@@ -42,7 +42,8 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		return Task.CompletedTask;
 	}
 
-	public async Task HandleSimpleReply(SimpleReplyMessage message) {
-		await Services.MessageReplyTracker.ReceiveSimpleReply(message);
+	public Task HandleSimpleReply(SimpleReplyMessage message) {
+		Services.MessageReplyTracker.ReceiveReply(message);
+		return Task.CompletedTask;
 	}
 }

@@ -71,23 +71,15 @@ public sealed class AgentManager {
 	}
 
 	public async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
-		var (sequenceId, resetEvent) = Services.MessageReplyTracker.RegisterSimpleReplyCallback();
+		var sequenceId = Services.MessageReplyTracker.RegisterReply();
 		var message = messageFactory(sequenceId);
 
 		if (!await SendMessage(guid, message)) {
-			Services.MessageReplyTracker.RemoveSimpleReplyCallback(sequenceId);
+			Services.MessageReplyTracker.ForgetReply(sequenceId);
 			return null;
 		}
 
-		try {
-			if (!resetEvent.Wait(waitForReplyTime, cancellationToken)) {
-				return null;
-			}
-		} catch (OperationCanceledException) {
-			return null;
-		}
-
-		return Services.MessageReplyTracker.GetSimpleReplyResult(sequenceId);
+		return await Services.MessageReplyTracker.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
 	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<AgentInfo>> {

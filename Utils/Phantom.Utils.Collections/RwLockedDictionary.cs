@@ -89,6 +89,15 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
+	public bool TryRemove(TKey key) {
+		rwLock.EnterWriteLock();
+		try {
+			return dict.Remove(key);
+		} finally {
+			rwLock.ExitWriteLock();
+		}
+	}
+
 	public bool TryRemove(TKey key, Predicate<TValue> removeCondition) {
 		rwLock.EnterWriteLock();
 		try {

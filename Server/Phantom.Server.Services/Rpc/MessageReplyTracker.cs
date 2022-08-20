@@ -3,50 +3,52 @@ using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToServer;
 using Serilog;
 
-namespace Phantom.Server.Services.Rpc; 
+namespace Phantom.Server.Services.Rpc;
 
 sealed class MessageReplyTracker {
 	private static readonly ILogger Logger = PhantomLogger.Create<MessageReplyTracker>();
-	
-	private uint lastSequenceId;
-	private readonly ConcurrentDictionary<uint, Func<int, Task>> simpleReplyCallbacks = new (4, 16);
-	private readonly ConcurrentDictionary<uint, int> simpleReplyResults = new (3, 8);
 
-	public (uint, ManualResetEventSlim) RegisterSimpleReplyCallback() {
+	private uint lastSequenceId;
+	private readonly ConcurrentDictionary<uint, TaskCompletionSource<int?>> simpleReplyTasks = new (4, 16);
+
+	public uint RegisterReply() {
 		var sequenceId = Interlocked.Increment(ref lastSequenceId);
-		var resetEvent = new ManualResetEventSlim(false);
-		
-		simpleReplyCallbacks[sequenceId] = result => {
-			simpleReplyResults[sequenceId] = result;
-			resetEvent.Set();
-			return Task.CompletedTask;
-		};
-		
-		return (sequenceId, resetEvent);
+		simpleReplyTasks[sequenceId] = new TaskCompletionSource<int?>(TaskCreationOptions.None);
+		return sequenceId;
 	}
 
-	public int? GetSimpleReplyResult(uint sequenceId) {
-		RemoveSimpleReplyCallback(sequenceId);
-		
-		if (!simpleReplyResults.TryRemove(sequenceId, out var result)) {
-			Logger.Warning("Requested a reply result with id {SequenceId} but no result was found.", sequenceId);
+	public async Task<int?> WaitForReply(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) {
+		if (!simpleReplyTasks.TryGetValue(sequenceId, out var completionSource)) {
+			Logger.Warning("No reply callback for id {SequenceId}.", sequenceId);
 			return null;
 		}
 		
-		return result;
+		try {
+			return await completionSource.Task.WaitAsync(waitForReplyTime, cancellationToken);
+		} catch (TimeoutException) {
+			return null;
+		} catch (OperationCanceledException) {
+			return null;
+		} catch (Exception e) {
+			Logger.Warning(e, "Error processing reply with id {SequenceId}.", sequenceId);
+			return null;
+		} finally {
+			ForgetReply(sequenceId);
+		}
 	}
 
-	public void RemoveSimpleReplyCallback(uint sequenceId) {
-		simpleReplyCallbacks.TryRemove(sequenceId, out _);
+	public void ForgetReply(uint sequenceId) {
+		if (simpleReplyTasks.TryRemove(sequenceId, out var task)) {
+			task.SetCanceled();
+		}
 	}
 
-	public Task ReceiveSimpleReply(SimpleReplyMessage message) {
-		if (simpleReplyCallbacks.TryRemove(message.SequenceId, out var callback)) {
-			return callback(message.EnumValue);
+	public void ReceiveReply(SimpleReplyMessage message) {
+		if (simpleReplyTasks.TryRemove(message.SequenceId, out var task)) {
+			task.SetResult(message.EnumValue);
 		}
 		else {
 			Logger.Warning("Received a reply with id {SequenceId} but no registered callback.", message.SequenceId);
-			return Task.CompletedTask;
 		}
 	}
 }

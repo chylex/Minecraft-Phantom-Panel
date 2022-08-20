@@ -76,7 +76,7 @@
     </div>
   </div>
 
-  <input type="submit" class="btn btn-primary" value="Create Instance" disabled="@(isSubmitting || !IsSubmittable)">
+  <input type="submit" class="btn btn-primary@(submitError == null ? "" : " is-invalid")" value="Create Instance" disabled="@(isSubmitting || !IsSubmittable)">
   <span class="invalid-feedback">@submitError</span>
 </EditForm>
 
@@ -87,7 +87,7 @@
 
   private EditContext editContext = null!;
   private bool isSubmitting = false;
-  private string submitError = string.Empty;
+  private string? submitError;
 
   private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
   
@@ -175,15 +175,16 @@
     submitError = GetResultError(result);
   }
 
-  private static string GetResultError(AddInstanceResult result) {
+  private static string? GetResultError(AddInstanceResult result) {
     return result switch {
-           AddInstanceResult.Success                     => string.Empty,
+           AddInstanceResult.Success                     => null,
            AddInstanceResult.GuidAlreadyExists           => "Instance was already created.",
            AddInstanceResult.InstanceNameMustNotBeEmpty  => "Instance name must not be empty.",
            AddInstanceResult.InstanceMemoryMustNotBeZero => "Memory must not be 0 MB.",
            AddInstanceResult.AgentNotFound               => "Agent not found.",
            AddInstanceResult.AgentInstanceLimitExceeded  => "Agent instance limit exceeded.",
            AddInstanceResult.AgentMemoryLimitExceeded    => "Agent memory limit exceeded.",
+           AddInstanceResult.AgentCommunicationError     => "Agent did not reply in time.",
            _                                             => "Unknown error."
            };
   }

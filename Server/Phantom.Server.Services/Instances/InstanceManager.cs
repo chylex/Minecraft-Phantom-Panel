@@ -55,6 +55,8 @@ public sealed class InstanceManager {
 			return AddInstanceResult.Success;
 		}
 
+		instances.TryRemove(instance.InstanceGuid);
+		
 		var (result, errorMessage) = reply switch {
 			null => (AddInstanceResult.AgentCommunicationError, "Agent did not reply in time."),
 			_    => (AddInstanceResult.UnknownError, "Unknown error.")
@@ -75,6 +77,16 @@ public sealed class InstanceManager {
 
 		public bool TryAdd(InstanceInfo instance) {
 			if (instances.TryAdd(instance.InstanceGuid, instance)) {
+				Update();
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+
+		public bool TryRemove(Guid instanceGuid) {
+			if (instances.TryRemove(instanceGuid)) {
 				Update();
 				return true;
 			}
