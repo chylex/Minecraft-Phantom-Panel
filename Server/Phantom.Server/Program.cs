@@ -36,6 +36,7 @@ try {
 	}
 
 	ServiceConfiguration.AgentToken = agentToken;
+	ServiceConfiguration.CancellationToken = cancellationTokenSource.Token;
 
 	var certificate = await CertificateFiles.CreateOrLoad(secretsPath);
 	if (certificate == null) {

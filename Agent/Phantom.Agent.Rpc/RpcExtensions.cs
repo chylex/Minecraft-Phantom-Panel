@@ -13,14 +13,7 @@ public static class RpcExtensions {
 		}
 	}
 	
-	public static async Task SendMessageWithSequenceId<TMessage, TParam>(this ClientSocket socket, Func<uint, TParam, TMessage> messageFactory, TParam factoryParameter) where TMessage : IMessageToServer {
-		byte[] bytes = MessageRegistries.ToServer.WriteWithSequenceId(messageFactory, factoryParameter).ToArray();
-		if (bytes.Length > 0) {
-			await socket.SendAsync(bytes);
-		}
-	}
-	
-	public static Task SendSimpleReply<TEnum>(this ClientSocket socket, TEnum reply) where TEnum : Enum {
-		return SendMessageWithSequenceId(socket, SimpleReplyMessage.FromEnum, reply);
+	public static Task SendSimpleReply<TMessage, TReplyEnum>(this ClientSocket socket, TMessage message, TReplyEnum reply) where TMessage : IMessageWithReply where TReplyEnum : Enum {
+		return SendMessage(socket, SimpleReplyMessage.FromEnum(message.SequenceId, reply));
 	}
 }

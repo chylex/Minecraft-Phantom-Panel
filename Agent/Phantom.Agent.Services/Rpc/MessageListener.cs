@@ -48,7 +48,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 
 	public async Task HandleCreateInstance(CreateInstanceMessage message) {
 		var result = agent.InstanceSessionManager.Create(message.Instance);
-		await socket.SendSimpleReply(result);
+		await socket.SendSimpleReply(message, result);
 	}
 
 	public Task HandleSetInstanceState(SetInstanceStateMessage message) {

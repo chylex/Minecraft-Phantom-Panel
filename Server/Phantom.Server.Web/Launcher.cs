@@ -92,7 +92,7 @@ public static class Launcher {
 	}
 
 	private static async Task WaitForDatabaseConnection(ILogger logger, DatabaseFacade db) {
-		var retry = new Throttler(TimeSpan.FromSeconds(15));
+		var retry = new Throttler(TimeSpan.FromSeconds(10));
 
 		while (!await db.CanConnectAsync()) {
 			logger.Warning("Cannot connect to database, retrying...");

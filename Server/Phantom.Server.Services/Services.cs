@@ -14,7 +14,7 @@ public static class Services {
 		var config = ServiceConfiguration.Validate();
 
 		InstanceManager = new InstanceManager();
-		AgentManager = new AgentManager(config.AuthToken, InstanceManager);
+		AgentManager = new AgentManager(config.AuthToken, config.CancellationToken, InstanceManager);
 		MessageReplyTracker = new MessageReplyTracker();
 	}
 }

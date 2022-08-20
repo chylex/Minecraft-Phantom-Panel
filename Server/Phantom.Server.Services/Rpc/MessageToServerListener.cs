@@ -43,6 +43,6 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	}
 
 	public async Task HandleSimpleReply(SimpleReplyMessage message) {
-		await Services.MessageReplyTracker.Receive(message);
+		await Services.MessageReplyTracker.ReceiveSimpleReply(message);
 	}
 }

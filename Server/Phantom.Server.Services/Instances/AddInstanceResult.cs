@@ -8,5 +8,6 @@ public enum AddInstanceResult {
 	AgentNotFound,
 	AgentInstanceLimitExceeded,
 	AgentMemoryLimitExceeded,
-	AgentCommunicationError
+	AgentCommunicationError,
+	UnknownError
 }

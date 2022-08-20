@@ -45,14 +45,23 @@ public sealed class InstanceManager {
 			if (!instances.TryAdd(instance)) {
 				return AddInstanceResult.GuidAlreadyExists;
 			}
-			
+
 			agentName = agentStats.AgentInfo.Name;
 		}
 
-		await Services.AgentManager.SendMessage(instance.AgentGuid, new CreateInstanceMessage(instance));
+		var reply = (CreateInstanceResult?) await Services.AgentManager.SendMessageWithReply(instance.AgentGuid, sequenceId => new CreateInstanceMessage(sequenceId, instance), TimeSpan.FromSeconds(10));
+		if (reply == CreateInstanceResult.Success) {
+			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instance.InstanceName, instance.InstanceGuid, agentName);
+			return AddInstanceResult.Success;
+		}
 
-		Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instance.InstanceName, instance.InstanceGuid, agentName);
-		return AddInstanceResult.Success;
+		var (result, errorMessage) = reply switch {
+			null => (AddInstanceResult.AgentCommunicationError, "Agent did not reply in time."),
+			_    => (AddInstanceResult.UnknownError, "Unknown error.")
+		};
+
+		Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", instance.InstanceName, instance.InstanceGuid, agentName, errorMessage);
+		return result;
 	}
 
 	public InstanceInfo? GetInstance(Guid instanceGuid) {

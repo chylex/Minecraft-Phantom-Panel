@@ -21,7 +21,10 @@ public sealed class AgentManager {
 	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsInfosChanged => agentInfos.Subs;
 	public EventSubscribers<ImmutableArray<AgentStats>> AgentStatsChanged => agentStats.Subs;
 
-	internal AgentManager(AgentAuthToken authToken, InstanceManager instanceManager) {
+	private readonly CancellationToken cancellationToken;
+	
+	internal AgentManager(AgentAuthToken authToken, CancellationToken cancellationToken, InstanceManager instanceManager) {
+		this.cancellationToken = cancellationToken;
 		this.AuthToken = authToken;
 
 		AgentsInfosChanged.Subscribe(this, agentStats.UpdateAgents);
@@ -55,12 +58,36 @@ public sealed class AgentManager {
 		return agentStats.GetAgentStats(agentGuid);
 	}
 
-	public async Task SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
+	public async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
 		var connection = agentInfos.GetConnection(guid);
 		if (connection != null) {
 			await connection.SendMessage(message);
+			return true;
 		}
-		// TODO handle missing agent?
+		else {
+			// TODO handle missing agent?
+			return false;
+		}
+	}
+
+	public async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
+		var (sequenceId, resetEvent) = Services.MessageReplyTracker.RegisterSimpleReplyCallback();
+		var message = messageFactory(sequenceId);
+
+		if (!await SendMessage(guid, message)) {
+			Services.MessageReplyTracker.RemoveSimpleReplyCallback(sequenceId);
+			return null;
+		}
+
+		try {
+			if (!resetEvent.Wait(waitForReplyTime, cancellationToken)) {
+				return null;
+			}
+		} catch (OperationCanceledException) {
+			return null;
+		}
+
+		return Services.MessageReplyTracker.GetSimpleReplyResult(sequenceId);
 	}
 
 	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<AgentInfo>> {
