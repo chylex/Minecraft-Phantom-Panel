@@ -11,8 +11,7 @@ static class MessageSerializer {
 			.WithCompression(MessagePackCompression.None)
 			.WithSecurity(MessagePackSecurity.UntrustedData.WithMaximumObjectGraphDepth(10));
 
-	public static void Serialize<TMessage, TListener>(Stream stream, ushort code, TMessage message, CancellationToken cancellationToken) where TMessage : IMessage<TListener> {
-		WriteCode(stream, code);
+	public static void Serialize<TMessage, TListener>(Stream stream, TMessage message, CancellationToken cancellationToken) where TMessage : IMessage<TListener> {
 		MessagePackSerializer.Serialize(stream, message, SerializerOptions, cancellationToken);
 	}
 

@@ -1,4 +1,5 @@
 ﻿using NetMQ.Sockets;
+using Phantom.Agent.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
@@ -45,9 +46,9 @@ public sealed class MessageListener : IMessageToAgentListener {
 		return Task.CompletedTask;
 	}
 
-	public Task HandleCreateInstance(CreateInstanceMessage message) {
-		agent.InstanceSessionManager.Create(message.Instance);
-		return Task.CompletedTask;
+	public async Task HandleCreateInstance(CreateInstanceMessage message) {
+		var result = agent.InstanceSessionManager.Create(message.Instance);
+		await socket.SendSimpleReply(result);
 	}
 
 	public Task HandleSetInstanceState(SetInstanceStateMessage message) {

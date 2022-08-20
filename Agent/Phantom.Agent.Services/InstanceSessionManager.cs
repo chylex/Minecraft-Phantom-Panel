@@ -14,7 +14,7 @@ sealed class InstanceSessionManager {
 	private readonly Dictionary<Guid, BaseLauncher> instanceLaunchers = new ();
 	private readonly Dictionary<Guid, InstanceSession> instanceSessions = new ();
 
-	public void Create(InstanceInfo instance) {
+	public CreateInstanceResult Create(InstanceInfo instance) {
 		var instanceFolder = Path.Combine(InstanceBasePath, instance.InstanceGuid.ToString());
 
 		Directory.CreateDirectory(instanceFolder);
@@ -35,6 +35,7 @@ sealed class InstanceSessionManager {
 
 		VanillaLauncher launcher = new VanillaLauncher(instanceProperties);
 		instanceLaunchers.Add(instance.InstanceGuid, launcher);
+		return CreateInstanceResult.Success; // TODO
 	}
 
 	public async Task<LaunchResult> Start(Guid guid) {

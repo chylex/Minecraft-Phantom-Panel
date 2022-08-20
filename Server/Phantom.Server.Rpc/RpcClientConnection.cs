@@ -29,4 +29,17 @@ public sealed class RpcClientConnection {
 			await socket.SendAsync(routingId, bytes);
 		}
 	}
+	//
+	// public async Task Send<TMessage, TReply>(TMessage message, Action<TReply> replyHandler, TimeSpan maximumWaitForReply) where TMessage : IMessageToAgent, IMessageWithReply<TReply> {
+	// 	if (IsClosed) {
+	// 		return; // TODO
+	// 	}
+	// 	
+	// 	byte[] bytes = MessageRegistries.ToAgent.Write(message).ToArray();
+	// 	if (bytes.Length > 0) {
+	// 		await socket.SendAsync(routingId, bytes);
+	// 	}
+	// 	
+	// 	var replyCancellationToken = new CancellationTokenSource(maximumWaitForReply);
+	// }
 }

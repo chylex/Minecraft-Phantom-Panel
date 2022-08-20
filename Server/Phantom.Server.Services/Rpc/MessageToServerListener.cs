@@ -41,4 +41,8 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		Services.AgentManager.UnregisterAgent(message, connection);
 		return Task.CompletedTask;
 	}
+
+	public async Task HandleSimpleReply(SimpleReplyMessage message) {
+		await Services.MessageReplyTracker.Receive(message);
+	}
 }
