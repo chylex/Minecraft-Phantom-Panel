@@ -1,8 +1,8 @@
 ﻿@if (Label != null) {
   <label for="@Id" class="form-label">@Label</label>
 }
-else if (HtmlLabel != null) {
-  <label for="@Id" class="form-label">@HtmlLabel</label>
+else if (LabelFragment != null) {
+  <label for="@Id" class="form-label">@LabelFragment</label>
 }
 
 @code {
@@ -14,5 +14,5 @@ else if (HtmlLabel != null) {
   public string? Label { get; set; }
 
   [Parameter]
-  public MarkupString? HtmlLabel { get; set; }
+  public RenderFragment? LabelFragment { get; set; }
 }

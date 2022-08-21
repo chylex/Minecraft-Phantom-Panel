@@ -45,21 +45,23 @@
 
   <div class="row">
     <div class="col-xl-8 mb-3">
-      @{ var maximumMemoryUnits = form.MaximumMemoryUnits; }
-      @{ string label; }
-      @if (maximumMemoryUnits == 0) {
-        label = "RAM";
+      @{
+        ushort maximumMemoryUnits = form.MaximumMemoryUnits;
+        RenderFragment label;
+        if (maximumMemoryUnits == 0) {
+          label = @<text>RAM</text>;
+        }
+        else {
+          label = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
+        }
       }
-      else {
-        label = "RAM &bullet; <code>" + (form.MemoryAllocation?.InMegabytes ?? 0) + " / " + (form.SelectedAgent?.AvailableMemory.InMegabytes) + " MB</code>";
-      }
-      <FormNumberInput Id="instance-memory" HtmlLabel="@((MarkupString) label)" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
     </div>
-    
+
     <div class="col-xl-2 mb-3">
       <FormNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
     </div>
-    
+
     <div class="col-xl-2 mb-3">
       <FormNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
     </div>
@@ -70,14 +72,14 @@
 
 @code {
 
-  private readonly FormModel form = new ();
-  private readonly InputSubmit.SubmitModel submitModel = new ();
+  private readonly FormModel form = new();
+  private readonly InputSubmit.SubmitModel submitModel = new();
   private EditContext editContext = null!;
-  
+
   private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
-  
+
   private readonly Guid instanceGuid = Guid.NewGuid();
-  
+
   private sealed class FormModel {
     public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid = Services.AgentManager.GetAgentStats();
 
@@ -112,7 +114,7 @@
     public int RconPort { get; set; } = 25575;
 
     public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
-    
+
     public string MinecraftVersion { get; set; } = "1.19";
 
     [Range(minimum: 0, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory is out of range.")]

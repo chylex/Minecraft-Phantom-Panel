@@ -1,7 +1,7 @@
 ﻿@typeparam TValue
 @inherits FormInputBase<TValue>
 
-<FormLabel Id="@Id" Label="@Label" HtmlLabel="@HtmlLabel" />
+<FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
 
 @if (Type == FormNumberInputType.Number) {
   <InputNumber Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-control")" />

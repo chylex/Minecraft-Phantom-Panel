@@ -11,7 +11,7 @@ public abstract class FormInputBase<TValue> : ComponentBase {
 	public string? Label { get; set; }
 
 	[Parameter]
-	public MarkupString? HtmlLabel { get; set; }
+	public RenderFragment? LabelFragment { get; set; }
 
 	[Parameter]
 	public TValue? Value { get; set; }
