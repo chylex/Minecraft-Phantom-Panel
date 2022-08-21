@@ -33,3 +33,7 @@ main {
 h1:focus {
   outline: none;
 }
+
+.form-range {
+  height: 2.5rem;
+}

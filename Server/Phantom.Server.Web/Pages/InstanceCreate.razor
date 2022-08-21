@@ -76,20 +76,18 @@
     </div>
   </div>
 
-  <input type="submit" class="btn btn-primary@(submitError == null ? "" : " is-invalid")" value="Create Instance" disabled="@(isSubmitting || !IsSubmittable)">
-  <span class="invalid-feedback">@submitError</span>
+  <InputSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
 </EditForm>
 
 @code {
 
   private readonly FormModel form = new();
-  private readonly Guid instanceGuid = Guid.NewGuid();
-
+  private readonly InputSubmit.SubmitModel submitModel = new ();
   private EditContext editContext = null!;
-  private bool isSubmitting = false;
-  private string? submitError;
-
+  
   private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
+  
+  private readonly Guid instanceGuid = Guid.NewGuid();
   
   private sealed class FormModel {
     public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid = Services.AgentManager.GetAgentStats();
@@ -162,7 +160,7 @@
       return;
     }
 
-    isSubmitting = true;
+    submitModel.StartSubmitting();
 
     var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
     var result = await Services.InstanceManager.AddInstance(instance);
@@ -171,8 +169,7 @@
       return;
     }
 
-    isSubmitting = false;
-    submitError = GetResultError(result);
+    submitModel.StopSubmitting(GetResultError(result));
   }
 
   private static string? GetResultError(AddInstanceResult result) {
