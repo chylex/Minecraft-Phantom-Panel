@@ -1,5 +1,11 @@
 ﻿namespace Phantom.Common.Data; 
 
 public enum CreateInstanceResult {
-	Success
+	Success,
+	InstanceAlreadyExists,
+	InstanceLimitExceeded,
+	MemoryLimitExceeded,
+	ServerPortInUse,
+	RconPortInUse,
+	AgentShuttingDown
 }

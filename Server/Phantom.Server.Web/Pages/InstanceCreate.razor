@@ -35,7 +35,7 @@
     </div>
 
     <div class="col-xl-2 mb-3">
-      <FormSelectInput Id="instance-server-kind" Label="ServerSoftware" @bind-Value="form.MinecraftServerKind">
+      <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
         @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
           <option value="@kind">@kind</option>
         }

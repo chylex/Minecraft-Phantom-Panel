@@ -10,7 +10,7 @@
 }
 else {
   <h1>Instance: @InstanceInfo.InstanceName</h1>
-  <button type="button" class="btn btn-success" @onclick="LaunchInstance">Launch</button>
+  <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@isLaunchingInstance">Launch</button>
   <div id="log" class="font-monospace mb-3">
     @foreach (var line in outputLines.EnumerateLast(uint.MaxValue)) {
       <p>@line</p>
@@ -33,6 +33,7 @@ else {
   public Guid InstanceGuid { get; set; }
 
   private string CommandInput { get; set; } = string.Empty;
+  private bool isLaunchingInstance = false;
   private bool isSendingCommand = false;
 
   private InstanceInfo? InstanceInfo { get; set; }
@@ -51,20 +52,24 @@ else {
     }
   }
 
-  private void LaunchInstance() {
-    Task.Run(async () => {
-      Random r = new Random();
-      while (true) {
-        outputLines.Add("random: " + r.NextInt64());
-        await InvokeAsync(StateHasChanged);
-
-        if (PageJs != null) {
-          await PageJs.InvokeVoidAsync("scrollLog");
-        }
-
-        await Task.Delay(r.Next(300, 1200));
-      }
-    });
+  private async Task LaunchInstance() {
+    isLaunchingInstance = true;
+    await Services.InstanceManager.LaunchInstance(InstanceGuid);
+    isLaunchingInstance = false;
+    
+    // Task.Run(async () => {
+    //   Random r = new Random();
+    //   while (true) {
+    //     outputLines.Add("random: " + r.NextInt64());
+    //     await InvokeAsync(StateHasChanged);
+    //
+    //     if (PageJs != null) {
+    //       await PageJs.InvokeVoidAsync("scrollLog");
+    //     }
+    //
+    //     await Task.Delay(r.Next(300, 1200));
+    //   }
+    // });
   }
 
   private async Task ExecuteCommand() {

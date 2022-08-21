@@ -40,6 +40,10 @@ public static class PhantomLogger {
 		return Create(typeof(T).Name);
 	}
 
+	public static ILogger Create<T>(string name) {
+		return Create(typeof(T).Name + ":" + name);
+	}
+
 	public static ILogger Create<T1, T2>() {
 		return Create(typeof(T1).Name + ":" + typeof(T2).Name);
 	}

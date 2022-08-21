@@ -7,6 +7,9 @@ public sealed class InstanceSession : IDisposable {
 	private readonly RingBuffer<string> outputBuffer = new (10000);
 	private event EventHandler<string>? OutputEvent;
 
+	public event EventHandler? SessionEnded;
+	public bool HasEnded { get; private set; }
+
 	private readonly Process process;
 
 	internal InstanceSession(Process process) {
@@ -16,8 +19,8 @@ public sealed class InstanceSession : IDisposable {
 		this.process.ErrorDataReceived += HandleOutputLine;
 	}
 
-	public async Task SendCommand(string command) {
-		await process.StandardInput.WriteLineAsync(command);
+	public async Task SendCommand(string command, CancellationToken cancellationToken) {
+		await process.StandardInput.WriteLineAsync(command.AsMemory(), cancellationToken);
 	}
 
 	public void AddOutputListener(EventHandler<string> listener, uint maxLinesToReadFromHistory = uint.MaxValue) {
@@ -41,14 +44,18 @@ public sealed class InstanceSession : IDisposable {
 
 	private void ProcessOnExited(object? sender, EventArgs e) {
 		OutputEvent = null;
+		HasEnded = true;
+		SessionEnded?.Invoke(this, EventArgs.Empty);
 	}
 
 	public void Kill() {
 		process.Kill(true);
 	}
 
-	public void WaitForExit() {
-		process.WaitForExit();
+	public async Task WaitForExit(CancellationToken cancellationToken) {
+		if (!HasEnded) {
+			await process.WaitForExitAsync(cancellationToken);
+		}
 	}
 
 	public void Dispose() {

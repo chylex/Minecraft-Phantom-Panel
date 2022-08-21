@@ -70,6 +70,16 @@ public sealed class InstanceManager {
 		return instances.GetInstance(instanceGuid);
 	}
 
+	public async Task LaunchInstance(Guid instanceGuid) {
+		var instanceInfo = GetInstance(instanceGuid);
+		if (instanceInfo != null) {
+			var reply = (SetInstanceStateResult?) await Services.AgentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SetInstanceStateMessage(sequenceId, instanceGuid, IsRunning: true), TimeSpan.FromSeconds(10));
+			if (reply == SetInstanceStateResult.Success) {
+				// TODO
+			}
+		}
+	}
+
 	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceInfo>> {
 		private readonly RwLockedDictionary<Guid, InstanceInfo> instances = new (LockRecursionPolicy.NoRecursion);
 

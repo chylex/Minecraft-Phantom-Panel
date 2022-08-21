@@ -47,11 +47,10 @@ public sealed class MessageListener : IMessageToAgentListener {
 	}
 
 	public async Task HandleCreateInstance(CreateInstanceMessage message) {
-		var result = agent.InstanceSessionManager.Create(message.Instance);
-		await socket.SendSimpleReply(message, result);
+		await socket.SendSimpleReply(message, agent.InstanceSessionManager.Create(message));
 	}
 
-	public Task HandleSetInstanceState(SetInstanceStateMessage message) {
-		return Task.CompletedTask;
+	public async Task HandleSetInstanceState(SetInstanceStateMessage message) {
+		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Update(message));
 	}
 }

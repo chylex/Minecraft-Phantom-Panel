@@ -35,14 +35,20 @@ try {
 	if (serverCertificate == null) {
 		Environment.Exit(1);
 	}
+	
+	string instanceBasePath = Path.GetFullPath("./data/instances");
+	Directory.CreateDirectory(instanceBasePath);
 
 	var agentInfo = new AgentInfo(agentGuid, Version: 1, agentName, maxInstances, maxMemory);
-	var agentServices = new AgentServices();
+	var agentServices = new AgentServices(agentInfo, instanceBasePath);
 
 	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
+	
 	await agentServices.Shutdown();
+	
+	PhantomLogger.Root.Information("Bye!");
 } finally {
 	cancellationTokenSource.Dispose();
 	PhantomLogger.Dispose();

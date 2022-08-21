@@ -1,20 +1,23 @@
-﻿using Phantom.Agent.Command;
-using Phantom.Agent.Services.Command;
+﻿using Phantom.Agent.Services.Instances;
+using Phantom.Common.Data;
 
 namespace Phantom.Agent.Services;
 
 public sealed class AgentServices {
-	internal InstanceSessionManager InstanceSessionManager { get; } = new ();
+	internal AgentInfo AgentInfo { get; }
+	internal InstanceSessionManager InstanceSessionManager { get; }
 
-	internal CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();
-	internal CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
+	// internal CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();
+	// internal CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
 
-	public AgentServices() {
-		this.CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
+	public AgentServices(AgentInfo agentInfo, string instanceBasePath) {
+		this.AgentInfo = agentInfo;
+		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, instanceBasePath);
+		// this.CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
 	}
 
 	public async Task Shutdown() {
-		await CommandQueue.Shutdown();
+		// await CommandQueue.Shutdown();
 		await InstanceSessionManager.StopAll();
 	}
 }
