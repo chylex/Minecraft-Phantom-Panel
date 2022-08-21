@@ -1,19 +1,20 @@
 ﻿@typeparam TValue
-@inherits LabeledInput<TValue>
+@inherits FormInputBase<TValue>
 
-<LabeledInputLabel Id="@Id" Label="@Label" HtmlLabel="@HtmlLabel" />
+<FormLabel Id="@Id" Label="@Label" HtmlLabel="@HtmlLabel" />
 
-@if (Type == LabeledNumberInputType.Number) {
+@if (Type == FormNumberInputType.Number) {
   <InputNumber Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-control")" />
 }
-else if (Type == LabeledNumberInputType.Range) {
+else if (Type == FormNumberInputType.Range) {
   <InputRange Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-range")" />
 }
+
 <ValidationMessage For="@ValueExpression" class="invalid-feedback" />
 
 @code {
 
   [Parameter]
-  public LabeledNumberInputType Type { get; set; } = LabeledNumberInputType.Number;
+  public FormNumberInputType Type { get; set; } = FormNumberInputType.Number;
 
 }

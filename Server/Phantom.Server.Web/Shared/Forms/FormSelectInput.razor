@@ -1,0 +1,15 @@
+﻿@typeparam TValue
+@inherits FormInputBase<TValue>
+
+<FormLabel Id="@Id" Label="@Label" HtmlLabel="@HtmlLabel" />
+<InputSelect Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-select")">
+  @ChildContent
+</InputSelect>
+<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+
+@code {
+
+  [Parameter]
+  public RenderFragment ChildContent { get; set; } = null!;
+
+}

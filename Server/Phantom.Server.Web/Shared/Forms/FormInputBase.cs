@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Phantom.Server.Web.Shared.Forms;
 
-public abstract class LabeledInput<TValue> : ComponentBase {
+public abstract class FormInputBase<TValue> : ComponentBase {
 	[Parameter, EditorRequired]
 	public string Id { get; set; } = null!;
 

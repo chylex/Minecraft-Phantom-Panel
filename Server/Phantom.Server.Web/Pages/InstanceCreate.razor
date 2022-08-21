@@ -1,4 +1,5 @@
 ﻿@page "/instances/create"
+@using Phantom.Server.Web.Utils
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Instances
 @using System.Collections.Immutable
@@ -6,7 +7,6 @@
 @using System.Diagnostics.CodeAnalysis
 @using Phantom.Server.Services
 @using Phantom.Common.Data
-@using Phantom.Server.Web.Utils
 @inject NavigationManager Nav
 
 <h1>New Instance</h1>
@@ -16,8 +16,7 @@
 
   <div class="row">
     <div class="col-xl-6 mb-3">
-      <label for="instance-agent" class="form-label">Agent</label>
-      <InputSelect id="instance-agent" class="form-select" @bind-Value="form.SelectedAgentGuid">
+      <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
         <option value="" selected>Select which agent will run the instance...</option>
         @foreach (var (agent, usedInstances, usedMemory) in form.AgentsByGuid.Values.OrderBy(static item => item.AgentInfo.Name)) {
           <option value="@agent.Guid">
@@ -28,22 +27,19 @@
             @(usedMemory.InMegabytes)/@(agent.MaxMemory.InMegabytes) MB RAM
           </option>
         }
-      </InputSelect>
-      <ValidationMessage For="() => form.SelectedAgentGuid" class="invalid-feedback" />
+      </FormSelectInput>
     </div>
 
     <div class="col-xl-4 mb-3">
-      <LabeledTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
+      <FormTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
     </div>
 
     <div class="col-xl-2 mb-3">
-      <label for="instance-server-kind" class="form-label">Server Software</label>
-      <InputSelect id="instance-server-kind" class="form-select" @bind-Value="form.MinecraftServerKind">
+      <FormSelectInput Id="instance-server-kind" Label="ServerSoftware" @bind-Value="form.MinecraftServerKind">
         @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
           <option value="@kind">@kind</option>
         }
-      </InputSelect>
-      <ValidationMessage For="() => form.MinecraftServerKind" class="invalid-feedback" />
+      </FormSelectInput>
     </div>
   </div>
 
@@ -57,15 +53,15 @@
       else {
         label = "RAM &bullet; <code>" + (form.MemoryAllocation?.InMegabytes ?? 0) + " / " + (form.SelectedAgent?.AvailableMemory.InMegabytes) + " MB</code>";
       }
-      <LabeledNumberInput Id="instance-memory" HtmlLabel="@((MarkupString) label)" Type="LabeledNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+      <FormNumberInput Id="instance-memory" HtmlLabel="@((MarkupString) label)" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
     </div>
     
     <div class="col-xl-2 mb-3">
-      <LabeledNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
+      <FormNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
     </div>
     
     <div class="col-xl-2 mb-3">
-      <LabeledNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
+      <FormNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
     </div>
   </div>
 
@@ -97,6 +93,7 @@
 
     public AgentStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agentStats) ? agentStats : null;
     public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
+    private ushort selectedMemoryUnits = 1;
 
     [Required(ErrorMessage = "You must select an agent.")]
     [AgentHasInstances(ErrorMessage = "This agent has no remaining instances.")]
@@ -108,7 +105,7 @@
     public string InstanceName { get; set; } = string.Empty;
 
     [Range(minimum: 0, maximum: 65535, ErrorMessage = "Server port must be between 0 and 65535")]
-    public int ServerPort { get; set; } = 25565; // TODO trigger validation of rconport
+    public int ServerPort { get; set; } = 25565;
 
     [Range(minimum: 0, maximum: 65535, ErrorMessage = "Rcon port must be between 0 and 65535")]
     [RconPortMustDifferFromServerPort(ErrorMessage = "Rcon port must not be the same as Server port.")]
@@ -118,8 +115,11 @@
     
     public string MinecraftVersion { get; set; } = "1.19";
 
-    [Range(minimum: 1, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory must not be 0 MB.")]
-    public ushort MemoryUnits { get; set; } = 1;
+    [Range(minimum: 0, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory is out of range.")]
+    public ushort MemoryUnits {
+      get => Math.Min(selectedMemoryUnits, MaximumMemoryUnits);
+      set => selectedMemoryUnits = value;
+    }
 
     public RamAllocationUnits? MemoryAllocation => new RamAllocationUnits(MemoryUnits);
 
@@ -145,6 +145,8 @@
 
   protected override void OnInitialized() {
     editContext = BootstrapEditContext.Create(form);
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.MemoryUnits));
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.ServerPort), revalidated: nameof(FormModel.RconPort));
   }
 
   private async Task Submit(EditContext context) {

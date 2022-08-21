@@ -1,5 +1,5 @@
-﻿@inherits LabeledInput<string>
+﻿@inherits FormInputBase<string>
 
-<LabeledInputLabel Id="@Id" Label="@Label" HtmlLabel="@HtmlLabel" />
+<FormLabel Id="@Id" Label="@Label" HtmlLabel="@HtmlLabel" />
 <InputText Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-control")" />
 <ValidationMessage For="@ValueExpression" class="invalid-feedback" />
