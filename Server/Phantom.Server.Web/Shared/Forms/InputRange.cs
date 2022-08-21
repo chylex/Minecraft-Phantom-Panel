@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Rendering;
 
-namespace Phantom.Server.Web.Shared;
+namespace Phantom.Server.Web.Shared.Forms;
 
 public sealed class InputRange<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue> {
 	[Parameter]

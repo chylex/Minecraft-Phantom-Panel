@@ -1,0 +1,18 @@
+﻿@if (Label != null) {
+  <label for="@Id" class="form-label">@Label</label>
+}
+else if (HtmlLabel != null) {
+  <label for="@Id" class="form-label">@HtmlLabel</label>
+}
+
+@code {
+
+  [Parameter, EditorRequired]
+  public string Id { get; set; } = null!;
+  
+  [Parameter]
+  public string? Label { get; set; }
+
+  [Parameter]
+  public MarkupString? HtmlLabel { get; set; }
+}

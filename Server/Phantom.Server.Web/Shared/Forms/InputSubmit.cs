@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 
-namespace Phantom.Server.Web.Shared;
+namespace Phantom.Server.Web.Shared.Forms;
 
 public sealed class InputSubmit : ComponentBase {
 	[Parameter]
 	public string Label { get; set; } = "Submit";
 
-	[Parameter]
+	[Parameter, EditorRequired]
 	public SubmitModel Model { get; set; } = null!;
 
 	[Parameter(CaptureUnmatchedValues = true)]

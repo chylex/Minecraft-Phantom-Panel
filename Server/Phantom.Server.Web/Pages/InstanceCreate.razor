@@ -3,6 +3,7 @@
 @using Phantom.Server.Services.Instances
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
+@using System.Diagnostics.CodeAnalysis
 @using Phantom.Server.Services
 @using Phantom.Common.Data
 @using Phantom.Server.Web.Utils
@@ -32,9 +33,7 @@
     </div>
 
     <div class="col-xl-4 mb-3">
-      <label for="instance-name" class="form-label">Instance Name</label>
-      <InputText id="instance-name" class="form-control" type="text" @bind-Value="form.InstanceName" />
-      <ValidationMessage For="() => form.InstanceName" class="invalid-feedback" />
+      <LabeledTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
     </div>
 
     <div class="col-xl-2 mb-3">
@@ -51,28 +50,22 @@
   <div class="row">
     <div class="col-xl-8 mb-3">
       @{ var maximumMemoryUnits = form.MaximumMemoryUnits; }
-      <label for="instance-memory" class="form-label">
-        @if (maximumMemoryUnits == 0) {
-          <text>RAM</text>
-        }
-        else {
-          <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</code></text>
-        }
-      </label>
-      <InputRange id="instance-memory" class="form-range" min="1" max="@(maximumMemoryUnits)" @bind-Value="form.MemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
-      <ValidationMessage For="() => form.MemoryUnits" class="invalid-feedback" />
+      @{ string label; }
+      @if (maximumMemoryUnits == 0) {
+        label = "RAM";
+      }
+      else {
+        label = "RAM &bullet; <code>" + (form.MemoryAllocation?.InMegabytes ?? 0) + " / " + (form.SelectedAgent?.AvailableMemory.InMegabytes) + " MB</code>";
+      }
+      <LabeledNumberInput Id="instance-memory" HtmlLabel="@((MarkupString) label)" Type="LabeledNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
     </div>
     
     <div class="col-xl-2 mb-3">
-      <label for="instance-server-port" class="form-label">Server Port</label>
-      <InputNumber id="instance-server-port" class="form-control" min="0" max="65535" @bind-Value="form.ServerPort" />
-      <ValidationMessage For="() => form.ServerPort" class="invalid-feedback" />
+      <LabeledNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
     </div>
     
     <div class="col-xl-2 mb-3">
-      <label for="instance-rcon-port" class="form-label">Rcon Port</label>
-      <InputNumber id="instance-rcon-port" class="form-control" min="0" max="65535" @bind-Value="form.RconPort" />
-      <ValidationMessage For="() => form.RconPort" class="invalid-feedback" />
+      <LabeledNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
     </div>
   </div>
 
@@ -81,7 +74,7 @@
 
 @code {
 
-  private readonly FormModel form = new();
+  private readonly FormModel form = new ();
   private readonly InputSubmit.SubmitModel submitModel = new ();
   private EditContext editContext = null!;
   
@@ -92,7 +85,17 @@
   private sealed class FormModel {
     public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid = Services.AgentManager.GetAgentStats();
 
-    public AgentStats? SelectedAgent => SelectedAgentGuid == null || !AgentsByGuid.TryGetValue(SelectedAgentGuid.Value, out var agentInfo) ? null : agentInfo;
+    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentStats? stats) {
+      if (agentGuid == null) {
+        stats = null;
+        return false;
+      }
+      else {
+        return AgentsByGuid.TryGetValue(agentGuid.Value, out stats);
+      }
+    }
+
+    public AgentStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agentStats) ? agentStats : null;
     public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
 
     [Required(ErrorMessage = "You must select an agent.")]
@@ -105,13 +108,14 @@
     public string InstanceName { get; set; } = string.Empty;
 
     [Range(minimum: 0, maximum: 65535, ErrorMessage = "Server port must be between 0 and 65535")]
-    public int ServerPort { get; set; } = 25565;
+    public int ServerPort { get; set; } = 25565; // TODO trigger validation of rconport
 
     [Range(minimum: 0, maximum: 65535, ErrorMessage = "Rcon port must be between 0 and 65535")]
-    [RconPortMustDifferFromInstancePort(ErrorMessage = "Rcon port must not be the same as Server port.")]
+    [RconPortMustDifferFromServerPort(ErrorMessage = "Rcon port must not be the same as Server port.")]
     public int RconPort { get; set; } = 25575;
 
     public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
+    
     public string MinecraftVersion { get; set; } = "1.19";
 
     [Range(minimum: 1, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory must not be 0 MB.")]
@@ -121,28 +125,21 @@
 
     public sealed class AgentHasInstancesAttribute : FormValidationAttribute {
       protected override string FieldName => nameof(SelectedAgentGuid);
-
-      protected override bool IsValid(object model, object? value) {
-        var agent = ((FormModel) model).SelectedAgent;
-        return agent != null && agent.UsedInstances < agent.AgentInfo.MaxInstances;
-      }
+      protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.UsedInstances < agent.AgentInfo.MaxInstances;
     }
 
     public sealed class AgentHasMemoryAttribute : FormValidationAttribute {
       protected override string FieldName => nameof(SelectedAgentGuid);
-
-      protected override bool IsValid(object model, object? value) {
-        var agent = ((FormModel) model).SelectedAgent;
-        return agent != null && agent.AvailableMemory > RamAllocationUnits.Zero;
-      }
+      protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.AvailableMemory > RamAllocationUnits.Zero;
     }
 
-    public sealed class RconPortMustDifferFromInstancePort : FormValidationAttribute {
+    public sealed class RconPortMustDifferFromServerPort : FormValidationAttribute {
       protected override string FieldName => nameof(RconPort);
-      
-      protected override bool IsValid(object model, object? value) {
-        return (int?) value != ((FormModel) model).ServerPort;
-      }
+      protected override bool IsValid(object model, object? value) => (int?) value != M(model).ServerPort;
+    }
+
+    private static FormModel M(object model) {
+      return (FormModel) model;
     }
   }
 
