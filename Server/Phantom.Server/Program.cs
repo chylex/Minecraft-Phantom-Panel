@@ -47,6 +47,8 @@ try {
 		RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token), static connection => new MessageToServerListener(connection)),
 		WebLauncher.Launch(new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, cancellationTokenSource.Token), options => options.UseNpgsql(sqlConnectionString))
 	);
+	
+	PhantomLogger.Root.Information("Bye!");
 } finally {
 	cancellationTokenSource.Dispose();
 	PhantomLogger.Dispose();

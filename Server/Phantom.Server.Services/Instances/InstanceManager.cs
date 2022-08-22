@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
+using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Utils.Collections;
@@ -78,6 +79,20 @@ public sealed class InstanceManager {
 				// TODO
 			}
 		}
+	}
+
+	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
+		var instanceInfo = GetInstance(instanceGuid);
+		if (instanceInfo != null) {
+			var reply = (SendCommandToInstanceResult?) await Services.AgentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
+			if (reply == SendCommandToInstanceResult.Success) {
+				// TODO
+			}
+			
+			return reply ?? SendCommandToInstanceResult.UnknownError;
+		}
+	
+		return SendCommandToInstanceResult.InstanceDoesNotExist;
 	}
 
 	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceInfo>> {

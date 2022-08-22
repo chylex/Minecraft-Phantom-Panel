@@ -7,6 +7,13 @@ using Serilog;
 namespace Phantom.Agent.Services.Instances;
 
 sealed class Instance : IDisposable {
+	private static uint loggerSequenceId = 0;
+
+	private static string GetLoggerName(Guid guid) {
+		var prefix = guid.ToString();
+		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
+	}
+	
 	public InstanceInfo Info { get; }
 
 	private readonly BaseLauncher launcher;
@@ -16,7 +23,7 @@ sealed class Instance : IDisposable {
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
 	public Instance(InstanceInfo info, BaseLauncher launcher) {
-		this.logger = PhantomLogger.Create<Instance>(info.InstanceGuid.ToString());
+		this.logger = PhantomLogger.Create<Instance>(GetLoggerName(info.InstanceGuid));
 
 		this.Info = info;
 		this.launcher = launcher;

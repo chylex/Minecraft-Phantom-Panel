@@ -162,6 +162,7 @@
     }
 
     submitModel.StartSubmitting();
+    await Task.Yield();
 
     var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
     var result = await Services.InstanceManager.AddInstance(instance);

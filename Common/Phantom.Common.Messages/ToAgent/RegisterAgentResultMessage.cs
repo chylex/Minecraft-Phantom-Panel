@@ -1,5 +1,5 @@
 ﻿using MessagePack;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Replies;
 
 namespace Phantom.Common.Messages.ToAgent;
 

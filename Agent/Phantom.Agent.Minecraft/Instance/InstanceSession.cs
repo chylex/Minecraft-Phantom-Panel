@@ -14,6 +14,7 @@ public sealed class InstanceSession : IDisposable {
 
 	internal InstanceSession(Process process) {
 		this.process = process;
+		this.process.EnableRaisingEvents = true;
 		this.process.Exited += ProcessOnExited;
 		this.process.OutputDataReceived += HandleOutputLine;
 		this.process.ErrorDataReceived += HandleOutputLine;

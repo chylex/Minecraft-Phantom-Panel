@@ -1,5 +1,6 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @using Phantom.Common.Data
+@using Phantom.Common.Data.Replies
 @using Phantom.Server.Services
 @using Phantom.Utils.Collections
 @inject IJSRuntime Js;
@@ -18,12 +19,14 @@ else {
   </div>
 
   <div class="mb-3">
+    <form @onsubmit="ExecuteCommand">
     <label for="command-input" class="form-label">Instance Name</label>
-    <div class="input-group flex-nowrap">
-      <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
-      <InputText id="command-input" class="form-control" type="text" placeholder="command" @bind-Value="CommandInput" @bind-Value:event="oninput" disabled="@isSendingCommand" />
-      <button type="button" class="btn btn-primary" @onclick="ExecuteCommand" disabled="@(string.IsNullOrWhiteSpace(CommandInput) || isSendingCommand)">Execute</button>
-    </div>
+      <div class="input-group flex-nowrap">
+        <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
+        <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" @onkeydown="OnCommandInputKeyDown" disabled="@isSendingCommand" @ref="commandInputElement" />
+        <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(commandInput) || isSendingCommand)">Execute</button>
+      </div>
+    </form>
   </div>
 }
 
@@ -32,7 +35,8 @@ else {
   [Parameter]
   public Guid InstanceGuid { get; set; }
 
-  private string CommandInput { get; set; } = string.Empty;
+  private ElementReference commandInputElement;
+  private string commandInput = string.Empty;
   private bool isLaunchingInstance = false;
   private bool isSendingCommand = false;
 
@@ -56,27 +60,39 @@ else {
     isLaunchingInstance = true;
     await Services.InstanceManager.LaunchInstance(InstanceGuid);
     isLaunchingInstance = false;
-    
-    // Task.Run(async () => {
-    //   Random r = new Random();
-    //   while (true) {
-    //     outputLines.Add("random: " + r.NextInt64());
-    //     await InvokeAsync(StateHasChanged);
-    //
-    //     if (PageJs != null) {
-    //       await PageJs.InvokeVoidAsync("scrollLog");
-    //     }
-    //
-    //     await Task.Delay(r.Next(300, 1200));
-    //   }
-    // });
+
+  // Task.Run(async () => {
+  //   Random r = new Random();
+  //   while (true) {
+  //     outputLines.Add("random: " + r.NextInt64());
+  //     await InvokeAsync(StateHasChanged);
+  //
+  //     if (PageJs != null) {
+  //       await PageJs.InvokeVoidAsync("scrollLog");
+  //     }
+  //
+  //     await Task.Delay(r.Next(300, 1200));
+  //   }
+  // });
   }
 
   private async Task ExecuteCommand() {
     isSendingCommand = true;
-    await Task.Delay(1500);
+    await Task.Yield();
+
+    var result = await Services.InstanceManager.SendCommand(InstanceGuid, commandInput);
+    if (result == SendCommandToInstanceResult.Success) {
+      commandInput = string.Empty;
+    }
+    else { // TODO
+    }
+
     isSendingCommand = false;
-    CommandInput = string.Empty;
+    await commandInputElement.FocusAsync(preventScroll: true);
+  }
+
+  private void OnCommandInputKeyDown(KeyboardEventArgs e) {
+    if (e.Code == "Enter" || e.Code == "NumpadEnter") {}
   }
 
 }

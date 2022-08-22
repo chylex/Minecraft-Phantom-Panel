@@ -3,6 +3,7 @@ using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Properties;
 using Phantom.Common.Data;
+using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.ToAgent;
 
 namespace Phantom.Agent.Services.Instances;
@@ -17,19 +18,20 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly HashSet<ushort> usedPorts = new ();
 
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
+	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
 	public InstanceSessionManager(AgentInfo agentInfo, string basePath) {
 		this.agentInfo = agentInfo;
 		this.basePath = basePath;
+		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
 	public CreateInstanceResult Create(CreateInstanceMessage message) {
 		var info = message.Instance;
-		var token = shutdownCancellationTokenSource.Token;
 
 		try {
-			semaphore.Wait(token);
+			semaphore.Wait(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
 			return CreateInstanceResult.AgentShuttingDown;
 		}
@@ -86,10 +88,8 @@ sealed class InstanceSessionManager : IDisposable {
 	}
 
 	public async Task<SetInstanceStateResult> Update(SetInstanceStateMessage message) {
-		var token = shutdownCancellationTokenSource.Token;
-		
 		try {
-			await semaphore.WaitAsync(token);
+			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
 			return SetInstanceStateResult.AgentShuttingDown;
 		}
@@ -101,7 +101,7 @@ sealed class InstanceSessionManager : IDisposable {
 
 			if (message.IsRunning is {} isRunning) {
 				if (isRunning) {
-					await instance.Launch(token);
+					await instance.Launch(shutdownCancellationToken);
 				}
 				else {
 					await instance.Stop(TimeSpan.FromMinutes(1));
@@ -114,57 +114,32 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 	}
 
-	// public async Task<LaunchResult> Start(Guid guid) {
-	// 	if (!instanceLaunchers.TryGetValue(guid, out var launcher)) {
-	// 		return new LaunchResult.InstanceNotFound();
-	// 	}
-	//
-	// 	if (instanceSessions.ContainsKey(guid)) {
-	// 		return new LaunchResult.InstanceAlreadyRunning();
-	// 	}
-	//
-	// 	InstanceSession session;
-	// 	try {
-	// 		session = await launcher.Launch();
-	// 	} catch (Exception e) {
-	// 		return new LaunchResult.UnknownError(e);
-	// 	}
-	//
-	// 	instanceSessions.Add(guid, session);
-	// 	return new LaunchResult.Success(guid, session);
-	// }
-	//
-	// public abstract record LaunchResult {
-	// 	private LaunchResult() {}
-	//
-	// 	public sealed record Success(Guid InstanceGuid, InstanceSession Session) : LaunchResult;
-	//
-	// 	public sealed record UnknownError(Exception Exception) : LaunchResult;
-	//
-	// 	public sealed record InstanceNotFound : LaunchResult;
-	//
-	// 	public sealed record InstanceAlreadyRunning : LaunchResult;
-	// }
-	//
-	// public async Task<SendCommandResult> SendCommand(Guid guid, string command) {
-	// 	if (!instanceSessions.TryGetValue(guid, out var session)) {
-	// 		return new SendCommandResult.InstanceNotRunning();
-	// 	}
-	//
-	// 	await session.SendCommand(command);
-	// 	return new SendCommandResult.Success();
-	// }
-	//
-	// public abstract record SendCommandResult {
-	// 	private SendCommandResult() {}
-	//
-	// 	public sealed record Success : SendCommandResult;
-	//
-	// 	public sealed record InstanceNotRunning : SendCommandResult;
-	// }
+	public async Task<SendCommandToInstanceResult> SendCommand(SendCommandToInstanceMessage message) {
+		try {
+			await semaphore.WaitAsync(shutdownCancellationToken);
+		} catch (OperationCanceledException) {
+			return SendCommandToInstanceResult.AgentShuttingDown;
+		}
+
+		try {
+			if (!instances.TryGetValue(message.InstanceGuid, out var instance)) {
+				return SendCommandToInstanceResult.InstanceDoesNotExist;
+			}
+
+			if (!await instance.SendCommand(message.Command, shutdownCancellationToken)) {
+				return SendCommandToInstanceResult.UnknownError;
+			}
+			
+			return SendCommandToInstanceResult.Success;
+		} finally {
+			semaphore.Release();
+		}
+	}
 
 	public async Task StopAll() {
 		shutdownCancellationTokenSource.Cancel();
+		
+		// ReSharper disable once MethodSupportsCancellation
 		await semaphore.WaitAsync();
 		try {
 			await Task.WhenAll(instances.Values.Select(static instance => instance.Stop(TimeSpan.FromSeconds(30))));
