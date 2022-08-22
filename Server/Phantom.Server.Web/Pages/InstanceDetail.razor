@@ -23,7 +23,7 @@ else {
     <label for="command-input" class="form-label">Instance Name</label>
       <div class="input-group flex-nowrap">
         <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
-        <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" @onkeydown="OnCommandInputKeyDown" disabled="@isSendingCommand" @ref="commandInputElement" />
+        <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" disabled="@isSendingCommand" @ref="commandInputElement" />
         <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(commandInput) || isSendingCommand)">Execute</button>
       </div>
     </form>
@@ -89,10 +89,6 @@ else {
 
     isSendingCommand = false;
     await commandInputElement.FocusAsync(preventScroll: true);
-  }
-
-  private void OnCommandInputKeyDown(KeyboardEventArgs e) {
-    if (e.Code == "Enter" || e.Code == "NumpadEnter") {}
   }
 
 }

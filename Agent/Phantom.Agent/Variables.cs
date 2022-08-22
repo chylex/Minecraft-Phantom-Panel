@@ -9,11 +9,11 @@ sealed record Variables(
 	ushort ServerPort,
 	string? AuthToken,
 	string? AuthTokenFilePath,
-	string AgentName,
+	string AgentNameOrEmpty,
 	ushort MaxInstances,
 	RamAllocationUnits MaxMemory
 ) {
-	private static Variables LoadOrThrow(Func<string> defaultAgentName) {
+	private static Variables LoadOrThrow() {
 		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
 		
 		return new Variables(
@@ -21,15 +21,15 @@ sealed record Variables(
 			EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401),
 			authToken,
 			authTokenFilePath,
-			EnvironmentVariables.GetString("AGENT_NAME").OrGetDefault(defaultAgentName),
+			EnvironmentVariables.GetString("AGENT_NAME").OrDefault(string.Empty),
 			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES").OrThrow, // TODO
 			RamAllocationUnits.FromString(EnvironmentVariables.GetString("MAX_MEMORY").OrThrow)
 		);
 	}
 
-	public static Variables LoadOrExit(Func<string> defaultAgentName) {
+	public static Variables LoadOrExit() {
 		try {
-			return LoadOrThrow(defaultAgentName);
+			return LoadOrThrow();
 		} catch (Exception e) {
 			PhantomLogger.Root.Fatal(e.Message);
 			Environment.Exit(1);

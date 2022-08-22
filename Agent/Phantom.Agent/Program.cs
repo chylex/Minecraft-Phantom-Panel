@@ -11,13 +11,9 @@ var cancellationTokenSource = new CancellationTokenSource();
 PosixSignals.RegisterCancellation(cancellationTokenSource);
 
 try {
-	Guid agentGuid = Guid.NewGuid();
+	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	
-	string DefaultAgentName() {
-		return AgentNameGenerator.GenerateFrom(agentGuid);
-	}
-
-	var (serverHost, serverPort, authToken, authTokenFilePath, agentName, maxInstances, maxMemory) = Variables.LoadOrExit(DefaultAgentName);
+	var (serverHost, serverPort, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
 
 	AgentAuthToken agentAuthToken;
 	try {
@@ -28,24 +24,31 @@ try {
 		return;
 	}
 
-	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
-
 	string serverPublicKeyPath = Path.GetFullPath("./secrets/agent.key");
-	var serverCertificate = await CertificateFiles.LoadPublicKey(serverPublicKeyPath);
+	var serverCertificate = await CertificateFile.LoadPublicKey(serverPublicKeyPath);
 	if (serverCertificate == null) {
 		Environment.Exit(1);
 	}
 	
-	string instanceBasePath = Path.GetFullPath("./data/instances");
-	Directory.CreateDirectory(instanceBasePath);
+	var folders = new AgentFolders(Path.GetFullPath("./data"));
+	if (!folders.TryCreate()) {
+		Environment.Exit(1);
+	}
+	
+	var agentGuid = await GuidFile.CreateOrLoad(folders.DataFolderPath);
+	if (agentGuid == null) {
+		Environment.Exit(1);
+		return;
+	}
+	
+	var agentName = string.IsNullOrEmpty(agentNameOrEmpty) ? AgentNameGenerator.GenerateFrom(agentGuid.Value) : agentNameOrEmpty;
+	var agentInfo = new AgentInfo(agentGuid.Value, Version: 1, agentName, maxInstances, maxMemory);
+	var agentServices = new AgentServices(agentInfo, folders);
 
-	var agentInfo = new AgentInfo(agentGuid, Version: 1, agentName, maxInstances, maxMemory);
-	var agentServices = new AgentServices(agentInfo, instanceBasePath);
-
+	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
-	
 	await agentServices.Shutdown();
 	
 	PhantomLogger.Root.Information("Bye!");

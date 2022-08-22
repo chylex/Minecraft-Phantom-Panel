@@ -5,8 +5,8 @@ using Serilog;
 
 namespace Phantom.Agent;
 
-static class CertificateFiles {
-	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(CertificateFiles));
+static class CertificateFile {
+	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(CertificateFile));
 
 	public static async Task<NetMQCertificate?> LoadPublicKey(string publicKeyFilePath) {
 		if (!File.Exists(publicKeyFilePath)) {
@@ -15,12 +15,18 @@ static class CertificateFiles {
 		}
 
 		try {
-			Files.RequireMaximumFileSize(publicKeyFilePath, 1024);
-			byte[] publicKey = await File.ReadAllBytesAsync(publicKeyFilePath);
-			return NetMQCertificate.FromPublicKey(publicKey);
+			var publicKey = await LoadPublicKeyFromFile(publicKeyFilePath);
+			Logger.Information("Loaded server certificate.");
+			return publicKey;
 		} catch (Exception e) {
 			Logger.Fatal(e, "Error loading server certificate from key file: {PublicKeyFilePath}", publicKeyFilePath);
 			return null;
 		}
+	}
+
+	private static async Task<NetMQCertificate> LoadPublicKeyFromFile(string filePath) {
+		Files.RequireMaximumFileSize(filePath, 1024);
+		byte[] publicKey = await File.ReadAllBytesAsync(filePath);
+		return NetMQCertificate.FromPublicKey(publicKey);
 	}
 }

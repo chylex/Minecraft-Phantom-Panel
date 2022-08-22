@@ -14,10 +14,11 @@ static class AgentTokenFile {
 
 		if (File.Exists(filePath)) {
 			try {
-				return await LoadTokenFromFile(filePath);
+				var token = await AgentAuthToken.ReadFromFile(filePath);
+				Logger.Information("Loaded existing agent token file.");
+				return token;
 			} catch (Exception e) {
-				Logger.Fatal("Error reading agent token file.");
-				Logger.Fatal(e.Message);
+				Logger.Fatal("Error reading agent token file: {Message}", e.Message);
 				return null;
 			}
 		}
@@ -29,15 +30,8 @@ static class AgentTokenFile {
 			await agentToken.WriteToFile(filePath);
 			return agentToken;
 		} catch (Exception e) {
-			Logger.Fatal("Error creating agent token file.");
-			Logger.Fatal(e.Message);
+			Logger.Fatal("Error creating agent token file: {Message}", e.Message);
 			return null;
 		}
-	}
-
-	private static async Task<AgentAuthToken?> LoadTokenFromFile(string filePath) {
-		AgentAuthToken token = await AgentAuthToken.ReadFromFile(filePath);
-		Logger.Information("Loaded existing agent token file.");
-		return token;
 	}
 }
