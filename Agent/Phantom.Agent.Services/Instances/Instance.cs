@@ -10,129 +10,176 @@ sealed class Instance : IDisposable {
 	public InstanceInfo Info { get; }
 
 	private readonly BaseLauncher launcher;
-	private InstanceSession? currentSession;
-
 	private readonly ILogger logger;
-	private readonly SemaphoreSlim semaphore = new (1, 1);
-	private bool isStopping;
+
+	private IState currentState;
+	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
 	public Instance(InstanceInfo info, BaseLauncher launcher) {
 		this.logger = PhantomLogger.Create<Instance>(info.InstanceGuid.ToString());
 
 		this.Info = info;
 		this.launcher = launcher;
+		this.currentState = new NotRunningState(this);
+	}
+
+	private bool TransitionState(IState newState) {
+		if (currentState == newState) {
+			return false;
+		}
+
+		if (currentState is IDisposable disposable) {
+			disposable.Dispose();
+		}
+
+		currentState = newState;
+		return true;
 	}
 
 	public async Task<bool> Launch(CancellationToken cancellationToken) {
-		await semaphore.WaitAsync(cancellationToken);
+		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
-			if (currentSession != null) {
-				return false;
-			}
+			return TransitionState(await currentState.Launch(cancellationToken));
+		} finally {
+			stateTransitioningActionSemaphore.Release();
+		}
+	}
 
-			logger.Information("Session starting...");
-			currentSession = await launcher.Launch();
-			currentSession.AddOutputListener(CurrentSessionOutput);
-			currentSession.SessionEnded += CurrentSessionEnded;
+	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		return await currentState.SendCommand(command, cancellationToken);
+	}
 
-			if (currentSession.HasEnded) {
-				logger.Warning("Session ended immediately after it was started.");
-				currentSession.Dispose();
-				currentSession = null;
-				return false;
+	public async Task Stop(TimeSpan waitTime) {
+		await stateTransitioningActionSemaphore.WaitAsync(waitTime);
+		try {
+			TransitionState(await currentState.Stop(waitTime));
+		} finally {
+			stateTransitioningActionSemaphore.Release();
+		}
+	}
+
+	private interface IState {
+		Task<IState> Launch(CancellationToken cancellationToken);
+		Task<bool> SendCommand(string command, CancellationToken cancellationToken);
+		Task<IState> Stop(TimeSpan waitTime);
+	}
+
+	private static Task<IState> FromState(IState state) {
+		return Task.FromResult(state);
+	}
+
+	private sealed class NotRunningState : IState {
+		private readonly Instance instance;
+
+		public NotRunningState(Instance instance) {
+			this.instance = instance;
+		}
+
+		public async Task<IState> Launch(CancellationToken cancellationToken) {
+			instance.logger.Information("Session starting...");
+			var session = await instance.launcher.Launch();
+			var state = new RunningState(instance, session);
+
+			if (session.HasEnded) {
+				instance.logger.Warning("Session ended immediately after it was started.");
+				state.Dispose();
+				return this;
 			}
 			else {
-				logger.Information("Session started.");
+				instance.logger.Information("Session started.");
+				return state;
+			}
+		}
+
+		public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+			return Task.FromResult(false);
+		}
+
+		public Task<IState> Stop(TimeSpan waitTime) {
+			return FromState(this);
+		}
+	}
+
+	private sealed class RunningState : IState, IDisposable {
+		private readonly Instance instance;
+		private readonly InstanceSession session;
+
+		public RunningState(Instance instance, InstanceSession session) {
+			this.instance = instance;
+			this.session = session;
+			this.session.AddOutputListener(SessionOutput);
+			this.session.SessionEnded += SessionEnded;
+		}
+
+		private void SessionOutput(object? sender, string e) {
+			instance.logger.Verbose("[Server] {Line}", e);
+		}
+
+		private void SessionEnded(object? sender, EventArgs e) {
+			instance.logger.Information("Session ended.");
+			instance.TransitionState(new NotRunningState(instance));
+		}
+
+		public Task<IState> Launch(CancellationToken cancellationToken) {
+			return FromState(this);
+		}
+
+		public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+			try {
+				instance.logger.Information("Sending command: {Command}", command);
+				await session.SendCommand(command, cancellationToken);
 				return true;
-			}
-		} finally {
-			semaphore.Release();
-		}
-	}
-
-	private void CurrentSessionOutput(object? sender, string e) {
-		logger.Verbose("[Server] {Line}", e);
-	}
-
-	private void CurrentSessionEnded(object? sender, EventArgs e) {
-		try {
-			semaphore.Wait();
-			try {
-				if (currentSession == sender && currentSession != null) {
-					currentSession.Dispose();
-					currentSession = null;
-					logger.Information("Session ended.");
-				}
-			} finally {
-				semaphore.Release();
-			}
-		} catch (OperationCanceledException) {
-			logger.Warning("Semaphore was cancelled while handling session ended event.");
-		}
-	}
-
-	public async Task Stop(CancellationToken cancellationToken) {
-		try {
-			await semaphore.WaitAsync(cancellationToken);
-
-			try {
-				if (currentSession != null) {
-					logger.Information("Stopping session...");
-					await currentSession.SendCommand("stop", cancellationToken);
-				}
-			} finally {
-				semaphore.Release();
-			}
-		} catch (OperationCanceledException) {
-			logger.Warning("Semaphore was cancelled while stopping session.");
-		}
-	}
-
-	public async Task StopAndWaitForExit(TimeSpan waitTime) {
-		var cts = new CancellationTokenSource(waitTime);
-		var token = cts.Token;
-
-		try {
-			InstanceSession? session = null;
-			try {
-				isStopping = true;
-				await semaphore.WaitAsync(token);
-
-				try {
-					session = currentSession;
-					if (session == null) {
-						return;
-					}
-
-					logger.Information("Stopping session...");
-					await session.SendCommand("stop", token);
-				} finally {
-					semaphore.Release();
-				}
 			} catch (OperationCanceledException) {
-				logger.Warning("Semaphore was cancelled while stopping session and waiting for exit.");
+				return false;
+			} catch (Exception e) {
+				instance.logger.Warning(e, "Caught exception while sending command.");
+				return false;
+			}
+		}
+
+		public async Task<IState> Stop(TimeSpan waitTime) {
+			session.SessionEnded -= SessionEnded;
+
+			instance.logger.Information("Stopping session with a time limit of {TimeLimit}s...", waitTime.TotalSeconds);
+			using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5))) {
+				try {
+					await session.SendCommand("stop", cts.Token);
+				} catch (OperationCanceledException) {
+					// ignore
+				} catch (Exception e) {
+					instance.logger.Warning(e, "Caught exception while sending stop command.");
+				}
 			}
 
-			if (session != null) {
+			instance.logger.Information("Waiting for session to end...");
+			using (var cts = new CancellationTokenSource(waitTime)) {
 				try {
-					logger.Information("Waiting for session to end...");
-					await session.WaitForExit(token);
+					await session.WaitForExit(cts.Token);
 				} catch (OperationCanceledException) {
 					try {
-						logger.Warning("Waiting timed out, killing session...");
+						instance.logger.Warning("Waiting timed out, killing session...");
 						session.Kill();
 					} catch (Exception e) {
-						logger.Warning(e, "Caught exception while killing session.");
+						instance.logger.Warning(e, "Caught exception while killing session.");
 					}
 				}
 			}
-		} finally {
-			cts.Dispose();
+
+			return new NotRunningState(instance);
+		}
+
+		public void Dispose() {
+			session.SessionEnded -= SessionEnded;
+			session.RemoveOutputListener(SessionOutput);
+			session.Dispose();
 		}
 	}
 
 	public void Dispose() {
-		currentSession?.Dispose();
-		semaphore.Dispose();
+		if (currentState is IDisposable disposable) {
+			disposable.Dispose();
+		}
+
+		stateTransitioningActionSemaphore.Dispose();
 	}
 }

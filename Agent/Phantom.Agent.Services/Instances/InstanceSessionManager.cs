@@ -104,7 +104,7 @@ sealed class InstanceSessionManager : IDisposable {
 					await instance.Launch(token);
 				}
 				else {
-					await instance.Stop(token);
+					await instance.Stop(TimeSpan.FromMinutes(1));
 				}
 			}
 
@@ -167,7 +167,7 @@ sealed class InstanceSessionManager : IDisposable {
 		shutdownCancellationTokenSource.Cancel();
 		await semaphore.WaitAsync();
 		try {
-			await Task.WhenAll(instances.Values.Select(static instance => instance.StopAndWaitForExit(TimeSpan.FromSeconds(30))));
+			await Task.WhenAll(instances.Values.Select(static instance => instance.Stop(TimeSpan.FromSeconds(30))));
 			instances.Clear();
 		} finally {
 			semaphore.Release();
