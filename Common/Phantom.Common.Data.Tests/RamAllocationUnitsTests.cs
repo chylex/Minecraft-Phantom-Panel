@@ -1,7 +1,6 @@
 ﻿using NUnit.Framework;
-using Phantom.Common.Data;
 
-namespace Tests.Phantom.Common.Data;
+namespace Phantom.Common.Data.Tests;
 
 [TestFixture]
 public sealed class RamAllocationUnitsTests {

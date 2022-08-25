@@ -1,7 +1,6 @@
 ﻿using NUnit.Framework;
-using Phantom.Utils.Runtime;
 
-namespace Tests.Phantom.Utils.Runtime;
+namespace Phantom.Utils.Runtime.Tests;
 
 [TestFixture]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]

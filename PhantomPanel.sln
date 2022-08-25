@@ -56,6 +56,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Utils.Runtime.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Utils.Threading", "Utils\Phantom.Utils.Threading\Phantom.Utils.Threading.csproj", "{EC040867-A508-4C9A-9206-550D0D996C84}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Server.Database", "Server\Phantom.Server.Database\Phantom.Server.Database.csproj", "{E3AD566F-384A-489A-A3BB-EA3BA400C18C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Phantom.Server.Database.Postgres", "Server\Phantom.Server.Database.Postgres\Phantom.Server.Database.Postgres.csproj", "{81625B4A-3DB6-48BD-A739-D23DA02107D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -150,6 +154,14 @@ Global
 		{95B55357-F8F0-48C2-A1C2-5EA997651783}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95B55357-F8F0-48C2-A1C2-5EA997651783}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95B55357-F8F0-48C2-A1C2-5EA997651783}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3AD566F-384A-489A-A3BB-EA3BA400C18C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3AD566F-384A-489A-A3BB-EA3BA400C18C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3AD566F-384A-489A-A3BB-EA3BA400C18C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3AD566F-384A-489A-A3BB-EA3BA400C18C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81625B4A-3DB6-48BD-A739-D23DA02107D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81625B4A-3DB6-48BD-A739-D23DA02107D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81625B4A-3DB6-48BD-A739-D23DA02107D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81625B4A-3DB6-48BD-A739-D23DA02107D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{7CA2E5FE-E507-4DC6-930C-E18711A9F856} = {8AC8FB6C-033A-4626-820F-ED0F908756B2}
@@ -174,5 +186,7 @@ Global
 		{95B55357-F8F0-48C2-A1C2-5EA997651783} = {01CB1A81-8950-471C-BFDF-F135FDDB2C18}
 		{BB112660-7A20-45E6-9195-65363B74027F} = {AA217EB8-E480-456B-BDF3-39419EF2AD85}
 		{D7F55010-B3ED-42A5-8D83-E754FFC5F2A2} = {01CB1A81-8950-471C-BFDF-F135FDDB2C18}
+		{E3AD566F-384A-489A-A3BB-EA3BA400C18C} = {8AC8FB6C-033A-4626-820F-ED0F908756B2}
+		{81625B4A-3DB6-48BD-A739-D23DA02107D1} = {8AC8FB6C-033A-4626-820F-ED0F908756B2}
 	EndGlobalSection
 EndGlobal

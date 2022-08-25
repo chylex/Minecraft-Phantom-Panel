@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Phantom.Common.Logging;
+using Phantom.Server.Database;
 using Phantom.Server.Web.Areas.Identity;
-using Phantom.Server.Web.Database;
 using Serilog;
 using ILogger = Serilog.ILogger;
 
@@ -29,8 +29,6 @@ public static class Launcher {
 		}
 
 		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder);
-		builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
 		builder.Services.AddAuthentication(ConfigureAuthentication).AddIdentityCookies(static _ => {});
 		builder.Services.AddIdentityCore<IdentityUser>(ConfigureIdentity).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
@@ -51,10 +49,7 @@ public static class Launcher {
 			await db.MigrateAsync();
 		}
 
-		if (app.Environment.IsDevelopment()) {
-			app.UseMigrationsEndPoint();
-		}
-		else {
+		if (!app.Environment.IsDevelopment()) {
 			app.UseExceptionHandler("/_Error");
 		}
 
