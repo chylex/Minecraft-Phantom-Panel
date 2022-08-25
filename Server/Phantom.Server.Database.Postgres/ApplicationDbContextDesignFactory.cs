@@ -1,14 +1,15 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Phantom.Server.Database.Postgres; 
+namespace Phantom.Server.Database.Postgres;
 
-[SuppressMessage("ReSharper", "UnusedType.Global")]
-public class ApplicationDbContextDesignFactory : IDesignTimeDbContextFactory<ApplicationDbContext> {
+public sealed class ApplicationDbContextDesignFactory : IDesignTimeDbContextFactory<ApplicationDbContext> {
 	public ApplicationDbContext CreateDbContext(string[] args) {
-		var opts = new DbContextOptionsBuilder<ApplicationDbContext>();
-		opts.UseNpgsql();
-		return new ApplicationDbContext(opts.Options);
+		var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+		              .UseNpgsql(static options => options.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName))
+		              .Options;
+
+		return new ApplicationDbContext(options);
 	}
 }
