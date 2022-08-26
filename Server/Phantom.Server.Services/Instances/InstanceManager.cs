@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
@@ -18,9 +19,11 @@ public sealed class InstanceManager {
 	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
 
 	private readonly AgentManager agentManager;
-	
-	internal InstanceManager(AgentManager agentManager) {
+	private readonly IServiceProvider serviceProvider;
+
+	public InstanceManager(AgentManager agentManager, IServiceProvider serviceProvider) {
 		this.agentManager = agentManager;
+		this.serviceProvider = serviceProvider;
 	}
 
 	public async Task<AddInstanceResult> AddInstance(InstanceInfo instance) {
@@ -34,7 +37,8 @@ public sealed class InstanceManager {
 
 		string agentName;
 		lock (this) {
-			var agentStats = agentManager.GetAgentStats(instance.AgentGuid);
+			var agentStatsManager = serviceProvider.GetRequiredService<AgentStatsManager>();
+			var agentStats = agentStatsManager.GetAgentStats(instance.AgentGuid);
 			if (agentStats == null) {
 				return AddInstanceResult.AgentNotFound;
 			}

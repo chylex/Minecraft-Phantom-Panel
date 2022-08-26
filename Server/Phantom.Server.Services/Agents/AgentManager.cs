@@ -4,8 +4,9 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
+using Phantom.Server.Database;
+using Phantom.Server.Database.Entities;
 using Phantom.Server.Rpc;
-using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -22,13 +23,15 @@ public sealed class AgentManager {
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentAuthToken authToken;
-	
-	internal AgentManager(ServiceConfiguration serviceConfiguration, AgentAuthToken authToken, InstanceManager instanceManager) {
+	private readonly DatabaseProvider databaseProvider;
+
+	public AgentManager(ServiceConfiguration serviceConfiguration, AgentAuthToken authToken, DatabaseProvider databaseProvider) {
 		this.cancellationToken = serviceConfiguration.CancellationToken;
 		this.authToken = authToken;
+		this.databaseProvider = databaseProvider;
 	}
 
-	internal RegisterAgentResult RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
+	internal async Task<RegisterAgentResult> RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
 		if (!authToken.FixedTimeEquals(message.AuthToken)) {
 			return RegisterAgentResult.InvalidToken;
 		}
@@ -36,6 +39,11 @@ public sealed class AgentManager {
 			return RegisterAgentResult.OldConnectionNotClosed;
 		}
 		else {
+			using (var scope = databaseProvider.CreateScope()) {
+				scope.Db.Agents.Add(new AgentEntity(message.AgentInfo.Guid, message.AgentInfo.Name));
+				await scope.Db.SaveChangesAsync(cancellationToken);
+			}
+			
 			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", message.AgentInfo.Name, message.AgentInfo.Guid);
 			return RegisterAgentResult.Success;
 		}

@@ -27,7 +27,7 @@ public static class Launcher {
 			builder.WebHost.UseStaticWebAssets();
 		}
 
-		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder);
+		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
 		builder.Services.AddAuthentication(ConfigureAuthentication).AddIdentityCookies(static _ => {});
 		builder.Services.AddIdentityCore<IdentityUser>(ConfigureIdentity).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");

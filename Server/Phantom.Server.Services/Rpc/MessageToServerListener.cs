@@ -11,7 +11,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	private readonly RpcClientConnection connection;
 	private readonly AgentManager agentManager;
 	private Guid? agentGuid;
-	
+
 	public bool IsDisposed { get; private set; }
 
 	public MessageToServerListener(RpcClientConnection connection, AgentManager agentManager) {
@@ -21,19 +21,17 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 
 	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
 		RegisterAgentResult result;
-		
-		lock (this) {
-			if (agentGuid != null) {
-				// TODO reconnection?
-				result = RegisterAgentResult.DuplicateConnection;
-			}
-			else {
-				result = agentManager.RegisterAgent(message, connection);
-			}
 
-			if (result == RegisterAgentResult.Success) {
-				agentGuid = message.AgentInfo.Guid;
-			}
+		if (agentGuid != null) {
+			// TODO reconnection?
+			result = RegisterAgentResult.DuplicateConnection;
+		}
+		else {
+			result = await agentManager.RegisterAgent(message, connection);
+		}
+
+		if (result == RegisterAgentResult.Success) {
+			agentGuid = message.AgentInfo.Guid;
 		}
 
 		await connection.Send(new RegisterAgentResultMessage(result));

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Logging;
 using Phantom.Server;
+using Phantom.Server.Database;
 using Phantom.Server.Database.Postgres;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services;
@@ -58,6 +59,7 @@ try {
 	services.AddSingleton<AgentManager>();
 	services.AddSingleton<AgentStatsManager>();
 	services.AddSingleton<InstanceManager>();
+	services.AddSingleton<DatabaseProvider>();
 	
 	var app = builder.Build();
 	var agentManager = app.Services.GetRequiredService<AgentManager>();
