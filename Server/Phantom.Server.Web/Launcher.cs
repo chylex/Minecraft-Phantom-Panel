@@ -2,17 +2,15 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Phantom.Common.Logging;
 using Phantom.Server.Database;
 using Phantom.Server.Web.Areas.Identity;
 using Serilog;
-using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Web;
 
 public static class Launcher {
-	public static WebApplicationBuilder CreateBuilder(Configuration config, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
+	public static async Task<WebApplication> CreateApplication(Configuration config, IConfigurator configurator, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = typeof(Launcher).Assembly.GetName().Name
 		});
@@ -27,46 +25,46 @@ public static class Launcher {
 			builder.WebHost.UseStaticWebAssets();
 		}
 
+		configurator.ConfigureServices(builder.Services);
+		
 		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
+		builder.Services.AddSingleton<DatabaseProvider>();
+		
 		builder.Services.AddAuthentication(ConfigureAuthentication).AddIdentityCookies(static _ => {});
 		builder.Services.AddIdentityCore<IdentityUser>(ConfigureIdentity).AddDefaultTokenProviders().AddEntityFrameworkStores<ApplicationDbContext>();
+		
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
 		builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 		
-		return builder;
+		var application = builder.Build();
+
+		await MigrateDatabase(config, application.Services.GetRequiredService<DatabaseProvider>());
+		await configurator.LoadFromDatabase(application.Services);
+		
+		return application;
 	}
 	
-	public static async Task Launch(Configuration config, WebApplication app) {
+	public static async Task Launch(Configuration config, WebApplication application) {
 		var logger = config.Logger;
 
-		app.UseSerilogRequestLogging();
+		application.UseSerilogRequestLogging();
 
-		using (var scope = app.Services.CreateScope()) {
-			var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>().Database;
-
-			logger.Information("Connecting to database...");
-			await WaitForDatabaseConnection(logger, db);
-
-			logger.Information("Running database migrations...");
-			await db.MigrateAsync();
+		if (!application.Environment.IsDevelopment()) {
+			application.UseExceptionHandler("/_Error");
 		}
 
-		if (!app.Environment.IsDevelopment()) {
-			app.UseExceptionHandler("/_Error");
-		}
+		application.UseStaticFiles();
+		application.UseRouting();
+		application.UseAuthentication();
+		application.UseAuthorization();
 
-		app.UseStaticFiles();
-		app.UseRouting();
-		app.UseAuthentication();
-		app.UseAuthorization();
-
-		app.MapControllers();
-		app.MapBlazorHub();
-		app.MapFallbackToPage("/_Host");
+		application.MapControllers();
+		application.MapBlazorHub();
+		application.MapFallbackToPage("/_Host");
 
 		logger.Information("Starting Web server on port {Port}...", config.Port);
-		await app.RunAsync(config.CancellationToken);
+		await application.RunAsync(config.CancellationToken);
 	}
 
 	private sealed class NullLifetime : IHostLifetime {
@@ -89,12 +87,26 @@ public static class Launcher {
 		o.SignIn.RequireConfirmedAccount = true;
 	}
 
-	private static async Task WaitForDatabaseConnection(ILogger logger, DatabaseFacade db) {
-		var retry = new Throttler(TimeSpan.FromSeconds(10));
+	private static async Task MigrateDatabase(Configuration config, DatabaseProvider databaseProvider) {
+		var logger = config.Logger;
 
-		while (!await db.CanConnectAsync()) {
+		using var scope = databaseProvider.CreateScope();
+		var database = scope.Ctx.Database;
+
+		logger.Information("Connecting to database...");
+		
+		var retryConnection = new Throttler(TimeSpan.FromSeconds(10));
+		while (!await database.CanConnectAsync(config.CancellationToken)) {
 			logger.Warning("Cannot connect to database, retrying...");
-			await retry.Wait();
+			await retryConnection.Wait();
 		}
+
+		logger.Information("Running database migrations...");
+		await database.MigrateAsync(); // Do not allow cancellation.
+	}
+
+	public interface IConfigurator {
+		void ConfigureServices(IServiceCollection services);
+		Task LoadFromDatabase(IServiceProvider serviceProvider);
 	}
 }

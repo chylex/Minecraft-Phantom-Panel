@@ -2,12 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Logging;
 using Phantom.Server;
-using Phantom.Server.Database;
 using Phantom.Server.Database.Postgres;
 using Phantom.Server.Rpc;
-using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
-using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.IO;
 using Phantom.Utils.Rpc;
@@ -48,29 +45,21 @@ try {
 	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token);
 	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, cancellationTokenSource.Token);
 
-	var builder = WebLauncher.CreateBuilder(webConfiguration, options => options.UseNpgsql(sqlConnectionString, static options => {
+	var webConfigurator = new WebConfigurator(agentToken, cancellationTokenSource.Token);
+	var webApplication = await WebLauncher.CreateApplication(webConfiguration, webConfigurator, options => options.UseNpgsql(sqlConnectionString, static options => {
 		options.CommandTimeout(10).MigrationsAssembly(typeof(ApplicationDbContextDesignFactory).Assembly.FullName);
 	}));
-	
-	var services = builder.Services;
-	
-	services.AddSingleton(new ServiceConfiguration(cancellationTokenSource.Token));
-	services.AddSingleton(agentToken);
-	services.AddSingleton<AgentManager>();
-	services.AddSingleton<AgentStatsManager>();
-	services.AddSingleton<InstanceManager>();
-	services.AddSingleton<DatabaseProvider>();
-	
-	var app = builder.Build();
-	var agentManager = app.Services.GetRequiredService<AgentManager>();
+
+	var agentManager = webApplication.Services.GetRequiredService<AgentManager>();
 
 	await Task.WhenAll(
 		RpcLauncher.Launch(rpcConfiguration, connection => new MessageToServerListener(connection, agentManager)),
-		WebLauncher.Launch(webConfiguration, app)
+		WebLauncher.Launch(webConfiguration, webApplication)
 	);
-	
-	PhantomLogger.Root.Information("Bye!");
+} catch (OperationCanceledException) {
+	// Ignore.
 } finally {
 	cancellationTokenSource.Dispose();
+	PhantomLogger.Root.Information("Bye!");
 	PhantomLogger.Dispose();
 }

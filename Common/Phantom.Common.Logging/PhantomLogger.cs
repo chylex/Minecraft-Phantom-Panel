@@ -24,6 +24,7 @@ public static class PhantomLogger {
 			.MinimumLevel.Override("Microsoft", LogEventLevel.Information)
 			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
 			.MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+			.Filter.ByExcluding(static e => e.Exception is OperationCanceledException)
 			.Enrich.FromLogContext()
 			.WriteTo.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
 			.CreateLogger();

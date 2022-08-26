@@ -12,7 +12,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource);
 
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
-	
+
 	var (serverHost, serverPort, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
 
 	AgentAuthToken agentAuthToken;
@@ -29,18 +29,18 @@ try {
 	if (serverCertificate == null) {
 		Environment.Exit(1);
 	}
-	
+
 	var folders = new AgentFolders(Path.GetFullPath("./data"));
 	if (!folders.TryCreate()) {
 		Environment.Exit(1);
 	}
-	
+
 	var agentGuid = await GuidFile.CreateOrLoad(folders.DataFolderPath);
 	if (agentGuid == null) {
 		Environment.Exit(1);
 		return;
 	}
-	
+
 	var agentName = string.IsNullOrEmpty(agentNameOrEmpty) ? AgentNameGenerator.GenerateFrom(agentGuid.Value) : agentNameOrEmpty;
 	var agentInfo = new AgentInfo(agentGuid.Value, Version: 1, agentName, maxInstances, maxMemory);
 	var agentServices = new AgentServices(agentInfo, folders);
@@ -50,9 +50,10 @@ try {
 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 	await agentServices.Shutdown();
-	
-	PhantomLogger.Root.Information("Bye!");
+} catch (OperationCanceledException) {
+	// Ignore.
 } finally {
 	cancellationTokenSource.Dispose();
+	PhantomLogger.Root.Information("Bye!");
 	PhantomLogger.Dispose();
 }

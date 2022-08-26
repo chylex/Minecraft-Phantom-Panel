@@ -31,6 +31,14 @@ public sealed class AgentManager {
 		this.databaseProvider = databaseProvider;
 	}
 
+	public async Task Initialize() {
+		using var scope = databaseProvider.CreateScope();
+		
+		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+			// TODO
+		}
+	}
+
 	internal async Task<RegisterAgentResult> RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
 		if (!authToken.FixedTimeEquals(message.AuthToken)) {
 			return RegisterAgentResult.InvalidToken;
@@ -40,8 +48,8 @@ public sealed class AgentManager {
 		}
 		else {
 			using (var scope = databaseProvider.CreateScope()) {
-				scope.Db.Agents.Add(new AgentEntity(message.AgentInfo.Guid, message.AgentInfo.Name));
-				await scope.Db.SaveChangesAsync(cancellationToken);
+				scope.Ctx.Agents.Add(new AgentEntity(message.AgentInfo.Guid, message.AgentInfo.Name));
+				await scope.Ctx.SaveChangesAsync(cancellationToken);
 			}
 			
 			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", message.AgentInfo.Name, message.AgentInfo.Guid);

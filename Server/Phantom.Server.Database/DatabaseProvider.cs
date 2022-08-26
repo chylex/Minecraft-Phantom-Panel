@@ -16,11 +16,11 @@ public sealed class DatabaseProvider {
 	public readonly struct Scope : IDisposable {
 		private readonly IServiceScope scope;
 
-		public ApplicationDbContext Db { get; }
+		public ApplicationDbContext Ctx { get; }
 
 		public Scope(IServiceScope scope) {
 			this.scope = scope;
-			this.Db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+			this.Ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 		}
 
 		public void Dispose() {
