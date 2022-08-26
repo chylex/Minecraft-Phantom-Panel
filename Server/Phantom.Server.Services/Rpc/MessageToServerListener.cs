@@ -3,17 +3,20 @@ using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services.Agents;
 
 namespace Phantom.Server.Services.Rpc;
 
 public sealed class MessageToServerListener : IMessageToServerListener {
 	private readonly RpcClientConnection connection;
+	private readonly AgentManager agentManager;
 	private Guid? agentGuid;
 	
 	public bool IsDisposed { get; private set; }
 
-	public MessageToServerListener(RpcClientConnection connection) {
+	public MessageToServerListener(RpcClientConnection connection, AgentManager agentManager) {
 		this.connection = connection;
+		this.agentManager = agentManager;
 	}
 
 	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
@@ -25,7 +28,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 				result = RegisterAgentResult.DuplicateConnection;
 			}
 			else {
-				result = Services.AgentManager.RegisterAgent(message, connection);
+				result = agentManager.RegisterAgent(message, connection);
 			}
 
 			if (result == RegisterAgentResult.Success) {
@@ -38,12 +41,12 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 
 	public Task HandleUnregisterAgent(UnregisterAgentMessage message) {
 		IsDisposed = true;
-		Services.AgentManager.UnregisterAgent(message, connection);
+		agentManager.UnregisterAgent(message, connection);
 		return Task.CompletedTask;
 	}
 
 	public Task HandleSimpleReply(SimpleReplyMessage message) {
-		Services.MessageReplyTracker.ReceiveReply(message);
+		MessageReplyTracker.Instance.ReceiveReply(message);
 		return Task.CompletedTask;
 	}
 }

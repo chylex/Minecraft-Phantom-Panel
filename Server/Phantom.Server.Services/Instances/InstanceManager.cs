@@ -3,6 +3,7 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Server.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Serilog;
@@ -16,7 +17,11 @@ public sealed class InstanceManager {
 
 	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
 
-	internal InstanceManager() {}
+	private readonly AgentManager agentManager;
+	
+	internal InstanceManager(AgentManager agentManager) {
+		this.agentManager = agentManager;
+	}
 
 	public async Task<AddInstanceResult> AddInstance(InstanceInfo instance) {
 		if (string.IsNullOrWhiteSpace(instance.InstanceName)) {
@@ -29,7 +34,7 @@ public sealed class InstanceManager {
 
 		string agentName;
 		lock (this) {
-			var agentStats = Services.AgentManager.GetAgentStats(instance.AgentGuid);
+			var agentStats = agentManager.GetAgentStats(instance.AgentGuid);
 			if (agentStats == null) {
 				return AddInstanceResult.AgentNotFound;
 			}
@@ -50,7 +55,7 @@ public sealed class InstanceManager {
 			agentName = agentStats.AgentInfo.Name;
 		}
 
-		var reply = (CreateInstanceResult?) await Services.AgentManager.SendMessageWithReply(instance.AgentGuid, sequenceId => new CreateInstanceMessage(sequenceId, instance), TimeSpan.FromSeconds(10));
+		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instance.AgentGuid, sequenceId => new CreateInstanceMessage(sequenceId, instance), TimeSpan.FromSeconds(10));
 		if (reply == CreateInstanceResult.Success) {
 			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instance.InstanceName, instance.InstanceGuid, agentName);
 			return AddInstanceResult.Success;
@@ -74,7 +79,7 @@ public sealed class InstanceManager {
 	public async Task LaunchInstance(Guid instanceGuid) {
 		var instanceInfo = GetInstance(instanceGuid);
 		if (instanceInfo != null) {
-			var reply = (SetInstanceStateResult?) await Services.AgentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SetInstanceStateMessage(sequenceId, instanceGuid, IsRunning: true), TimeSpan.FromSeconds(10));
+			var reply = (SetInstanceStateResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SetInstanceStateMessage(sequenceId, instanceGuid, IsRunning: true), TimeSpan.FromSeconds(10));
 			if (reply == SetInstanceStateResult.Success) {
 				// TODO
 			}
@@ -84,7 +89,7 @@ public sealed class InstanceManager {
 	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
 		var instanceInfo = GetInstance(instanceGuid);
 		if (instanceInfo != null) {
-			var reply = (SendCommandToInstanceResult?) await Services.AgentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
+			var reply = (SendCommandToInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
 			if (reply == SendCommandToInstanceResult.Success) {
 				// TODO
 			}

@@ -12,13 +12,12 @@ using ILogger = Serilog.ILogger;
 namespace Phantom.Server.Web;
 
 public static class Launcher {
-	public static async Task Launch(Configuration config, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
-		var logger = config.Logger;
+	public static WebApplicationBuilder CreateBuilder(Configuration config, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = typeof(Launcher).Assembly.GetName().Name
 		});
 
-		builder.Host.UseSerilog(logger, dispose: true);
+		builder.Host.UseSerilog(config.Logger, dispose: true);
 		builder.Host.ConfigureServices(static services => services.AddSingleton<IHostLifetime>(new NullLifetime()));
 
 		builder.WebHost.UseUrls(config.HttpUrl);
@@ -34,8 +33,12 @@ public static class Launcher {
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
 		builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
-
-		var app = builder.Build();
+		
+		return builder;
+	}
+	
+	public static async Task Launch(Configuration config, WebApplication app) {
+		var logger = config.Logger;
 
 		app.UseSerilogRequestLogging();
 

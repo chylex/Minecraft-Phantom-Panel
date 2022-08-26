@@ -6,6 +6,7 @@ using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Instances;
+using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Serilog;
@@ -16,24 +17,19 @@ public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 
 	private readonly ObservableAgentInfos agentInfos = new (PhantomLogger.Create<AgentManager, ObservableAgentInfos>());
-	private readonly ObservableAgentStats agentStats = new (PhantomLogger.Create<AgentManager, ObservableAgentStats>());
 
-	public AgentAuthToken AuthToken { get; }
 	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsInfosChanged => agentInfos.Subs;
-	public EventSubscribers<ImmutableArray<AgentStats>> AgentStatsChanged => agentStats.Subs;
 
 	private readonly CancellationToken cancellationToken;
+	private readonly AgentAuthToken authToken;
 	
-	internal AgentManager(AgentAuthToken authToken, CancellationToken cancellationToken, InstanceManager instanceManager) {
-		this.cancellationToken = cancellationToken;
-		this.AuthToken = authToken;
-
-		AgentsInfosChanged.Subscribe(this, agentStats.UpdateAgents);
-		instanceManager.InstancesChanged.Subscribe(this, agentStats.UpdateInstances);
+	internal AgentManager(ServiceConfiguration serviceConfiguration, AgentAuthToken authToken, InstanceManager instanceManager) {
+		this.cancellationToken = serviceConfiguration.CancellationToken;
+		this.authToken = authToken;
 	}
 
 	internal RegisterAgentResult RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
-		if (!AuthToken.FixedTimeEquals(message.AuthToken)) {
+		if (!authToken.FixedTimeEquals(message.AuthToken)) {
 			return RegisterAgentResult.InvalidToken;
 		}
 		else if (!agentInfos.TryRegister(new AgentConnection(connection, message.AgentInfo))) {
@@ -51,14 +47,6 @@ public sealed class AgentManager {
 		}
 	}
 
-	public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
-		return agentStats.GetAgentStats();
-	}
-
-	public AgentStats? GetAgentStats(Guid agentGuid) {
-		return agentStats.GetAgentStats(agentGuid);
-	}
-
 	public async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
 		var connection = agentInfos.GetConnection(guid);
 		if (connection != null) {
@@ -72,15 +60,15 @@ public sealed class AgentManager {
 	}
 
 	public async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
-		var sequenceId = Services.MessageReplyTracker.RegisterReply();
+		var sequenceId = MessageReplyTracker.Instance.RegisterReply();
 		var message = messageFactory(sequenceId);
 
 		if (!await SendMessage(guid, message)) {
-			Services.MessageReplyTracker.ForgetReply(sequenceId);
+			MessageReplyTracker.Instance.ForgetReply(sequenceId);
 			return null;
 		}
 
-		return await Services.MessageReplyTracker.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
+		return await MessageReplyTracker.Instance.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
 	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<AgentInfo>> {
@@ -114,49 +102,6 @@ public sealed class AgentManager {
 
 		protected override ImmutableArray<AgentInfo> GetData() {
 			return agents.ValuesCopy.Select(static agent => agent.Info).ToImmutableArray();
-		}
-	}
-
-	private sealed class ObservableAgentStats : ObservableState<ImmutableArray<AgentStats>> {
-		private ImmutableDictionary<Guid, AgentInfo> agents = ImmutableDictionary<Guid, AgentInfo>.Empty;
-		private ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>>.Empty;
-
-		public ObservableAgentStats(ILogger logger) : base(logger) {}
-
-		public void UpdateAgents(ImmutableArray<AgentInfo> newAgents) {
-			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid);
-			Update();
-		}
-
-		public void UpdateInstances(ImmutableArray<InstanceInfo> newInstances) {
-			instancesByAgentGuid = newInstances.GroupBy(static instance => instance.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
-			Update();
-		}
-
-		public AgentStats? GetAgentStats(Guid agentGuid) {
-			return agents.TryGetValue(agentGuid, out var agentInfo) ? ComputeAgentStats(instancesByAgentGuid, agentInfo) : null;
-		}
-
-		public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
-			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableDictionary(static stats => stats.AgentInfo.Guid);
-		}
-
-		protected override ImmutableArray<AgentStats> GetData() {
-			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableArray();
-		}
-
-		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid, AgentInfo agentInfo) {
-			int usedInstances = 0;
-			var usedMemory = RamAllocationUnits.Zero;
-
-			if (instancesByAgentGuid.TryGetValue(agentInfo.Guid, out var instances)) {
-				foreach (var instance in instances) {
-					usedInstances += 1;
-					usedMemory += instance.MemoryAllocation;
-				}
-			}
-
-			return new AgentStats(agentInfo, usedInstances, usedMemory);
 		}
 	}
 }

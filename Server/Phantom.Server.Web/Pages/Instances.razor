@@ -1,8 +1,11 @@
 ﻿@page "/instances"
 @using System.Collections.Immutable
+@using Phantom.Server.Services.Agents
+@using Phantom.Server.Services.Instances
 @using Phantom.Common.Data
-@using Phantom.Server.Services
 @implements IDisposable
+@inject AgentManager AgentManager
+@inject InstanceManager InstanceManager
 
 <h1>Instances</h1>
 
@@ -54,19 +57,19 @@
   private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
 
   protected override void OnInitialized() {
-    Services.AgentManager.AgentsInfosChanged.Subscribe(this, agents => {
+    AgentManager.AgentsInfosChanged.Subscribe(this, agents => {
       this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
     });
     
-    Services.InstanceManager.InstancesChanged.Subscribe(this, instances => {
+    InstanceManager.InstancesChanged.Subscribe(this, instances => {
       this.instances = instances;
       InvokeAsync(StateHasChanged);
     });
   }
 
   void IDisposable.Dispose() {
-    Services.AgentManager.AgentsInfosChanged.Unsubscribe(this);
-    Services.InstanceManager.InstancesChanged.Unsubscribe(this);
+    AgentManager.AgentsInfosChanged.Unsubscribe(this);
+    InstanceManager.InstancesChanged.Unsubscribe(this);
   }
 
 }

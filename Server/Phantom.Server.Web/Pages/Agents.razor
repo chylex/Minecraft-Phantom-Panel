@@ -1,9 +1,12 @@
 ﻿@page "/agents"
 @using System.Collections.Immutable
 @using Phantom.Server.Services.Agents
-@using Phantom.Server.Services
+@using Phantom.Common.Data
 @using Phantom.Common.Messages.ToAgent
 @implements IDisposable
+@inject AgentManager AgentManager
+@inject AgentStatsManager AgentStatsManager
+@inject AgentAuthToken AgentAuthToken
 
 <h1>Agents</h1>
 
@@ -42,7 +45,7 @@
         @if (agentStats.IsEmpty) {
           <text>No agents registered.</text>
         }
-        Register agents using the token: <code>@Services.AgentManager.AuthToken</code>
+        Register agents using the token: <code>@AgentAuthToken</code>
       </td>
     </tr>
   </tfoot>
@@ -51,14 +54,14 @@
 @code {
 
   private ImmutableArray<AgentStats> agentStats = ImmutableArray<AgentStats>.Empty;
-  private readonly Dictionary<Guid, AgentRow> agentRows = new ();
+  private readonly Dictionary<Guid, AgentRow> agentRows = new();
 
   private sealed class AgentRow {
     public bool IsShutdownButtonDisabled { get; set; } = false;
   }
 
   protected override void OnInitialized() {
-    Services.AgentManager.AgentStatsChanged.Subscribe(this, agents => {
+    AgentStatsManager.AgentStatsChanged.Subscribe(this, agents => {
       this.agentStats = agents.Sort(static (a1, a2) => a1.AgentInfo.Name.CompareTo(a2.AgentInfo.Name));
 
       var remainingGuids = agents.Select(static agent => agent.AgentInfo.Guid).ToImmutableHashSet();
@@ -78,11 +81,11 @@
 
   private async Task ShutdownAgent(Guid guid) {
     GetOrAddAgentRow(guid).IsShutdownButtonDisabled = true;
-    await Services.AgentManager.SendMessage(guid, new ShutdownAgentMessage());
+    await AgentManager.SendMessage(guid, new ShutdownAgentMessage());
   }
 
   void IDisposable.Dispose() {
-    Services.AgentManager.AgentStatsChanged.Unsubscribe(this);
+    AgentStatsManager.AgentStatsChanged.Unsubscribe(this);
   }
 
 }

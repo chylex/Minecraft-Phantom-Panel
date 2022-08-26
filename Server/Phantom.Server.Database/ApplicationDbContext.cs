@@ -5,4 +5,6 @@ namespace Phantom.Server.Database;
 
 public class ApplicationDbContext : IdentityDbContext {
 	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {}
+	
+	// public DbSet<AgentEntity> Agents { get; set; } = null!;
 }

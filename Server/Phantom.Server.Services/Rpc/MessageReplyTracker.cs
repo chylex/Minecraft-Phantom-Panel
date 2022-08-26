@@ -8,8 +8,12 @@ namespace Phantom.Server.Services.Rpc;
 sealed class MessageReplyTracker {
 	private static readonly ILogger Logger = PhantomLogger.Create<MessageReplyTracker>();
 
+	public static MessageReplyTracker Instance { get; } = new ();
+	
 	private uint lastSequenceId;
 	private readonly ConcurrentDictionary<uint, TaskCompletionSource<int?>> simpleReplyTasks = new (4, 16);
+	
+	private MessageReplyTracker() {}
 
 	public uint RegisterReply() {
 		var sequenceId = Interlocked.Increment(ref lastSequenceId);

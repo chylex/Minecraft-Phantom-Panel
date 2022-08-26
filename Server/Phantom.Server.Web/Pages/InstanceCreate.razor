@@ -5,9 +5,10 @@
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
-@using Phantom.Server.Services
 @using Phantom.Common.Data
 @inject NavigationManager Nav
+@inject AgentStatsManager AgentStatsManager
+@inject InstanceManager InstanceManager
 
 <h1>New Instance</h1>
 
@@ -72,16 +73,20 @@
 
 @code {
 
-  private readonly FormModel form = new();
-  private readonly InputSubmit.SubmitModel submitModel = new();
+  private FormModel form = null!;
   private EditContext editContext = null!;
+  private readonly InputSubmit.SubmitModel submitModel = new();
 
   private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
 
   private readonly Guid instanceGuid = Guid.NewGuid();
 
   private sealed class FormModel {
-    public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid = Services.AgentManager.GetAgentStats();
+    public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid;
+
+    public FormModel(AgentStatsManager agentStatsManager) {
+      AgentsByGuid = agentStatsManager.GetAgentStats();
+    }
 
     private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentStats? stats) {
       if (agentGuid == null) {
@@ -146,6 +151,7 @@
   }
 
   protected override void OnInitialized() {
+    form = new FormModel(AgentStatsManager);
     editContext = BootstrapEditContext.Create(form);
     editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.MemoryUnits));
     editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.ServerPort), revalidated: nameof(FormModel.RconPort));
@@ -165,7 +171,7 @@
     await Task.Yield();
 
     var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
-    var result = await Services.InstanceManager.AddInstance(instance);
+    var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);
       return;

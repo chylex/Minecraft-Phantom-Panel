@@ -1,9 +1,10 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
+@using Phantom.Server.Services.Instances
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Replies
-@using Phantom.Server.Services
 @using Phantom.Utils.Collections
 @inject IJSRuntime Js;
+@inject InstanceManager InstanceManager;
 
 @if (InstanceInfo == null) {
   <h1>Instance Not Found</h1>
@@ -46,7 +47,7 @@ else {
   private readonly RingBuffer<string> outputLines = new(1000);
 
   protected override void OnInitialized() {
-    InstanceInfo = Services.InstanceManager.GetInstance(InstanceGuid);
+    InstanceInfo = InstanceManager.GetInstance(InstanceGuid);
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender) {
@@ -58,7 +59,7 @@ else {
 
   private async Task LaunchInstance() {
     isLaunchingInstance = true;
-    await Services.InstanceManager.LaunchInstance(InstanceGuid);
+    await InstanceManager.LaunchInstance(InstanceGuid);
     isLaunchingInstance = false;
 
   // Task.Run(async () => {
@@ -80,7 +81,7 @@ else {
     isSendingCommand = true;
     await Task.Yield();
 
-    var result = await Services.InstanceManager.SendCommand(InstanceGuid, commandInput);
+    var result = await InstanceManager.SendCommand(InstanceGuid, commandInput);
     if (result == SendCommandToInstanceResult.Success) {
       commandInput = string.Empty;
     }
