@@ -14,4 +14,8 @@ public sealed class AgentEntity {
 		Id = id;
 		Name = name;
 	}
+
+	public AgentEntity() {
+		Name = null!;
+	}
 }

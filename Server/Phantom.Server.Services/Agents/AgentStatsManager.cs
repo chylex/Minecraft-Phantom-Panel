@@ -13,7 +13,7 @@ public sealed class AgentStatsManager {
 	public EventSubscribers<ImmutableArray<AgentStats>> AgentStatsChanged => agentStats.Subs;
 	
 	public AgentStatsManager(AgentManager agentManager, InstanceManager instanceManager) {
-		agentManager.AgentsInfosChanged.Subscribe(this, agentStats.UpdateAgents);
+		agentManager.AgentsChanged.Subscribe(this, agentStats.UpdateAgents);
 		instanceManager.InstancesChanged.Subscribe(this, agentStats.UpdateInstances);
 	}
 	
@@ -31,8 +31,8 @@ public sealed class AgentStatsManager {
 
 		public ObservableAgentStats(ILogger logger) : base(logger) {}
 
-		public void UpdateAgents(ImmutableArray<AgentInfo> newAgents) {
-			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid);
+		public void UpdateAgents(ImmutableArray<Agent> newAgents) {
+			agents = newAgents.Where(static agent => agent is Agent.Online).Cast<Agent.Online>().ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Info);
 			Update();
 		}
 

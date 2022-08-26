@@ -5,7 +5,6 @@ using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Database;
-using Phantom.Server.Database.Entities;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
@@ -17,9 +16,9 @@ namespace Phantom.Server.Services.Agents;
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 
-	private readonly ObservableAgentInfos agentInfos = new (PhantomLogger.Create<AgentManager, ObservableAgentInfos>());
+	private readonly ObservableAgentInfos agents = new (PhantomLogger.Create<AgentManager, ObservableAgentInfos>());
 
-	public EventSubscribers<ImmutableArray<AgentInfo>> AgentsInfosChanged => agentInfos.Subs;
+	public EventSubscribers<ImmutableArray<Agent>> AgentsChanged => agents.Subs;
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentAuthToken authToken;
@@ -35,7 +34,10 @@ public sealed class AgentManager {
 		using var scope = databaseProvider.CreateScope();
 		
 		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			// TODO
+			if (!agents.TryRegister(new Agent.Offline(agent.Id, agent.Name))) {
+				// TODO
+				throw new InvalidOperationException("Unable to register agent from database: " + agent.Id);
+			}
 		}
 	}
 
@@ -43,28 +45,35 @@ public sealed class AgentManager {
 		if (!authToken.FixedTimeEquals(message.AuthToken)) {
 			return RegisterAgentResult.InvalidToken;
 		}
-		else if (!agentInfos.TryRegister(new AgentConnection(connection, message.AgentInfo))) {
+		else if (!agents.TryRegister(new Agent.Online(new AgentConnection(connection, message.AgentInfo)))) {
 			return RegisterAgentResult.OldConnectionNotClosed;
 		}
 		else {
+			var agentGuid = message.AgentInfo.Guid;
+			var agentName = message.AgentInfo.Name;
+			
 			using (var scope = databaseProvider.CreateScope()) {
-				scope.Ctx.Agents.Add(new AgentEntity(message.AgentInfo.Guid, message.AgentInfo.Name));
+				scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
+					agent.Id = guid;
+					agent.Name = agentName;
+				});
+				
 				await scope.Ctx.SaveChangesAsync(cancellationToken);
 			}
 			
-			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", message.AgentInfo.Name, message.AgentInfo.Guid);
+			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agentName, agentGuid);
 			return RegisterAgentResult.Success;
 		}
 	}
 
 	internal void UnregisterAgent(UnregisterAgentMessage message, RpcClientConnection connection) {
-		if (agentInfos.TryUnregister(message.AgentGuid, connection)) {
+		if (agents.TryUnregister(message.AgentGuid, connection)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", message.AgentGuid);
 		}
 	}
 
 	public async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
-		var connection = agentInfos.GetConnection(guid);
+		var connection = agents.GetConnection(guid);
 		if (connection != null) {
 			await connection.SendMessage(message);
 			return true;
@@ -75,7 +84,7 @@ public sealed class AgentManager {
 		}
 	}
 
-	public async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
+	internal async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
 		var sequenceId = MessageReplyTracker.Instance.RegisterReply();
 		var message = messageFactory(sequenceId);
 
@@ -87,13 +96,23 @@ public sealed class AgentManager {
 		return await MessageReplyTracker.Instance.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
-	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<AgentInfo>> {
-		private readonly RwLockedDictionary<Guid, AgentConnection> agents = new (LockRecursionPolicy.NoRecursion);
+	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<Agent>> {
+		private readonly RwLockedDictionary<Guid, Agent> agents = new (LockRecursionPolicy.NoRecursion);
 		
 		public ObservableAgentInfos(ILogger logger) : base(logger) {}
 
-		public bool TryRegister(AgentConnection agentConnection) {
-			if (agents.TryAddOrReplace(agentConnection.Info.Guid, agentConnection, static oldConnection => oldConnection.IsClosed)) {
+		public bool TryRegister(Agent.Offline agent) {
+			if (agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent is Agent.Offline)) {
+				Update();
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		
+		public bool TryRegister(Agent.Online agent) {
+			if (agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent is not Agent.Online online || online.Connection.IsClosed)) {
 				Update();
 				return true;
 			}
@@ -103,7 +122,7 @@ public sealed class AgentManager {
 		}
 
 		public bool TryUnregister(Guid guid, RpcClientConnection connection) {
-			if (agents.TryRemove(guid, oldConnection => oldConnection.IsSame(connection))) {
+			if (agents.TryReplace(guid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent is Agent.Online online && online.Connection.IsSame(connection))) {
 				Update();
 				return true;
 			}
@@ -113,11 +132,11 @@ public sealed class AgentManager {
 		}
 
 		public AgentConnection? GetConnection(Guid guid) {
-			return agents.TryGetValue(guid, out var connection) ? connection : null;
+			return agents.TryGetValue(guid, out var agent) && agent is Agent.Online online ? online.Connection : null;
 		}
 
-		protected override ImmutableArray<AgentInfo> GetData() {
-			return agents.ValuesCopy.Select(static agent => agent.Info).ToImmutableArray();
+		protected override ImmutableArray<Agent> GetData() {
+			return agents.ValuesCopy;
 		}
 	}
 }

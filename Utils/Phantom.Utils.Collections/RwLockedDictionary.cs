@@ -89,6 +89,21 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
+	public bool TryReplace(TKey key, Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
+		rwLock.EnterWriteLock();
+		try {
+			if (dict.TryGetValue(key, out var oldValue) && replaceCondition(oldValue)) {
+				dict[key] = replacementValue(oldValue);
+				return true;
+			}
+			else {
+				return false;
+			}
+		} finally {
+			rwLock.ExitWriteLock();
+		}
+	}
+
 	public bool TryRemove(TKey key) {
 		rwLock.EnterWriteLock();
 		try {

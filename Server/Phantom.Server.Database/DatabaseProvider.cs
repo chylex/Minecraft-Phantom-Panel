@@ -18,7 +18,7 @@ public sealed class DatabaseProvider {
 
 		public ApplicationDbContext Ctx { get; }
 
-		public Scope(IServiceScope scope) {
+		internal Scope(IServiceScope scope) {
 			this.scope = scope;
 			this.Ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 		}

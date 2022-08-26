@@ -57,7 +57,7 @@
   private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
 
   protected override void OnInitialized() {
-    AgentManager.AgentsInfosChanged.Subscribe(this, agents => {
+    AgentManager.AgentsChanged.Subscribe(this, agents => {
       this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
     });
     
@@ -68,7 +68,7 @@
   }
 
   void IDisposable.Dispose() {
-    AgentManager.AgentsInfosChanged.Unsubscribe(this);
+    AgentManager.AgentsChanged.Unsubscribe(this);
     InstanceManager.InstancesChanged.Unsubscribe(this);
   }
 

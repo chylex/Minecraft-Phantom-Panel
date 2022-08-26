@@ -18,31 +18,46 @@
       <th class="text-end">Memory</th>
       <th class="text-end">Version</th>
       <th>Identifier</th>
+      <th class="text-center">Status</th>
       <th>Actions</th>
     </tr>
   </thead>
-  @if (!agentStats.IsEmpty) {
+  @if (!agents.IsEmpty) {
     <tbody>
-      @foreach (var (agent, usedInstances, usedMemory) in agentStats) {
+      @foreach (var agent in agents) {
         <tr>
           <td>@agent.Name</td>
-          <td class="text-end">@usedInstances / @agent.MaxInstances</td>
-          <td class="text-end">@usedMemory.InMegabytes / @agent.MaxMemory.InMegabytes MB</td>
-          <td class="text-end">@agent.Version</td>
-          <td>
-            <code class="text-uppercase">@agent.Guid.ToString()</code>
-          </td>
-          <td>
-            <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@GetOrAddAgentRow(agent.Guid).IsShutdownButtonDisabled">Shutdown</button>
-          </td>
+          @if (agentStats.TryGetValue(agent.Guid, out var stats)) {
+            var agentInfo = stats.AgentInfo;
+            <td class="text-end">@stats.UsedInstances / @agentInfo.MaxInstances</td>
+            <td class="text-end">@stats.UsedMemory.InMegabytes / @agentInfo.MaxMemory.InMegabytes MB</td>
+            <td class="text-end">@agentInfo.Version</td>
+            <td>
+              <code class="text-uppercase">@agent.Guid.ToString()</code>
+            </td>
+            <td class="text-center text-success">Online</td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@GetOrAddAgentRow(agent.Guid).IsShutdownButtonDisabled">Shutdown</button>
+            </td>
+          }
+          else {
+            <td class="text-end">-</td>
+            <td class="text-end">-</td>
+            <td class="text-end">-</td>
+            <td>
+              <code class="text-uppercase">@agent.Guid.ToString()</code>
+            </td>
+            <td class="text-center text-danger">Offline</td>
+            <td></td>
+          }
         </tr>
       }
     </tbody>
   }
   <tfoot>
     <tr>
-      <td colspan="6">
-        @if (agentStats.IsEmpty) {
+      <td colspan="7">
+        @if (agents.IsEmpty) {
           <text>No agents registered.</text>
         }
         Register agents using the token: <code>@AgentAuthToken</code>
@@ -53,7 +68,8 @@
 
 @code {
 
-  private ImmutableArray<AgentStats> agentStats = ImmutableArray<AgentStats>.Empty;
+  private ImmutableArray<Agent> agents = ImmutableArray<Agent>.Empty;
+  private ImmutableDictionary<Guid, AgentStats> agentStats = ImmutableDictionary<Guid, AgentStats>.Empty;
   private readonly Dictionary<Guid, AgentRow> agentRows = new();
 
   private sealed class AgentRow {
@@ -61,16 +77,21 @@
   }
 
   protected override void OnInitialized() {
-    AgentStatsManager.AgentStatsChanged.Subscribe(this, agents => {
-      this.agentStats = agents.Sort(static (a1, a2) => a1.AgentInfo.Name.CompareTo(a2.AgentInfo.Name));
+    AgentManager.AgentsChanged.Subscribe(this, agents => {
+      this.agents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
 
-      var remainingGuids = agents.Select(static agent => agent.AgentInfo.Guid).ToImmutableHashSet();
+      var remainingGuids = agents.Select(static agent => agent.Guid).ToImmutableHashSet();
       foreach (var guid in agentRows.Keys) {
         if (!remainingGuids.Contains(guid)) {
           agentRows.Remove(guid);
         }
       }
 
+      InvokeAsync(StateHasChanged);
+    });
+
+    AgentStatsManager.AgentStatsChanged.Subscribe(this, agentStats => {
+      this.agentStats = agentStats.ToImmutableDictionary(static stats => stats.AgentInfo.Guid);
       InvokeAsync(StateHasChanged);
     });
   }
@@ -85,6 +106,7 @@
   }
 
   void IDisposable.Dispose() {
+    AgentManager.AgentsChanged.Unsubscribe(this);
     AgentStatsManager.AgentStatsChanged.Unsubscribe(this);
   }
 
