@@ -1,12 +1,13 @@
 ﻿@page "/agents"
 @using System.Collections.Immutable
-@using Phantom.Server.Services.Agents
 @using Phantom.Common.Data
 @using Phantom.Common.Messages.ToAgent
+@using Phantom.Server.Services.Agents
+@using Phantom.Utils.Collections
 @implements IDisposable
+@inject AgentAuthToken AgentAuthToken
 @inject AgentManager AgentManager
 @inject AgentStatsManager AgentStatsManager
-@inject AgentAuthToken AgentAuthToken
 
 <h1>Agents</h1>
 
@@ -22,9 +23,10 @@
       <th>Actions</th>
     </tr>
   </thead>
-  @if (!agents.IsEmpty) {
+  @if (!agentTable.IsEmpty) {
     <tbody>
-      @foreach (var agent in agents) {
+      @foreach (var row in agentTable) {
+        var agent = row.Agent;
         <tr>
           <td>@agent.Name</td>
           @if (agentStats.TryGetValue(agent.Guid, out var stats)) {
@@ -37,7 +39,7 @@
             </td>
             <td class="text-center text-success">Online</td>
             <td>
-              <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@GetOrAddAgentRow(agent.Guid).IsShutdownButtonDisabled">Shutdown</button>
+              <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@row.IsShutdownButtonDisabled">Shutdown</button>
             </td>
           }
           else {
@@ -57,7 +59,7 @@
   <tfoot>
     <tr>
       <td colspan="7">
-        @if (agents.IsEmpty) {
+        @if (agentTable.IsEmpty) {
           <text>No agents registered.</text>
         }
         Register agents using the token: <code>@AgentAuthToken</code>
@@ -68,25 +70,22 @@
 
 @code {
 
-  private ImmutableArray<Agent> agents = ImmutableArray<Agent>.Empty;
+  private readonly Table<AgentRow, Guid> agentTable = new ();
   private ImmutableDictionary<Guid, AgentStats> agentStats = ImmutableDictionary<Guid, AgentStats>.Empty;
-  private readonly Dictionary<Guid, AgentRow> agentRows = new();
 
   private sealed class AgentRow {
+    public Agent Agent { get; set; }
     public bool IsShutdownButtonDisabled { get; set; } = false;
+
+    public AgentRow(Agent agent) {
+      Agent = agent;
+    }
   }
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
-      this.agents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
-
-      var remainingGuids = agents.Select(static agent => agent.Guid).ToImmutableHashSet();
-      foreach (var guid in agentRows.Keys) {
-        if (!remainingGuids.Contains(guid)) {
-          agentRows.Remove(guid);
-        }
-      }
-
+      var sortedAgents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
+      agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => new AgentRow(agent), static (agent, row) => row.Agent = agent);
       InvokeAsync(StateHasChanged);
     });
 
@@ -96,13 +95,11 @@
     });
   }
 
-  private AgentRow GetOrAddAgentRow(Guid guid) {
-    return agentRows.TryGetValue(guid, out var row) ? row : agentRows[guid] = new AgentRow();
-  }
-
   private async Task ShutdownAgent(Guid guid) {
-    GetOrAddAgentRow(guid).IsShutdownButtonDisabled = true;
-    await AgentManager.SendMessage(guid, new ShutdownAgentMessage());
+    if (agentTable.TryGetValue(guid, out var row)) {
+      row.IsShutdownButtonDisabled = true;
+      await AgentManager.SendMessage(guid, new ShutdownAgentMessage());
+    }
   }
 
   void IDisposable.Dispose() {
