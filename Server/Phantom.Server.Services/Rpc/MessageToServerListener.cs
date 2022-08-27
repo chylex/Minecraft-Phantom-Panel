@@ -47,7 +47,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		return Task.CompletedTask;
 	}
 
-	public Task HandleInstanceOutputLine(InstanceOutputLineMessage message) {
+	public Task HandleInstanceOutput(InstanceOutputMessage message) {
 		instanceManager.AddInstanceLogs(message);
 		return Task.CompletedTask;
 	}

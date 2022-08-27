@@ -24,6 +24,11 @@ public sealed class RingBuffer<T> {
 		writeIndex %= Capacity;
 	}
 
+	public void Clear() {
+		Count = 0;
+		writeIndex = 0;
+	}
+
 	public IEnumerable<T> EnumerateLast(uint maximumItems) {
 		int totalItemsToReturn = (int) Math.Min(maximumItems, Count);
 		

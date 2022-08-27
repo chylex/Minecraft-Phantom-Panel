@@ -111,8 +111,8 @@ public sealed class InstanceManager {
 		return instanceLogs.GetOrAdd(instanceGuid, static _ => new ObservableInstanceLogs(PhantomLogger.Create<InstanceManager, ObservableInstanceLogs>()));
 	}
 
-	internal void AddInstanceLogs(InstanceOutputLineMessage message) {
-		GetInstanceLogs(message.InstanceGuid).Add(message.Line);
+	internal void AddInstanceLogs(InstanceOutputMessage message) {
+		GetInstanceLogs(message.InstanceGuid).Add(message.Lines);
 	}
 
 	public EventSubscribers<RingBuffer<string>> GetInstanceLogsSubs(Guid instanceGuid) {
@@ -162,8 +162,11 @@ public sealed class InstanceManager {
 		
 		public ObservableInstanceLogs(ILogger logger) : base(logger) {}
 
-		public void Add(string line) {
-			log.Add(line);
+		public void Add(ImmutableArray<string> lines) {
+			foreach (var line in lines) {
+				log.Add(line);
+			}
+
 			Update();
 		}
 		

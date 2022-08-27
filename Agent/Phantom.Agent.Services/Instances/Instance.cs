@@ -1,9 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Logging;
-using Phantom.Common.Messages.ToServer;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -18,14 +16,17 @@ sealed class Instance : IDisposable {
 	
 	public InstanceInfo Info { get; }
 
-	private readonly BaseLauncher launcher;
+	private readonly string shortName;
 	private readonly ILogger logger;
+	
+	private readonly BaseLauncher launcher;
 
 	private IState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
 	public Instance(InstanceInfo info, BaseLauncher launcher) {
-		this.logger = PhantomLogger.Create<Instance>(GetLoggerName(info.InstanceGuid));
+		this.shortName = GetLoggerName(info.InstanceGuid);
+		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Info = info;
 		this.launcher = launcher;
@@ -112,18 +113,20 @@ sealed class Instance : IDisposable {
 	private sealed class RunningState : IState, IDisposable {
 		private readonly Instance instance;
 		private readonly InstanceSession session;
+		private readonly InstanceLogSenderThread logSenderThread;
 
 		public RunningState(Instance instance, InstanceSession session) {
 			this.instance = instance;
 			this.session = session;
+			this.logSenderThread = new InstanceLogSenderThread(instance.Info.InstanceGuid, instance.shortName);
+			
 			this.session.AddOutputListener(SessionOutput);
 			this.session.SessionEnded += SessionEnded;
 		}
 
 		private void SessionOutput(object? sender, string e) {
 			instance.logger.Verbose("[Server] {Line}", e);
-			// TODO throttle
-			ServerMessaging.SendMessage(new InstanceOutputLineMessage(instance.Info.InstanceGuid, e)).GetAwaiter().GetResult();
+			logSenderThread.Enqueue(e);
 		}
 
 		private void SessionEnded(object? sender, EventArgs e) {
@@ -180,6 +183,7 @@ sealed class Instance : IDisposable {
 		}
 
 		public void Dispose() {
+			logSenderThread.Cancel();
 			session.SessionEnded -= SessionEnded;
 			session.RemoveOutputListener(SessionOutput);
 			session.Dispose();

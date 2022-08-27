@@ -18,7 +18,7 @@ public static class MessageRegistries {
 		
 		ToServer.Add<RegisterAgentMessage>(0);
 		ToServer.Add<UnregisterAgentMessage>(1);
-		ToServer.Add<InstanceOutputLineMessage>(2);
+		ToServer.Add<InstanceOutputMessage>(2);
 		ToServer.Add<SimpleReplyMessage>(127);
 	}
 }
