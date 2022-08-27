@@ -5,6 +5,7 @@ using Phantom.Server;
 using Phantom.Server.Database.Postgres;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Agents;
+using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.IO;
 using Phantom.Utils.Rpc;
@@ -51,9 +52,10 @@ try {
 	}));
 
 	var agentManager = webApplication.Services.GetRequiredService<AgentManager>();
+	var instanceManager = webApplication.Services.GetRequiredService<InstanceManager>();
 
 	await Task.WhenAll(
-		RpcLauncher.Launch(rpcConfiguration, connection => new MessageToServerListener(connection, agentManager)),
+		RpcLauncher.Launch(rpcConfiguration, connection => new MessageToServerListener(connection, agentManager, instanceManager)),
 		WebLauncher.Launch(webConfiguration, webApplication)
 	);
 } catch (OperationCanceledException) {

@@ -1,7 +1,9 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Logging;
+using Phantom.Common.Messages.ToServer;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -120,6 +122,8 @@ sealed class Instance : IDisposable {
 
 		private void SessionOutput(object? sender, string e) {
 			instance.logger.Verbose("[Server] {Line}", e);
+			// TODO throttle
+			ServerMessaging.SendMessage(new InstanceOutputLineMessage(instance.Info.InstanceGuid, e)).GetAwaiter().GetResult();
 		}
 
 		private void SessionEnded(object? sender, EventArgs e) {

@@ -1,9 +1,11 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -15,6 +17,7 @@ public sealed class InstanceManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManager>();
 
 	private readonly ObservableInstances instances = new (PhantomLogger.Create<InstanceManager, ObservableInstances>());
+	private readonly ConcurrentDictionary<Guid, ObservableInstanceLogs> instanceLogs = new ();
 
 	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
 
@@ -66,7 +69,7 @@ public sealed class InstanceManager {
 		}
 
 		instances.TryRemove(instance.InstanceGuid);
-		
+
 		var (result, errorMessage) = reply switch {
 			null => (AddInstanceResult.AgentCommunicationError, "Agent did not reply in time."),
 			_    => (AddInstanceResult.UnknownError, "Unknown error.")
@@ -97,11 +100,23 @@ public sealed class InstanceManager {
 			if (reply == SendCommandToInstanceResult.Success) {
 				// TODO
 			}
-			
+
 			return reply ?? SendCommandToInstanceResult.UnknownError;
 		}
-	
+
 		return SendCommandToInstanceResult.InstanceDoesNotExist;
+	}
+
+	private ObservableInstanceLogs GetInstanceLogs(Guid instanceGuid) {
+		return instanceLogs.GetOrAdd(instanceGuid, static _ => new ObservableInstanceLogs(PhantomLogger.Create<InstanceManager, ObservableInstanceLogs>()));
+	}
+
+	internal void AddInstanceLogs(InstanceOutputLineMessage message) {
+		GetInstanceLogs(message.InstanceGuid).Add(message.Line);
+	}
+
+	public EventSubscribers<RingBuffer<string>> GetInstanceLogsSubs(Guid instanceGuid) {
+		return GetInstanceLogs(instanceGuid).Subs;
 	}
 
 	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceInfo>> {
@@ -139,6 +154,21 @@ public sealed class InstanceManager {
 
 		protected override ImmutableArray<InstanceInfo> GetData() {
 			return instances.ValuesCopy;
+		}
+	}
+
+	private sealed class ObservableInstanceLogs : ObservableState<RingBuffer<string>> {
+		private readonly RingBuffer<string> log = new (1000);
+		
+		public ObservableInstanceLogs(ILogger logger) : base(logger) {}
+
+		public void Add(string line) {
+			log.Add(line);
+			Update();
+		}
+		
+		protected override RingBuffer<string> GetData() {
+			return log;
 		}
 	}
 }

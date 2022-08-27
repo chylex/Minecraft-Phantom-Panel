@@ -3,6 +3,8 @@
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Replies
 @using Phantom.Utils.Collections
+@using Phantom.Utils.Events
+@implements IDisposable
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
 
@@ -14,14 +16,14 @@ else {
   <h1>Instance: @InstanceInfo.InstanceName</h1>
   <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@isLaunchingInstance">Launch</button>
   <div id="log" class="font-monospace mb-3">
-    @foreach (var line in outputLines.EnumerateLast(uint.MaxValue)) {
+    @foreach (var line in instanceLogs.EnumerateLast(uint.MaxValue)) {
       <p>@line</p>
     }
   </div>
 
   <div class="mb-3">
     <form @onsubmit="ExecuteCommand">
-    <label for="command-input" class="form-label">Instance Name</label>
+      <label for="command-input" class="form-label">Instance Name</label>
       <div class="input-group flex-nowrap">
         <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
         <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" disabled="@isSendingCommand" @ref="commandInputElement" />
@@ -44,16 +46,24 @@ else {
   private InstanceInfo? InstanceInfo { get; set; }
   private IJSObjectReference? PageJs { get; set; }
 
-  private readonly RingBuffer<string> outputLines = new(1000);
+  private EventSubscribers<RingBuffer<string>> instanceLogsSubs = null!;
+  private RingBuffer<string> instanceLogs = null!;
 
   protected override void OnInitialized() {
     InstanceInfo = InstanceManager.GetInstance(InstanceGuid);
+    instanceLogsSubs = InstanceManager.GetInstanceLogsSubs(InstanceGuid);
+    instanceLogsSubs.Subscribe(this, buffer => {
+      instanceLogs = buffer;
+      InvokeAsync(RefreshLog);
+    });
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender) {
     if (firstRender) {
       PageJs = await Js.InvokeAsync<IJSObjectReference>("import", "./Pages/InstanceDetail.razor.js");
       StateHasChanged();
+      
+      await PageJs.InvokeVoidAsync("initLog");
     }
   }
 
@@ -61,20 +71,14 @@ else {
     isLaunchingInstance = true;
     await InstanceManager.LaunchInstance(InstanceGuid);
     isLaunchingInstance = false;
+  }
 
-  // Task.Run(async () => {
-  //   Random r = new Random();
-  //   while (true) {
-  //     outputLines.Add("random: " + r.NextInt64());
-  //     await InvokeAsync(StateHasChanged);
-  //
-  //     if (PageJs != null) {
-  //       await PageJs.InvokeVoidAsync("scrollLog");
-  //     }
-  //
-  //     await Task.Delay(r.Next(300, 1200));
-  //   }
-  // });
+  private async Task RefreshLog() {
+    if (PageJs != null) {
+      await PageJs.InvokeVoidAsync("scrollLog");
+    }
+
+    StateHasChanged();
   }
 
   private async Task ExecuteCommand() {
@@ -90,6 +94,10 @@ else {
 
     isSendingCommand = false;
     await commandInputElement.FocusAsync(preventScroll: true);
+  }
+
+  public void Dispose() {
+    instanceLogsSubs.Unsubscribe(this);
   }
 
 }

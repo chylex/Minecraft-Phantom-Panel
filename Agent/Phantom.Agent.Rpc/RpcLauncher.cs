@@ -41,6 +41,8 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	protected override async Task Run(ClientSocket socket) {
 		var cancellationToken = config.CancellationToken;
 		var listener = messageListenerFactory(socket);
+		
+		ServerMessaging.SetCurrentSocket(socket);
 
 		// TODO optimize msg
 		await foreach (var bytes in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
