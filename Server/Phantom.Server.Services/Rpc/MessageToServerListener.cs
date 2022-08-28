@@ -24,9 +24,8 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	}
 
 	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
-		if (agentGuid != null) {
-			// TODO reconnection?
-			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.DuplicateConnection));
+		if (agentGuid != null && agentGuid != message.AgentInfo.Guid) {
+			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.ConnectionAlreadyHasAnAgent));
 		}
 		else if (await agentManager.RegisterAgent(message, instanceManager, connection)) {
 			agentGuid = message.AgentInfo.Guid;

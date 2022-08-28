@@ -17,14 +17,13 @@ export function initLog() {
 			else {
 				setTimeout(function() {
 					shouldAutoScroll = log.scrollHeight - log.scrollTop - log.clientHeight < 5;
-				}, 20);
+				}, 10);
 			}
 		});
 	}
 	else {
 		console.error("Missing log element.");
 	}
-	
 }
 
 export function scrollLog() {
@@ -32,6 +31,6 @@ export function scrollLog() {
 		setTimeout(function() {
 			isAutoScrolling = true;
 			log.scrollTop = log.scrollHeight;
-		}, 20);
+		}, 10);
 	}
 }

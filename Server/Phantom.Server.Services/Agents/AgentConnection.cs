@@ -8,7 +8,6 @@ internal sealed class AgentConnection {
 	private readonly RpcClientConnection connection;
 
 	public AgentInfo Info { get; }
-	public bool IsClosed => connection.IsClosed;
 
 	internal AgentConnection(RpcClientConnection connection, AgentInfo info) {
 		this.connection = connection;
@@ -17,6 +16,10 @@ internal sealed class AgentConnection {
 
 	public bool IsSame(RpcClientConnection connection) {
 		return this.connection.IsSame(connection);
+	}
+
+	public void Close() {
+		connection.Close();
 	}
 
 	public async Task SendMessage<TMessage>(TMessage message) where TMessage : IMessageToAgent {

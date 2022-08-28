@@ -49,13 +49,11 @@ public sealed class AgentManager {
 			return false;
 		}
 
-		if (!agents.TryRegister(new Agent.Online(new AgentConnection(connection, message.AgentInfo)))) {
-			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.OldConnectionNotClosed));
-			return false;
-		}
-
-		var agentGuid = message.AgentInfo.Guid;
-		var agentName = message.AgentInfo.Name;
+		var agentInfo = message.AgentInfo;
+		var agentGuid = agentInfo.Guid;
+		var agentName = agentInfo.Name;
+		
+		agents.Register(new Agent.Online(new AgentConnection(connection, agentInfo)));
 
 		using (var scope = databaseProvider.CreateScope()) {
 			scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
@@ -121,14 +119,12 @@ public sealed class AgentManager {
 			}
 		}
 
-		public bool TryRegister(Agent.Online agent) {
-			if (agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent is not Agent.Online online || online.Connection.IsClosed)) {
-				Update();
-				return true;
+		public void Register(Agent.Online agent) {
+			if (agents.AddOrReplace(agent.Guid, agent, out var oldAgent) && oldAgent is Agent.Online oldOnlineAgent) {
+				oldOnlineAgent.Connection.Close();
 			}
-			else {
-				return false;
-			}
+
+			Update();
 		}
 
 		public bool TryUnregister(Guid guid, RpcClientConnection connection) {

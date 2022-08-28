@@ -40,6 +40,11 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 
 		var clients = new Dictionary<ulong, Client>();
 
+		void OnConnectionClosed(object? sender, RpcClientConnectionClosedEventArgs e) {
+			clients.Remove(e.RoutingId);
+			logger.Verbose("Closed connection to {RoutingId}.", e.RoutingId);
+		}
+
 		// TODO optimize msg
 		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
 			if (logger.IsEnabled(LogEventLevel.Verbose)) {
@@ -56,24 +61,32 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 			}
 
 			if (!clients.TryGetValue(routingId, out var client)) {
-				clients[routingId] = client = new Client {
-					Connection = new RpcClientConnection(socket, routingId),
-					Listener = listenerFactory(new RpcClientConnection(socket, routingId))
-				};
+				var connection = new RpcClientConnection(socket, routingId);
+				connection.Closed += OnConnectionClosed;
+				
+				client = new Client(connection, listenerFactory);
+				clients[routingId] = client;
 			}
 
 			MessageRegistries.ToServer.Handle(bytes, client.Listener, cancellationToken);
 
 			if (client.Listener.IsDisposed) {
-				client.Connection.IsClosed = true;
-				clients.Remove(routingId);
-				logger.Verbose("Closed connection to {RoutingId}.", routingId);
+				client.Connection.Close();
 			}
+		}
+		
+		foreach (var client in clients.Values) {
+			client.Connection.Closed -= OnConnectionClosed;
 		}
 	}
 
 	private readonly struct Client {
-		public RpcClientConnection Connection { get; init; }
-		public IMessageToServerListener Listener { get; init; }
+		public RpcClientConnection Connection { get; }
+		public IMessageToServerListener Listener { get; }
+
+		public Client(RpcClientConnection connection, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) {
+			Connection = connection;
+			Listener = listenerFactory(connection);
+		}
 	}
 }

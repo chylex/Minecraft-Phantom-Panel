@@ -9,9 +9,9 @@ public abstract class Agent {
 
 	private Agent() {}
 
-	public abstract Agent AsOffline();
+	internal abstract Agent AsOffline();
 
-	public sealed class Offline : Agent {
+	internal sealed class Offline : Agent {
 		public override Guid Guid { get; }
 		public override string Name { get; }
 		
@@ -22,12 +22,12 @@ public abstract class Agent {
 			Name = name;
 		}
 
-		public override Agent AsOffline() {
+		internal override Agent AsOffline() {
 			return this;
 		}
 	}
 
-	public sealed class Online : Agent {
+	internal sealed class Online : Agent {
 		public override Guid Guid => Info.Guid;
 		public override string Name => Info.Name;
 		
@@ -39,7 +39,7 @@ public abstract class Agent {
 			Info = connection.Info;
 		}
 
-		public override Agent AsOffline() {
+		internal override Agent AsOffline() {
 			return new Offline(Guid, Name);
 		}
 	}

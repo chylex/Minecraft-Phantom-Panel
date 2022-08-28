@@ -47,6 +47,17 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
+	public bool AddOrReplace(TKey key, TValue newValue, out TValue? oldValue) {
+		rwLock.EnterWriteLock();
+		try {
+			bool hadValue = dict.TryGetValue(key, out oldValue);
+			dict[key] = newValue;
+			return hadValue;
+		} finally {
+			rwLock.ExitWriteLock();
+		}
+	}
+
 	public bool Remove(TKey key) {
 		rwLock.EnterWriteLock();
 		try {

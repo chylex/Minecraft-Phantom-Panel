@@ -23,30 +23,29 @@ public sealed class MessageListener : IMessageToAgentListener {
 
 	public Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
-		
+
 		foreach (var instanceInfo in message.InitialInstances) {
 			Logger.Information("Creating initial instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
-			
+
 			if (agent.InstanceSessionManager.Create(instanceInfo) != CreateInstanceResult.Success) {
 				Logger.Fatal("Unable to create instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
-				
+
 				shutdownTokenSource.Cancel();
 				return Task.CompletedTask;
 			}
 		}
-		
+
 		return Task.CompletedTask;
 	}
 
 	public Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message) {
 		string errorMessage = message.FailureKind switch {
-			RegisterAgentFailure.DuplicateConnection    => "This connection already has an associated agent.",
-			RegisterAgentFailure.InvalidToken           => "Invalid token.",
-			RegisterAgentFailure.OldConnectionNotClosed => "The old connection for this agent is still active.",
-			_                                           => "Unknown error " + (byte) message.FailureKind + "."
+			RegisterAgentFailure.ConnectionAlreadyHasAnAgent => "This connection already has an associated agent.",
+			RegisterAgentFailure.InvalidToken                => "Invalid token.",
+			_                                                => "Unknown error " + (byte) message.FailureKind + "."
 		};
 
-		Logger.Fatal("Agent authentication failed: {Error}.", errorMessage);
+		Logger.Fatal("Agent authentication failed: {Error}", errorMessage);
 		Environment.Exit(1);
 
 		return Task.CompletedTask;
