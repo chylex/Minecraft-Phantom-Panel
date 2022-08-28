@@ -3,7 +3,8 @@
 namespace Phantom.Common.Messages;
 
 public interface IMessageToAgentListener {
-	Task HandleAgentAuthenticationResult(RegisterAgentResultMessage message);
+	Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message);
+	Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message);
 	Task HandleShutdownAgent(ShutdownAgentMessage message);
 	Task HandleCreateInstance(CreateInstanceMessage message);
 	Task HandleSetInstanceState(SetInstanceStateMessage message);

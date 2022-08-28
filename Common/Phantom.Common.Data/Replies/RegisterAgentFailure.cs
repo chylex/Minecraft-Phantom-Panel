@@ -1,7 +1,6 @@
 ﻿namespace Phantom.Common.Data.Replies; 
 
-public enum RegisterAgentResult : byte {
-	Success,
+public enum RegisterAgentFailure : byte {
 	DuplicateConnection,
 	OldConnectionNotClosed,
 	InvalidToken

@@ -27,9 +27,7 @@ sealed class InstanceSessionManager : IDisposable {
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	public CreateInstanceResult Create(CreateInstanceMessage message) {
-		var info = message.Instance;
-
+	public CreateInstanceResult Create(InstanceInfo info) {
 		try {
 			semaphore.Wait(shutdownCancellationToken);
 		} catch (OperationCanceledException) {

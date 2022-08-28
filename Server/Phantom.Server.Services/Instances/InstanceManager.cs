@@ -124,6 +124,10 @@ public sealed class InstanceManager {
 		return SendCommandToInstanceResult.InstanceDoesNotExist;
 	}
 
+	internal ImmutableArray<InstanceInfo> GetInstancesForAgent(Guid agentGuid) {
+		return instances.GetInstances().Where(instance => instance.AgentGuid == agentGuid).ToImmutableArray();
+	}
+
 	private ObservableInstanceLogs GetInstanceLogs(Guid instanceGuid) {
 		return instanceLogs.GetOrAdd(instanceGuid, static _ => new ObservableInstanceLogs(PhantomLogger.Create<InstanceManager, ObservableInstanceLogs>()));
 	}

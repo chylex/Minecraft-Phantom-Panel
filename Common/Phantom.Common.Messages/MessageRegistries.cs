@@ -10,11 +10,12 @@ public static class MessageRegistries {
 	public static MessageRegistry<IMessageToServerListener, IMessageToServer> ToServer { get; } = new (PhantomLogger.Create("MessageRegistry:ToServer"));
 
 	static MessageRegistries() {
-		ToAgent.Add<RegisterAgentResultMessage>(0);
-		ToAgent.Add<ShutdownAgentMessage>(1);
-		ToAgent.Add<CreateInstanceMessage>(2);
-		ToAgent.Add<SetInstanceStateMessage>(3);
-		ToAgent.Add<SendCommandToInstanceMessage>(4);
+		ToAgent.Add<RegisterAgentSuccessMessage>(0);
+		ToAgent.Add<RegisterAgentFailureMessage>(1);
+		ToAgent.Add<ShutdownAgentMessage>(2);
+		ToAgent.Add<CreateInstanceMessage>(3);
+		ToAgent.Add<SetInstanceStateMessage>(4);
+		ToAgent.Add<SendCommandToInstanceMessage>(5);
 		
 		ToServer.Add<RegisterAgentMessage>(0);
 		ToServer.Add<UnregisterAgentMessage>(1);

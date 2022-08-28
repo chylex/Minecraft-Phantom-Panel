@@ -21,23 +21,34 @@ public sealed class MessageListener : IMessageToAgentListener {
 		this.shutdownTokenSource = shutdownTokenSource;
 	}
 
-	public Task HandleAgentAuthenticationResult(RegisterAgentResultMessage message) {
-		var result = message.Result;
-		if (result == RegisterAgentResult.Success) {
-			Logger.Information("Agent authentication successful.");
-			return Task.CompletedTask;
+	public Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
+		Logger.Information("Agent authentication successful.");
+		
+		foreach (var instanceInfo in message.InitialInstances) {
+			Logger.Information("Creating initial instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
+			
+			if (agent.InstanceSessionManager.Create(instanceInfo) != CreateInstanceResult.Success) {
+				Logger.Fatal("Unable to create instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
+				
+				shutdownTokenSource.Cancel();
+				return Task.CompletedTask;
+			}
 		}
+		
+		return Task.CompletedTask;
+	}
 
-		string errorMessage = result switch {
-			RegisterAgentResult.DuplicateConnection    => "This connection already has an associated agent.",
-			RegisterAgentResult.InvalidToken           => "Invalid token.",
-			RegisterAgentResult.OldConnectionNotClosed => "The old connection for this agent is still active.",
-			_                                          => "Unknown error " + (byte) result + "."
+	public Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message) {
+		string errorMessage = message.FailureKind switch {
+			RegisterAgentFailure.DuplicateConnection    => "This connection already has an associated agent.",
+			RegisterAgentFailure.InvalidToken           => "Invalid token.",
+			RegisterAgentFailure.OldConnectionNotClosed => "The old connection for this agent is still active.",
+			_                                           => "Unknown error " + (byte) message.FailureKind + "."
 		};
 
 		Logger.Fatal("Agent authentication failed: {Error}.", errorMessage);
 		Environment.Exit(1);
-		
+
 		return Task.CompletedTask;
 	}
 
@@ -47,7 +58,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 	}
 
 	public async Task HandleCreateInstance(CreateInstanceMessage message) {
-		await socket.SendSimpleReply(message, agent.InstanceSessionManager.Create(message));
+		await socket.SendSimpleReply(message, agent.InstanceSessionManager.Create(message.Instance));
 	}
 
 	public async Task HandleSetInstanceState(SetInstanceStateMessage message) {

@@ -24,21 +24,13 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	}
 
 	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
-		RegisterAgentResult result;
-
 		if (agentGuid != null) {
 			// TODO reconnection?
-			result = RegisterAgentResult.DuplicateConnection;
+			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.DuplicateConnection));
 		}
-		else {
-			result = await agentManager.RegisterAgent(message, connection);
-		}
-
-		if (result == RegisterAgentResult.Success) {
+		else if (await agentManager.RegisterAgent(message, instanceManager, connection)) {
 			agentGuid = message.AgentInfo.Guid;
 		}
-
-		await connection.Send(new RegisterAgentResultMessage(result));
 	}
 
 	public Task HandleUnregisterAgent(UnregisterAgentMessage message) {

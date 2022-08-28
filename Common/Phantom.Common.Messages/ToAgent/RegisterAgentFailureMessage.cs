@@ -4,10 +4,10 @@ using Phantom.Common.Data.Replies;
 namespace Phantom.Common.Messages.ToAgent;
 
 [MessagePackObject]
-public sealed record RegisterAgentResultMessage(
-	[property: Key(0)] RegisterAgentResult Result
+public sealed record RegisterAgentFailureMessage(
+	[property: Key(0)] RegisterAgentFailure FailureKind
 ) : IMessageToAgent {
 	public Task Accept(IMessageToAgentListener listener) {
-		return listener.HandleAgentAuthenticationResult(this);
+		return listener.HandleRegisterAgentFailureResult(this);
 	}
 }

@@ -3,9 +3,11 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
+using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Database;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -32,7 +34,7 @@ public sealed class AgentManager {
 
 	public async Task Initialize() {
 		using var scope = databaseProvider.CreateScope();
-		
+
 		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			if (!agents.TryRegister(new Agent.Offline(agent.AgentId, agent.Name))) {
 				// TODO
@@ -41,29 +43,33 @@ public sealed class AgentManager {
 		}
 	}
 
-	internal async Task<RegisterAgentResult> RegisterAgent(RegisterAgentMessage message, RpcClientConnection connection) {
+	internal async Task<bool> RegisterAgent(RegisterAgentMessage message, InstanceManager instanceManager, RpcClientConnection connection) {
 		if (!authToken.FixedTimeEquals(message.AuthToken)) {
-			return RegisterAgentResult.InvalidToken;
+			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
+			return false;
 		}
-		else if (!agents.TryRegister(new Agent.Online(new AgentConnection(connection, message.AgentInfo)))) {
-			return RegisterAgentResult.OldConnectionNotClosed;
+
+		if (!agents.TryRegister(new Agent.Online(new AgentConnection(connection, message.AgentInfo)))) {
+			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.OldConnectionNotClosed));
+			return false;
 		}
-		else {
-			var agentGuid = message.AgentInfo.Guid;
-			var agentName = message.AgentInfo.Name;
-			
-			using (var scope = databaseProvider.CreateScope()) {
-				scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
-					agent.AgentId = guid;
-					agent.Name = agentName;
-				});
-				
-				await scope.Ctx.SaveChangesAsync(cancellationToken);
-			}
-			
-			Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agentName, agentGuid);
-			return RegisterAgentResult.Success;
+
+		var agentGuid = message.AgentInfo.Guid;
+		var agentName = message.AgentInfo.Name;
+
+		using (var scope = databaseProvider.CreateScope()) {
+			scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
+				agent.AgentId = guid;
+				agent.Name = agentName;
+			});
+
+			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
+
+		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agentName, agentGuid);
+
+		await connection.Send(new RegisterAgentSuccessMessage(instanceManager.GetInstancesForAgent(agentGuid)));
+		return true;
 	}
 
 	internal void UnregisterAgent(UnregisterAgentMessage message, RpcClientConnection connection) {
@@ -102,7 +108,7 @@ public sealed class AgentManager {
 
 	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<Agent>> {
 		private readonly RwLockedDictionary<Guid, Agent> agents = new (LockRecursionPolicy.NoRecursion);
-		
+
 		public ObservableAgentInfos(ILogger logger) : base(logger) {}
 
 		public bool TryRegister(Agent.Offline agent) {
@@ -114,7 +120,7 @@ public sealed class AgentManager {
 				return false;
 			}
 		}
-		
+
 		public bool TryRegister(Agent.Online agent) {
 			if (agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent is not Agent.Online online || online.Connection.IsClosed)) {
 				Update();
