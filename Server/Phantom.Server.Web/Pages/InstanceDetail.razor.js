@@ -9,6 +9,7 @@ export function initLog() {
 	
 	if (log) {
 		shouldAutoScroll = true;
+		log.scrollTop = log.scrollHeight;
 		log.addEventListener("scroll", function() {
 			if (isAutoScrolling) {
 				isAutoScrolling = false;

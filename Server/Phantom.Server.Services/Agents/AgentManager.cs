@@ -24,8 +24,8 @@ public sealed class AgentManager {
 	private readonly AgentAuthToken authToken;
 	private readonly DatabaseProvider databaseProvider;
 
-	public AgentManager(ServiceConfiguration serviceConfiguration, AgentAuthToken authToken, DatabaseProvider databaseProvider) {
-		this.cancellationToken = serviceConfiguration.CancellationToken;
+	public AgentManager(ServiceConfiguration configuration, AgentAuthToken authToken, DatabaseProvider databaseProvider) {
+		this.cancellationToken = configuration.CancellationToken;
 		this.authToken = authToken;
 		this.databaseProvider = databaseProvider;
 	}
@@ -34,9 +34,9 @@ public sealed class AgentManager {
 		using var scope = databaseProvider.CreateScope();
 		
 		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			if (!agents.TryRegister(new Agent.Offline(agent.Id, agent.Name))) {
+			if (!agents.TryRegister(new Agent.Offline(agent.AgentId, agent.Name))) {
 				// TODO
-				throw new InvalidOperationException("Unable to register agent from database: " + agent.Id);
+				throw new InvalidOperationException("Unable to register agent from database: " + agent.AgentId);
 			}
 		}
 	}
@@ -54,7 +54,7 @@ public sealed class AgentManager {
 			
 			using (var scope = databaseProvider.CreateScope()) {
 				scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
-					agent.Id = guid;
+					agent.AgentId = guid;
 					agent.Name = agentName;
 				});
 				
@@ -70,6 +70,10 @@ public sealed class AgentManager {
 		if (agents.TryUnregister(message.AgentGuid, connection)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", message.AgentGuid);
 		}
+	}
+
+	internal void NotifyAgentIsAlive(Guid agentGuid) {
+		// TODO
 	}
 
 	public async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {

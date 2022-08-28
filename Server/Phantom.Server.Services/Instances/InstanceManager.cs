@@ -6,6 +6,7 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
+using Phantom.Server.Database;
 using Phantom.Server.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -21,27 +22,39 @@ public sealed class InstanceManager {
 
 	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
 
+	private readonly CancellationToken cancellationToken;
 	private readonly AgentManager agentManager;
+	private readonly DatabaseProvider databaseProvider;
 	private readonly IServiceProvider serviceProvider;
 
-	public InstanceManager(AgentManager agentManager, IServiceProvider serviceProvider) {
+	public InstanceManager(ServiceConfiguration configuration, AgentManager agentManager, DatabaseProvider databaseProvider, IServiceProvider serviceProvider) {
+		this.cancellationToken = configuration.CancellationToken;
 		this.agentManager = agentManager;
+		this.databaseProvider = databaseProvider;
 		this.serviceProvider = serviceProvider;
 	}
 
-	public async Task<AddInstanceResult> AddInstance(InstanceInfo instance) {
-		if (string.IsNullOrWhiteSpace(instance.InstanceName)) {
+	public async Task Initialize() {
+		using var scope = databaseProvider.CreateScope();
+
+		await foreach (var instance in scope.Ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+			instances.AddOrReplace(instance.AsInstanceInfo);
+		}
+	}
+
+	public async Task<AddInstanceResult> AddInstance(InstanceInfo instanceInfo) {
+		if (string.IsNullOrWhiteSpace(instanceInfo.InstanceName)) {
 			return AddInstanceResult.InstanceNameMustNotBeEmpty;
 		}
 
-		if (instance.MemoryAllocation.RawValue == 0) {
+		if (instanceInfo.MemoryAllocation.RawValue == 0) {
 			return AddInstanceResult.InstanceMemoryMustNotBeZero;
 		}
 
 		string agentName;
 		lock (this) {
 			var agentStatsManager = serviceProvider.GetRequiredService<AgentStatsManager>();
-			var agentStats = agentStatsManager.GetAgentStats(instance.AgentGuid);
+			var agentStats = agentStatsManager.GetAgentStats(instanceInfo.AgentGuid);
 			if (agentStats == null) {
 				return AddInstanceResult.AgentNotFound;
 			}
@@ -51,32 +64,36 @@ public sealed class InstanceManager {
 			}
 
 			var availableMemory = agentStats.AvailableMemory;
-			if (instance.MemoryAllocation > availableMemory) {
+			if (instanceInfo.MemoryAllocation > availableMemory) {
 				return AddInstanceResult.AgentMemoryLimitExceeded;
-			}
-
-			if (!instances.TryAdd(instance)) {
-				return AddInstanceResult.GuidAlreadyExists;
 			}
 
 			agentName = agentStats.AgentInfo.Name;
 		}
 
-		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instance.AgentGuid, sequenceId => new CreateInstanceMessage(sequenceId, instance), TimeSpan.FromSeconds(10));
+		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new CreateInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));
 		if (reply == CreateInstanceResult.Success) {
-			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instance.InstanceName, instance.InstanceGuid, agentName);
+			instances.AddOrReplace(instanceInfo);
+			
+			using (var scope = databaseProvider.CreateScope()) {
+				scope.Ctx.Instances.Upsert(instanceInfo.InstanceGuid, (_, instance) => instance.SetFromInstanceInfo(instanceInfo));
+				await scope.Ctx.SaveChangesAsync(cancellationToken);
+			}
+			
+			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instanceInfo.InstanceName, instanceInfo.InstanceGuid, agentName);
 			return AddInstanceResult.Success;
 		}
+		else {
+			instances.TryRemove(instanceInfo.InstanceGuid);
 
-		instances.TryRemove(instance.InstanceGuid);
+			var (result, errorMessage) = reply switch {
+				null => (AddInstanceResult.AgentCommunicationError, "Agent did not reply in time."),
+				_    => (AddInstanceResult.UnknownError, "Unknown error.")
+			};
 
-		var (result, errorMessage) = reply switch {
-			null => (AddInstanceResult.AgentCommunicationError, "Agent did not reply in time."),
-			_    => (AddInstanceResult.UnknownError, "Unknown error.")
-		};
-
-		Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", instance.InstanceName, instance.InstanceGuid, agentName, errorMessage);
-		return result;
+			Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", instanceInfo.InstanceName, instanceInfo.InstanceGuid, agentName, errorMessage);
+			return result;
+		}
 	}
 
 	public InstanceInfo? GetInstance(Guid instanceGuid) {
@@ -123,6 +140,11 @@ public sealed class InstanceManager {
 		private readonly RwLockedDictionary<Guid, InstanceInfo> instances = new (LockRecursionPolicy.NoRecursion);
 
 		public ObservableInstances(ILogger logger) : base(logger) {}
+
+		public void AddOrReplace(InstanceInfo instance) {
+			instances[instance.InstanceGuid] = instance;
+			Update();
+		}
 
 		public bool TryAdd(InstanceInfo instance) {
 			if (instances.TryAdd(instance.InstanceGuid, instance)) {

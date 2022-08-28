@@ -183,7 +183,6 @@
   private static string? GetResultError(AddInstanceResult result) {
     return result switch {
            AddInstanceResult.Success                     => null,
-           AddInstanceResult.GuidAlreadyExists           => "Instance was already created.",
            AddInstanceResult.InstanceNameMustNotBeEmpty  => "Instance name must not be empty.",
            AddInstanceResult.InstanceMemoryMustNotBeZero => "Memory must not be 0 MB.",
            AddInstanceResult.AgentNotFound               => "Agent not found.",

@@ -2,7 +2,6 @@
 
 public enum AddInstanceResult {
 	Success,
-	GuidAlreadyExists,
 	InstanceNameMustNotBeEmpty,
 	InstanceMemoryMustNotBeZero,
 	AgentNotFound,

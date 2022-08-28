@@ -4,6 +4,7 @@ using Phantom.Common.Data;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
+using Serilog.Events;
 
 namespace Phantom.Agent.Rpc;
 
@@ -39,15 +40,27 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	}
 
 	protected override async Task Run(ClientSocket socket) {
+		var logger = config.Logger;
 		var cancellationToken = config.CancellationToken;
+		
 		var listener = messageListenerFactory(socket);
 		
-		ServerMessaging.SetCurrentSocket(socket);
+		ServerMessaging.SetCurrentSocket(socket, cancellationToken);
 
 		// TODO optimize msg
 		await foreach (var bytes in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
-			config.Logger.Verbose("Received {Bytes} B message from server.", bytes.Length);
-			MessageRegistries.ToAgent.Handle(bytes, listener, cancellationToken);
+			if (logger.IsEnabled(LogEventLevel.Verbose)) {
+				if (bytes.Length > 0 && MessageRegistries.ToAgent.TryGetType(bytes, out var type)) {
+					logger.Verbose("Received {MessageType} ({Bytes} B) from server.", type.Name, bytes.Length);
+				}
+				else {
+					logger.Verbose("Received {Bytes} B message from server.", bytes.Length);
+				}
+			}
+
+			if (bytes.Length > 0) {
+				MessageRegistries.ToAgent.Handle(bytes, listener, cancellationToken);
+			}
 		}
 	}
 

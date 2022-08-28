@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Phantom.Common.Data;
+using Phantom.Server.Database.Converters;
 using Phantom.Server.Database.Entities;
 
 namespace Phantom.Server.Database;
@@ -22,6 +25,14 @@ public class ApplicationDbContext : IdentityDbContext {
 		builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens", schema: IdentitySchema);
 		builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims", schema: IdentitySchema);
 	}
-	
+
+	protected override void ConfigureConventions(ModelConfigurationBuilder builder) {
+		base.ConfigureConventions(builder);
+
+		builder.Properties<MinecraftServerKind>().HaveConversion<EnumToStringConverter<MinecraftServerKind>>();
+		builder.Properties<RamAllocationUnits>().HaveConversion<RamAllocationUnitsConverter>();
+	}
+
 	public DbSet<AgentEntity> Agents { get; set; } = null!;
+	public DbSet<InstanceEntity> Instances { get; set; } = null!;
 }

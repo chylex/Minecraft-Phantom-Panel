@@ -34,7 +34,7 @@
             <code class="text-uppercase">@instance.InstanceGuid.ToString()</code>
           </td>
           <td>
-            @* <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(instance.Guid)" disabled="@GetOrAddAgentRow(instance.Guid).IsShutdownButtonDisabled">Shutdown</button> *@
+            <a href="/instances/@instance.InstanceGuid" class="btn btn-dark">Detail</a>
           </td>
         </tr>
       }

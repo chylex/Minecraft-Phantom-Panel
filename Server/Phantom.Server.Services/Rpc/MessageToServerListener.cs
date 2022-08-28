@@ -47,6 +47,14 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		return Task.CompletedTask;
 	}
 
+	public Task HandleAgentIsAlive(AgentIsAliveMessage message) {
+		if (agentGuid != null) {
+			agentManager.NotifyAgentIsAlive(agentGuid.Value);
+		}
+
+		return Task.CompletedTask;
+	}
+
 	public Task HandleInstanceOutput(InstanceOutputMessage message) {
 		instanceManager.AddInstanceLogs(message);
 		return Task.CompletedTask;

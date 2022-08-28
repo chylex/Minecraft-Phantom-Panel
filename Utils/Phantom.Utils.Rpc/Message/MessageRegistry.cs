@@ -1,10 +1,12 @@
-﻿using Serilog;
+﻿using System.Diagnostics.CodeAnalysis;
+using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
 
 public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase : class, IMessage<TListener> {
 	private readonly ILogger logger;
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
+	private readonly Dictionary<ushort, Type> codeToTypeMapping = new ();
 	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessageBase>> codeToDeserializerMapping = new ();
 
 	public MessageRegistry(ILogger logger) {
@@ -13,7 +15,20 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 
 	public void Add<TMessage>(ushort code) where TMessage : TMessageBase {
 		typeToCodeMapping.Add(typeof(TMessage), code);
+		codeToTypeMapping.Add(code, typeof(TMessage));
 		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<TMessage, TMessageBase, TListener>());
+	}
+
+	public bool TryGetType(byte[] bytes, [NotNullWhen(true)] out Type? type) {
+		var memory = new ReadOnlyMemory<byte>(bytes);
+
+		try {
+			var code = MessageSerializer.ReadCode(ref memory);
+			return codeToTypeMapping.TryGetValue(code, out type);
+		} catch (Exception) {
+			type = null;
+			return false;
+		}
 	}
 
 	public ReadOnlySpan<byte> Write<TMessage>(TMessage message, CancellationToken cancellationToken = default) where TMessage : TMessageBase {
