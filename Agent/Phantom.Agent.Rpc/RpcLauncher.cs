@@ -1,6 +1,6 @@
 using NetMQ;
 using NetMQ.Sockets;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;

@@ -1,5 +1,5 @@
 ﻿using System.Collections.Immutable;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;

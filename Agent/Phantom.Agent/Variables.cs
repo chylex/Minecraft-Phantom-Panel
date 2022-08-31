@@ -1,4 +1,4 @@
-﻿using Phantom.Common.Data;
+﻿using Phantom.Common.Data.Instance;
 using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
 

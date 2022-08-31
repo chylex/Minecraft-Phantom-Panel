@@ -5,7 +5,7 @@ using MessagePack;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 
-namespace Phantom.Common.Data;
+namespace Phantom.Common.Data.Agent;
 
 [MessagePackObject]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]

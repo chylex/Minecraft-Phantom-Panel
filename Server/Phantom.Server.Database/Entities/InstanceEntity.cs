@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 
 namespace Phantom.Server.Database.Entities; 
 

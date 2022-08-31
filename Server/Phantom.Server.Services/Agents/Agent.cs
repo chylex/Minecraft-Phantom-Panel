@@ -1,4 +1,4 @@
-﻿using Phantom.Common.Data;
+﻿using Phantom.Common.Data.Agent;
 
 namespace Phantom.Server.Services.Agents; 
 

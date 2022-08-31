@@ -1,6 +1,7 @@
 ﻿using MessagePack;
+using Phantom.Common.Data.Minecraft;
 
-namespace Phantom.Common.Data; 
+namespace Phantom.Common.Data.Instance; 
 
 [MessagePackObject]
 public sealed record InstanceInfo(

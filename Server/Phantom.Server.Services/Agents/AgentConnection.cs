@@ -1,4 +1,4 @@
-﻿using Phantom.Common.Data;
+﻿using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages;
 using Phantom.Server.Rpc;
 

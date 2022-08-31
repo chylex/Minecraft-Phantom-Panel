@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data;
+﻿using Phantom.Common.Data.Agent;
+using Phantom.Common.Data.Instance;
 
 namespace Phantom.Server.Services.Agents;
 

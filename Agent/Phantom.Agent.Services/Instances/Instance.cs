@@ -1,6 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Instance;
 using Phantom.Common.Logging;
 using Serilog;
 

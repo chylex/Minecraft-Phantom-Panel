@@ -2,7 +2,8 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Server.Database.Converters;
 using Phantom.Server.Database.Entities;
 

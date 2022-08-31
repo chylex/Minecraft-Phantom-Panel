@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using Phantom.Common.Data.Instance;
 
 namespace Phantom.Common.Data.Tests;
 

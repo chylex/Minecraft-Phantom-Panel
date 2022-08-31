@@ -2,7 +2,8 @@
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Properties;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Agent;
+using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.ToAgent;
 

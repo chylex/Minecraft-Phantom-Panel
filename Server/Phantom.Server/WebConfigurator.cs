@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Agent;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Instances;

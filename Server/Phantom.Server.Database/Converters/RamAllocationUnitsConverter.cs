@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Phantom.Common.Data;
+using Phantom.Common.Data.Instance;
 
 namespace Phantom.Server.Database.Converters;
 

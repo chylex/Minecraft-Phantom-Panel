@@ -1,6 +1,7 @@
 ﻿using MessagePack;
+using Phantom.Common.Data.Instance;
 
-namespace Phantom.Common.Data;
+namespace Phantom.Common.Data.Agent;
 
 [MessagePackObject]
 public sealed record AgentInfo(

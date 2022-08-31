@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using MessagePack;
 
-namespace Phantom.Common.Data;
+namespace Phantom.Common.Data.Instance;
 
 /// <summary>
 /// Represents a number of RAM allocation units, using the conversion factor of 256 MB per unit. Supports allocations up to 16 TB minus 256 MB (65535 units).
