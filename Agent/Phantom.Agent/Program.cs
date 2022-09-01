@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent;
+using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
@@ -30,10 +31,16 @@ try {
 		Environment.Exit(1);
 	}
 
-	var folders = new AgentFolders(Path.GetFullPath("./data"));
+	var folders = new AgentFolders("./temp", "./data");
 	if (!folders.TryCreate()) {
 		Environment.Exit(1);
 	}
+
+	var mse = new MinecraftServerExecutables(folders.ServerExecutableFolderPath);
+	await Task.WhenAll(
+		mse.DownloadAndGetPath("1.19", CancellationToken.None),
+		mse.DownloadAndGetPath("1.19", CancellationToken.None)
+	);
 
 	var agentGuid = await GuidFile.CreateOrLoad(folders.DataFolderPath);
 	if (agentGuid == null) {
