@@ -7,16 +7,24 @@ namespace Phantom.Agent.Services;
 public sealed class AgentFolders {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentFolders>();
 
+	public string TemporaryFolderPath { get; }
+	public string ServerExecutableFolderPath { get; }
+
 	public string DataFolderPath { get; }
 	public string InstancesFolderPath { get; }
 
-	public AgentFolders(string dataFolder) {
+	public AgentFolders(string temporaryFolder, string dataFolder) {
+		this.TemporaryFolderPath = Path.GetFullPath(temporaryFolder);
+		this.ServerExecutableFolderPath = Path.Combine(TemporaryFolderPath, "servers");
+
 		this.DataFolderPath = Path.GetFullPath(dataFolder);
 		this.InstancesFolderPath = Path.Combine(DataFolderPath, "instances");
 	}
 
 	public bool TryCreate() {
-		return TryCreateFolder(DataFolderPath) &&
+		return TryCreateFolder(TemporaryFolderPath) &&
+		       TryCreateFolder(ServerExecutableFolderPath) &&
+		       TryCreateFolder(DataFolderPath) &&
 		       TryCreateFolder(InstancesFolderPath);
 	}
 

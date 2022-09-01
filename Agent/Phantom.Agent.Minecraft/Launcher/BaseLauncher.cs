@@ -3,17 +3,28 @@ using System.Text;
 using Kajabity.Tools.Java;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
+using Phantom.Agent.Minecraft.Server;
 
 namespace Phantom.Agent.Minecraft.Launcher;
 
 public abstract class BaseLauncher {
+	private readonly MinecraftServerExecutables serverExecutables;
 	private readonly InstanceProperties instanceProperties;
 
-	private protected BaseLauncher(InstanceProperties instanceProperties) {
+	private protected BaseLauncher(MinecraftServerExecutables serverExecutables, InstanceProperties instanceProperties) {
+		this.serverExecutables = serverExecutables;
 		this.instanceProperties = instanceProperties;
 	}
 
-	public async Task<InstanceSession> Launch() {
+	public async Task<InstanceSession> Launch(CancellationToken cancellationToken) {
+		string serverJarPath;
+		
+		try {
+			serverJarPath = await serverExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
+		} catch (Exception e) {
+			throw e;
+		}
+
 		var startInfo = new ProcessStartInfo {
 			FileName = instanceProperties.JavaRuntime.JavaExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
@@ -30,7 +41,7 @@ public abstract class BaseLauncher {
 		var processArguments = startInfo.ArgumentList;
 		jvmArguments.Build(processArguments);
 		processArguments.Add("-jar");
-		processArguments.Add(instanceProperties.ServerJarPath);
+		processArguments.Add(serverJarPath);
 		processArguments.Add("nogui");
 
 		var process = new Process { StartInfo = startInfo };

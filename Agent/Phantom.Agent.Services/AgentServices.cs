@@ -12,7 +12,7 @@ public sealed class AgentServices {
 
 	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders) {
 		this.AgentInfo = agentInfo;
-		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders.InstancesFolderPath);
+		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders);
 		// this.CommandQueue = new CommandQueue<AgentServices, CommandListener>(this, CommandListeners, workerCount: 4);
 	}
 

@@ -87,7 +87,7 @@ sealed class Instance : IDisposable {
 
 		public async Task<IState> Launch(CancellationToken cancellationToken) {
 			instance.logger.Information("Session starting...");
-			var session = await instance.launcher.Launch();
+			var session = await instance.launcher.Launch(cancellationToken);
 			var state = new RunningState(instance, session);
 
 			if (session.HasEnded) {

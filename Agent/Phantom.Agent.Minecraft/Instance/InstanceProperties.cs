@@ -7,6 +7,6 @@ public sealed record InstanceProperties(
 	JavaRuntime JavaRuntime,
 	JvmProperties JvmProperties,
 	string InstanceFolder,
-	string ServerJarPath,
+	string ServerVersion,
 	ServerProperties ServerProperties
 );

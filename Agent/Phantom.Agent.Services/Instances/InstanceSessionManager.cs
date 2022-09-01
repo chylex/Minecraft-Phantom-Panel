@@ -2,6 +2,7 @@
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Properties;
+using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
@@ -15,6 +16,7 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 
+	private readonly MinecraftServerExecutables serverExecutables;
 	private readonly Dictionary<Guid, Instance> instances = new ();
 	private readonly HashSet<ushort> usedPorts = new ();
 
@@ -22,9 +24,10 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
-	public InstanceSessionManager(AgentInfo agentInfo, string basePath) {
+	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders) {
 		this.agentInfo = agentInfo;
-		this.basePath = basePath;
+		this.basePath = agentFolders.InstancesFolderPath;
+		this.serverExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
@@ -70,11 +73,11 @@ sealed class InstanceSessionManager : IDisposable {
 				new JavaRuntime(JavaHomePath),
 				jvmProperties,
 				instanceFolder,
-				Path.Combine(basePath, "server.jar"), // TODO
+				info.MinecraftVersion,
 				new ServerProperties(info.ServerPort, info.RconPort)
 			);
 
-			VanillaLauncher launcher = new VanillaLauncher(properties);
+			VanillaLauncher launcher = new VanillaLauncher(serverExecutables, properties);
 
 			instances.Add(info.InstanceGuid, new Instance(info, launcher));
 			usedPorts.Add(info.ServerPort);
