@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Cryptography\Phantom.Utils.Cryptography.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
   </ItemGroup>
 
 </Project>

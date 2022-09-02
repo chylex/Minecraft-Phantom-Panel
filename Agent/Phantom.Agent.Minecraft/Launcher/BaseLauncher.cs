@@ -16,13 +16,10 @@ public abstract class BaseLauncher {
 		this.instanceProperties = instanceProperties;
 	}
 
-	public async Task<InstanceSession> Launch(CancellationToken cancellationToken) {
-		string serverJarPath;
-		
-		try {
-			serverJarPath = await serverExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
-		} catch (Exception e) {
-			throw e;
+	public async Task<InstanceSession?> Launch(CancellationToken cancellationToken) {
+		var serverJarPath = await serverExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
+		if (serverJarPath == null) {
+			return null;
 		}
 
 		var startInfo = new ProcessStartInfo {
