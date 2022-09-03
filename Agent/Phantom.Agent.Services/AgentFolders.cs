@@ -7,25 +7,29 @@ namespace Phantom.Agent.Services;
 public sealed class AgentFolders {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentFolders>();
 
-	public string TemporaryFolderPath { get; }
-	public string ServerExecutableFolderPath { get; }
-
 	public string DataFolderPath { get; }
 	public string InstancesFolderPath { get; }
 
-	public AgentFolders(string temporaryFolder, string dataFolder) {
-		this.TemporaryFolderPath = Path.GetFullPath(temporaryFolder);
-		this.ServerExecutableFolderPath = Path.Combine(TemporaryFolderPath, "servers");
+	public string TemporaryFolderPath { get; }
+	public string ServerExecutableFolderPath { get; }
 
-		this.DataFolderPath = Path.GetFullPath(dataFolder);
+	public string JavaSearchFolderPath { get; }
+
+	public AgentFolders(string dataFolderPath, string temporaryFolderPath, string javaSearchFolderPath) {
+		this.DataFolderPath = Path.GetFullPath(dataFolderPath);
 		this.InstancesFolderPath = Path.Combine(DataFolderPath, "instances");
+		
+		this.TemporaryFolderPath = Path.GetFullPath(temporaryFolderPath);
+		this.ServerExecutableFolderPath = Path.Combine(TemporaryFolderPath, "servers");
+		
+		this.JavaSearchFolderPath = javaSearchFolderPath;
 	}
 
 	public bool TryCreate() {
-		return TryCreateFolder(TemporaryFolderPath) &&
-		       TryCreateFolder(ServerExecutableFolderPath) &&
-		       TryCreateFolder(DataFolderPath) &&
-		       TryCreateFolder(InstancesFolderPath);
+		return TryCreateFolder(DataFolderPath) &&
+		       TryCreateFolder(InstancesFolderPath) &&
+		       TryCreateFolder(TemporaryFolderPath) &&
+		       TryCreateFolder(ServerExecutableFolderPath);
 	}
 
 	private static bool TryCreateFolder(string folderPath) {

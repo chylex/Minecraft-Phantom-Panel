@@ -13,7 +13,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource);
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 
-	var (serverHost, serverPort, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
+	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
 
 	AgentAuthToken agentAuthToken;
 	try {
@@ -30,7 +30,7 @@ try {
 		Environment.Exit(1);
 	}
 
-	var folders = new AgentFolders("./temp", "./data");
+	var folders = new AgentFolders("./data", "./temp", javaSearchPath);
 	if (!folders.TryCreate()) {
 		Environment.Exit(1);
 	}
