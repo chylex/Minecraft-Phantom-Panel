@@ -1,11 +1,13 @@
-﻿namespace Phantom.Agent.Minecraft.Java; 
+﻿using Phantom.Common.Data.Java;
+
+namespace Phantom.Agent.Minecraft.Java; 
 
 public sealed class JavaRuntime {
-	private readonly string javaHome;
-	
-	public JavaRuntime(string javaHome) {
-		this.javaHome = javaHome;
+	internal string ExecutablePath { get; }
+	public JavaVersion Version { get; }
+
+	public JavaRuntime(string executablePath, JavaVersion version) {
+		this.ExecutablePath = executablePath;
+		this.Version = version;
 	}
-	
-	public string JavaExecutablePath => javaHome + "/bin/java";
 }

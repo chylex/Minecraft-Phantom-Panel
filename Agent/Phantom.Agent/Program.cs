@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent;
+using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
@@ -15,6 +16,10 @@ try {
 
 	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
 
+	await foreach (var runtime in JavaRuntimeDiscovery.Scan(javaSearchPath)) {
+		
+	}
+	
 	AgentAuthToken agentAuthToken;
 	try {
 		agentAuthToken = authTokenFilePath == null ? new AgentAuthToken(authToken) : await AgentAuthToken.ReadFromFile(authTokenFilePath);

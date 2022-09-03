@@ -23,7 +23,7 @@ public abstract class BaseLauncher {
 		}
 
 		var startInfo = new ProcessStartInfo {
-			FileName = instanceProperties.JavaRuntime.JavaExecutablePath,
+			FileName = instanceProperties.JavaRuntime.ExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
 			RedirectStandardInput = true,
 			RedirectStandardOutput = true,
