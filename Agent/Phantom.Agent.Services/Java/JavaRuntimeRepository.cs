@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Common.Data.Java;
+using Phantom.Utils.Cryptography;
 
 namespace Phantom.Agent.Services.Java;
 
@@ -44,7 +45,7 @@ sealed class JavaRuntimeRepository {
 	}
 
 	private static Guid GenerateStableGuid(string executablePath) {
-		Random rand = new Random(executablePath.GetHashCode(StringComparison.Ordinal));
+		Random rand = new Random(StableHashCode.ForString(executablePath));
 		Span<byte> bytes = stackalloc byte[16];
 		rand.NextBytes(bytes);
 		return new Guid(bytes);

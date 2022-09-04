@@ -1,4 +1,6 @@
-﻿namespace Phantom.Agent;
+﻿using Phantom.Utils.Cryptography;
+
+namespace Phantom.Agent;
 
 static class AgentNameGenerator {
 	private static readonly string[] Prefixes = {
@@ -466,7 +468,7 @@ static class AgentNameGenerator {
 	};
 
 	public static string GenerateFrom(Guid guid) {
-		var rand = new Random(guid.GetHashCode());
+		var rand = new Random(StableHashCode.ForString(guid.ToString()));
 		string prefix = Prefixes[rand.Next(Prefixes.Length)];
 		string suffix = Suffixes[rand.Next(Suffixes.Length)];
 		return string.Concat(prefix, " ", suffix);
