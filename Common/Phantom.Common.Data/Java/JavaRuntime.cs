@@ -17,15 +17,11 @@ public sealed record JavaRuntime(
 			return 1;
 		}
 
-		var fullVersionComparison = string.Compare(FullVersion, other.FullVersion, StringComparison.OrdinalIgnoreCase);
-		if (fullVersionComparison != 0) {
-			return -fullVersionComparison;
-		}
-
-		// TODO not proper version comparison
-		var mainVersionComparison = string.Compare(MainVersion, other.MainVersion, StringComparison.OrdinalIgnoreCase);
-		if (mainVersionComparison != 0) {
-			return -mainVersionComparison;
+		if (Version.TryParse(FullVersion, out var fullVersion) && Version.TryParse(other.FullVersion, out var otherFullVersion)) {
+			var versionComparison = -fullVersion.CompareTo(otherFullVersion);
+			if (versionComparison != 0) {
+				return versionComparison;
+			}
 		}
 
 		return string.Compare(Vendor, other.Vendor, StringComparison.OrdinalIgnoreCase);

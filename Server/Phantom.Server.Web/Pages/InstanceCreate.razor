@@ -40,7 +40,7 @@
   </div>
   
   <div class="row">
-    <div class="col-xl-3 mb-3">
+    <div class="col-xl-4 mb-3">
       <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
         @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
           <option value="@kind">@kind</option>
@@ -48,7 +48,7 @@
       </FormSelectInput>
     </div>
 
-    <div class="col-xl-3 mb-3">
+    <div class="col-xl-4 mb-3">
       <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid" disabled="@(form.JavaRuntimesForSelectedAgent.IsEmpty)">
         @foreach (var (guid, runtime) in form.JavaRuntimesForSelectedAgent) {
           <option value="@guid">@runtime.FullVersion (@runtime.Vendor)</option>
@@ -56,11 +56,11 @@
       </FormSelectInput>
     </div>
 
-    <div class="col-xl-3 mb-3">
+    <div class="col-xl-2 mb-3">
       <FormNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
     </div>
 
-    <div class="col-xl-3 mb-3">
+    <div class="col-xl-2 mb-3">
       <FormNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
     </div>
   </div>
