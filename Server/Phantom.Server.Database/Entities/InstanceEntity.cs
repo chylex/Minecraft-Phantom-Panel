@@ -1,12 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 
 namespace Phantom.Server.Database.Entities; 
 
 [Table("Instances", Schema = "agents")]
-public class InstanceEntity {
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+public sealed class InstanceEntity {
 	[Key]
 	public Guid InstanceGuid { get; set; }
 
@@ -18,13 +20,14 @@ public class InstanceEntity {
 	public string MinecraftVersion { get; set; }
 	public MinecraftServerKind MinecraftServerKind { get; set; }
 	public RamAllocationUnits MemoryAllocation { get; set; }
+	public Guid JavaRuntimeGuid { get; set; }
 
 	public InstanceEntity() {
 		InstanceName = null!;
 		MinecraftVersion = null!;
 	}
 
-	public InstanceInfo AsInstanceInfo => new (AgentGuid, InstanceGuid, InstanceName, ServerPort, RconPort, MinecraftVersion, MinecraftServerKind, MemoryAllocation);
+	public InstanceInfo AsInstanceInfo => new (AgentGuid, InstanceGuid, InstanceName, ServerPort, RconPort, MinecraftVersion, MinecraftServerKind, MemoryAllocation, JavaRuntimeGuid);
 	
 	public void SetFromInstanceInfo(InstanceInfo info) {
 		InstanceGuid = info.InstanceGuid;
@@ -35,5 +38,6 @@ public class InstanceEntity {
 		MinecraftVersion = info.MinecraftVersion;
 		MinecraftServerKind = info.MinecraftServerKind;
 		MemoryAllocation = info.MemoryAllocation;
+		JavaRuntimeGuid = info.JavaRuntimeGuid;
 	}
 }

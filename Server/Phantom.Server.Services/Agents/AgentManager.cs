@@ -36,9 +36,9 @@ public sealed class AgentManager {
 		using var scope = databaseProvider.CreateScope();
 
 		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			if (!agents.TryRegister(new Agent.Offline(agent.AgentId, agent.Name))) {
+			if (!agents.TryRegister(new Agent.Offline(agent.AgentGuid, agent.Name))) {
 				// TODO
-				throw new InvalidOperationException("Unable to register agent from database: " + agent.AgentId);
+				throw new InvalidOperationException("Unable to register agent from database: " + agent.AgentGuid);
 			}
 		}
 	}
@@ -57,7 +57,7 @@ public sealed class AgentManager {
 
 		using (var scope = databaseProvider.CreateScope()) {
 			scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
-				agent.AgentId = guid;
+				agent.AgentGuid = guid;
 				agent.Name = agentName;
 			});
 

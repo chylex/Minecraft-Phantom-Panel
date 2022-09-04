@@ -6,7 +6,7 @@ namespace Phantom.Server.Database.Entities;
 [Table("Agents", Schema = "agents")]
 public sealed class AgentEntity {
 	[Key]
-	public Guid AgentId { get; set; } // TODO rename
+	public Guid AgentGuid { get; set; }
 	
 	public string Name { get; set; }
 

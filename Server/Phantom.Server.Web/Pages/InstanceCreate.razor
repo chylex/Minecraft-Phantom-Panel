@@ -5,6 +5,7 @@
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
+@using Phantom.Common.Data.Java
 @using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Data.Instance
 @inject NavigationManager Nav
@@ -32,7 +33,7 @@
       </FormSelectInput>
     </div>
 
-    <div class="col-xl-4 mb-3">
+    <div class="col-xl-2 mb-3">
       <FormTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
     </div>
 
@@ -40,6 +41,14 @@
       <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
         @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
           <option value="@kind">@kind</option>
+        }
+      </FormSelectInput>
+    </div>
+
+    <div class="col-xl-2 mb-3">
+      <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid">
+        @foreach (var (guid, runtime) in form.JavaRuntimesForSelectedAgent) {
+          <option value="@guid">@runtime.FullVersion (@runtime.Vendor)</option>
         }
       </FormSelectInput>
     </div>
@@ -83,23 +92,30 @@
   private readonly Guid instanceGuid = Guid.NewGuid();
 
   private sealed class FormModel {
-    public readonly ImmutableDictionary<Guid, AgentStats> AgentsByGuid;
+    public ImmutableDictionary<Guid, AgentStats> AgentsByGuid { get; }
+    private readonly ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> javaRuntimesByAgentGuid;
 
     public FormModel(AgentStatsManager agentStatsManager) {
       AgentsByGuid = agentStatsManager.GetAgentStats();
+      javaRuntimesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>.Empty; // TODO
     }
 
-    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentStats? stats) {
+    private bool TryGet<TValue>(ImmutableDictionary<Guid, TValue> dictionary, Guid? agentGuid, [NotNullWhen(true)] out TValue? value) {
       if (agentGuid == null) {
-        stats = null;
+        value = default;
         return false;
       }
       else {
-        return AgentsByGuid.TryGetValue(agentGuid.Value, out stats);
+        return dictionary.TryGetValue(agentGuid.Value, out value);
       }
     }
 
+    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentStats? stats) {
+      return TryGet(AgentsByGuid, agentGuid, out stats);
+    }
+
     public AgentStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agentStats) ? agentStats : null;
+    public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(javaRuntimesByAgentGuid, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
     public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
     private ushort selectedMemoryUnits = 1;
 
@@ -120,6 +136,9 @@
     public int RconPort { get; set; } = 25575;
 
     public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
+
+    [Required(ErrorMessage = "You must select a Java runtime.")]
+    public Guid? JavaRuntimeGuid { get; set; }
 
     public string MinecraftVersion { get; set; } = "1.19";
 
@@ -171,7 +190,7 @@
     submitModel.StartSubmitting();
     await Task.Yield();
 
-    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero);
+    var instance = new InstanceInfo(selectedAgent.AgentInfo.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero, form.JavaRuntimeGuid.GetValueOrDefault());
     var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);

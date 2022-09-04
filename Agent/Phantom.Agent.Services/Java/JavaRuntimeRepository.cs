@@ -6,8 +6,8 @@ using Phantom.Common.Data.Java;
 namespace Phantom.Agent.Services.Java;
 
 sealed class JavaRuntimeRepository {
-	private readonly Dictionary<Guid, JavaRuntimeExecutable> runtimesByGuid = new ();
 	private readonly Dictionary<string, Guid> guidsByPath = new ();
+	private readonly Dictionary<Guid, JavaRuntimeExecutable> runtimesByGuid = new ();
 	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
 
 	public ImmutableArray<TaggedJavaRuntime> All {
@@ -25,7 +25,7 @@ sealed class JavaRuntimeRepository {
 		rwLock.EnterWriteLock();
 		try {
 			if (!guidsByPath.TryGetValue(runtime.ExecutablePath, out var guid)) {
-				guidsByPath[runtime.ExecutablePath] = guid = Guid.NewGuid();
+				guidsByPath[runtime.ExecutablePath] = guid = GenerateStableGuid(runtime.ExecutablePath);
 			}
 
 			runtimesByGuid[guid] = runtime;
@@ -41,5 +41,12 @@ sealed class JavaRuntimeRepository {
 		} finally {
 			rwLock.ExitReadLock();
 		}
+	}
+
+	private static Guid GenerateStableGuid(string executablePath) {
+		Random rand = new Random(executablePath.GetHashCode(StringComparison.Ordinal));
+		Span<byte> bytes = stackalloc byte[16];
+		rand.NextBytes(bytes);
+		return new Guid(bytes);
 	}
 }
