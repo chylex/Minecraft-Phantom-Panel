@@ -4,7 +4,7 @@ using Phantom.Agent.Minecraft.Properties;
 namespace Phantom.Agent.Minecraft.Instance;
 
 public sealed record InstanceProperties(
-	JavaRuntime JavaRuntime,
+	JavaRuntimeExecutable JavaRuntimeExecutable,
 	JvmProperties JvmProperties,
 	string InstanceFolder,
 	string ServerVersion,

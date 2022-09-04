@@ -34,7 +34,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var logger = config.Logger;
 		var url = config.TcpUrl;
 
-		logger.Information("Starting ZeroMQ client on {Url}...", url);
+		logger.Information("Starting ZeroMQ client and connecting to {Url}...", url);
 		socket.Connect(url);
 		logger.Information("ZeroMQ client connected.");
 	}

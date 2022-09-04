@@ -18,7 +18,7 @@ public static class JavaRuntimeDiscovery {
 		return null;
 	}
 
-	public static async IAsyncEnumerable<JavaRuntime> Scan(string folderPath) {
+	public static async IAsyncEnumerable<JavaRuntimeExecutable> Scan(string folderPath) {
 		Logger.Information("Starting Java runtime scan in: {FolderPath}", folderPath);
 
 		string javaExecutableName = OperatingSystem.IsWindows() ? "java.exe" : "java";
@@ -33,9 +33,9 @@ public static class JavaRuntimeDiscovery {
 			if (File.Exists(javaExecutablePath)) {
 				Logger.Information("Found candidate Java executable: {JavaExecutablePath}", javaExecutablePath);
 
-				JavaVersion? foundVersion;
+				JavaRuntime? foundRuntime;
 				try {
-					foundVersion = await TryReadJavaVersionInformationFromProcess(javaExecutablePath);
+					foundRuntime = await TryReadJavaRuntimeInformationFromProcess(javaExecutablePath);
 				} catch (OperationCanceledException) {
 					Logger.Error("Java process did not exit in time.");
 					continue;
@@ -44,18 +44,18 @@ public static class JavaRuntimeDiscovery {
 					continue;
 				}
 
-				if (foundVersion == null) {
+				if (foundRuntime == null) {
 					Logger.Error("Java executable did not output version information.");
 					continue;
 				}
 
-				Logger.Information("Found Java {Version} from {Vendor}: {Path}", foundVersion.FullVersion, foundVersion.Vendor, javaExecutablePath);
-				yield return new JavaRuntime(javaExecutablePath, foundVersion);
+				Logger.Information("Found Java {Version} from {Vendor}: {Path}", foundRuntime.FullVersion, foundRuntime.Vendor, javaExecutablePath);
+				yield return new JavaRuntimeExecutable(javaExecutablePath, foundRuntime);
 			}
 		}
 	}
 
-	private static async Task<JavaVersion?> TryReadJavaVersionInformationFromProcess(string javaExecutablePath) {
+	private static async Task<JavaRuntime?> TryReadJavaRuntimeInformationFromProcess(string javaExecutablePath) {
 		var startInfo = new ProcessStartInfo {
 			FileName = javaExecutablePath,
 			WorkingDirectory = Path.GetDirectoryName(javaExecutablePath),
@@ -73,14 +73,14 @@ public static class JavaRuntimeDiscovery {
 		try {
 			process.Start();
 
-			JavaVersionBuilder versionBuilder = new ();
+			JavaRuntimeBuilder runtimeBuilder = new ();
 
 			while (await process.StandardError.ReadLineAsync(cancellationTokenSource.Token) is {} line) {
-				ExtractJavaVersionPropertiesFromLine(line, versionBuilder);
+				ExtractJavaVersionPropertiesFromLine(line, runtimeBuilder);
 				
-				JavaVersion? version = versionBuilder.TryBuild();
-				if (version != null) {
-					return version;
+				JavaRuntime? runtime = runtimeBuilder.TryBuild();
+				if (runtime != null) {
+					return runtime;
 				}
 			}
 
@@ -92,7 +92,7 @@ public static class JavaRuntimeDiscovery {
 		}
 	}
 
-	private static void ExtractJavaVersionPropertiesFromLine(ReadOnlySpan<char> line, JavaVersionBuilder versionBuilder) {
+	private static void ExtractJavaVersionPropertiesFromLine(ReadOnlySpan<char> line, JavaRuntimeBuilder runtimeBuilder) {
 		line = line.TrimStart();
 
 		int separatorIndex = line.IndexOf('=');
@@ -102,13 +102,13 @@ public static class JavaRuntimeDiscovery {
 
 		var propertyName = line[..separatorIndex].TrimEnd();
 		if (propertyName.Equals("java.specification.version", StringComparison.Ordinal)) {
-			versionBuilder.MainVersion = ExtractValue(line, separatorIndex);
+			runtimeBuilder.MainVersion = ExtractValue(line, separatorIndex);
 		}
 		else if (propertyName.Equals("java.version", StringComparison.Ordinal)) {
-			versionBuilder.FullVersion = ExtractValue(line, separatorIndex);
+			runtimeBuilder.FullVersion = ExtractValue(line, separatorIndex);
 		}
 		else if (propertyName.Equals("java.vm.vendor", StringComparison.Ordinal)) {
-			versionBuilder.Vendor = ExtractValue(line, separatorIndex);
+			runtimeBuilder.Vendor = ExtractValue(line, separatorIndex);
 		}
 	}
 
@@ -116,17 +116,17 @@ public static class JavaRuntimeDiscovery {
 		return line[(separatorIndex + 1)..].Trim().ToString();
 	}
 
-	private sealed class JavaVersionBuilder {
+	private sealed class JavaRuntimeBuilder {
 		public string? MainVersion { get; set; } = null;
 		public string? FullVersion { get; set; } = null;
 		public string? Vendor { get; set; } = null;
 
-		public JavaVersion? TryBuild() {
+		public JavaRuntime? TryBuild() {
 			if (MainVersion == null || FullVersion == null || Vendor == null) {
 				return null;
 			}
 			else {
-				return new JavaVersion(MainVersion, FullVersion, Vendor);
+				return new JavaRuntime(MainVersion, FullVersion, Vendor);
 			}
 		}
 	}

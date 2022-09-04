@@ -1,5 +1,4 @@
 ﻿using Phantom.Agent;
-using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
@@ -8,6 +7,8 @@ using Phantom.Common.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 
+const int AgentVersion = 1;
+
 var cancellationTokenSource = new CancellationTokenSource();
 PosixSignals.RegisterCancellation(cancellationTokenSource);
 
@@ -15,10 +16,6 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 
 	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
-
-	await foreach (var runtime in JavaRuntimeDiscovery.Scan(javaSearchPath)) {
-		
-	}
 	
 	AgentAuthToken agentAuthToken;
 	try {
@@ -47,10 +44,11 @@ try {
 	}
 
 	var agentName = string.IsNullOrEmpty(agentNameOrEmpty) ? AgentNameGenerator.GenerateFrom(agentGuid.Value) : agentNameOrEmpty;
-	var agentInfo = new AgentInfo(agentGuid.Value, Version: 1, agentName, maxInstances, maxMemory);
+	var agentInfo = new AgentInfo(agentGuid.Value, AgentVersion, agentName, maxInstances, maxMemory);
 	var agentServices = new AgentServices(agentInfo, folders);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
+	await agentServices.Initialize();
 	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");

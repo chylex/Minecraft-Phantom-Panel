@@ -12,5 +12,6 @@ public sealed record InstanceInfo(
 	[property: Key(4)] ushort RconPort,
 	[property: Key(5)] string MinecraftVersion,
 	[property: Key(6)] MinecraftServerKind MinecraftServerKind,
-	[property: Key(7)] RamAllocationUnits MemoryAllocation
+	[property: Key(7)] RamAllocationUnits MemoryAllocation,
+	[property: Key(8)] Guid JavaRuntimeGuid
 );

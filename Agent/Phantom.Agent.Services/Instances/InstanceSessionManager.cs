@@ -3,6 +3,7 @@ using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Agent.Services.Java;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
@@ -20,18 +21,25 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly Dictionary<Guid, Instance> instances = new ();
 	private readonly HashSet<ushort> usedPorts = new ();
 
+	private readonly JavaRuntimeRepository javaRuntimeRepository;
+	
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
-	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders) {
+	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
 		this.serverExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
+		this.javaRuntimeRepository = javaRuntimeRepository;
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
 	public CreateInstanceResult Create(InstanceInfo info) {
+		if (!javaRuntimeRepository.TryGetByGuid(info.JavaRuntimeGuid, out var javaRuntime)) {
+			return CreateInstanceResult.UnknownJavaRuntime;
+		}
+		
 		try {
 			semaphore.Wait(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
@@ -70,7 +78,7 @@ sealed class InstanceSessionManager : IDisposable {
 			Directory.CreateDirectory(instanceFolder);
 
 			var properties = new InstanceProperties(
-				new JavaRuntime(JavaHomePath),
+				javaRuntime,
 				jvmProperties,
 				instanceFolder,
 				info.MinecraftVersion,

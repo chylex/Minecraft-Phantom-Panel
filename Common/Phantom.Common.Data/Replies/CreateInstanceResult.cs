@@ -2,6 +2,7 @@
 
 public enum CreateInstanceResult {
 	Success,
+	UnknownJavaRuntime,
 	InstanceAlreadyExists,
 	InstanceLimitExceeded,
 	MemoryLimitExceeded,
