@@ -220,7 +220,7 @@ namespace Phantom.Server.Database.Migrations
 
             modelBuilder.Entity("Phantom.Server.Database.Entities.AgentEntity", b =>
                 {
-                    b.Property<Guid>("AgentId")
+                    b.Property<Guid>("AgentGuid")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
@@ -228,7 +228,7 @@ namespace Phantom.Server.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("AgentId");
+                    b.HasKey("AgentGuid");
 
                     b.ToTable("Agents", "agents");
                 });
@@ -245,6 +245,9 @@ namespace Phantom.Server.Database.Migrations
                     b.Property<string>("InstanceName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid>("JavaRuntimeGuid")
+                        .HasColumnType("uuid");
 
                     b.Property<ushort>("MemoryAllocation")
                         .HasColumnType("integer");

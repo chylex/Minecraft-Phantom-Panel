@@ -8,8 +8,8 @@ namespace Phantom.Agent.Services;
 public sealed class AgentServices {
 	private AgentInfo AgentInfo { get; }
 	private AgentFolders AgentFolders { get; }
-	private JavaRuntimeRepository JavaRuntimeRepository { get; }
 	
+	internal JavaRuntimeRepository JavaRuntimeRepository { get; }
 	internal InstanceSessionManager InstanceSessionManager { get; }
 
 	// internal CommandListeners<AgentServices, CommandListener> CommandListeners { get; } = new ();

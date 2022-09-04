@@ -12,7 +12,7 @@ using Phantom.Server.Database;
 namespace Phantom.Server.Database.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20220826124632_Dev1")]
+    [Migration("20220904072923_Dev1")]
     partial class Dev1
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -222,7 +222,7 @@ namespace Phantom.Server.Database.Migrations
 
             modelBuilder.Entity("Phantom.Server.Database.Entities.AgentEntity", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<Guid>("AgentGuid")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
@@ -230,9 +230,47 @@ namespace Phantom.Server.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("Id");
+                    b.HasKey("AgentGuid");
 
                     b.ToTable("Agents", "agents");
+                });
+
+            modelBuilder.Entity("Phantom.Server.Database.Entities.InstanceEntity", b =>
+                {
+                    b.Property<Guid>("InstanceGuid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgentGuid")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InstanceName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("JavaRuntimeGuid")
+                        .HasColumnType("uuid");
+
+                    b.Property<ushort>("MemoryAllocation")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("MinecraftServerKind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MinecraftVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RconPort")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ServerPort")
+                        .HasColumnType("integer");
+
+                    b.HasKey("InstanceGuid");
+
+                    b.ToTable("Instances", "agents");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

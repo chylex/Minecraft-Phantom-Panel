@@ -4,6 +4,7 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.ToServer;
 using Serilog;
 
 namespace Phantom.Agent.Services.Rpc;
@@ -21,7 +22,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 		this.shutdownTokenSource = shutdownTokenSource;
 	}
 
-	public Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
+	public async Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
 
 		foreach (var instanceInfo in message.InitialInstances) {
@@ -31,11 +32,11 @@ public sealed class MessageListener : IMessageToAgentListener {
 				Logger.Fatal("Unable to create instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
 
 				shutdownTokenSource.Cancel();
-				return Task.CompletedTask;
+				return;
 			}
 		}
 
-		return Task.CompletedTask;
+		await ServerMessaging.SendMessage(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
 	}
 
 	public Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message) {

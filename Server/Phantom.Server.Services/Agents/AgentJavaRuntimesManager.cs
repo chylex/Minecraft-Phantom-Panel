@@ -1,0 +1,16 @@
+﻿using System.Collections.Immutable;
+using Phantom.Common.Data.Java;
+using Phantom.Common.Messages.ToServer;
+using Phantom.Utils.Collections;
+
+namespace Phantom.Server.Services.Agents; 
+
+public sealed class AgentJavaRuntimesManager {
+	private readonly RwLockedDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> runtimes = new (LockRecursionPolicy.NoRecursion);
+
+	public ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> All => runtimes.ToImmutable();
+	
+	internal void Update(Guid agentGuid, AdvertiseJavaRuntimesMessage message) {
+		runtimes[agentGuid] = message.Runtimes;
+	}
+}

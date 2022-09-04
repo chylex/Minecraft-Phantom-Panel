@@ -9,6 +9,7 @@
       <env name="MAX_MEMORY" value="10G" />
       <env name="SERVER_AUTH_TOKEN_FILE" value="./secrets/agent.token" />
       <env name="SERVER_HOST" value="localhost" />
+      <env name="JAVA_SEARCH_PATH" value="C:\Users\Dan\.jdks" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />

@@ -132,4 +132,13 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitWriteLock();
 		}
 	}
+
+	public ImmutableDictionary<TKey, TValue> ToImmutable() {
+		rwLock.EnterReadLock();
+		try {
+			return dict.ToImmutableDictionary();
+		} finally {
+			rwLock.ExitReadLock();
+		}
+	}
 }

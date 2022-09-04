@@ -173,12 +173,32 @@ namespace Phantom.Server.Database.Migrations
                 schema: "agents",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    AgentGuid = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Agents", x => x.Id);
+                    table.PrimaryKey("PK_Agents", x => x.AgentGuid);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Instances",
+                schema: "agents",
+                columns: table => new
+                {
+                    InstanceGuid = table.Column<Guid>(type: "uuid", nullable: false),
+                    AgentGuid = table.Column<Guid>(type: "uuid", nullable: false),
+                    InstanceName = table.Column<string>(type: "text", nullable: false),
+                    ServerPort = table.Column<int>(type: "integer", nullable: false),
+                    RconPort = table.Column<int>(type: "integer", nullable: false),
+                    MinecraftVersion = table.Column<string>(type: "text", nullable: false),
+                    MinecraftServerKind = table.Column<string>(type: "text", nullable: false),
+                    MemoryAllocation = table.Column<ushort>(type: "integer", nullable: false),
+                    JavaRuntimeGuid = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Instances", x => x.InstanceGuid);
                 });
 
             migrationBuilder.AddForeignKey(
@@ -276,6 +296,10 @@ namespace Phantom.Server.Database.Migrations
 
             migrationBuilder.DropTable(
                 name: "Agents",
+                schema: "agents");
+
+            migrationBuilder.DropTable(
+                name: "Instances",
                 schema: "agents");
 
             migrationBuilder.DropPrimaryKey(
