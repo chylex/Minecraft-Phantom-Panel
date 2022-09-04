@@ -14,7 +14,7 @@ sealed class JavaRuntimeRepository {
 		get {
 			rwLock.EnterReadLock();
 			try {
-				return runtimesByGuid.Select(static kvp => new TaggedJavaRuntime(kvp.Key, kvp.Value.Runtime)).ToImmutableArray();
+				return runtimesByGuid.Select(static kvp => new TaggedJavaRuntime(kvp.Key, kvp.Value.Runtime)).OrderBy(static taggedRuntime => taggedRuntime.Runtime).ToImmutableArray();
 			} finally {
 				rwLock.ExitReadLock();
 			}

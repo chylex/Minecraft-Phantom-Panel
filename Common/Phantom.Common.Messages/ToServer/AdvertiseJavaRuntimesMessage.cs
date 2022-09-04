@@ -6,7 +6,7 @@ namespace Phantom.Common.Messages.ToServer;
 
 [MessagePackObject]
 public sealed record AdvertiseJavaRuntimesMessage(
-	ImmutableArray<TaggedJavaRuntime> Runtimes
+	[property: Key(0)] ImmutableArray<TaggedJavaRuntime> Runtimes
 ) : IMessageToServer {
 	public Task Accept(IMessageToServerListener listener) {
 		return listener.HandleAdvertiseJavaRuntimes(this);

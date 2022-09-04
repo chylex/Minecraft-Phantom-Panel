@@ -19,7 +19,7 @@
   <DataAnnotationsValidator />
 
   <div class="row">
-    <div class="col-xl-6 mb-3">
+    <div class="col-xl-7 mb-3">
       <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
         <option value="" selected>Select which agent will run the instance...</option>
         @foreach (var (agent, usedInstances, usedMemory) in form.AgentsByGuid.Values.OrderBy(static item => item.AgentInfo.Name)) {
@@ -34,11 +34,13 @@
       </FormSelectInput>
     </div>
 
-    <div class="col-xl-2 mb-3">
+    <div class="col-xl-5 mb-3">
       <FormTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
     </div>
-
-    <div class="col-xl-2 mb-3">
+  </div>
+  
+  <div class="row">
+    <div class="col-xl-3 mb-3">
       <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
         @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
           <option value="@kind">@kind</option>
@@ -46,17 +48,25 @@
       </FormSelectInput>
     </div>
 
-    <div class="col-xl-2 mb-3">
-      <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid">
+    <div class="col-xl-3 mb-3">
+      <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid" disabled="@(form.JavaRuntimesForSelectedAgent.IsEmpty)">
         @foreach (var (guid, runtime) in form.JavaRuntimesForSelectedAgent) {
           <option value="@guid">@runtime.FullVersion (@runtime.Vendor)</option>
         }
       </FormSelectInput>
     </div>
+
+    <div class="col-xl-3 mb-3">
+      <FormNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
+    </div>
+
+    <div class="col-xl-3 mb-3">
+      <FormNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
+    </div>
   </div>
 
   <div class="row">
-    <div class="col-xl-8 mb-3">
+    <div class="col-xl-12 mb-3">
       @{
         ushort maximumMemoryUnits = form.MaximumMemoryUnits;
         RenderFragment label;
@@ -68,14 +78,6 @@
         }
       }
       <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
-    </div>
-
-    <div class="col-xl-2 mb-3">
-      <FormNumberInput Id="instance-server-port" Label="Server Port" @bind-Value="form.ServerPort" min="0" max="65535" />
-    </div>
-
-    <div class="col-xl-2 mb-3">
-      <FormNumberInput Id="instance-rcon-port" Label="Rcon Port" @bind-Value="form.RconPort" min="0" max="65535" />
     </div>
   </div>
 
