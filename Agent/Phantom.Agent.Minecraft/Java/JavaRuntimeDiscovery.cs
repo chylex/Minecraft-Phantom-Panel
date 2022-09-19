@@ -27,7 +27,8 @@ public static class JavaRuntimeDiscovery {
 			MatchType = MatchType.Simple,
 			RecurseSubdirectories = true,
 			ReturnSpecialDirectories = false,
-			IgnoreInaccessible = true
+			IgnoreInaccessible = true,
+			AttributesToSkip = FileAttributes.Hidden | FileAttributes.ReparsePoint | FileAttributes.System
 		})) {
 			var javaExecutablePath = Path.Combine(binFolderPath, javaExecutableName);
 			if (File.Exists(javaExecutablePath)) {

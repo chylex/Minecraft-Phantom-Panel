@@ -38,7 +38,7 @@ public sealed class AgentFolders {
 		}
 
 		try {
-			Directories.Create(folderPath, Chmod.URW_GR);
+			Directories.Create(folderPath, Chmod.URWX_GRX);
 			return true;
 		} catch (Exception e) {
 			Logger.Fatal(e, "Error creating folder: {FolderPath}", folderPath);

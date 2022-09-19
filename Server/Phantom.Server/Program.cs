@@ -24,7 +24,7 @@ try {
 	string secretsPath = Path.GetFullPath("./secrets");
 	if (!Directory.Exists(secretsPath)) {
 		try {
-			Directories.Create(secretsPath, Chmod.URW_GR);
+			Directories.Create(secretsPath, Chmod.URWX_GRX);
 		} catch (Exception e) {
 			PhantomLogger.Root.Fatal(e, "Error creating secrets folder.");
 			Environment.Exit(1);
