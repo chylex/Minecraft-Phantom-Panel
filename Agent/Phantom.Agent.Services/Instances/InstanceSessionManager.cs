@@ -12,8 +12,6 @@ using Phantom.Common.Messages.ToAgent;
 namespace Phantom.Agent.Services.Instances;
 
 sealed class InstanceSessionManager : IDisposable {
-	private const string JavaHomePath = @"C:\Users\Dan\.jdks\openjdk-17.0.1";
-
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 

@@ -1,12 +1,13 @@
-﻿using MessagePack;
+﻿using System.Diagnostics.CodeAnalysis;
+using MessagePack;
 
-namespace Phantom.Common.Data.Java; 
+namespace Phantom.Common.Data.Java;
 
 [MessagePackObject]
 public sealed record JavaRuntime(
 	[property: Key(0)] string MainVersion,
 	[property: Key(1)] string FullVersion,
-	[property: Key(2)] string Vendor
+	[property: Key(2)] string DisplayName
 ) : IComparable<JavaRuntime> {
 	public int CompareTo(JavaRuntime? other) {
 		if (ReferenceEquals(this, other)) {
@@ -17,13 +18,23 @@ public sealed record JavaRuntime(
 			return 1;
 		}
 
-		if (Version.TryParse(FullVersion, out var fullVersion) && Version.TryParse(other.FullVersion, out var otherFullVersion)) {
+		if (TryParseFullVersion(FullVersion, out var fullVersion) && TryParseFullVersion(other.FullVersion, out var otherFullVersion)) {
 			var versionComparison = -fullVersion.CompareTo(otherFullVersion);
 			if (versionComparison != 0) {
 				return versionComparison;
 			}
 		}
 
-		return string.Compare(Vendor, other.Vendor, StringComparison.OrdinalIgnoreCase);
+		return string.Compare(DisplayName, other.DisplayName, StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static bool TryParseFullVersion(string versionString, [NotNullWhen(true)] out Version? version) {
+		int dashIndex = versionString.IndexOf('-');
+		var versionSpan = dashIndex != -1 ? versionString.AsSpan(0, dashIndex) : versionString;
+		if (versionSpan.Contains('_')) {
+			versionSpan = versionSpan.ToString().Replace('_', '.');
+		}
+
+		return Version.TryParse(versionSpan, out version);
 	}
 }

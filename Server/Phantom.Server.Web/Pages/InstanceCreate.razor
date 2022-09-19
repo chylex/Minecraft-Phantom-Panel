@@ -50,8 +50,9 @@
 
     <div class="col-xl-4 mb-3">
       <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid" disabled="@(form.JavaRuntimesForSelectedAgent.IsEmpty)">
+        <option value="" selected>Select Java runtime...</option>
         @foreach (var (guid, runtime) in form.JavaRuntimesForSelectedAgent) {
-          <option value="@guid">@runtime.FullVersion (@runtime.Vendor)</option>
+          <option value="@guid">@runtime.DisplayName</option>
         }
       </FormSelectInput>
     </div>
@@ -77,7 +78,7 @@
           label = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
         }
       }
-      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="1" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
     </div>
   </div>
 
@@ -103,7 +104,7 @@
       javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
     }
 
-    private bool TryGet<TValue>(ImmutableDictionary<Guid, TValue> dictionary, Guid? agentGuid, [NotNullWhen(true)] out TValue? value) {
+    private bool TryGet<TValue>(ImmutableDictionary<Guid, TValue> dictionary, Guid? agentGuid, [MaybeNullWhen(false)] out TValue value) {
       if (agentGuid == null) {
         value = default;
         return false;
@@ -120,7 +121,7 @@
     public AgentStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agentStats) ? agentStats : null;
     public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(javaRuntimesByAgentGuid, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
     public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
-    private ushort selectedMemoryUnits = 1;
+    private ushort selectedMemoryUnits = 4;
 
     [Required(ErrorMessage = "You must select an agent.")]
     [AgentHasInstances(ErrorMessage = "This agent has no remaining instances.")]
@@ -177,6 +178,7 @@
     form = new FormModel(AgentJavaRuntimesManager, AgentStatsManager);
     editContext = BootstrapEditContext.Create(form);
     editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.MemoryUnits));
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.JavaRuntimeGuid));
     editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.ServerPort), revalidated: nameof(FormModel.RconPort));
   }
 

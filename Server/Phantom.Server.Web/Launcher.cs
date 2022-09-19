@@ -16,8 +16,7 @@ public static class Launcher {
 		});
 
 		builder.Host.UseSerilog(config.Logger, dispose: true);
-		builder.Host.ConfigureServices(static services => services.AddSingleton<IHostLifetime>(new NullLifetime()));
-
+		
 		builder.WebHost.UseUrls(config.HttpUrl);
 		builder.WebHost.UseSetting(WebHostDefaults.DetailedErrorsKey, builder.Environment.IsDevelopment() ? "true" : "false");
 
@@ -26,6 +25,8 @@ public static class Launcher {
 		}
 
 		configurator.ConfigureServices(builder.Services);
+		
+		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
 		
 		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
 		builder.Services.AddSingleton<DatabaseProvider>();
