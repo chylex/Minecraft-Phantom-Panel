@@ -1,5 +1,17 @@
-﻿@inherits Phantom.Server.Web.Components.Forms.Base.FormInputBase<string>
+﻿@inherits FormInputBaseDebounced<string>
 
 <FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
-<InputText Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-control")" />
+<InputFieldText @ref="Input"
+                Value="@Value"
+                ValueChanged="@ValueChanged"
+                ValueExpression="@ValueExpression"
+                OnChange="@OnChangeDebounced"
+                OnBlur="@OnBlur"
+                AdditionalAttributes="@GetAttributes("form-control")" />
 <ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+
+@code {
+  
+  protected override IStringConvertibleFormInput Input { get; set; } = null!;
+}
+

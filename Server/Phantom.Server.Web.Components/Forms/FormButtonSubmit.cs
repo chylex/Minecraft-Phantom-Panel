@@ -4,7 +4,7 @@ using Phantom.Server.Web.Components.Utils;
 
 namespace Phantom.Server.Web.Components.Forms;
 
-public sealed class InputSubmit : ComponentBase {
+public sealed class FormButtonSubmit : ComponentBase {
 	[Parameter]
 	public string Label { get; set; } = "Submit";
 

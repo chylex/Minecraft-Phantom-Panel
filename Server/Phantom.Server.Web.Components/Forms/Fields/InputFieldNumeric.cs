@@ -3,20 +3,23 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Phantom.Server.Web.Components.Forms.Base;
-using Phantom.Server.Web.Components.Utils;
 
-namespace Phantom.Server.Web.Components.Forms;
+namespace Phantom.Server.Web.Components.Forms.Fields;
 
-public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, IStringConvertibleFormInput {
+public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, IStringConvertibleFormInput {
 	[Parameter]
-	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
+	public FormNumberInputType Type { get; set; }
 
 	[Parameter]
 	public EventCallback<ChangeEventArgs> OnChange { get; set; }
 
 	[Parameter]
-	public FormNumberInputType Type { get; set; }
+	public EventCallback<FocusEventArgs> OnBlur { get; set; }
+
+	[Parameter]
+	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
 
 	public void SetStringValue(string? value) {
 		CurrentValueAsString = value;
@@ -34,6 +37,7 @@ public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessed
 		builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValueAsString));
 		builder.AddAttribute(5, "onchange", OnChange);
 		builder.AddAttribute(6, "oninput", OnChange);
+		builder.AddAttribute(7, "onblur", OnBlur);
 		builder.CloseElement();
 	}
 

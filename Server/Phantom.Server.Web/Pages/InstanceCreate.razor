@@ -82,14 +82,14 @@
     </div>
   </div>
 
-  <InputSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
+  <FormButtonSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
 </EditForm>
 
 @code {
 
   private FormModel form = null!;
   private EditContext editContext = null!;
-  private readonly InputSubmit.SubmitModel submitModel = new();
+  private readonly FormButtonSubmit.SubmitModel submitModel = new();
 
   private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
 
