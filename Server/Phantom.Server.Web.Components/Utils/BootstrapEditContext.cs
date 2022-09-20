@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 
-namespace Phantom.Server.Web.Utils;
+namespace Phantom.Server.Web.Components.Utils;
 
-static class BootstrapEditContext {
+public static class BootstrapEditContext {
 	public static EditContext Create(object model) {
 		EditContext context = new EditContext(model);
 		context.SetFieldCssClassProvider(ClassProvider);

@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Phantom.Server.Web.Utils; 
+namespace Phantom.Server.Web.Components.Utils; 
 
-abstract class FormValidationAttribute : ValidationAttribute {
+public abstract class FormValidationAttribute : ValidationAttribute {
 	public sealed override bool IsValid(object? value) {
 		return base.IsValid(value);
 	}

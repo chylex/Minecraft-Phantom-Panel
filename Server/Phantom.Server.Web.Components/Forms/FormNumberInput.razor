@@ -1,0 +1,16 @@
+﻿@typeparam TValue
+@using Phantom.Server.Web.Components.Forms
+@using Phantom.Server.Web.Components.Forms.Base
+@inherits Phantom.Server.Web.Components.Forms.Base.FormInputBaseDebounced<TValue>
+
+<FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
+<InputNumeric @ref="Input" Type="@Type" Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" OnChange="@OnChangeDebounced" AdditionalAttributes="@GetAttributes(Type.GetBootstrapCssClass())" />
+<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+
+@code {
+
+  [Parameter]
+  public FormNumberInputType Type { get; set; } = FormNumberInputType.Number;
+
+  protected override IStringConvertibleFormInput Input { get; set; } = null!;
+}

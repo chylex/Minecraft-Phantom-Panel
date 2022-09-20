@@ -2,7 +2,7 @@ using System.Timers;
 using Microsoft.AspNetCore.Components;
 using Timer = System.Timers.Timer;
 
-namespace Phantom.Server.Web.Shared.Forms;
+namespace Phantom.Server.Web.Components.Forms.Base;
 
 public abstract class FormInputBaseDebounced<TValue> : FormInputBase<TValue>, IDisposable {
 	private const int DebounceTimeMillis = 400;

@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace Phantom.Server.Web.Utils;
+namespace Phantom.Server.Web.Components.Utils;
 
 static class BlazorUtils {
 	public static string? CombineClassNames(IReadOnlyDictionary<string, object>? additionalAttributes, string? classNames) {

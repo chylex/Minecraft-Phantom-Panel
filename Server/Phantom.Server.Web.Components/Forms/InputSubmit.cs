@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
-using Phantom.Server.Web.Utils;
+using Phantom.Server.Web.Components.Utils;
 
-namespace Phantom.Server.Web.Shared.Forms;
+namespace Phantom.Server.Web.Components.Forms;
 
 public sealed class InputSubmit : ComponentBase {
 	[Parameter]

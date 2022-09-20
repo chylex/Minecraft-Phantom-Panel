@@ -3,8 +3,10 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Rendering;
+using Phantom.Server.Web.Components.Forms.Base;
+using Phantom.Server.Web.Components.Utils;
 
-namespace Phantom.Server.Web.Shared.Forms;
+namespace Phantom.Server.Web.Components.Forms;
 
 public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, IStringConvertibleFormInput {
 	[Parameter]
@@ -13,7 +15,8 @@ public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessed
 	[Parameter]
 	public EventCallback<ChangeEventArgs> OnChange { get; set; }
 
-	public FormNumberInputType Type { get; }
+	[Parameter]
+	public FormNumberInputType Type { get; set; }
 
 	public void SetStringValue(string? value) {
 		CurrentValueAsString = value;
@@ -22,7 +25,7 @@ public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessed
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
 		builder.OpenElement(0, "input");
 		builder.AddMultipleAttributes(1, AdditionalAttributes);
-		builder.AddAttribute(2, "type", GetNumberInputType(Type));
+		builder.AddAttribute(2, "type", Type.GetHtmlInputType());
 
 		if (!string.IsNullOrEmpty(CssClass)) {
 			builder.AddAttribute(3, "class", CssClass);
@@ -57,14 +60,6 @@ public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessed
 			ushort v  => BindConverter.FormatValue((int) v, CultureInfo.InvariantCulture),
 			uint v    => BindConverter.FormatValue((long) v, CultureInfo.InvariantCulture),
 			_         => throw new InvalidOperationException($"Unsupported value type {value.GetType()}")
-		};
-	}
-
-	private static string GetNumberInputType(FormNumberInputType type) {
-		return type switch {
-			FormNumberInputType.Number => "number",
-			FormNumberInputType.Range  => "range",
-			_                          => throw new InvalidOperationException($"Unsupported input type {type}")
 		};
 	}
 }

@@ -1,4 +1,4 @@
-namespace Phantom.Server.Web.Shared.Forms; 
+namespace Phantom.Server.Web.Components.Forms.Base; 
 
 public interface IStringConvertibleFormInput {
 	void SetStringValue(string? value);
