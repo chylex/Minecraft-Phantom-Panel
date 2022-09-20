@@ -31,6 +31,6 @@ export function scrollLog() {
 		setTimeout(function() {
 			isAutoScrolling = true;
 			log.scrollTop = log.scrollHeight;
-		}, 10);
+		}, 50);
 	}
 }
