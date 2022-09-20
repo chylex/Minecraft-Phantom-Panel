@@ -4,11 +4,11 @@ using Phantom.Common.Data.Instance;
 namespace Phantom.Common.Messages.ToAgent;
 
 [MessagePackObject]
-public sealed record CreateInstanceMessage(
+public sealed record ConfigureInstanceMessage(
 	[property: Key(0)] uint SequenceId,
 	[property: Key(1)] InstanceInfo Instance
 ) : IMessageToAgent, IMessageWithReply {
 	public Task Accept(IMessageToAgentListener listener) {
-		return listener.HandleCreateInstance(this);
+		return listener.HandleConfigureInstance(this);
 	}
 }

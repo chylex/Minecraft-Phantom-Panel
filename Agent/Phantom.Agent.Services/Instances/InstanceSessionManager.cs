@@ -33,7 +33,7 @@ sealed class InstanceSessionManager : IDisposable {
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	public CreateInstanceResult Create(InstanceInfo info) {
+	public CreateInstanceResult Configure(InstanceInfo info) {
 		if (!javaRuntimeRepository.TryGetByGuid(info.JavaRuntimeGuid, out var javaRuntime)) {
 			return CreateInstanceResult.UnknownJavaRuntime;
 		}
@@ -147,8 +147,7 @@ sealed class InstanceSessionManager : IDisposable {
 	public async Task StopAll() {
 		shutdownCancellationTokenSource.Cancel();
 		
-		// ReSharper disable once MethodSupportsCancellation
-		await semaphore.WaitAsync();
+		await semaphore.WaitAsync(CancellationToken.None);
 		try {
 			await Task.WhenAll(instances.Values.Select(static instance => instance.Stop(TimeSpan.FromSeconds(30))));
 			instances.Clear();

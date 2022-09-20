@@ -71,7 +71,7 @@ public sealed class InstanceManager {
 			agentName = agentStats.AgentInfo.Name;
 		}
 
-		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new CreateInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));
+		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));
 		if (reply == CreateInstanceResult.Success) {
 			instances.AddOrReplace(instanceInfo);
 			
