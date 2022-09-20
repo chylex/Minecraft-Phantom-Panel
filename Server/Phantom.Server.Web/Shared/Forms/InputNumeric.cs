@@ -6,23 +6,31 @@ using Microsoft.AspNetCore.Components.Rendering;
 
 namespace Phantom.Server.Web.Shared.Forms;
 
-public sealed class InputRange<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue> {
+public sealed class InputNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, IStringConvertibleFormInput {
 	[Parameter]
 	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
 
+	[Parameter]
+	public EventCallback<ChangeEventArgs> OnChange { get; set; }
+
+	public FormNumberInputType Type { get; }
+
+	public void SetStringValue(string? value) {
+		CurrentValueAsString = value;
+	}
+
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
-		var eventCallback = EventCallback.Factory.CreateBinder<string?>(this, value => CurrentValueAsString = value, CurrentValueAsString);
 		builder.OpenElement(0, "input");
 		builder.AddMultipleAttributes(1, AdditionalAttributes);
-		builder.AddAttribute(2, "type", "range");
+		builder.AddAttribute(2, "type", GetNumberInputType(Type));
 
 		if (!string.IsNullOrEmpty(CssClass)) {
 			builder.AddAttribute(3, "class", CssClass);
 		}
 
 		builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValueAsString));
-		builder.AddAttribute(5, "onchange", eventCallback);
-		builder.AddAttribute(6, "oninput", eventCallback);
+		builder.AddAttribute(5, "onchange", OnChange);
+		builder.AddAttribute(6, "oninput", OnChange);
 		builder.CloseElement();
 	}
 
@@ -48,7 +56,15 @@ public sealed class InputRange<[DynamicallyAccessedMembers(DynamicallyAccessedMe
 			decimal v => BindConverter.FormatValue(v, CultureInfo.InvariantCulture),
 			ushort v  => BindConverter.FormatValue((int) v, CultureInfo.InvariantCulture),
 			uint v    => BindConverter.FormatValue((long) v, CultureInfo.InvariantCulture),
-			_         => throw new InvalidOperationException($"Unsupported type {value.GetType()}")
+			_         => throw new InvalidOperationException($"Unsupported value type {value.GetType()}")
+		};
+	}
+
+	private static string GetNumberInputType(FormNumberInputType type) {
+		return type switch {
+			FormNumberInputType.Number => "number",
+			FormNumberInputType.Range  => "range",
+			_                          => throw new InvalidOperationException($"Unsupported input type {type}")
 		};
 	}
 }

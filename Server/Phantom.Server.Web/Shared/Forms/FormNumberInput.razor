@@ -1,15 +1,8 @@
 ﻿@typeparam TValue
-@inherits FormInputBase<TValue>
+@inherits FormInputBaseDebounced<TValue>
 
 <FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
-
-@if (Type == FormNumberInputType.Number) {
-  <InputNumber Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-control")" />
-}
-else if (Type == FormNumberInputType.Range) {
-  <InputRange Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-range")" />
-}
-
+<InputNumeric @ref="Input" Type="@Type" Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" OnChange="@OnChangeDebounced" AdditionalAttributes="@GetAttributes("form-range")" />
 <ValidationMessage For="@ValueExpression" class="invalid-feedback" />
 
 @code {
@@ -17,4 +10,5 @@ else if (Type == FormNumberInputType.Range) {
   [Parameter]
   public FormNumberInputType Type { get; set; } = FormNumberInputType.Number;
 
+  protected override IStringConvertibleFormInput Input { get; set; } = null!;
 }
