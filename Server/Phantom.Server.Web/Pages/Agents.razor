@@ -19,8 +19,8 @@
       <th class="text-end">Memory</th>
       <th class="text-end">Version</th>
       <th>Identifier</th>
-      <th class="text-right">Last Online</th>
       <th class="text-center">Status</th>
+      <th class="text-right">Last Ping</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -31,25 +31,48 @@
         var stats = agentStats.TryGetValue(agent.Guid, out var s) ? s : null;
         <tr>
           <td>@agent.Name</td>
-          <td class="text-end">@(stats?.UsedInstances.ToString() ?? "-") / @agent.MaxInstances</td>
-          <td class="text-end">@(stats?.UsedMemory.InMegabytes.ToString() ?? "-") / @agent.MaxMemory.InMegabytes MB</td>
+          <td class="text-end">
+            @if (stats != null) {
+              <ProgressBar Value="@stats.UsedInstances" Maximum="@agent.MaxInstances">
+                @stats.UsedInstances / @agent.MaxInstances
+              </ProgressBar>
+            }
+            else {
+              <text>@agent.MaxInstances</text>
+            }
+          </td>
+          <td class="text-end">
+            @if (stats != null) {
+              <ProgressBar Value="@stats.UsedMemory.InMegabytes" Maximum="@agent.MaxMemory.InMegabytes">
+                @stats.UsedMemory.InMegabytes / @agent.MaxMemory.InMegabytes MB
+              </ProgressBar>
+            }
+            else {
+              <text>@agent.MaxMemory.InMegabytes</text>
+            }
+          </td>
           <td class="text-end">@agent.Version</td>
-          <td><code class="text-uppercase">@agent.Guid.ToString()</code></td>
-          @if (agent.LastPing is {} lastPing) {
-            <td class="text-right"><time datetime="@lastPing.ToString("o")">@lastPing.ToString()</time></td>
-          }
-          else {
-            <td class="text-right">?</td>
-          }
+          <td>
+            <code class="text-uppercase">@agent.Guid.ToString()</code>
+          </td>
           @if (agent.IsOnline) {
             <td class="text-center text-success">Online</td>
+            <td class="text-right"></td>
             <td>
-                <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@row.IsShutdownButtonDisabled">Shutdown</button>
+              <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@row.IsShutdownButtonDisabled">Shutdown</button>
             </td>
           }
           else {
             <td class="text-center text-danger">Offline</td>
-            <td></td>
+            @if (agent.LastPing is {} lastPing) {
+              <td class="text-right">
+                <time datetime="@lastPing.ToString("o")" data-time-type="relative">@lastPing.ToString()</time>
+              </td>
+            }
+            else {
+              <td class="text-right">-</td>
+            }
+            <td>-</td>
           }
         </tr>
       }
@@ -69,7 +92,7 @@
 
 @code {
 
-  private readonly Table<AgentRow, Guid> agentTable = new ();
+  private readonly Table<AgentRow, Guid> agentTable = new();
   private ImmutableDictionary<Guid, AgentStats> agentStats = ImmutableDictionary<Guid, AgentStats>.Empty;
 
   private sealed class AgentRow {
