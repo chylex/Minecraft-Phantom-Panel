@@ -34,6 +34,10 @@ h1:focus {
   outline: none;
 }
 
+code {
+  font-size: 0.925rem;
+}
+
 .form-range {
   height: 2.5rem;
 }

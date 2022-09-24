@@ -28,9 +28,7 @@ export function initLog() {
 
 export function scrollLog() {
 	if (shouldAutoScroll) {
-		setTimeout(function() {
-			isAutoScrolling = true;
-			log.scrollTop = log.scrollHeight;
-		}, 50);
+		isAutoScrolling = true;
+		log.scrollTop = log.scrollHeight;
 	}
 }

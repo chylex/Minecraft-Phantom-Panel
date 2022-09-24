@@ -74,11 +74,11 @@ else {
   }
 
   private async Task RefreshLog() {
+    StateHasChanged();
+    
     if (PageJs != null) {
       await PageJs.InvokeVoidAsync("scrollLog");
     }
-
-    StateHasChanged();
   }
 
   private async Task ExecuteCommand() {

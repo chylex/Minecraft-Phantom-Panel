@@ -1,6 +1,6 @@
 ﻿.nav-item {
   font-size: 1.1rem;
-  padding: 0 1rem 0.5rem;
+  padding: 0 1rem 0.6rem;
 }
 
 .nav-item:first-of-type {
@@ -24,7 +24,7 @@
 .nav-item ::deep a {
   color: #d7d7d7;
   border-radius: 4px;
-  height: 3rem;
+  padding: 0.6rem 1rem;
 }
 
 .nav-item ::deep a.active {
