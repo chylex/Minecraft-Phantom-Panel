@@ -29,27 +29,20 @@
       @foreach (var row in agentTable) {
         var agent = row.Agent;
         var stats = agentStats.TryGetValue(agent.Guid, out var s) ? s : null;
+        var usedInstances = stats?.UsedInstances;
+        var usedMemory = stats?.UsedMemory.InMegabytes;
+        
         <tr>
           <td>@agent.Name</td>
           <td class="text-end">
-            @if (stats != null) {
-              <ProgressBar Value="@stats.UsedInstances" Maximum="@agent.MaxInstances">
-                @stats.UsedInstances / @agent.MaxInstances
-              </ProgressBar>
-            }
-            else {
-              <text>@agent.MaxInstances</text>
-            }
+            <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@agent.MaxInstances">
+              @(usedInstances?.ToString() ?? "?") / @agent.MaxInstances
+            </ProgressBar>
           </td>
           <td class="text-end">
-            @if (stats != null) {
-              <ProgressBar Value="@stats.UsedMemory.InMegabytes" Maximum="@agent.MaxMemory.InMegabytes">
-                @stats.UsedMemory.InMegabytes / @agent.MaxMemory.InMegabytes MB
-              </ProgressBar>
-            }
-            else {
-              <text>@agent.MaxMemory.InMegabytes</text>
-            }
+            <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@agent.MaxMemory.InMegabytes">
+              @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes MB
+            </ProgressBar>
           </td>
           <td class="text-end">@agent.Version</td>
           <td>

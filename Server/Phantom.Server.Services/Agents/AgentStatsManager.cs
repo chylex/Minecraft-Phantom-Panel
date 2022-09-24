@@ -17,8 +17,8 @@ public sealed class AgentStatsManager {
 		instanceManager.InstancesChanged.Subscribe(this, agentStats.UpdateInstances);
 	}
 	
-	public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
-		return agentStats.GetAgentStats();
+	public ImmutableDictionary<Guid, AgentStats> GetOnlineAgentStats() {
+		return agentStats.GetOnlineAgentStats();
 	}
 
 	public AgentStats? GetAgentStats(Guid agentGuid) {
@@ -32,7 +32,7 @@ public sealed class AgentStatsManager {
 		public ObservableAgentStats(ILogger logger) : base(logger) {}
 
 		public void UpdateAgents(ImmutableArray<Agent> newAgents) {
-			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent); // TODO
+			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent);
 			Update();
 		}
 
@@ -45,12 +45,17 @@ public sealed class AgentStatsManager {
 			return agents.TryGetValue(agentGuid, out var agent) ? ComputeAgentStats(instancesByAgentGuid, agent) : null;
 		}
 
-		public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
-			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableDictionary(static stats => stats.Agent.Guid);
+		public ImmutableDictionary<Guid, AgentStats> GetOnlineAgentStats() {
+			return agents.Values
+			             .Where(static agent => agent.IsOnline)
+			             .Select(agent => ComputeAgentStats(instancesByAgentGuid, agent))
+			             .ToImmutableDictionary(static stats => stats.Agent.Guid);
 		}
 
 		protected override ImmutableArray<AgentStats> GetData() {
-			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableArray();
+			return agents.Values
+			             .Select(agent => ComputeAgentStats(instancesByAgentGuid, agent))
+			             .ToImmutableArray();
 		}
 
 		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid, Agent agent) {

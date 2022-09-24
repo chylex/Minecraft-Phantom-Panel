@@ -100,7 +100,7 @@
     private readonly ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> javaRuntimesByAgentGuid;
 
     public FormModel(AgentJavaRuntimesManager agentJavaRuntimesManager, AgentStatsManager agentStatsManager) {
-      AgentsByGuid = agentStatsManager.GetAgentStats();
+      AgentsByGuid = agentStatsManager.GetOnlineAgentStats();
       javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
     }
 
