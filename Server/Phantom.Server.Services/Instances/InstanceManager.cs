@@ -59,7 +59,7 @@ public sealed class InstanceManager {
 				return AddInstanceResult.AgentNotFound;
 			}
 
-			if (agentStats.UsedInstances >= agentStats.AgentInfo.MaxInstances) {
+			if (agentStats.UsedInstances >= agentStats.Agent.MaxInstances) {
 				return AddInstanceResult.AgentInstanceLimitExceeded;
 			}
 
@@ -68,7 +68,7 @@ public sealed class InstanceManager {
 				return AddInstanceResult.AgentMemoryLimitExceeded;
 			}
 
-			agentName = agentStats.AgentInfo.Name;
+			agentName = agentStats.Agent.Name;
 		}
 
 		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));

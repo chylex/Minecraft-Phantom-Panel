@@ -59,6 +59,7 @@
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
       this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
+      InvokeAsync(StateHasChanged);
     });
     
     InstanceManager.InstancesChanged.Subscribe(this, instances => {

@@ -1,17 +1,13 @@
-﻿using Phantom.Common.Data.Agent;
-using Phantom.Common.Messages;
+﻿using Phantom.Common.Messages;
 using Phantom.Server.Rpc;
 
 namespace Phantom.Server.Services.Agents; 
 
-internal sealed class AgentConnection {
+sealed class AgentConnection {
 	private readonly RpcClientConnection connection;
 
-	public AgentInfo Info { get; }
-
-	internal AgentConnection(RpcClientConnection connection, AgentInfo info) {
+	internal AgentConnection(RpcClientConnection connection) {
 		this.connection = connection;
-		this.Info = info;
 	}
 
 	public bool IsSame(RpcClientConnection connection) {

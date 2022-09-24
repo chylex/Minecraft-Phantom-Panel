@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Phantom.Common.Data.Instance;
 
 namespace Phantom.Server.Database.Entities;
 
@@ -9,6 +10,9 @@ public sealed class AgentEntity {
 	public Guid AgentGuid { get; set; }
 	
 	public string Name { get; set; }
+	public ushort Version { get; set; }
+	public ushort MaxInstances { get; set; }
+	public RamAllocationUnits MaxMemory { get; set; }
 
 	public AgentEntity() {
 		Name = null!;

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Logging;
 using Phantom.Server.Services.Instances;
@@ -27,13 +26,13 @@ public sealed class AgentStatsManager {
 	}
 
 	private sealed class ObservableAgentStats : ObservableState<ImmutableArray<AgentStats>> {
-		private ImmutableDictionary<Guid, AgentInfo> agents = ImmutableDictionary<Guid, AgentInfo>.Empty;
+		private ImmutableDictionary<Guid, Agent> agents = ImmutableDictionary<Guid, Agent>.Empty;
 		private ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>>.Empty;
 
 		public ObservableAgentStats(ILogger logger) : base(logger) {}
 
 		public void UpdateAgents(ImmutableArray<Agent> newAgents) {
-			agents = newAgents.Where(static agent => agent is Agent.Online).Cast<Agent.Online>().ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Info);
+			agents = newAgents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent); // TODO
 			Update();
 		}
 
@@ -43,29 +42,29 @@ public sealed class AgentStatsManager {
 		}
 
 		public AgentStats? GetAgentStats(Guid agentGuid) {
-			return agents.TryGetValue(agentGuid, out var agentInfo) ? ComputeAgentStats(instancesByAgentGuid, agentInfo) : null;
+			return agents.TryGetValue(agentGuid, out var agent) ? ComputeAgentStats(instancesByAgentGuid, agent) : null;
 		}
 
 		public ImmutableDictionary<Guid, AgentStats> GetAgentStats() {
-			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableDictionary(static stats => stats.AgentInfo.Guid);
+			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableDictionary(static stats => stats.Agent.Guid);
 		}
 
 		protected override ImmutableArray<AgentStats> GetData() {
 			return agents.Values.Select(agent => ComputeAgentStats(instancesByAgentGuid, agent)).ToImmutableArray();
 		}
 
-		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid, AgentInfo agentInfo) {
+		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid, Agent agent) {
 			int usedInstances = 0;
 			var usedMemory = RamAllocationUnits.Zero;
 
-			if (instancesByAgentGuid.TryGetValue(agentInfo.Guid, out var instances)) {
+			if (instancesByAgentGuid.TryGetValue(agent.Guid, out var instances)) {
 				foreach (var instance in instances) {
 					usedInstances += 1;
 					usedMemory += instance.MemoryAllocation;
 				}
 			}
 
-			return new AgentStats(agentInfo, usedInstances, usedMemory);
+			return new AgentStats(agent, usedInstances, usedMemory);
 		}
 	}
 }

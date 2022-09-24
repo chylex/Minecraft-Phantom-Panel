@@ -19,6 +19,7 @@
       <th class="text-end">Memory</th>
       <th class="text-end">Version</th>
       <th>Identifier</th>
+      <th class="text-right">Last Online</th>
       <th class="text-center">Status</th>
       <th>Actions</th>
     </tr>
@@ -27,28 +28,26 @@
     <tbody>
       @foreach (var row in agentTable) {
         var agent = row.Agent;
+        var stats = agentStats.TryGetValue(agent.Guid, out var s) ? s : null;
         <tr>
           <td>@agent.Name</td>
-          @if (agentStats.TryGetValue(agent.Guid, out var stats)) {
-            var agentInfo = stats.AgentInfo;
-            <td class="text-end">@stats.UsedInstances / @agentInfo.MaxInstances</td>
-            <td class="text-end">@stats.UsedMemory.InMegabytes / @agentInfo.MaxMemory.InMegabytes MB</td>
-            <td class="text-end">@agentInfo.Version</td>
-            <td>
-              <code class="text-uppercase">@agent.Guid.ToString()</code>
-            </td>
+          <td class="text-end">@(stats?.UsedInstances.ToString() ?? "-") / @agent.MaxInstances</td>
+          <td class="text-end">@(stats?.UsedMemory.InMegabytes.ToString() ?? "-") / @agent.MaxMemory.InMegabytes MB</td>
+          <td class="text-end">@agent.Version</td>
+          <td><code class="text-uppercase">@agent.Guid.ToString()</code></td>
+          @if (agent.LastPing is {} lastPing) {
+            <td class="text-right"><time datetime="@lastPing.ToString("o")">@lastPing.ToString()</time></td>
+          }
+          else {
+            <td class="text-right">?</td>
+          }
+          @if (agent.IsOnline) {
             <td class="text-center text-success">Online</td>
             <td>
-              <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@row.IsShutdownButtonDisabled">Shutdown</button>
+                <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@row.IsShutdownButtonDisabled">Shutdown</button>
             </td>
           }
           else {
-            <td class="text-end">-</td>
-            <td class="text-end">-</td>
-            <td class="text-end">-</td>
-            <td>
-              <code class="text-uppercase">@agent.Guid.ToString()</code>
-            </td>
             <td class="text-center text-danger">Offline</td>
             <td></td>
           }
@@ -90,7 +89,7 @@
     });
 
     AgentStatsManager.AgentStatsChanged.Subscribe(this, agentStats => {
-      this.agentStats = agentStats.ToImmutableDictionary(static stats => stats.AgentInfo.Guid);
+      this.agentStats = agentStats.ToImmutableDictionary(static stats => stats.Agent.Guid);
       InvokeAsync(StateHasChanged);
     });
   }

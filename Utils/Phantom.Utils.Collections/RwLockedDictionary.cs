@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Phantom.Utils.Collections;
 
@@ -47,7 +48,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool AddOrReplace(TKey key, TValue newValue, out TValue? oldValue) {
+	public bool AddOrReplace(TKey key, TValue newValue, [MaybeNullWhen(false)] out TValue oldValue) {
 		rwLock.EnterWriteLock();
 		try {
 			bool hadValue = dict.TryGetValue(key, out oldValue);
@@ -67,7 +68,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool TryGetValue(TKey key, out TValue? value) {
+	public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value) {
 		rwLock.EnterReadLock();
 		try {
 			return dict.TryGetValue(key, out value);
@@ -100,7 +101,11 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool TryReplace(TKey key, Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
+	public bool TryReplace(TKey key, Func<TValue, TValue> replacementValue) {
+		return TryReplaceIf(key, replacementValue, static _ => true);
+	}
+
+	public bool TryReplaceIf(TKey key, Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
 		rwLock.EnterWriteLock();
 		try {
 			if (dict.TryGetValue(key, out var oldValue) && replaceCondition(oldValue)) {
@@ -124,7 +129,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool TryRemove(TKey key, Predicate<TValue> removeCondition) {
+	public bool TryRemoveIf(TKey key, Predicate<TValue> removeCondition) {
 		rwLock.EnterWriteLock();
 		try {
 			return dict.TryGetValue(key, out var oldValue) && removeCondition(oldValue) && dict.Remove(key);

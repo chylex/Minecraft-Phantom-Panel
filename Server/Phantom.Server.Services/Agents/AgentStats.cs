@@ -1,12 +1,11 @@
-﻿using Phantom.Common.Data.Agent;
-using Phantom.Common.Data.Instance;
+﻿using Phantom.Common.Data.Instance;
 
 namespace Phantom.Server.Services.Agents;
 
 public sealed record AgentStats(
-	AgentInfo AgentInfo,
+	Agent Agent,
 	int UsedInstances,
 	RamAllocationUnits UsedMemory
 ) {
-	public RamAllocationUnits AvailableMemory => AgentInfo.MaxMemory - UsedMemory;
+	public RamAllocationUnits AvailableMemory => Agent.MaxMemory - UsedMemory;
 }

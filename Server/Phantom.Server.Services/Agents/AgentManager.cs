@@ -18,7 +18,7 @@ namespace Phantom.Server.Services.Agents;
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 
-	private readonly ObservableAgentInfos agents = new (PhantomLogger.Create<AgentManager, ObservableAgentInfos>());
+	private readonly ObservableAgents agents = new (PhantomLogger.Create<AgentManager, ObservableAgents>());
 
 	public EventSubscribers<ImmutableArray<Agent>> AgentsChanged => agents.Subs;
 
@@ -36,7 +36,7 @@ public sealed class AgentManager {
 		using var scope = databaseProvider.CreateScope();
 
 		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			if (!agents.TryRegister(new Agent.Offline(agent.AgentGuid, agent.Name))) {
+			if (!agents.TryRegister(new Agent(agent.AgentGuid, agent.Name, agent.Version, agent.MaxInstances, agent.MaxMemory))) {
 				// TODO
 				throw new InvalidOperationException("Unable to register agent from database: " + agent.AgentGuid);
 			}
@@ -52,13 +52,20 @@ public sealed class AgentManager {
 		var agentInfo = message.AgentInfo;
 		var agentGuid = agentInfo.Guid;
 		var agentName = agentInfo.Name;
+
+		var agent = new Agent(agentGuid, agentName, agentInfo.Version, agentInfo.MaxInstances, agentInfo.MaxMemory, DateTimeOffset.Now) {
+			Connection = new AgentConnection(connection)
+		};
 		
-		agents.Register(new Agent.Online(new AgentConnection(connection, agentInfo)));
+		agents.Register(agent);
 
 		using (var scope = databaseProvider.CreateScope()) {
-			scope.Ctx.Agents.Upsert(agentGuid, (guid, agent) => {
-				agent.AgentGuid = guid;
-				agent.Name = agentName;
+			scope.Ctx.Agents.Upsert(agentGuid, (guid, entity) => {
+				entity.AgentGuid = guid;
+				entity.Name = agent.Name;
+				entity.Version = agent.Version;
+				entity.MaxInstances = agent.MaxInstances;
+				entity.MaxMemory = agent.MaxMemory;
 			});
 
 			await scope.Ctx.SaveChangesAsync(cancellationToken);
@@ -77,7 +84,7 @@ public sealed class AgentManager {
 	}
 
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
-		// TODO
+		agents.Update(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
 	}
 
 	public async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
@@ -104,13 +111,13 @@ public sealed class AgentManager {
 		return await MessageReplyTracker.Instance.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
-	private sealed class ObservableAgentInfos : ObservableState<ImmutableArray<Agent>> {
+	private sealed class ObservableAgents : ObservableState<ImmutableArray<Agent>> {
 		private readonly RwLockedDictionary<Guid, Agent> agents = new (LockRecursionPolicy.NoRecursion);
 
-		public ObservableAgentInfos(ILogger logger) : base(logger) {}
+		public ObservableAgents(ILogger logger) : base(logger) {}
 
-		public bool TryRegister(Agent.Offline agent) {
-			if (agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent is Agent.Offline)) {
+		public bool TryRegister(Agent agent) {
+			if (agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent.IsOffline)) {
 				Update();
 				return true;
 			}
@@ -119,16 +126,22 @@ public sealed class AgentManager {
 			}
 		}
 
-		public void Register(Agent.Online agent) {
-			if (agents.AddOrReplace(agent.Guid, agent, out var oldAgent) && oldAgent is Agent.Online oldOnlineAgent) {
-				oldOnlineAgent.Connection.Close();
+		public void Register(Agent agent) {
+			if (agents.AddOrReplace(agent.Guid, agent, out var oldAgent) && oldAgent.Connection is {} oldConnection) {
+				oldConnection.Close();
 			}
 
 			Update();
 		}
 
+		public void Update(Guid guid, Func<Agent, Agent> updater) {
+			if (agents.TryReplace(guid, updater)) {
+				Update();
+			}
+		}
+
 		public bool TryUnregister(Guid guid, RpcClientConnection connection) {
-			if (agents.TryReplace(guid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent is Agent.Online online && online.Connection.IsSame(connection))) {
+			if (agents.TryReplaceIf(guid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent.Connection?.IsSame(connection) == true)) {
 				Update();
 				return true;
 			}
@@ -138,7 +151,7 @@ public sealed class AgentManager {
 		}
 
 		public AgentConnection? GetConnection(Guid guid) {
-			return agents.TryGetValue(guid, out var agent) && agent is Agent.Online online ? online.Connection : null;
+			return agents.TryGetValue(guid, out var agent) ? agent.Connection : null;
 		}
 
 		protected override ImmutableArray<Agent> GetData() {
