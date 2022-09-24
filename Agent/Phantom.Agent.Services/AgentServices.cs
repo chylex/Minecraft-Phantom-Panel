@@ -6,7 +6,6 @@ using Phantom.Common.Data.Agent;
 namespace Phantom.Agent.Services;
 
 public sealed class AgentServices {
-	private AgentInfo AgentInfo { get; }
 	private AgentFolders AgentFolders { get; }
 	
 	internal JavaRuntimeRepository JavaRuntimeRepository { get; }
@@ -16,7 +15,6 @@ public sealed class AgentServices {
 	// internal CommandQueue<AgentServices, CommandListener> CommandQueue { get; }
 
 	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders) {
-		this.AgentInfo = agentInfo;
 		this.AgentFolders = agentFolders;
 		this.JavaRuntimeRepository = new JavaRuntimeRepository();
 		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository);

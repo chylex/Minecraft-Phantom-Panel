@@ -76,7 +76,7 @@ public sealed class InstanceManager {
 			instances.AddOrReplace(instanceInfo);
 			
 			using (var scope = databaseProvider.CreateScope()) {
-				scope.Ctx.Instances.Upsert(instanceInfo.InstanceGuid, (_, instance) => instance.SetFromInstanceInfo(instanceInfo));
+				scope.Ctx.InstanceUpsert.Fetch(instanceInfo.InstanceGuid).SetFromInstanceInfo(instanceInfo);
 				await scope.Ctx.SaveChangesAsync(cancellationToken);
 			}
 			

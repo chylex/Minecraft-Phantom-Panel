@@ -6,11 +6,21 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Server.Database.Converters;
 using Phantom.Server.Database.Entities;
+using Phantom.Server.Database.Factories;
 
 namespace Phantom.Server.Database;
 
 public class ApplicationDbContext : IdentityDbContext {
-	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {}
+	public DbSet<AgentEntity> Agents { get; set; } = null!;
+	public DbSet<InstanceEntity> Instances { get; set; } = null!;
+
+	public AgentEntityUpsert AgentUpsert { get; }
+	public InstanceEntityUpsert InstanceUpsert { get; }
+
+	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {
+		AgentUpsert = new AgentEntityUpsert(this);
+		InstanceUpsert = new InstanceEntityUpsert(this);
+	}
 
 	protected override void OnModelCreating(ModelBuilder builder) {
 		base.OnModelCreating(builder);
@@ -33,7 +43,4 @@ public class ApplicationDbContext : IdentityDbContext {
 		builder.Properties<MinecraftServerKind>().HaveConversion<EnumToStringConverter<MinecraftServerKind>>();
 		builder.Properties<RamAllocationUnits>().HaveConversion<RamAllocationUnitsConverter>();
 	}
-
-	public DbSet<AgentEntity> Agents { get; set; } = null!;
-	public DbSet<InstanceEntity> Instances { get; set; } = null!;
 }

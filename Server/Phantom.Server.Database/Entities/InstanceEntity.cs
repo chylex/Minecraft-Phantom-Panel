@@ -22,7 +22,8 @@ public sealed class InstanceEntity {
 	public RamAllocationUnits MemoryAllocation { get; set; }
 	public Guid JavaRuntimeGuid { get; set; }
 
-	public InstanceEntity() {
+	internal InstanceEntity(Guid instanceGuid) {
+		InstanceGuid = instanceGuid;
 		InstanceName = null!;
 		MinecraftVersion = null!;
 	}

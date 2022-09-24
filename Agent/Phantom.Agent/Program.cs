@@ -44,7 +44,7 @@ try {
 	}
 
 	var agentName = string.IsNullOrEmpty(agentNameOrEmpty) ? AgentNameGenerator.GenerateFrom(agentGuid.Value) : agentNameOrEmpty;
-	var agentInfo = new AgentInfo(agentGuid.Value, AgentVersion, agentName, maxInstances, maxMemory);
+	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory);
 	var agentServices = new AgentServices(agentInfo, folders);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");

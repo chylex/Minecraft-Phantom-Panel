@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data.Instance;
+﻿using Phantom.Common.Data.Agent;
+using Phantom.Common.Data.Instance;
 
 namespace Phantom.Server.Services.Agents;
 
@@ -11,6 +12,8 @@ public sealed record Agent(
 	DateTimeOffset? LastPing = null
 ) {
 	internal AgentConnection? Connection { get; init; }
+	
+	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.Version, info.MaxInstances, info.MaxMemory) {}
 
 	public bool IsOnline => Connection is not null;
 	public bool IsOffline => Connection is null;

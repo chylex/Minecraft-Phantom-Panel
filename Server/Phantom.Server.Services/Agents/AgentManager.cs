@@ -49,31 +49,27 @@ public sealed class AgentManager {
 			return false;
 		}
 
-		var agentInfo = message.AgentInfo;
-		var agentGuid = agentInfo.Guid;
-		var agentName = agentInfo.Name;
-
-		var agent = new Agent(agentGuid, agentName, agentInfo.Version, agentInfo.MaxInstances, agentInfo.MaxMemory, DateTimeOffset.Now) {
+		var agent = new Agent(message.AgentInfo) {
+			LastPing = DateTimeOffset.Now,
 			Connection = new AgentConnection(connection)
 		};
-		
+
 		agents.Register(agent);
 
 		using (var scope = databaseProvider.CreateScope()) {
-			scope.Ctx.Agents.Upsert(agentGuid, (guid, entity) => {
-				entity.AgentGuid = guid;
-				entity.Name = agent.Name;
-				entity.Version = agent.Version;
-				entity.MaxInstances = agent.MaxInstances;
-				entity.MaxMemory = agent.MaxMemory;
-			});
-
+			var entity = scope.Ctx.AgentUpsert.Fetch(agent.Guid);
+			
+			entity.Name = agent.Name;
+			entity.Version = agent.Version;
+			entity.MaxInstances = agent.MaxInstances;
+			entity.MaxMemory = agent.MaxMemory;
+			
 			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
 
-		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agentName, agentGuid);
+		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
 
-		await connection.Send(new RegisterAgentSuccessMessage(instanceManager.GetInstancesForAgent(agentGuid)));
+		await connection.Send(new RegisterAgentSuccessMessage(instanceManager.GetInstancesForAgent(agent.Guid)));
 		return true;
 	}
 
