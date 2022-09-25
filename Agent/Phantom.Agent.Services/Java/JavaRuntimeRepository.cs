@@ -6,7 +6,7 @@ using Phantom.Utils.Cryptography;
 
 namespace Phantom.Agent.Services.Java;
 
-sealed class JavaRuntimeRepository {
+sealed class JavaRuntimeRepository : IJavaRuntimeRepository {
 	private readonly Dictionary<string, Guid> guidsByPath = new ();
 	private readonly Dictionary<Guid, JavaRuntimeExecutable> runtimesByGuid = new ();
 	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
@@ -35,7 +35,7 @@ sealed class JavaRuntimeRepository {
 		}
 	}
 
-	public bool TryGetByGuid(Guid guid, [NotNullWhen(true)] out JavaRuntimeExecutable? runtime) {
+	public bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
 		rwLock.EnterReadLock();
 		try {
 			return runtimesByGuid.TryGetValue(guid, out runtime);

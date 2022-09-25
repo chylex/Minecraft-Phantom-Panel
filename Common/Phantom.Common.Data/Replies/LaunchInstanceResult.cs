@@ -5,6 +5,8 @@ public enum LaunchInstanceResult {
 	AgentShuttingDown,
 	InstanceDoesNotExist,
 	InstanceAlreadyRunning,
+	JavaRuntimeNotFound,
+	CouldNotDownloadMinecraftServer,
 	ServerPortAlreadyInUse,
 	RconPortAlreadyInUse,
 	CommunicationError,

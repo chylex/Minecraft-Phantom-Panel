@@ -21,17 +21,19 @@ sealed class Instance : IDisposable {
 	private readonly ILogger logger;
 	
 	private readonly BaseLauncher launcher;
+	private readonly LaunchServices launchServices;
 	private readonly UsedPortTracker usedPortTracker;
 
 	private IState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
-	public Instance(InstanceInfo info, BaseLauncher launcher, UsedPortTracker usedPortTracker) {
+	public Instance(InstanceInfo info, BaseLauncher launcher, LaunchServices launchServices, UsedPortTracker usedPortTracker) {
 		this.shortName = GetLoggerName(info.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Info = info;
 		this.launcher = launcher;
+		this.launchServices = launchServices;
 		this.usedPortTracker = usedPortTracker;
 		this.currentState = new NotRunningState(this);
 	}
@@ -52,9 +54,9 @@ sealed class Instance : IDisposable {
 	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
 		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
-			var result = await currentState.Launch(cancellationToken);
-			TransitionState(result.Item1);
-			return result.Item2;
+			var (state, result) = await currentState.Launch(cancellationToken);
+			TransitionState(state);
+			return result;
 		} finally {
 			stateTransitioningActionSemaphore.Release();
 		}
@@ -100,12 +102,23 @@ sealed class Instance : IDisposable {
 			}
 			
 			instance.logger.Information("Session starting...");
-			var session = await instance.launcher.Launch(cancellationToken);
-			if (session == null) {
+			
+			var launchResult = await instance.launcher.Launch(instance.launchServices, cancellationToken);
+			if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
+				instance.logger.Error("Session failed to launch, could not download Minecraft server.");
+				return (this, LaunchInstanceResult.CouldNotDownloadMinecraftServer);
+			}
+			else if (launchResult is LaunchResult.InvalidJavaRuntime) {
+				instance.logger.Error("Session failed to launch, invalid Java runtime.");
+				return (this, LaunchInstanceResult.JavaRuntimeNotFound);
+			}
+			
+			if (launchResult is not LaunchResult.Success launchSuccess) {
 				instance.logger.Error("Session failed to launch.");
 				return (this, LaunchInstanceResult.UnknownError);
 			}
 			
+			var session = launchSuccess.Session;
 			var state = new RunningState(instance, session);
 
 			if (session.HasEnded) {

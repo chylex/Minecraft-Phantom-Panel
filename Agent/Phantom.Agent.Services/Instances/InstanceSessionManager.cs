@@ -1,9 +1,9 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Minecraft.Launcher.Types;
 using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
-using Phantom.Agent.Services.Java;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
@@ -15,29 +15,22 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 
-	private readonly MinecraftServerExecutables serverExecutables;
+	private readonly LaunchServices launchServices;
 	private readonly UsedPortTracker usedPortTracker = new ();
 	private readonly Dictionary<Guid, Instance> instances = new ();
-
-	private readonly JavaRuntimeRepository javaRuntimeRepository;
 	
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
-	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository) {
+	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, IJavaRuntimeRepository javaRuntimeRepository) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
-		this.serverExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
-		this.javaRuntimeRepository = javaRuntimeRepository;
+		this.launchServices = new LaunchServices(new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath), javaRuntimeRepository);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
 	public ConfigureInstanceResult Configure(InstanceInfo info) {
-		if (!javaRuntimeRepository.TryGetByGuid(info.JavaRuntimeGuid, out var javaRuntime)) {
-			return ConfigureInstanceResult.UnknownJavaRuntime;
-		}
-		
 		try {
 			semaphore.Wait(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
@@ -67,14 +60,14 @@ sealed class InstanceSessionManager : IDisposable {
 			Directory.CreateDirectory(instanceFolder);
 
 			var properties = new InstanceProperties(
-				javaRuntime,
+				info.JavaRuntimeGuid,
 				jvmProperties,
 				instanceFolder,
 				info.MinecraftVersion,
 				new ServerProperties(info.ServerPort, info.RconPort)
 			);
 
-			instances[instanceGuid] = new Instance(info, new VanillaLauncher(serverExecutables, properties), usedPortTracker);
+			instances[instanceGuid] = new Instance(info, new VanillaLauncher(properties), launchServices, usedPortTracker);
 			
 			return ConfigureInstanceResult.Success;
 		} finally {

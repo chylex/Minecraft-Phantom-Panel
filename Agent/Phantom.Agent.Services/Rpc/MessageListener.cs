@@ -26,10 +26,10 @@ public sealed class MessageListener : IMessageToAgentListener {
 		Logger.Information("Agent authentication successful.");
 
 		foreach (var instanceInfo in message.InitialInstances) {
-			Logger.Information("Creating initial instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
+			Logger.Information("Configuring instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
 
 			if (agent.InstanceSessionManager.Configure(instanceInfo) != ConfigureInstanceResult.Success) {
-				Logger.Fatal("Unable to create instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
+				Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
 
 				shutdownTokenSource.Cancel();
 				return;

@@ -3,27 +3,28 @@ using System.Text;
 using Kajabity.Tools.Java;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
-using Phantom.Agent.Minecraft.Server;
 
 namespace Phantom.Agent.Minecraft.Launcher;
 
 public abstract class BaseLauncher {
-	private readonly MinecraftServerExecutables serverExecutables;
 	private readonly InstanceProperties instanceProperties;
 
-	private protected BaseLauncher(MinecraftServerExecutables serverExecutables, InstanceProperties instanceProperties) {
-		this.serverExecutables = serverExecutables;
+	private protected BaseLauncher(InstanceProperties instanceProperties) {
 		this.instanceProperties = instanceProperties;
 	}
 
-	public async Task<InstanceSession?> Launch(CancellationToken cancellationToken) {
-		var serverJarPath = await serverExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
+	public async Task<LaunchResult> Launch(LaunchServices services, CancellationToken cancellationToken) {
+		var serverJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
 		if (serverJarPath == null) {
-			return null;
+			return new LaunchResult.CouldNotDownloadMinecraftServer();
+		}
+
+		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
+			return new LaunchResult.InvalidJavaRuntime();
 		}
 
 		var startInfo = new ProcessStartInfo {
-			FileName = instanceProperties.JavaRuntimeExecutable.ExecutablePath,
+			FileName = javaRuntimeExecutable.ExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
 			RedirectStandardInput = true,
 			RedirectStandardOutput = true,
@@ -51,7 +52,7 @@ public abstract class BaseLauncher {
 		process.BeginOutputReadLine();
 		process.BeginErrorReadLine();
 
-		return session;
+		return new LaunchResult.Success(session);
 	}
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}
