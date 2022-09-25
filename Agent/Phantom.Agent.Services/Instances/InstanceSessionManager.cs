@@ -23,34 +23,34 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
-	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, IJavaRuntimeRepository javaRuntimeRepository) {
+	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
 		this.launchServices = new LaunchServices(new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath), javaRuntimeRepository);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	public ConfigureInstanceResult Configure(InstanceInfo info) {
+	public ConfigureInstanceResult Configure(InstanceConfiguration configuration) {
 		try {
 			semaphore.Wait(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
 			return ConfigureInstanceResult.AgentShuttingDown;
 		}
 
-		var instanceGuid = info.InstanceGuid;
+		var instanceGuid = configuration.InstanceGuid;
 		
 		try {
-			var otherInstances = instances.Values.Where(instance => instance.Info.InstanceGuid != instanceGuid).ToArray();
+			var otherInstances = instances.Values.Where(instance => instance.Configuration.InstanceGuid != instanceGuid).ToArray();
 			if (otherInstances.Length + 1 >= agentInfo.MaxInstances) {
 				return ConfigureInstanceResult.InstanceLimitExceeded;
 			}
 
-			var availableMemory = agentInfo.MaxMemory - otherInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Info.MemoryAllocation);
-			if (availableMemory < info.MemoryAllocation) {
+			var availableMemory = agentInfo.MaxMemory - otherInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Configuration.MemoryAllocation);
+			if (availableMemory < configuration.MemoryAllocation) {
 				return ConfigureInstanceResult.MemoryLimitExceeded;
 			}
 
-			var heapMegabytes = info.MemoryAllocation.InMegabytes;
+			var heapMegabytes = configuration.MemoryAllocation.InMegabytes;
 			var jvmProperties = new JvmProperties(
 				InitialHeapMegabytes: heapMegabytes / 2,
 				MaximumHeapMegabytes: heapMegabytes
@@ -60,14 +60,14 @@ sealed class InstanceSessionManager : IDisposable {
 			Directory.CreateDirectory(instanceFolder);
 
 			var properties = new InstanceProperties(
-				info.JavaRuntimeGuid,
+				configuration.JavaRuntimeGuid,
 				jvmProperties,
 				instanceFolder,
-				info.MinecraftVersion,
-				new ServerProperties(info.ServerPort, info.RconPort)
+				configuration.MinecraftVersion,
+				new ServerProperties(configuration.ServerPort, configuration.RconPort)
 			);
 
-			instances[instanceGuid] = new Instance(info, new VanillaLauncher(properties), launchServices, usedPortTracker);
+			instances[instanceGuid] = new Instance(configuration, new VanillaLauncher(properties), launchServices, usedPortTracker);
 			
 			return ConfigureInstanceResult.Success;
 		} finally {

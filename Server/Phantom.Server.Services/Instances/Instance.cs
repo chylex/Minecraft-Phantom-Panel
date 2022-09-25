@@ -3,7 +3,7 @@ using Phantom.Common.Data.Instance;
 namespace Phantom.Server.Services.Instances; 
 
 public sealed record Instance(
-	InstanceInfo Info,
+	InstanceConfiguration Configuration,
 	InstanceState State = InstanceState.Offline
 ) {
 	

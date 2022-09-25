@@ -48,7 +48,7 @@ else {
   private string commandInput = string.Empty;
   private bool isSendingCommand = false;
 
-  private InstanceInfo? InstanceInfo { get; set; }
+  private InstanceConfiguration? InstanceInfo { get; set; }
   private IJSObjectReference? PageJs { get; set; }
 
   private EventSubscribers<RingBuffer<string>> instanceLogsSubs = null!;

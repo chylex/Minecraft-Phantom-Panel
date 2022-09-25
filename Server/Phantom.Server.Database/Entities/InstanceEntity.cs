@@ -27,18 +27,4 @@ public sealed class InstanceEntity {
 		InstanceName = null!;
 		MinecraftVersion = null!;
 	}
-
-	public InstanceInfo AsInstanceInfo => new (AgentGuid, InstanceGuid, InstanceName, ServerPort, RconPort, MinecraftVersion, MinecraftServerKind, MemoryAllocation, JavaRuntimeGuid);
-	
-	public void SetFromInstanceInfo(InstanceInfo info) {
-		InstanceGuid = info.InstanceGuid;
-		AgentGuid = info.AgentGuid;
-		InstanceName = info.InstanceName;
-		ServerPort = info.ServerPort;
-		RconPort = info.RconPort;
-		MinecraftVersion = info.MinecraftVersion;
-		MinecraftServerKind = info.MinecraftServerKind;
-		MemoryAllocation = info.MemoryAllocation;
-		JavaRuntimeGuid = info.JavaRuntimeGuid;
-	}
 }

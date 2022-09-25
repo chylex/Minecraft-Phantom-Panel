@@ -27,7 +27,7 @@ public sealed class AgentStatsManager {
 
 	private sealed class ObservableAgentStats : ObservableState<ImmutableArray<AgentStats>> {
 		private ImmutableDictionary<Guid, Agent> agents = ImmutableDictionary<Guid, Agent>.Empty;
-		private ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>>.Empty;
+		private ImmutableDictionary<Guid, ImmutableArray<InstanceConfiguration>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceConfiguration>>.Empty;
 
 		public ObservableAgentStats(ILogger logger) : base(logger) {}
 
@@ -36,7 +36,7 @@ public sealed class AgentStatsManager {
 			Update();
 		}
 
-		public void UpdateInstances(ImmutableArray<InstanceInfo> newInstances) {
+		public void UpdateInstances(ImmutableArray<InstanceConfiguration> newInstances) {
 			instancesByAgentGuid = newInstances.GroupBy(static instance => instance.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
 			Update();
 		}
@@ -58,7 +58,7 @@ public sealed class AgentStatsManager {
 			             .ToImmutableArray();
 		}
 
-		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceInfo>> instancesByAgentGuid, Agent agent) {
+		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceConfiguration>> instancesByAgentGuid, Agent agent) {
 			int usedInstances = 0;
 			var usedMemory = RamAllocationUnits.Zero;
 

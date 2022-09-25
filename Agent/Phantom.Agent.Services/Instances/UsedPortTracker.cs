@@ -5,27 +5,27 @@ namespace Phantom.Agent.Services.Instances;
 sealed class UsedPortTracker {
 	private readonly HashSet<ushort> usedPorts = new ();
 
-	public Result MarkUsed(InstanceInfo info) {
+	public Result Reserve(InstanceConfiguration configuration) {
 		lock (usedPorts) {
-			if (usedPorts.Contains(info.ServerPort)) {
+			if (usedPorts.Contains(configuration.ServerPort)) {
 				return Result.ServerPortAlreadyInUse;
 			}
 
-			if (usedPorts.Contains(info.RconPort)) {
+			if (usedPorts.Contains(configuration.RconPort)) {
 				return Result.RconPortAlreadyInUse;
 			}
 
-			usedPorts.Add(info.ServerPort);
-			usedPorts.Add(info.RconPort);
+			usedPorts.Add(configuration.ServerPort);
+			usedPorts.Add(configuration.RconPort);
 		}
 
 		return Result.Success;
 	}
 	
-	public void Release(InstanceInfo info) {
+	public void Release(InstanceConfiguration configuration) {
 		lock (usedPorts) {
-			usedPorts.Remove(info.ServerPort);
-			usedPorts.Remove(info.RconPort);
+			usedPorts.Remove(configuration.ServerPort);
+			usedPorts.Remove(configuration.RconPort);
 		}
 	}
 

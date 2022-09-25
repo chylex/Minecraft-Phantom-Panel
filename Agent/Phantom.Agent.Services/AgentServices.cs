@@ -1,6 +1,5 @@
 ﻿using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Services.Instances;
-using Phantom.Agent.Services.Java;
 using Phantom.Common.Data.Agent;
 
 namespace Phantom.Agent.Services;

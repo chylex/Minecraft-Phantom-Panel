@@ -11,5 +11,9 @@
     <ProjectReference Include="..\Phantom.Agent.Minecraft\Phantom.Agent.Minecraft.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Rpc\Phantom.Agent.Rpc.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Java" />
+  </ItemGroup>
 
 </Project>

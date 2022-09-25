@@ -6,6 +6,7 @@ using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Database;
+using Phantom.Server.Database.Entities;
 using Phantom.Server.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -19,7 +20,7 @@ public sealed class InstanceManager {
 	private readonly ObservableInstances instances = new (PhantomLogger.Create<InstanceManager, ObservableInstances>());
 	private readonly ConcurrentDictionary<Guid, ObservableInstanceLogs> instanceLogs = new ();
 
-	public EventSubscribers<ImmutableArray<InstanceInfo>> InstancesChanged => instances.Subs;
+	public EventSubscribers<ImmutableArray<InstanceConfiguration>> InstancesChanged => instances.Subs;
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentManager agentManager;
@@ -37,46 +38,68 @@ public sealed class InstanceManager {
 		using var scope = databaseProvider.CreateScope();
 
 		await foreach (var instance in scope.Ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			instances.AddOrReplace(instance.AsInstanceInfo);
+			var instanceConfiguration = new InstanceConfiguration(
+				instance.AgentGuid,
+				instance.InstanceGuid,
+				instance.InstanceName,
+				instance.ServerPort,
+				instance.RconPort,
+				instance.MinecraftVersion,
+				instance.MinecraftServerKind,
+				instance.MemoryAllocation,
+				instance.JavaRuntimeGuid
+			);
+			
+			instances.AddOrReplace(instanceConfiguration);
 		}
 	}
 
-	public async Task<AddInstanceResult> AddInstance(InstanceInfo instanceInfo) {
-		var agent = agentManager.GetAgent(instanceInfo.AgentGuid);
+	public async Task<AddInstanceResult> AddInstance(InstanceConfiguration instanceConfiguration) {
+		var agent = agentManager.GetAgent(instanceConfiguration.AgentGuid);
 		if (agent == null) {
 			return AddInstanceResult.AgentNotFound;
 		}
 
-		if (!instances.TryAdd(instanceInfo)) {
+		if (!instances.TryAdd(instanceConfiguration)) {
 			return AddInstanceResult.InstanceAlreadyExists;
 		}
 
 		using (var scope = databaseProvider.CreateScope()) {
-			scope.Ctx.InstanceUpsert.Fetch(instanceInfo.InstanceGuid).SetFromInstanceInfo(instanceInfo);
+			InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(instanceConfiguration.InstanceGuid);
+			
+			entity.AgentGuid = instanceConfiguration.AgentGuid;
+			entity.InstanceName = instanceConfiguration.InstanceName;
+			entity.ServerPort = instanceConfiguration.ServerPort;
+			entity.RconPort = instanceConfiguration.RconPort;
+			entity.MinecraftVersion = instanceConfiguration.MinecraftVersion;
+			entity.MinecraftServerKind = instanceConfiguration.MinecraftServerKind;
+			entity.MemoryAllocation = instanceConfiguration.MemoryAllocation;
+			entity.JavaRuntimeGuid = instanceConfiguration.JavaRuntimeGuid;
+			
 			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
 
 		var agentName = agent.Name;
 
-		var reply = (ConfigureInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));
+		var reply = (ConfigureInstanceResult?) await agentManager.SendMessageWithReply(instanceConfiguration.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, instanceConfiguration), TimeSpan.FromSeconds(10));
 		if (reply == ConfigureInstanceResult.Success) {
-			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instanceInfo.InstanceName, instanceInfo.InstanceGuid, agentName);
+			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instanceConfiguration.InstanceName, instanceConfiguration.InstanceGuid, agentName);
 			return AddInstanceResult.Success;
 		}
 		else {
-			instances.TryRemove(instanceInfo.InstanceGuid);
+			instances.TryRemove(instanceConfiguration.InstanceGuid);
 
 			var (result, errorMessage) = reply switch {
 				null => (AddInstanceResult.AgentCommunicationError, "Agent did not reply in time."),
 				_    => (AddInstanceResult.UnknownError, "Unknown error.")
 			};
 
-			Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", instanceInfo.InstanceName, instanceInfo.InstanceGuid, agentName, errorMessage);
+			Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", instanceConfiguration.InstanceName, instanceConfiguration.InstanceGuid, agentName, errorMessage);
 			return result;
 		}
 	}
 
-	public InstanceInfo? GetInstance(Guid instanceGuid) {
+	public InstanceConfiguration? GetInstance(Guid instanceGuid) {
 		return instances.GetInstance(instanceGuid);
 	}
 
@@ -86,7 +109,7 @@ public sealed class InstanceManager {
 			return LaunchInstanceResult.InstanceDoesNotExist;
 		}
 
-		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
+		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(300));
 		return reply ?? LaunchInstanceResult.CommunicationError;
 	}
 
@@ -104,7 +127,7 @@ public sealed class InstanceManager {
 		return SendCommandToInstanceResult.InstanceDoesNotExist;
 	}
 
-	internal ImmutableArray<InstanceInfo> GetInstancesForAgent(Guid agentGuid) {
+	internal ImmutableArray<InstanceConfiguration> GetInstancesForAgent(Guid agentGuid) {
 		return instances.GetInstances().Where(instance => instance.AgentGuid == agentGuid).ToImmutableArray();
 	}
 
@@ -120,18 +143,18 @@ public sealed class InstanceManager {
 		return GetInstanceLogs(instanceGuid).Subs;
 	}
 
-	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceInfo>> {
-		private readonly RwLockedDictionary<Guid, InstanceInfo> instances = new (LockRecursionPolicy.NoRecursion);
+	private sealed class ObservableInstances : ObservableState<ImmutableArray<InstanceConfiguration>> {
+		private readonly RwLockedDictionary<Guid, InstanceConfiguration> instances = new (LockRecursionPolicy.NoRecursion);
 
 		public ObservableInstances(ILogger logger) : base(logger) {}
 
-		public void AddOrReplace(InstanceInfo instance) {
-			instances[instance.InstanceGuid] = instance;
+		public void AddOrReplace(InstanceConfiguration configuration) {
+			instances[configuration.InstanceGuid] = configuration;
 			Update();
 		}
 
-		public bool TryAdd(InstanceInfo instance) {
-			if (instances.TryAdd(instance.InstanceGuid, instance)) {
+		public bool TryAdd(InstanceConfiguration configuration) {
+			if (instances.TryAdd(configuration.InstanceGuid, configuration)) {
 				Update();
 				return true;
 			}
@@ -150,15 +173,15 @@ public sealed class InstanceManager {
 			}
 		}
 
-		public InstanceInfo? GetInstance(Guid instanceGuid) {
+		public InstanceConfiguration? GetInstance(Guid instanceGuid) {
 			return instances.TryGetValue(instanceGuid, out var instance) ? instance : null;
 		}
 
-		public ImmutableArray<InstanceInfo> GetInstances() {
+		public ImmutableArray<InstanceConfiguration> GetInstances() {
 			return instances.ValuesCopy;
 		}
 
-		protected override ImmutableArray<InstanceInfo> GetData() {
+		protected override ImmutableArray<InstanceConfiguration> GetData() {
 			return instances.ValuesCopy;
 		}
 	}

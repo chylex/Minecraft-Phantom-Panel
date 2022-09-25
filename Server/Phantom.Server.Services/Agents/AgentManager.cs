@@ -35,10 +35,11 @@ public sealed class AgentManager {
 	public async Task Initialize() {
 		using var scope = databaseProvider.CreateScope();
 
-		await foreach (var agent in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			if (!agents.TryRegister(new Agent(agent.AgentGuid, agent.Name, agent.Version, agent.MaxInstances, agent.MaxMemory))) {
+		await foreach (var entity in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+			var agent = new Agent(entity.AgentGuid, entity.Name, entity.Version, entity.MaxInstances, entity.MaxMemory);
+			if (!agents.TryRegister(agent)) {
 				// TODO
-				throw new InvalidOperationException("Unable to register agent from database: " + agent.AgentGuid);
+				throw new InvalidOperationException("Unable to register agent from database: " + agent.Guid);
 			}
 		}
 	}

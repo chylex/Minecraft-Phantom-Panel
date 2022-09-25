@@ -15,7 +15,7 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 	
-	public InstanceInfo Info { get; }
+	public InstanceConfiguration Configuration { get; }
 
 	private readonly string shortName;
 	private readonly ILogger logger;
@@ -27,11 +27,11 @@ sealed class Instance : IDisposable {
 	private IState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
-	public Instance(InstanceInfo info, BaseLauncher launcher, LaunchServices launchServices, UsedPortTracker usedPortTracker) {
-		this.shortName = GetLoggerName(info.InstanceGuid);
+	public Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, UsedPortTracker usedPortTracker) {
+		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
-		this.Info = info;
+		this.Configuration = configuration;
 		this.launcher = launcher;
 		this.launchServices = launchServices;
 		this.usedPortTracker = usedPortTracker;
@@ -93,16 +93,25 @@ sealed class Instance : IDisposable {
 		}
 
 		public async Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken) {
-			var portResult = instance.usedPortTracker.MarkUsed(instance.Info);
+			var portResult = instance.usedPortTracker.Reserve(instance.Configuration);
 			if (portResult == UsedPortTracker.Result.ServerPortAlreadyInUse) {
 				return (this, LaunchInstanceResult.ServerPortAlreadyInUse);
 			}
 			else if (portResult == UsedPortTracker.Result.RconPortAlreadyInUse) {
 				return (this, LaunchInstanceResult.RconPortAlreadyInUse);
 			}
+
+			var result = await LaunchWithReservedPorts(cancellationToken);
+			if (result.Item2 != LaunchInstanceResult.Success) {
+				instance.usedPortTracker.Release(instance.Configuration);
+			}
 			
+			return result;
+		}
+
+		private async Task<(IState, LaunchInstanceResult)> LaunchWithReservedPorts(CancellationToken cancellationToken) {
 			instance.logger.Information("Session starting...");
-			
+
 			var launchResult = await instance.launcher.Launch(instance.launchServices, cancellationToken);
 			if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
 				instance.logger.Error("Session failed to launch, could not download Minecraft server.");
@@ -112,12 +121,12 @@ sealed class Instance : IDisposable {
 				instance.logger.Error("Session failed to launch, invalid Java runtime.");
 				return (this, LaunchInstanceResult.JavaRuntimeNotFound);
 			}
-			
+
 			if (launchResult is not LaunchResult.Success launchSuccess) {
 				instance.logger.Error("Session failed to launch.");
 				return (this, LaunchInstanceResult.UnknownError);
 			}
-			
+
 			var session = launchSuccess.Session;
 			var state = new RunningState(instance, session);
 
@@ -149,7 +158,7 @@ sealed class Instance : IDisposable {
 		public RunningState(Instance instance, InstanceSession session) {
 			this.instance = instance;
 			this.session = session;
-			this.logSenderThread = new InstanceLogSenderThread(instance.Info.InstanceGuid, instance.shortName);
+			this.logSenderThread = new InstanceLogSenderThread(instance.Configuration.InstanceGuid, instance.shortName);
 			
 			this.session.AddOutputListener(SessionOutput);
 			this.session.SessionEnded += SessionEnded;
@@ -161,7 +170,6 @@ sealed class Instance : IDisposable {
 		}
 
 		private void SessionEnded(object? sender, EventArgs e) {
-			ReleasePorts();
 			instance.logger.Information("Session ended.");
 			instance.TransitionState(new NotRunningState(instance));
 		}
@@ -212,12 +220,7 @@ sealed class Instance : IDisposable {
 				}
 			}
 
-			ReleasePorts();
 			return new NotRunningState(instance);
-		}
-
-		private void ReleasePorts() {
-			instance.usedPortTracker.Release(instance.Info);
 		}
 
 		public void Dispose() {
@@ -225,6 +228,7 @@ sealed class Instance : IDisposable {
 			session.SessionEnded -= SessionEnded;
 			session.RemoveOutputListener(SessionOutput);
 			session.Dispose();
+			instance.usedPortTracker.Release(instance.Configuration);
 		}
 	}
 

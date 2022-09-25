@@ -195,7 +195,7 @@
     submitModel.StartSubmitting();
     await Task.Yield();
 
-    var instance = new InstanceInfo(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero, form.JavaRuntimeGuid.GetValueOrDefault());
+    var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, (ushort) form.ServerPort, (ushort) form.RconPort, form.MinecraftVersion, form.MinecraftServerKind, form.MemoryAllocation ?? RamAllocationUnits.Zero, form.JavaRuntimeGuid.GetValueOrDefault());
     var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);

@@ -4,7 +4,7 @@ using Phantom.Common.Data.Minecraft;
 namespace Phantom.Common.Data.Instance; 
 
 [MessagePackObject]
-public sealed record InstanceInfo(
+public sealed record InstanceConfiguration(
 	[property: Key(0)] Guid AgentGuid,
 	[property: Key(1)] Guid InstanceGuid,
 	[property: Key(2)] string InstanceName,

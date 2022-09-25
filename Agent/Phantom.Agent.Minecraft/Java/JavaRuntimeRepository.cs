@@ -1,12 +1,11 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using Phantom.Agent.Minecraft.Java;
 using Phantom.Common.Data.Java;
 using Phantom.Utils.Cryptography;
 
-namespace Phantom.Agent.Services.Java;
+namespace Phantom.Agent.Minecraft.Java;
 
-sealed class JavaRuntimeRepository : IJavaRuntimeRepository {
+public sealed class JavaRuntimeRepository {
 	private readonly Dictionary<string, Guid> guidsByPath = new ();
 	private readonly Dictionary<Guid, JavaRuntimeExecutable> runtimesByGuid = new ();
 	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
