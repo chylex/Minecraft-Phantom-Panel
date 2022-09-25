@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Serilog;
 
@@ -20,16 +21,18 @@ sealed class Instance : IDisposable {
 	private readonly ILogger logger;
 	
 	private readonly BaseLauncher launcher;
+	private readonly UsedPortTracker usedPortTracker;
 
 	private IState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
-	public Instance(InstanceInfo info, BaseLauncher launcher) {
+	public Instance(InstanceInfo info, BaseLauncher launcher, UsedPortTracker usedPortTracker) {
 		this.shortName = GetLoggerName(info.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Info = info;
 		this.launcher = launcher;
+		this.usedPortTracker = usedPortTracker;
 		this.currentState = new NotRunningState(this);
 	}
 
@@ -46,10 +49,12 @@ sealed class Instance : IDisposable {
 		return true;
 	}
 
-	public async Task<bool> Launch(CancellationToken cancellationToken) {
+	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
 		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
-			return TransitionState(await currentState.Launch(cancellationToken));
+			var result = await currentState.Launch(cancellationToken);
+			TransitionState(result.Item1);
+			return result.Item2;
 		} finally {
 			stateTransitioningActionSemaphore.Release();
 		}
@@ -69,7 +74,7 @@ sealed class Instance : IDisposable {
 	}
 
 	private interface IState {
-		Task<IState> Launch(CancellationToken cancellationToken);
+		Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken);
 		Task<bool> SendCommand(string command, CancellationToken cancellationToken);
 		Task<IState> Stop(TimeSpan waitTime);
 	}
@@ -85,12 +90,20 @@ sealed class Instance : IDisposable {
 			this.instance = instance;
 		}
 
-		public async Task<IState> Launch(CancellationToken cancellationToken) {
+		public async Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken) {
+			var portResult = instance.usedPortTracker.MarkUsed(instance.Info);
+			if (portResult == UsedPortTracker.Result.ServerPortAlreadyInUse) {
+				return (this, LaunchInstanceResult.ServerPortAlreadyInUse);
+			}
+			else if (portResult == UsedPortTracker.Result.RconPortAlreadyInUse) {
+				return (this, LaunchInstanceResult.RconPortAlreadyInUse);
+			}
+			
 			instance.logger.Information("Session starting...");
 			var session = await instance.launcher.Launch(cancellationToken);
 			if (session == null) {
 				instance.logger.Error("Session failed to launch.");
-				return this;
+				return (this, LaunchInstanceResult.UnknownError);
 			}
 			
 			var state = new RunningState(instance, session);
@@ -98,11 +111,11 @@ sealed class Instance : IDisposable {
 			if (session.HasEnded) {
 				instance.logger.Warning("Session ended immediately after it was started.");
 				state.Dispose();
-				return this;
+				return (this, LaunchInstanceResult.UnknownError);
 			}
 			else {
 				instance.logger.Information("Session started.");
-				return state;
+				return (state, LaunchInstanceResult.Success);
 			}
 		}
 
@@ -135,12 +148,14 @@ sealed class Instance : IDisposable {
 		}
 
 		private void SessionEnded(object? sender, EventArgs e) {
+			ReleasePorts();
 			instance.logger.Information("Session ended.");
 			instance.TransitionState(new NotRunningState(instance));
 		}
 
-		public Task<IState> Launch(CancellationToken cancellationToken) {
-			return FromState(this);
+		public Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken) {
+			(IState, LaunchInstanceResult) result = (this, LaunchInstanceResult.InstanceAlreadyRunning);
+			return Task.FromResult(result);
 		}
 
 		public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
@@ -184,7 +199,12 @@ sealed class Instance : IDisposable {
 				}
 			}
 
+			ReleasePorts();
 			return new NotRunningState(instance);
+		}
+
+		private void ReleasePorts() {
+			instance.usedPortTracker.Release(instance.Info);
 		}
 
 		public void Dispose() {

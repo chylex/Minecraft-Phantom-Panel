@@ -16,8 +16,8 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly string basePath;
 
 	private readonly MinecraftServerExecutables serverExecutables;
+	private readonly UsedPortTracker usedPortTracker = new ();
 	private readonly Dictionary<Guid, Instance> instances = new ();
-	private readonly HashSet<ushort> usedPorts = new ();
 
 	private readonly JavaRuntimeRepository javaRuntimeRepository;
 	
@@ -33,37 +33,28 @@ sealed class InstanceSessionManager : IDisposable {
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	public CreateInstanceResult Configure(InstanceInfo info) {
+	public ConfigureInstanceResult Configure(InstanceInfo info) {
 		if (!javaRuntimeRepository.TryGetByGuid(info.JavaRuntimeGuid, out var javaRuntime)) {
-			return CreateInstanceResult.UnknownJavaRuntime;
+			return ConfigureInstanceResult.UnknownJavaRuntime;
 		}
 		
 		try {
 			semaphore.Wait(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
-			return CreateInstanceResult.AgentShuttingDown;
+			return ConfigureInstanceResult.AgentShuttingDown;
 		}
 
+		var instanceGuid = info.InstanceGuid;
+		
 		try {
-			if (instances.TryGetValue(info.InstanceGuid, out _)) {
-				return CreateInstanceResult.InstanceAlreadyExists;
+			var otherInstances = instances.Values.Where(instance => instance.Info.InstanceGuid != instanceGuid).ToArray();
+			if (otherInstances.Length + 1 >= agentInfo.MaxInstances) {
+				return ConfigureInstanceResult.InstanceLimitExceeded;
 			}
 
-			if (usedPorts.Contains(info.ServerPort)) {
-				return CreateInstanceResult.ServerPortInUse;
-			}
-
-			if (usedPorts.Contains(info.RconPort)) {
-				return CreateInstanceResult.RconPortInUse;
-			}
-
-			if (instances.Values.Count + 1 >= agentInfo.MaxInstances) {
-				return CreateInstanceResult.InstanceLimitExceeded;
-			}
-
-			var availableMemory = agentInfo.MaxMemory - instances.Values.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Info.MemoryAllocation);
+			var availableMemory = agentInfo.MaxMemory - otherInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Info.MemoryAllocation);
 			if (availableMemory < info.MemoryAllocation) {
-				return CreateInstanceResult.MemoryLimitExceeded;
+				return ConfigureInstanceResult.MemoryLimitExceeded;
 			}
 
 			var heapMegabytes = info.MemoryAllocation.InMegabytes;
@@ -72,7 +63,7 @@ sealed class InstanceSessionManager : IDisposable {
 				MaximumHeapMegabytes: heapMegabytes
 			);
 
-			var instanceFolder = Path.Combine(basePath, info.InstanceGuid.ToString());
+			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
 			Directory.CreateDirectory(instanceFolder);
 
 			var properties = new InstanceProperties(
@@ -83,40 +74,27 @@ sealed class InstanceSessionManager : IDisposable {
 				new ServerProperties(info.ServerPort, info.RconPort)
 			);
 
-			VanillaLauncher launcher = new VanillaLauncher(serverExecutables, properties);
-
-			instances.Add(info.InstanceGuid, new Instance(info, launcher));
-			usedPorts.Add(info.ServerPort);
-			usedPorts.Add(info.RconPort);
-
-			return CreateInstanceResult.Success;
+			instances[instanceGuid] = new Instance(info, new VanillaLauncher(serverExecutables, properties), usedPortTracker);
+			
+			return ConfigureInstanceResult.Success;
 		} finally {
 			semaphore.Release();
 		}
 	}
 
-	public async Task<SetInstanceStateResult> Update(SetInstanceStateMessage message) {
+	public async Task<LaunchInstanceResult> Launch(LaunchInstanceMessage message) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
-			return SetInstanceStateResult.AgentShuttingDown;
+			return LaunchInstanceResult.AgentShuttingDown;
 		}
 
 		try {
 			if (!instances.TryGetValue(message.InstanceGuid, out var instance)) {
-				return SetInstanceStateResult.InstanceDoesNotExist;
+				return LaunchInstanceResult.InstanceDoesNotExist;
 			}
 
-			if (message.IsRunning is {} isRunning) {
-				if (isRunning) {
-					await instance.Launch(shutdownCancellationToken);
-				}
-				else {
-					await instance.Stop(TimeSpan.FromMinutes(1));
-				}
-			}
-
-			return SetInstanceStateResult.Success;
+			return await instance.Launch(shutdownCancellationToken);
 		} finally {
 			semaphore.Release();
 		}

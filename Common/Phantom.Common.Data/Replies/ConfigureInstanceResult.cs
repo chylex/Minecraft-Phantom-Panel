@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Common.Data.Replies; 
 
-public enum CreateInstanceResult {
+public enum ConfigureInstanceResult {
 	Success,
 	UnknownJavaRuntime,
 	InstanceAlreadyExists,

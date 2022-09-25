@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
@@ -43,43 +42,24 @@ public sealed class InstanceManager {
 	}
 
 	public async Task<AddInstanceResult> AddInstance(InstanceInfo instanceInfo) {
-		if (string.IsNullOrWhiteSpace(instanceInfo.InstanceName)) {
-			return AddInstanceResult.InstanceNameMustNotBeEmpty;
+		var agent = agentManager.GetAgent(instanceInfo.AgentGuid);
+		if (agent == null) {
+			return AddInstanceResult.AgentNotFound;
 		}
 
-		if (instanceInfo.MemoryAllocation.RawValue == 0) {
-			return AddInstanceResult.InstanceMemoryMustNotBeZero;
+		if (!instances.TryAdd(instanceInfo)) {
+			return AddInstanceResult.InstanceAlreadyExists;
 		}
 
-		string agentName;
-		lock (this) {
-			var agentStatsManager = serviceProvider.GetRequiredService<AgentStatsManager>();
-			var agentStats = agentStatsManager.GetAgentStats(instanceInfo.AgentGuid);
-			if (agentStats == null) {
-				return AddInstanceResult.AgentNotFound;
-			}
-
-			if (agentStats.UsedInstances >= agentStats.Agent.MaxInstances) {
-				return AddInstanceResult.AgentInstanceLimitExceeded;
-			}
-
-			var availableMemory = agentStats.AvailableMemory;
-			if (instanceInfo.MemoryAllocation > availableMemory) {
-				return AddInstanceResult.AgentMemoryLimitExceeded;
-			}
-
-			agentName = agentStats.Agent.Name;
+		using (var scope = databaseProvider.CreateScope()) {
+			scope.Ctx.InstanceUpsert.Fetch(instanceInfo.InstanceGuid).SetFromInstanceInfo(instanceInfo);
+			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
 
-		var reply = (CreateInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));
-		if (reply == CreateInstanceResult.Success) {
-			instances.AddOrReplace(instanceInfo);
-			
-			using (var scope = databaseProvider.CreateScope()) {
-				scope.Ctx.InstanceUpsert.Fetch(instanceInfo.InstanceGuid).SetFromInstanceInfo(instanceInfo);
-				await scope.Ctx.SaveChangesAsync(cancellationToken);
-			}
-			
+		var agentName = agent.Name;
+
+		var reply = (ConfigureInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, instanceInfo), TimeSpan.FromSeconds(10));
+		if (reply == ConfigureInstanceResult.Success) {
 			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", instanceInfo.InstanceName, instanceInfo.InstanceGuid, agentName);
 			return AddInstanceResult.Success;
 		}
@@ -100,14 +80,14 @@ public sealed class InstanceManager {
 		return instances.GetInstance(instanceGuid);
 	}
 
-	public async Task LaunchInstance(Guid instanceGuid) {
+	public async Task<LaunchInstanceResult> LaunchInstance(Guid instanceGuid) {
 		var instanceInfo = GetInstance(instanceGuid);
-		if (instanceInfo != null) {
-			var reply = (SetInstanceStateResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new SetInstanceStateMessage(sequenceId, instanceGuid, IsRunning: true), TimeSpan.FromSeconds(10));
-			if (reply == SetInstanceStateResult.Success) {
-				// TODO
-			}
+		if (instanceInfo == null) {
+			return LaunchInstanceResult.InstanceDoesNotExist;
 		}
+
+		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instanceInfo.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
+		return reply ?? LaunchInstanceResult.CommunicationError;
 	}
 
 	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
@@ -185,7 +165,7 @@ public sealed class InstanceManager {
 
 	private sealed class ObservableInstanceLogs : ObservableState<RingBuffer<string>> {
 		private readonly RingBuffer<string> log = new (1000);
-		
+
 		public ObservableInstanceLogs(ILogger logger) : base(logger) {}
 
 		public void Add(ImmutableArray<string> lines) {
@@ -195,7 +175,7 @@ public sealed class InstanceManager {
 
 			Update();
 		}
-		
+
 		protected override RingBuffer<string> GetData() {
 			return log;
 		}

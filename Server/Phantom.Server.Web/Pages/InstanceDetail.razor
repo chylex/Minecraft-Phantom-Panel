@@ -15,6 +15,9 @@
 else {
   <h1>Instance: @InstanceInfo.InstanceName</h1>
   <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@isLaunchingInstance">Launch</button>
+  @if (launchError != null) {
+    <p class="text-danger">@launchError</p>
+  }
   <div id="log" class="font-monospace mb-3">
     @foreach (var line in instanceLogs.EnumerateLast(uint.MaxValue)) {
       <p>@line</p>
@@ -38,9 +41,11 @@ else {
   [Parameter]
   public Guid InstanceGuid { get; set; }
 
+  private string? launchError = null;
+  private bool isLaunchingInstance = false;
+
   private ElementReference commandInputElement;
   private string commandInput = string.Empty;
-  private bool isLaunchingInstance = false;
   private bool isSendingCommand = false;
 
   private InstanceInfo? InstanceInfo { get; set; }
@@ -62,20 +67,23 @@ else {
     if (firstRender) {
       PageJs = await Js.InvokeAsync<IJSObjectReference>("import", "./Pages/InstanceDetail.razor.js");
       StateHasChanged();
-      
+
       await PageJs.InvokeVoidAsync("initLog");
     }
   }
 
   private async Task LaunchInstance() {
     isLaunchingInstance = true;
-    await InstanceManager.LaunchInstance(InstanceGuid);
+    launchError = null;
+    
+    var result = await InstanceManager.LaunchInstance(InstanceGuid);
+    launchError = GetLaunchResultError(result);
     isLaunchingInstance = false;
   }
 
   private async Task RefreshLog() {
     StateHasChanged();
-    
+
     if (PageJs != null) {
       await PageJs.InvokeVoidAsync("scrollLog");
     }
@@ -98,6 +106,19 @@ else {
 
   public void Dispose() {
     instanceLogsSubs.Unsubscribe(this);
+  }
+
+  private static string? GetLaunchResultError(LaunchInstanceResult result) {
+    return result switch {
+           LaunchInstanceResult.Success => null,
+           LaunchInstanceResult.AgentShuttingDown => "Agent is shutting down.",
+           LaunchInstanceResult.InstanceDoesNotExist => "Instance does not exist.",
+           LaunchInstanceResult.InstanceAlreadyRunning => "Instance is already running.",
+           LaunchInstanceResult.ServerPortAlreadyInUse => "Server port is already in use.",
+           LaunchInstanceResult.RconPortAlreadyInUse => "Rcon port is already in use.",
+           LaunchInstanceResult.CommunicationError => "Communication error.",
+           _ => "Unknown error."
+           };
   }
 
 }

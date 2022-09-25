@@ -7,6 +7,6 @@ public interface IMessageToAgentListener {
 	Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message);
 	Task HandleShutdownAgent(ShutdownAgentMessage message);
 	Task HandleConfigureInstance(ConfigureInstanceMessage message);
-	Task HandleSetInstanceState(SetInstanceStateMessage message);
+	Task HandleLaunchInstance(LaunchInstanceMessage message);
 	Task HandleSendCommandToInstance(SendCommandToInstanceMessage message);
 }

@@ -79,6 +79,10 @@ public sealed class AgentManager {
 		}
 	}
 
+	internal Agent? GetAgent(Guid guid) {
+		return agents.GetAgent(guid);
+	}
+
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
 		agents.Update(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
 	}
@@ -144,6 +148,10 @@ public sealed class AgentManager {
 			else {
 				return false;
 			}
+		}
+
+		public Agent? GetAgent(Guid guid) {
+			return agents.TryGetValue(guid, out var agent) ? agent : null;
 		}
 
 		public AgentConnection? GetConnection(Guid guid) {
