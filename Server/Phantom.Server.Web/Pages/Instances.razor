@@ -2,7 +2,6 @@
 @using System.Collections.Immutable
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Instances
-@using Phantom.Common.Data.Instance
 @implements IDisposable
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager
@@ -25,16 +24,18 @@
   @if (!instances.IsEmpty) {
     <tbody>
       @foreach (var instance in instances) {
+        var configuration = instance.Configuration;
+        var instanceGuid = configuration.InstanceGuid.ToString();
         <tr>
-          <td>@instance.InstanceName</td>
-          <td>@(agentNames.TryGetValue(instance.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
-          <td><code>@instance.ServerPort</code></td>
-          <td class="text-end">@instance.MemoryAllocation.InMegabytes MB</td>
+          <td>@configuration.InstanceName</td>
+          <td>@(agentNames.TryGetValue(configuration.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
+          <td><code>@configuration.ServerPort</code></td>
+          <td class="text-end">@configuration.MemoryAllocation.InMegabytes MB</td>
           <td>
-            <code class="text-uppercase">@instance.InstanceGuid.ToString()</code>
+            <code class="text-uppercase">@instanceGuid</code>
           </td>
           <td>
-            <a href="/instances/@instance.InstanceGuid" class="btn btn-info btn-sm">Detail</a>
+            <a href="/instances/@instanceGuid" class="btn btn-outline-info btn-sm">Detail</a>
           </td>
         </tr>
       }
@@ -53,7 +54,7 @@
 
 @code {
 
-  private ImmutableArray<InstanceConfiguration> instances = ImmutableArray<InstanceConfiguration>.Empty;
+  private ImmutableArray<Instance> instances = ImmutableArray<Instance>.Empty;
   private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
 
   protected override void OnInitialized() {

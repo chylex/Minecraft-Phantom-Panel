@@ -27,7 +27,7 @@ public sealed class AgentStatsManager {
 
 	private sealed class ObservableAgentStats : ObservableState<ImmutableArray<AgentStats>> {
 		private ImmutableDictionary<Guid, Agent> agents = ImmutableDictionary<Guid, Agent>.Empty;
-		private ImmutableDictionary<Guid, ImmutableArray<InstanceConfiguration>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<InstanceConfiguration>>.Empty;
+		private ImmutableDictionary<Guid, ImmutableArray<Instance>> instancesByAgentGuid = ImmutableDictionary<Guid, ImmutableArray<Instance>>.Empty;
 
 		public ObservableAgentStats(ILogger logger) : base(logger) {}
 
@@ -36,8 +36,8 @@ public sealed class AgentStatsManager {
 			Update();
 		}
 
-		public void UpdateInstances(ImmutableArray<InstanceConfiguration> newInstances) {
-			instancesByAgentGuid = newInstances.GroupBy(static instance => instance.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
+		public void UpdateInstances(ImmutableArray<Instance> newInstances) {
+			instancesByAgentGuid = newInstances.GroupBy(static instance => instance.Configuration.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
 			Update();
 		}
 
@@ -58,14 +58,14 @@ public sealed class AgentStatsManager {
 			             .ToImmutableArray();
 		}
 
-		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<InstanceConfiguration>> instancesByAgentGuid, Agent agent) {
+		private static AgentStats ComputeAgentStats(ImmutableDictionary<Guid, ImmutableArray<Instance>> instancesByAgentGuid, Agent agent) {
 			int usedInstances = 0;
 			var usedMemory = RamAllocationUnits.Zero;
 
 			if (instancesByAgentGuid.TryGetValue(agent.Guid, out var instances)) {
 				foreach (var instance in instances) {
 					usedInstances += 1;
-					usedMemory += instance.MemoryAllocation;
+					usedMemory += instance.Configuration.MemoryAllocation;
 				}
 			}
 

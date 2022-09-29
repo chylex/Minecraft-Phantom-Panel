@@ -70,7 +70,7 @@ public sealed class AgentManager {
 
 		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
 
-		await connection.Send(new RegisterAgentSuccessMessage(instanceManager.GetInstancesForAgent(agent.Guid)));
+		await connection.Send(new RegisterAgentSuccessMessage(instanceManager.GetInstanceConfigurationsForAgent(agent.Guid)));
 		return true;
 	}
 

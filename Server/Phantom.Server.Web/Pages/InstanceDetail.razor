@@ -1,19 +1,18 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @using Phantom.Server.Services.Instances
-@using Phantom.Common.Data.Instance
-@using Phantom.Common.Data.Replies
 @using Phantom.Utils.Collections
 @using Phantom.Utils.Events
+@using Phantom.Common.Data.Replies
 @implements IDisposable
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
 
-@if (InstanceInfo == null) {
+@if (Instance == null) {
   <h1>Instance Not Found</h1>
   <p>Return to <a href="/instances">all instances</a>.</p>
 }
 else {
-  <h1>Instance: @InstanceInfo.InstanceName</h1>
+  <h1>Instance: @Instance.Configuration.InstanceName</h1>
   <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@isLaunchingInstance">Launch</button>
   @if (launchError != null) {
     <p class="text-danger">@launchError</p>
@@ -48,14 +47,14 @@ else {
   private string commandInput = string.Empty;
   private bool isSendingCommand = false;
 
-  private InstanceConfiguration? InstanceInfo { get; set; }
+  private Instance? Instance { get; set; }
   private IJSObjectReference? PageJs { get; set; }
 
   private EventSubscribers<RingBuffer<string>> instanceLogsSubs = null!;
   private RingBuffer<string> instanceLogs = null!;
 
   protected override void OnInitialized() {
-    InstanceInfo = InstanceManager.GetInstance(InstanceGuid);
+    Instance = InstanceManager.GetInstance(InstanceGuid);
     instanceLogsSubs = InstanceManager.GetInstanceLogsSubs(InstanceGuid);
     instanceLogsSubs.Subscribe(this, buffer => {
       instanceLogs = buffer;
