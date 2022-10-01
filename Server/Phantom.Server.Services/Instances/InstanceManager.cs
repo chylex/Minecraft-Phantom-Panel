@@ -1,10 +1,8 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
-using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Database;
 using Phantom.Server.Database.Entities;
 using Phantom.Server.Services.Agents;
@@ -18,7 +16,6 @@ public sealed class InstanceManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManager>();
 
 	private readonly ObservableInstances instances = new (PhantomLogger.Create<InstanceManager, ObservableInstances>());
-	private readonly ConcurrentDictionary<Guid, ObservableInstanceLogs> instanceLogs = new ();
 
 	public EventSubscribers<ImmutableArray<Instance>> InstancesChanged => instances.Subs;
 
@@ -129,18 +126,6 @@ public sealed class InstanceManager {
 		return instances.GetInstances().Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
 	}
 
-	private ObservableInstanceLogs GetInstanceLogs(Guid instanceGuid) {
-		return instanceLogs.GetOrAdd(instanceGuid, static _ => new ObservableInstanceLogs(PhantomLogger.Create<InstanceManager, ObservableInstanceLogs>()));
-	}
-
-	internal void AddInstanceLogs(InstanceOutputMessage message) {
-		GetInstanceLogs(message.InstanceGuid).Add(message.Lines);
-	}
-
-	public EventSubscribers<RingBuffer<string>> GetInstanceLogsSubs(Guid instanceGuid) {
-		return GetInstanceLogs(instanceGuid).Subs;
-	}
-
 	private sealed class ObservableInstances : ObservableState<ImmutableArray<Instance>> {
 		private readonly RwLockedDictionary<Guid, Instance> instances = new (LockRecursionPolicy.NoRecursion);
 
@@ -181,24 +166,6 @@ public sealed class InstanceManager {
 
 		protected override ImmutableArray<Instance> GetData() {
 			return instances.ValuesCopy;
-		}
-	}
-
-	private sealed class ObservableInstanceLogs : ObservableState<RingBuffer<string>> {
-		private readonly RingBuffer<string> log = new (1000);
-
-		public ObservableInstanceLogs(ILogger logger) : base(logger) {}
-
-		public void Add(ImmutableArray<string> lines) {
-			foreach (var line in lines) {
-				log.Add(line);
-			}
-
-			Update();
-		}
-
-		protected override RingBuffer<string> GetData() {
-			return log;
 		}
 	}
 }

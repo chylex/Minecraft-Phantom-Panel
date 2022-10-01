@@ -6,6 +6,7 @@
 @implements IDisposable
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
+@inject InstanceLogManager InstanceLogManager
 
 @if (Instance == null) {
   <h1>Instance Not Found</h1>
@@ -55,7 +56,7 @@ else {
 
   protected override void OnInitialized() {
     Instance = InstanceManager.GetInstance(InstanceGuid);
-    instanceLogsSubs = InstanceManager.GetInstanceLogsSubs(InstanceGuid);
+    instanceLogsSubs = InstanceLogManager.GetSubs(InstanceGuid);
     instanceLogsSubs.Subscribe(this, buffer => {
       instanceLogs = buffer;
       InvokeAsync(RefreshLog);

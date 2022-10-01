@@ -4,7 +4,6 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
-using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Database;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Instances;
@@ -44,13 +43,13 @@ public sealed class AgentManager {
 		}
 	}
 
-	internal async Task<bool> RegisterAgent(RegisterAgentMessage message, InstanceManager instanceManager, RpcClientConnection connection) {
-		if (!authToken.FixedTimeEquals(message.AuthToken)) {
+	internal async Task<bool> RegisterAgent(AgentAuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcClientConnection connection) {
+		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
 			return false;
 		}
 
-		var agent = new Agent(message.AgentInfo) {
+		var agent = new Agent(agentInfo) {
 			LastPing = DateTimeOffset.Now,
 			Connection = new AgentConnection(connection)
 		};
@@ -74,9 +73,9 @@ public sealed class AgentManager {
 		return true;
 	}
 
-	internal void UnregisterAgent(UnregisterAgentMessage message, RpcClientConnection connection) {
-		if (agents.TryUnregister(message.AgentGuid, connection)) {
-			Logger.Information("Unregistered agent with GUID {Guid}.", message.AgentGuid);
+	internal void UnregisterAgent(Guid agentGuid, RpcClientConnection connection) {
+		if (agents.TryUnregister(agentGuid, connection)) {
+			Logger.Information("Unregistered agent with GUID {Guid}.", agentGuid);
 		}
 	}
 
