@@ -7,7 +7,7 @@ using Phantom.Server.Web.Components.Forms.Base;
 
 namespace Phantom.Server.Web.Components.Forms.Fields;
 
-public sealed class InputFieldText : InputBase<string?>, IStringConvertibleFormInput {
+public sealed class InputFieldText : InputBase<string?>, ICustomFormField {
 	[Parameter]
 	public FormNumberInputType Type { get; set; }
 
@@ -19,6 +19,8 @@ public sealed class InputFieldText : InputBase<string?>, IStringConvertibleFormI
 
 	[Parameter]
 	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
+
+	public bool TwoWayValueBinding { get; set; } = true;
 
 	public void SetStringValue(string? value) {
 		CurrentValueAsString = value;
@@ -33,7 +35,10 @@ public sealed class InputFieldText : InputBase<string?>, IStringConvertibleFormI
 			builder.AddAttribute(3, "class", CssClass);
 		}
 
-		builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValue));
+		if (TwoWayValueBinding) {
+			builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValue));
+		}
+
 		builder.AddAttribute(5, "onchange", OnChange);
 		builder.AddAttribute(6, "oninput", OnChange);
 		builder.AddAttribute(7, "onblur", OnBlur);

@@ -1,7 +1,7 @@
 ﻿@inherits FormInputBaseDebounced<string>
 
 <FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
-<InputFieldText @ref="Input"
+<InputFieldText @ref="FormField"
                 Value="@Value"
                 ValueChanged="@ValueChanged"
                 ValueExpression="@ValueExpression"
@@ -12,6 +12,6 @@
 
 @code {
   
-  protected override IStringConvertibleFormInput Input { get; set; } = null!;
+  protected override ICustomFormField FormField { get; set; } = null!;
 }
 

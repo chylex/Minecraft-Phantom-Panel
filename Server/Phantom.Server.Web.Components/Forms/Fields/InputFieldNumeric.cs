@@ -8,7 +8,7 @@ using Phantom.Server.Web.Components.Forms.Base;
 
 namespace Phantom.Server.Web.Components.Forms.Fields;
 
-public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, IStringConvertibleFormInput {
+public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, ICustomFormField {
 	[Parameter]
 	public FormNumberInputType Type { get; set; }
 
@@ -20,6 +20,8 @@ public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAcc
 
 	[Parameter]
 	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
+
+	public bool TwoWayValueBinding { get; set; } = true;
 
 	public void SetStringValue(string? value) {
 		CurrentValueAsString = value;
@@ -34,7 +36,10 @@ public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAcc
 			builder.AddAttribute(3, "class", CssClass);
 		}
 
-		builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValueAsString));
+		if (TwoWayValueBinding) {
+			builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValueAsString));
+		}
+
 		builder.AddAttribute(5, "onchange", OnChange);
 		builder.AddAttribute(6, "oninput", OnChange);
 		builder.AddAttribute(7, "onblur", OnBlur);

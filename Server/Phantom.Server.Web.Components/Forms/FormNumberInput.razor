@@ -2,7 +2,7 @@
 @inherits FormInputBaseDebounced<TValue>
 
 <FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
-<InputFieldNumeric @ref="Input"
+<InputFieldNumeric @ref="FormField"
                    Type="@Type"
                    Value="@Value"
                    ValueChanged="@ValueChanged"
@@ -17,5 +17,5 @@
   [Parameter]
   public FormNumberInputType Type { get; set; } = FormNumberInputType.Number;
 
-  protected override IStringConvertibleFormInput Input { get; set; } = null!;
+  protected override ICustomFormField FormField { get; set; } = null!;
 }

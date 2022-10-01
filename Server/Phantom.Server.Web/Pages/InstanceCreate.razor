@@ -78,7 +78,7 @@
           label = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(form.SelectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
         }
       }
-      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
     </div>
   </div>
 

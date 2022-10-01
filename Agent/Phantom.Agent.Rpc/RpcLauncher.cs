@@ -36,7 +36,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 
 		logger.Information("Starting ZeroMQ client and connecting to {Url}...", url);
 		socket.Connect(url);
-		logger.Information("ZeroMQ client connected.");
+		logger.Information("ZeroMQ client ready.");
 	}
 
 	protected override async Task Run(ClientSocket socket) {
