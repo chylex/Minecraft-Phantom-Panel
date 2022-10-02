@@ -14,27 +14,27 @@ sealed class Instance : IDisposable {
 		var prefix = guid.ToString();
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
-	
+
 	public InstanceConfiguration Configuration { get; }
 
 	private readonly string shortName;
 	private readonly ILogger logger;
-	
+
 	private readonly BaseLauncher launcher;
 	private readonly LaunchServices launchServices;
-	private readonly UsedPortTracker usedPortTracker;
+	private readonly PortManager portManager;
 
 	private IState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
-	public Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, UsedPortTracker usedPortTracker) {
+	public Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
 		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Configuration = configuration;
 		this.launcher = launcher;
 		this.launchServices = launchServices;
-		this.usedPortTracker = usedPortTracker;
+		this.portManager = portManager;
 		this.currentState = new NotRunningState(this);
 	}
 
@@ -93,19 +93,23 @@ sealed class Instance : IDisposable {
 		}
 
 		public async Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken) {
-			var portResult = instance.usedPortTracker.Reserve(instance.Configuration);
-			if (portResult == UsedPortTracker.Result.ServerPortAlreadyInUse) {
-				return (this, LaunchInstanceResult.ServerPortAlreadyInUse);
-			}
-			else if (portResult == UsedPortTracker.Result.RconPortAlreadyInUse) {
-				return (this, LaunchInstanceResult.RconPortAlreadyInUse);
-			}
+			LaunchInstanceResult? portReservationResult = instance.portManager.Reserve(instance.Configuration) switch {
+				PortManager.Result.ServerPortNotAllowed   => LaunchInstanceResult.ServerPortNotAllowed,
+				PortManager.Result.ServerPortAlreadyInUse => LaunchInstanceResult.ServerPortAlreadyInUse,
+				PortManager.Result.RconPortNotAllowed     => LaunchInstanceResult.RconPortNotAllowed,
+				PortManager.Result.RconPortAlreadyInUse   => LaunchInstanceResult.RconPortAlreadyInUse,
+				_                                         => null
+			};
 
-			var result = await LaunchWithReservedPorts(cancellationToken);
-			if (result.Item2 != LaunchInstanceResult.Success) {
-				instance.usedPortTracker.Release(instance.Configuration);
+			if (portReservationResult != null) {
+				return (this, portReservationResult.Value);
 			}
 			
+			var result = await LaunchWithReservedPorts(cancellationToken);
+			if (result.Item2 != LaunchInstanceResult.Success) {
+				instance.portManager.Release(instance.Configuration);
+			}
+
 			return result;
 		}
 
@@ -159,7 +163,7 @@ sealed class Instance : IDisposable {
 			this.instance = instance;
 			this.session = session;
 			this.logSenderThread = new InstanceLogSenderThread(instance.Configuration.InstanceGuid, instance.shortName);
-			
+
 			this.session.AddOutputListener(SessionOutput);
 			this.session.SessionEnded += SessionEnded;
 		}
@@ -228,7 +232,7 @@ sealed class Instance : IDisposable {
 			session.SessionEnded -= SessionEnded;
 			session.RemoveOutputListener(SessionOutput);
 			session.Dispose();
-			instance.usedPortTracker.Release(instance.Configuration);
+			instance.portManager.Release(instance.Configuration);
 		}
 	}
 

@@ -98,6 +98,10 @@ public sealed class InstanceManager {
 		return instances.GetInstance(instanceGuid);
 	}
 
+	public void SetInstanceState(Guid instanceGuid, InstanceState instanceState) {
+		instances.Update(instanceGuid, instance => instance with { State = instanceState });
+	}
+
 	public async Task<LaunchInstanceResult> LaunchInstance(Guid instanceGuid) {
 		var instance = GetInstance(instanceGuid);
 		if (instance == null) {
@@ -153,6 +157,12 @@ public sealed class InstanceManager {
 			}
 			else {
 				return false;
+			}
+		}
+
+		public void Update(Guid guid, Func<Instance, Instance> updater) {
+			if (instances.TryReplace(guid, updater)) {
+				Update();
 			}
 		}
 

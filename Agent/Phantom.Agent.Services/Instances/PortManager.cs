@@ -1,9 +1,17 @@
+using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 
 namespace Phantom.Agent.Services.Instances;
 
-sealed class UsedPortTracker {
+sealed class PortManager {
+	private readonly AllowedPorts allowedServerPorts;
+	private readonly AllowedPorts allowedRconPorts;
 	private readonly HashSet<ushort> usedPorts = new ();
+
+	public PortManager(AllowedPorts allowedServerPorts, AllowedPorts allowedRconPorts) {
+		this.allowedServerPorts = allowedServerPorts;
+		this.allowedRconPorts = allowedRconPorts;
+	}
 
 	public Result Reserve(InstanceConfiguration configuration) {
 		lock (usedPorts) {
@@ -31,7 +39,9 @@ sealed class UsedPortTracker {
 
 	public enum Result {
 		Success,
+		ServerPortNotAllowed,
 		ServerPortAlreadyInUse,
+		RconPortNotAllowed,
 		RconPortAlreadyInUse,
 	}
 }

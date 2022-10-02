@@ -16,7 +16,7 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly string basePath;
 
 	private readonly LaunchServices launchServices;
-	private readonly UsedPortTracker usedPortTracker = new ();
+	private readonly PortManager portManager;
 	private readonly Dictionary<Guid, Instance> instances = new ();
 	
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
@@ -27,6 +27,7 @@ sealed class InstanceSessionManager : IDisposable {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
 		this.launchServices = new LaunchServices(new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath), javaRuntimeRepository);
+		this.portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
@@ -67,7 +68,7 @@ sealed class InstanceSessionManager : IDisposable {
 				new ServerProperties(configuration.ServerPort, configuration.RconPort)
 			);
 
-			instances[instanceGuid] = new Instance(configuration, new VanillaLauncher(properties), launchServices, usedPortTracker);
+			instances[instanceGuid] = new Instance(configuration, new VanillaLauncher(properties), launchServices, portManager);
 			
 			return ConfigureInstanceResult.Success;
 		} finally {

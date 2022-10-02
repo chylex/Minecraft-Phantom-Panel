@@ -36,6 +36,11 @@ public sealed class AllowedPortsTests {
 		}
 		
 		[Test]
+		public void SpacesAreTrimmed() {
+			Assert.That(AllowedPorts.FromString(" 12345 ,  21000 - 34000  ").ToString(), Is.EqualTo("12345,21000-34000"));
+		}
+		
+		[Test]
 		public void InvalidSinglePort() {
 			Assert.That(CallFromString("70000"), Throws.Exception.TypeOf<FormatException>().With.Message.EqualTo("Invalid port '70000'."));
 		}

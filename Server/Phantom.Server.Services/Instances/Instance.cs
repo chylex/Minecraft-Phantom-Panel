@@ -4,7 +4,7 @@ namespace Phantom.Server.Services.Instances;
 
 public sealed record Instance(
 	InstanceConfiguration Configuration,
-	InstanceState State = InstanceState.Offline
+	InstanceState State
 ) {
-	
+	internal Instance(InstanceConfiguration configuration) : this(configuration, InstanceState.Offline) {}
 }
