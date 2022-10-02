@@ -98,8 +98,8 @@ public sealed class InstanceManager {
 		return instances.GetInstance(instanceGuid);
 	}
 
-	public void SetInstanceState(Guid instanceGuid, InstanceState instanceState) {
-		instances.Update(instanceGuid, instance => instance with { State = instanceState });
+	public void SetInstanceState(Guid instanceGuid, InstanceStatus instanceStatus) {
+		instances.Update(instanceGuid, instance => instance with { Status = instanceStatus });
 	}
 
 	public async Task<LaunchInstanceResult> LaunchInstance(Guid instanceGuid) {

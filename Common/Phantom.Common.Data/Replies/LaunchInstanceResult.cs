@@ -1,16 +1,12 @@
 ﻿namespace Phantom.Common.Data.Replies; 
 
 public enum LaunchInstanceResult {
-	Success,
+	LaunchInitiated,
 	AgentShuttingDown,
 	InstanceDoesNotExist,
+	InstanceAlreadyLaunching,
 	InstanceAlreadyRunning,
-	JavaRuntimeNotFound,
-	CouldNotDownloadMinecraftServer,
-	ServerPortNotAllowed,
-	ServerPortAlreadyInUse,
-	RconPortNotAllowed,
-	RconPortAlreadyInUse,
+	InstanceIsStopping,
 	CommunicationError,
-	UnknownError,
+	UnknownError
 }

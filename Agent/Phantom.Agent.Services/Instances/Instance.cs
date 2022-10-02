@@ -1,5 +1,5 @@
-﻿using Phantom.Agent.Minecraft.Instance;
-using Phantom.Agent.Minecraft.Launcher;
+﻿using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
@@ -24,7 +24,7 @@ sealed class Instance : IDisposable {
 	private readonly LaunchServices launchServices;
 	private readonly PortManager portManager;
 
-	private IState currentState;
+	private IInstanceState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
 	public Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
@@ -33,13 +33,13 @@ sealed class Instance : IDisposable {
 
 		this.Configuration = configuration;
 		this.Launcher = launcher;
-		
+
 		this.launchServices = launchServices;
 		this.portManager = portManager;
-		this.currentState = new NotRunningState(this);
+		this.currentState = new InstanceNotRunningState();
 	}
 
-	private bool TransitionState(IState newState) {
+	private bool TransitionState(IInstanceState newState) {
 		if (currentState == newState) {
 			return false;
 		}
@@ -65,11 +65,46 @@ sealed class Instance : IDisposable {
 	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
 		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
-			var (state, result) = await currentState.Launch(cancellationToken);
-			TransitionState(state);
-			return result;
+			if (TransitionState(currentState.Launch(CreateContext()))) {
+				return LaunchInstanceResult.LaunchInitiated;
+			}
+
+			return currentState switch {
+				InstanceLaunchingState => LaunchInstanceResult.InstanceAlreadyLaunching,
+				InstanceRunningState   => LaunchInstanceResult.InstanceAlreadyRunning,
+				InstanceStoppingState  => LaunchInstanceResult.InstanceIsStopping,
+				_                      => LaunchInstanceResult.UnknownError
+			};
 		} finally {
 			stateTransitioningActionSemaphore.Release();
+		}
+	}
+
+	public async Task<StopInstanceResult> Stop() {
+		await stateTransitioningActionSemaphore.WaitAsync();
+		try {
+			if (TransitionState(currentState.Stop(CreateContext()))) {
+				return StopInstanceResult.StopInitiated;
+			}
+
+			return currentState switch {
+				InstanceNotRunningState => StopInstanceResult.InstanceAlreadyStopped,
+				InstanceStoppingState   => StopInstanceResult.InstanceAlreadyStopping,
+				_                       => StopInstanceResult.UnknownError
+			};
+		} finally {
+			stateTransitioningActionSemaphore.Release();
+		}
+	}
+
+	public async Task StopAndWait(TimeSpan waitTime) {
+		await Stop();
+
+		using var waitTokenSource = new CancellationTokenSource(waitTime);
+		var waitToken = waitTokenSource.Token;
+
+		while (currentState is not InstanceNotRunningState) {
+			await Task.Delay(TimeSpan.FromMilliseconds(250), waitToken);
 		}
 	}
 
@@ -77,173 +112,29 @@ sealed class Instance : IDisposable {
 		return await currentState.SendCommand(command, cancellationToken);
 	}
 
-	public async Task Stop(TimeSpan waitTime) {
-		await stateTransitioningActionSemaphore.WaitAsync(waitTime);
-		try {
-			TransitionState(await currentState.Stop(waitTime));
-		} finally {
-			stateTransitioningActionSemaphore.Release();
-		}
+	private InstanceContext CreateContext() {
+		return new InstanceContextImpl(this);
 	}
 
-	private interface IState {
-		Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken);
-		Task<bool> SendCommand(string command, CancellationToken cancellationToken);
-		Task<IState> Stop(TimeSpan waitTime);
-	}
-
-	private static Task<IState> FromState(IState state) {
-		return Task.FromResult(state);
-	}
-
-	private sealed class NotRunningState : IState {
+	private sealed class InstanceContextImpl : InstanceContext {
 		private readonly Instance instance;
 
-		public NotRunningState(Instance instance) {
+		public InstanceContextImpl(Instance instance) : base(instance.Configuration, instance.Launcher) {
 			this.instance = instance;
 		}
 
-		public async Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken) {
-			LaunchInstanceResult? portReservationResult = instance.portManager.Reserve(instance.Configuration) switch {
-				PortManager.Result.ServerPortNotAllowed   => LaunchInstanceResult.ServerPortNotAllowed,
-				PortManager.Result.ServerPortAlreadyInUse => LaunchInstanceResult.ServerPortAlreadyInUse,
-				PortManager.Result.RconPortNotAllowed     => LaunchInstanceResult.RconPortNotAllowed,
-				PortManager.Result.RconPortAlreadyInUse   => LaunchInstanceResult.RconPortAlreadyInUse,
-				_                                         => null
-			};
+		public override LaunchServices LaunchServices => instance.launchServices;
+		public override PortManager PortManager => instance.portManager;
+		public override ILogger Logger => instance.logger;
+		public override string ShortName => instance.shortName;
 
-			if (portReservationResult != null) {
-				return (this, portReservationResult.Value);
-			}
-			
-			var result = await LaunchWithReservedPorts(cancellationToken);
-			if (result.Item2 != LaunchInstanceResult.Success) {
-				instance.portManager.Release(instance.Configuration);
-			}
-
-			return result;
-		}
-
-		private async Task<(IState, LaunchInstanceResult)> LaunchWithReservedPorts(CancellationToken cancellationToken) {
-			instance.logger.Information("Session starting...");
-
-			var launchResult = await instance.Launcher.Launch(instance.launchServices, cancellationToken);
-			if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
-				instance.logger.Error("Session failed to launch, could not download Minecraft server.");
-				return (this, LaunchInstanceResult.CouldNotDownloadMinecraftServer);
-			}
-			else if (launchResult is LaunchResult.InvalidJavaRuntime) {
-				instance.logger.Error("Session failed to launch, invalid Java runtime.");
-				return (this, LaunchInstanceResult.JavaRuntimeNotFound);
-			}
-
-			if (launchResult is not LaunchResult.Success launchSuccess) {
-				instance.logger.Error("Session failed to launch.");
-				return (this, LaunchInstanceResult.UnknownError);
-			}
-
-			var session = launchSuccess.Session;
-			var state = new RunningState(instance, session);
-
-			if (session.HasEnded) {
-				instance.logger.Warning("Session ended immediately after it was started.");
-				state.Dispose();
-				return (this, LaunchInstanceResult.UnknownError);
-			}
-			else {
-				instance.logger.Information("Session started.");
-				return (state, LaunchInstanceResult.Success);
-			}
-		}
-
-		public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
-			return Task.FromResult(false);
-		}
-
-		public Task<IState> Stop(TimeSpan waitTime) {
-			return FromState(this);
-		}
-	}
-
-	private sealed class RunningState : IState, IDisposable {
-		private readonly Instance instance;
-		private readonly InstanceSession session;
-		private readonly InstanceLogSenderThread logSenderThread;
-
-		public RunningState(Instance instance, InstanceSession session) {
-			this.instance = instance;
-			this.session = session;
-			this.logSenderThread = new InstanceLogSenderThread(instance.Configuration.InstanceGuid, instance.shortName);
-
-			this.session.AddOutputListener(SessionOutput);
-			this.session.SessionEnded += SessionEnded;
-		}
-
-		private void SessionOutput(object? sender, string e) {
-			instance.logger.Verbose("[Server] {Line}", e);
-			logSenderThread.Enqueue(e);
-		}
-
-		private void SessionEnded(object? sender, EventArgs e) {
-			instance.logger.Information("Session ended.");
-			instance.TransitionState(new NotRunningState(instance));
-		}
-
-		public Task<(IState, LaunchInstanceResult)> Launch(CancellationToken cancellationToken) {
-			(IState, LaunchInstanceResult) result = (this, LaunchInstanceResult.InstanceAlreadyRunning);
-			return Task.FromResult(result);
-		}
-
-		public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		public override void TransitionState(Func<IInstanceState> newState) {
+			instance.stateTransitioningActionSemaphore.Wait();
 			try {
-				instance.logger.Information("Sending command: {Command}", command);
-				await session.SendCommand(command, cancellationToken);
-				return true;
-			} catch (OperationCanceledException) {
-				return false;
-			} catch (Exception e) {
-				instance.logger.Warning(e, "Caught exception while sending command.");
-				return false;
+				instance.TransitionState(newState());
+			} finally {
+				instance.stateTransitioningActionSemaphore.Release();
 			}
-		}
-
-		public async Task<IState> Stop(TimeSpan waitTime) {
-			session.SessionEnded -= SessionEnded;
-
-			instance.logger.Information("Stopping session with a time limit of {TimeLimit}s...", waitTime.TotalSeconds);
-			using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5))) {
-				try {
-					await session.SendCommand("stop", cts.Token);
-				} catch (OperationCanceledException) {
-					// ignore
-				} catch (Exception e) {
-					instance.logger.Warning(e, "Caught exception while sending stop command.");
-				}
-			}
-
-			instance.logger.Information("Waiting for session to end...");
-			using (var cts = new CancellationTokenSource(waitTime)) {
-				try {
-					await session.WaitForExit(cts.Token);
-				} catch (OperationCanceledException) {
-					try {
-						instance.logger.Warning("Waiting timed out, killing session...");
-						session.Kill();
-					} catch (Exception e) {
-						instance.logger.Warning(e, "Caught exception while killing session.");
-					}
-				}
-			}
-
-			return new NotRunningState(instance);
-		}
-
-		public void Dispose() {
-			logSenderThread.Cancel();
-			session.SessionEnded -= SessionEnded;
-			session.RemoveOutputListener(SessionOutput);
-			session.Dispose();
-			instance.portManager.Release(instance.Configuration);
 		}
 	}
 

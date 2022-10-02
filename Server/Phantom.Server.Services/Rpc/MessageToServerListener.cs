@@ -59,8 +59,8 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		agentJavaRuntimesManager.Update(await WaitForAgentGuid(), message.Runtimes);
 	}
 
-	public Task HandleReportInstanceState(ReportInstanceStateMessage message) {
-		instanceManager.SetInstanceState(message.InstanceGuid, message.InstanceState);
+	public Task HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
+		instanceManager.SetInstanceState(message.InstanceGuid, message.InstanceStatus);
 		return Task.CompletedTask;
 	}
 

@@ -14,13 +14,13 @@ public abstract class BaseLauncher {
 	}
 
 	public async Task<LaunchResult> Launch(LaunchServices services, CancellationToken cancellationToken) {
+		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
+			return new LaunchResult.InvalidJavaRuntime();
+		}
+		
 		var serverJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
 		if (serverJarPath == null) {
 			return new LaunchResult.CouldNotDownloadMinecraftServer();
-		}
-
-		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
-			return new LaunchResult.InvalidJavaRuntime();
 		}
 
 		var startInfo = new ProcessStartInfo {

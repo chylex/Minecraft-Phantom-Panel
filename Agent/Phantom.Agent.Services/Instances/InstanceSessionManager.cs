@@ -7,7 +7,6 @@ using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Messages.ToAgent;
 
 namespace Phantom.Agent.Services.Instances;
 
@@ -83,7 +82,7 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 	}
 
-	public async Task<LaunchInstanceResult> Launch(LaunchInstanceMessage message) {
+	public async Task<LaunchInstanceResult> Launch(Guid instanceGuid) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
@@ -91,17 +90,37 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 
 		try {
-			if (!instances.TryGetValue(message.InstanceGuid, out var instance)) {
+			if (!instances.TryGetValue(instanceGuid, out var instance)) {
 				return LaunchInstanceResult.InstanceDoesNotExist;
 			}
-
-			return await instance.Launch(shutdownCancellationToken);
+			else {
+				return await instance.Launch(shutdownCancellationToken);
+			}
 		} finally {
 			semaphore.Release();
 		}
 	}
 
-	public async Task<SendCommandToInstanceResult> SendCommand(SendCommandToInstanceMessage message) {
+	public async Task<StopInstanceResult> Stop(Guid instanceGuid) {
+		try {
+			await semaphore.WaitAsync(shutdownCancellationToken);
+		} catch (OperationCanceledException) {
+			return StopInstanceResult.AgentShuttingDown;
+		}
+
+		try {
+			if (!instances.TryGetValue(instanceGuid, out var instance)) {
+				return StopInstanceResult.InstanceDoesNotExist;
+			}
+			else {
+				return await instance.Stop();
+			}
+		} finally {
+			semaphore.Release();
+		}
+	}
+
+	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
@@ -109,11 +128,11 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 
 		try {
-			if (!instances.TryGetValue(message.InstanceGuid, out var instance)) {
+			if (!instances.TryGetValue(instanceGuid, out var instance)) {
 				return SendCommandToInstanceResult.InstanceDoesNotExist;
 			}
 
-			if (!await instance.SendCommand(message.Command, shutdownCancellationToken)) {
+			if (!await instance.SendCommand(command, shutdownCancellationToken)) {
 				return SendCommandToInstanceResult.UnknownError;
 			}
 			
@@ -128,7 +147,7 @@ sealed class InstanceSessionManager : IDisposable {
 		
 		await semaphore.WaitAsync(CancellationToken.None);
 		try {
-			await Task.WhenAll(instances.Values.Select(static instance => instance.Stop(TimeSpan.FromSeconds(30))));
+			await Task.WhenAll(instances.Values.Select(static instance => instance.StopAndWait(TimeSpan.FromSeconds(30))));
 			instances.Clear();
 		} finally {
 			semaphore.Release();

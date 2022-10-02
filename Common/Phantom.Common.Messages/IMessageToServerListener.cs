@@ -8,7 +8,7 @@ public interface IMessageToServerListener {
 	Task HandleUnregisterAgent(UnregisterAgentMessage message);
 	Task HandleAgentIsAlive(AgentIsAliveMessage message);
 	Task HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message);
-	Task HandleReportInstanceState(ReportInstanceStateMessage message);
+	Task HandleReportInstanceStatus(ReportInstanceStatusMessage message);
 	Task HandleInstanceOutput(InstanceOutputMessage message);
 	Task HandleSimpleReply(SimpleReplyMessage message);
 }

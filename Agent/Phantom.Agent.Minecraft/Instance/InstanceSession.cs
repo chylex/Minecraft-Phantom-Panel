@@ -61,5 +61,7 @@ public sealed class InstanceSession : IDisposable {
 
 	public void Dispose() {
 		process.Dispose();
+		OutputEvent = null;
+		SessionEnded = null;
 	}
 }
