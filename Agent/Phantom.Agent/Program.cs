@@ -15,7 +15,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource);
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 
-	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory) = Variables.LoadOrExit();
+	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentNameOrEmpty, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
 	
 	AgentAuthToken agentAuthToken;
 	try {
@@ -44,7 +44,7 @@ try {
 	}
 
 	var agentName = string.IsNullOrEmpty(agentNameOrEmpty) ? AgentNameGenerator.GenerateFrom(agentGuid.Value) : agentNameOrEmpty;
-	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory);
+	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
 	var agentServices = new AgentServices(agentInfo, folders);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");

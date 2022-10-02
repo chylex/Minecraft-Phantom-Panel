@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent.Minecraft.Java;
+using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
@@ -13,7 +14,10 @@ sealed record Variables(
 	string? AuthTokenFilePath,
 	string AgentNameOrEmpty,
 	ushort MaxInstances,
-	RamAllocationUnits MaxMemory
+	RamAllocationUnits MaxMemory,
+	AllowedPorts AllowedServerPorts,
+	AllowedPorts AllowedRconPorts
+	
 ) {
 	private static Variables LoadOrThrow() {
 		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
@@ -27,7 +31,9 @@ sealed record Variables(
 			authTokenFilePath,
 			EnvironmentVariables.GetString("AGENT_NAME").OrDefault(string.Empty),
 			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES").OrThrow, // TODO
-			RamAllocationUnits.FromString(EnvironmentVariables.GetString("MAX_MEMORY").OrThrow)
+			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).OrThrow,
+			EnvironmentVariables.GetString("ALLOWED_SERVER_PORTS").MapParse(AllowedPorts.FromString).OrThrow,
+			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).OrThrow
 		);
 	}
 

@@ -38,16 +38,24 @@ public static class EnvironmentVariables {
 		public T OrDefault(T defaultValue)             => HasValue ? value! : defaultValue;
 		public T OrGetDefault(Func<T> getDefaultValue) => HasValue ? value! : getDefaultValue();
 
-		internal Value<TResult> Map<TResult>(Func<T, TResult> mapper, string mapperThrowingErrorMessage) where TResult : notnull {
+		internal Value<TResult> Map<TResult>(Func<T, TResult> mapper, Func<Exception, string> mapperThrowingErrorMessage) where TResult : notnull {
 			if (kind is ValueKind.Missing or ValueKind.HasError) {
 				return new Value<TResult>(default, kind, variableName, errorMessage);
 			}
 
 			try {
 				return Value<TResult>.Of(mapper(value!), variableName);
-			} catch (Exception) {
-				return Value<TResult>.Error(variableName, mapperThrowingErrorMessage);
+			} catch (Exception e) {
+				return Value<TResult>.Error(variableName, mapperThrowingErrorMessage(e));
 			}
+		}
+
+		internal Value<TResult> Map<TResult>(Func<T, TResult> mapper, string mapperThrowingErrorMessage) where TResult : notnull {
+			return Map(mapper, _ => mapperThrowingErrorMessage);
+		}
+
+		public Value<TResult> MapParse<TResult>(Func<T, TResult> mapper) where TResult : notnull {
+			return Map(mapper, static e => "Environment variable has invalid format: " + e.Message);
 		}
 	}
 

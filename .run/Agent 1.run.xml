@@ -5,11 +5,13 @@
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Agent1" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
+      <env name="JAVA_SEARCH_PATH" value="C:\Users\Dan\.jdks" />
       <env name="MAX_INSTANCES" value="5" />
       <env name="MAX_MEMORY" value="10G" />
       <env name="SERVER_AUTH_TOKEN_FILE" value="./secrets/agent.token" />
       <env name="SERVER_HOST" value="localhost" />
-      <env name="JAVA_SEARCH_PATH" value="C:\Users\Dan\.jdks" />
+      <env name="ALLOWED_SERVER_PORTS" value="25565,39000-39099" />
+      <env name="ALLOWED_RCON_PORTS" value="25566,39100-39199" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />

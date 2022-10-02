@@ -92,4 +92,12 @@ public readonly record struct RamAllocationUnits(
 		
 		return FromMegabytes(size * unitMultiplier);
 	}
+
+	/// <summary>
+	/// Converts a string in the format &lt;number&gt;{M|G} (case-insensitive) to <see cref="RamAllocationUnits"/>.
+	/// </summary>
+	/// <exception cref="ArgumentOutOfRangeException">If the <paramref name="definition"/> is in the incorrect format, or the value cannot be converted via <see cref="FromMegabytes"/>.</exception>
+	public static RamAllocationUnits FromString(string definition) {
+		return FromString((ReadOnlySpan<char>) definition);
+	}
 }
