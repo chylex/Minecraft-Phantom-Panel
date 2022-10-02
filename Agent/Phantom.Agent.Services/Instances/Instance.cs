@@ -15,12 +15,12 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 
-	public InstanceConfiguration Configuration { get; }
+	public InstanceConfiguration Configuration { get; private set; }
+	public BaseLauncher Launcher { get; private set; }
 
 	private readonly string shortName;
 	private readonly ILogger logger;
 
-	private readonly BaseLauncher launcher;
 	private readonly LaunchServices launchServices;
 	private readonly PortManager portManager;
 
@@ -32,7 +32,8 @@ sealed class Instance : IDisposable {
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Configuration = configuration;
-		this.launcher = launcher;
+		this.Launcher = launcher;
+		
 		this.launchServices = launchServices;
 		this.portManager = portManager;
 		this.currentState = new NotRunningState(this);
@@ -49,6 +50,16 @@ sealed class Instance : IDisposable {
 
 		currentState = newState;
 		return true;
+	}
+
+	public async Task Reconfigure(InstanceConfiguration configuration, BaseLauncher launcher, CancellationToken cancellationToken) {
+		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
+		try {
+			Configuration = configuration;
+			Launcher = launcher;
+		} finally {
+			stateTransitioningActionSemaphore.Release();
+		}
 	}
 
 	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
@@ -116,7 +127,7 @@ sealed class Instance : IDisposable {
 		private async Task<(IState, LaunchInstanceResult)> LaunchWithReservedPorts(CancellationToken cancellationToken) {
 			instance.logger.Information("Session starting...");
 
-			var launchResult = await instance.launcher.Launch(instance.launchServices, cancellationToken);
+			var launchResult = await instance.Launcher.Launch(instance.launchServices, cancellationToken);
 			if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
 				instance.logger.Error("Session failed to launch, could not download Minecraft server.");
 				return (this, LaunchInstanceResult.CouldNotDownloadMinecraftServer);

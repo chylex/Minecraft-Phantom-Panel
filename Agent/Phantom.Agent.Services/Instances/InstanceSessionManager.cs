@@ -31,9 +31,9 @@ sealed class InstanceSessionManager : IDisposable {
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	public ConfigureInstanceResult Configure(InstanceConfiguration configuration) {
+	public async Task<ConfigureInstanceResult> Configure(InstanceConfiguration configuration) {
 		try {
-			semaphore.Wait(shutdownCancellationToken);
+			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
 			return ConfigureInstanceResult.AgentShuttingDown;
 		}
@@ -68,7 +68,14 @@ sealed class InstanceSessionManager : IDisposable {
 				new ServerProperties(configuration.ServerPort, configuration.RconPort)
 			);
 
-			instances[instanceGuid] = new Instance(configuration, new VanillaLauncher(properties), launchServices, portManager);
+			var launcher = new VanillaLauncher(properties);
+			
+			if (instances.TryGetValue(instanceGuid, out var existingInstance)) {
+				await existingInstance.Reconfigure(configuration, launcher, shutdownCancellationToken);
+			}
+			else {
+				instances[instanceGuid] = new Instance(configuration, launcher, launchServices, portManager);
+			}
 			
 			return ConfigureInstanceResult.Success;
 		} finally {

@@ -28,7 +28,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 		foreach (var instanceInfo in message.InitialInstances) {
 			Logger.Information("Configuring instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
 
-			if (agent.InstanceSessionManager.Configure(instanceInfo) != ConfigureInstanceResult.Success) {
+			if (await agent.InstanceSessionManager.Configure(instanceInfo) != ConfigureInstanceResult.Success) {
 				Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
 
 				shutdownTokenSource.Cancel();
@@ -58,7 +58,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 	}
 
 	public async Task HandleConfigureInstance(ConfigureInstanceMessage message) {
-		await socket.SendSimpleReply(message, agent.InstanceSessionManager.Configure(message.Configuration));
+		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Configure(message.Configuration));
 	}
 
 	public async Task HandleLaunchInstance(LaunchInstanceMessage message) {

@@ -55,13 +55,18 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		agentManager.NotifyAgentIsAlive(await WaitForAgentGuid());
 	}
 
-	public Task HandleInstanceOutput(InstanceOutputMessage message) {
-		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
+	public async Task HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message) {
+		agentJavaRuntimesManager.Update(await WaitForAgentGuid(), message.Runtimes);
+	}
+
+	public Task HandleReportInstanceState(ReportInstanceStateMessage message) {
+		instanceManager.SetInstanceState(message.InstanceGuid, message.InstanceState);
 		return Task.CompletedTask;
 	}
 
-	public async Task HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message) {
-		agentJavaRuntimesManager.Update(await WaitForAgentGuid(), message.Runtimes);
+	public Task HandleInstanceOutput(InstanceOutputMessage message) {
+		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
+		return Task.CompletedTask;
 	}
 
 	public Task HandleSimpleReply(SimpleReplyMessage message) {
