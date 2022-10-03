@@ -1,5 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data.Instance;
 
 namespace Phantom.Agent.Services.Instances.States;
@@ -14,17 +15,20 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		this.context.ReportStatus(new InstanceStatus.Downloading(0)); // TODO
 		
 		var launchTask = Task.Run(DoLaunch);
-		launchTask.ContinueWith(OnLaunchSuccess, TaskContinuationOptions.OnlyOnRanToCompletion);
-		launchTask.ContinueWith(OnLaunchFailure, TaskContinuationOptions.NotOnRanToCompletion);
+		launchTask.ContinueWith(OnLaunchSuccess, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+		launchTask.ContinueWith(OnLaunchFailure, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
 	}
 
 	private async Task<InstanceSession> DoLaunch() {
 		var cancellationToken = cancellationTokenSource.Token;
 		cancellationToken.ThrowIfCancellationRequested();
 
-		context.ReportStatus(new InstanceStatus.Downloading(100)); // TODO
+		void OnDownloadProgress(object? sender, DownloadProgressEventArgs args) {
+			ulong progress = Math.Min(args.DownloadedBytes * 100 / args.TotalBytes, 100);
+			context.ReportStatus(new InstanceStatus.Downloading((byte) progress));
+		}
 
-		var launchResult = await context.Launcher.Launch(context.LaunchServices, cancellationToken);
+		var launchResult = await context.Launcher.Launch(context.LaunchServices, OnDownloadProgress, cancellationToken);
 		if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotDownloadMinecraftServer, "Session failed to launch, could not download Minecraft server.");
 		}
@@ -36,6 +40,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 			throw new LaunchFailureException(InstanceLaunchFailReason.UnknownError, "Session failed to launch.");
 		}
 
+		context.ReportStatus(new InstanceStatus.Downloading(100));
 		return launchSuccess.Session;
 	}
 

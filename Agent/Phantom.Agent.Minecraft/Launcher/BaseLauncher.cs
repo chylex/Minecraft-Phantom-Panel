@@ -3,6 +3,7 @@ using System.Text;
 using Kajabity.Tools.Java;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
+using Phantom.Agent.Minecraft.Server;
 
 namespace Phantom.Agent.Minecraft.Launcher;
 
@@ -13,12 +14,12 @@ public abstract class BaseLauncher {
 		this.instanceProperties = instanceProperties;
 	}
 
-	public async Task<LaunchResult> Launch(LaunchServices services, CancellationToken cancellationToken) {
+	public async Task<LaunchResult> Launch(LaunchServices services, EventHandler<DownloadProgressEventArgs> downloadProgressEventHandler, CancellationToken cancellationToken) {
 		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
 			return new LaunchResult.InvalidJavaRuntime();
 		}
 		
-		var serverJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, cancellationToken);
+		var serverJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
 		if (serverJarPath == null) {
 			return new LaunchResult.CouldNotDownloadMinecraftServer();
 		}

@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
@@ -7,15 +8,37 @@ using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
 
-sealed class MinecraftServerExecutableDownloader {
+sealed class MinecraftServerExecutableDownloader : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutableDownloader>();
 
 	private const string VersionManifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
 
 	public Task<string?> Task { get; }
+	public event EventHandler<DownloadProgressEventArgs>? DownloadProgress;
 
 	public MinecraftServerExecutableDownloader(string version, string filePath, CancellationToken cancellationToken) {
 		this.Task = DownloadAndGetPath(version, filePath, cancellationToken);
+	}
+
+	private void ReportDownloadProgress(DownloadProgressEventArgs args) {
+		DownloadProgress?.Invoke(this, args);
+	}
+
+	public void Dispose() {
+		DownloadProgress = null;
+		Task.Dispose();
+	}
+
+	private sealed class DownloadProgressCallback {
+		private readonly MinecraftServerExecutableDownloader downloader;
+
+		public DownloadProgressCallback(MinecraftServerExecutableDownloader downloader) {
+			this.downloader = downloader;
+		}
+
+		public void ReportProgress(ulong downloadedBytes, ulong totalBytes) {
+			downloader.ReportDownloadProgress(new DownloadProgressEventArgs(downloadedBytes, totalBytes));
+		}
 	}
 
 	private async Task<string?> DownloadAndGetPath(string version, string filePath, CancellationToken cancellationToken) {
@@ -34,7 +57,7 @@ sealed class MinecraftServerExecutableDownloader {
 
 			Logger.Information("Downloading server executable from: {Url} ({Size})", serverExecutableInfo.DownloadUrl, serverExecutableInfo.Size.ToHumanReadable(decimalPlaces: 1));
 			try {
-				await FetchServerExecutableFile(http, serverExecutableInfo, filePath, cancellationToken);
+				await FetchServerExecutableFile(http, new DownloadProgressCallback(this), serverExecutableInfo, filePath, cancellationToken);
 			} catch (Exception) {
 				TryDeleteExecutableAfterFailure(filePath);
 				throw;
@@ -77,7 +100,7 @@ sealed class MinecraftServerExecutableDownloader {
 		}
 	}
 
-	private static async Task FetchServerExecutableFile(HttpClient http, ServerExecutableInfo info, string filePath, CancellationToken cancellationToken) {
+	private static async Task FetchServerExecutableFile(HttpClient http, DownloadProgressCallback progressCallback, ServerExecutableInfo info, string filePath, CancellationToken cancellationToken) {
 		Sha1String downloadedFileHash;
 
 		try {
@@ -86,7 +109,9 @@ sealed class MinecraftServerExecutableDownloader {
 
 			await using var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
 			await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-			downloadedFileHash = await StreamHasher.Copy(responseStream, fileStream, cancellationToken);
+
+			using var streamCopier = new MinecraftServerDownloadStreamCopier(progressCallback, info.Size.Bytes);
+			downloadedFileHash = await streamCopier.Copy(responseStream, fileStream, cancellationToken);
 		} catch (OperationCanceledException) {
 			throw;
 		} catch (Exception e) {
@@ -185,6 +210,38 @@ sealed class MinecraftServerExecutableDownloader {
 		}
 
 		return valueElement;
+	}
+
+	private sealed class MinecraftServerDownloadStreamCopier : IDisposable {
+		private readonly StreamCopier streamCopier = new ();
+		private readonly IncrementalHash sha1 = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+
+		private readonly DownloadProgressCallback progressCallback;
+		private readonly ulong totalBytes;
+		private ulong readBytes;
+
+		public MinecraftServerDownloadStreamCopier(DownloadProgressCallback progressCallback, ulong totalBytes) {
+			this.progressCallback = progressCallback;
+			this.totalBytes = totalBytes;
+			this.streamCopier.BufferReady += OnBufferReady;
+		}
+
+		private void OnBufferReady(object? sender, StreamCopier.BufferEventArgs args) {
+			sha1.AppendData(args.Buffer.Span);
+
+			readBytes += (uint) args.Buffer.Length;
+			progressCallback.ReportProgress(readBytes, totalBytes);
+		}
+
+		public async Task<Sha1String> Copy(Stream source, Stream destination, CancellationToken cancellationToken) {
+			await streamCopier.Copy(source, destination, cancellationToken);
+			return Sha1String.FromBytes(sha1.GetHashAndReset());
+		}
+
+		public void Dispose() {
+			sha1.Dispose();
+			streamCopier.Dispose();
+		}
 	}
 
 	private sealed class StopProcedureException : Exception {

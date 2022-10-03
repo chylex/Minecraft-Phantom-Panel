@@ -9,7 +9,7 @@ public sealed class Sha1String {
 		return new Sha1String(hash.ToLowerInvariant());
 	}
 
-	internal static Sha1String FromBytes(byte[] bytes) {
+	public static Sha1String FromBytes(byte[] bytes) {
 		return FromString(Convert.ToHexString(bytes));
 	}
 
