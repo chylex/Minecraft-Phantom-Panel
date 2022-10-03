@@ -1,8 +1,10 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
+using Phantom.Common.Messages.ToServer;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -15,8 +17,14 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 
+	public static async Task<Instance> Create(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
+		var instance = new Instance(configuration, launcher, launchServices, portManager);
+		await instance.ReportNotRunningState();
+		return instance;
+	}
+
 	public InstanceConfiguration Configuration { get; private set; }
-	public BaseLauncher Launcher { get; private set; }
+	private BaseLauncher Launcher { get; set; }
 
 	private readonly string shortName;
 	private readonly ILogger logger;
@@ -27,7 +35,7 @@ sealed class Instance : IDisposable {
 	private IInstanceState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
-	public Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
+	private Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
 		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
@@ -57,8 +65,15 @@ sealed class Instance : IDisposable {
 		try {
 			Configuration = configuration;
 			Launcher = launcher;
+			await ReportNotRunningState();
 		} finally {
 			stateTransitioningActionSemaphore.Release();
+		}
+	}
+
+	private async Task ReportNotRunningState() {
+		if (currentState is InstanceNotRunningState) {
+			await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, InstanceStatus.IsNotRunning));
 		}
 	}
 
@@ -89,6 +104,7 @@ sealed class Instance : IDisposable {
 
 			return currentState switch {
 				InstanceNotRunningState => StopInstanceResult.InstanceAlreadyStopped,
+				InstanceLaunchingState  => StopInstanceResult.StopInitiated,
 				InstanceStoppingState   => StopInstanceResult.InstanceAlreadyStopping,
 				_                       => StopInstanceResult.UnknownError
 			};

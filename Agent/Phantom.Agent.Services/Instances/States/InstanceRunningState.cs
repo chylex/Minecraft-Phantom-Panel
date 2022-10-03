@@ -39,6 +39,7 @@ sealed class InstanceRunningState : IInstanceState {
 	private void SessionEnded(object? sender, EventArgs e) {
 		if (sessionObjects.Dispose()) {
 			context.Logger.Information("Session ended.");
+			context.ReportStatus(InstanceStatus.IsNotRunning);
 			context.TransitionState(new InstanceNotRunningState());
 		}
 	}

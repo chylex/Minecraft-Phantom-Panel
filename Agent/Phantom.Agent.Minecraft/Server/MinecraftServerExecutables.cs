@@ -16,7 +16,7 @@ public sealed class MinecraftServerExecutables {
 		this.basePath = basePath;
 	}
 
-	public async Task<string?> DownloadAndGetPath(string version, CancellationToken cancellationToken) {
+	internal async Task<string?> DownloadAndGetPath(string version, CancellationToken cancellationToken) {
 		string serverExecutableFolderPath = Path.Combine(basePath, VersionFolderSanitizeRegex.Replace(version, "_"));
 		string serverExecutableFilePath = Path.Combine(serverExecutableFolderPath, "server.jar");
 
@@ -44,12 +44,12 @@ public sealed class MinecraftServerExecutables {
 			}
 		}
 
-		var result = await downloader.Task;
-
-		lock (this) {
-			runningDownloadersByVersion.Remove(version);
+		try {
+			return await downloader.Task;
+		} finally {
+			lock (this) {
+				runningDownloadersByVersion.Remove(version);
+			}
 		}
-
-		return result;
 	}
 }

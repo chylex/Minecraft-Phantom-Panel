@@ -73,7 +73,7 @@ sealed class InstanceSessionManager : IDisposable {
 				await existingInstance.Reconfigure(configuration, launcher, shutdownCancellationToken);
 			}
 			else {
-				instances[instanceGuid] = new Instance(configuration, launcher, launchServices, portManager);
+				instances[instanceGuid] = await Instance.Create(configuration, launcher, launchServices, portManager);
 			}
 			
 			return ConfigureInstanceResult.Success;

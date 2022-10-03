@@ -14,9 +14,9 @@ public abstract record InstanceStatus {
 	public static readonly InstanceStatus IsNotRunning = new NotRunning();
 	public static readonly InstanceStatus IsRunning = new Running();
 	public static readonly InstanceStatus IsStopping = new Stopping();
-	
+
 	[MessagePackObject]
-	private sealed record Offline : InstanceStatus;
+	public sealed record Offline : InstanceStatus;
 
 	[MessagePackObject]
 	public sealed record Invalid(
@@ -24,21 +24,35 @@ public abstract record InstanceStatus {
 	) : InstanceStatus;
 
 	[MessagePackObject]
-	private sealed record NotRunning : InstanceStatus;
-	
+	public sealed record NotRunning : InstanceStatus;
+
 	[MessagePackObject]
 	public sealed record Downloading(
 		[property: Key(0)] byte Progress
 	) : InstanceStatus;
-	
+
 	[MessagePackObject]
-	private sealed record Running : InstanceStatus;
-	
+	public sealed record Running : InstanceStatus;
+
 	[MessagePackObject]
-	private sealed record Stopping : InstanceStatus;
-	
+	public sealed record Stopping : InstanceStatus;
+
 	[MessagePackObject]
 	public sealed record Failed(
 		[property: Key(0)] InstanceLaunchFailReason Reason
 	) : InstanceStatus;
+}
+
+public static class InstanceStatusExtensions {
+	public static bool CanLaunch(this InstanceStatus status) {
+		return status is InstanceStatus.NotRunning or InstanceStatus.Failed;
+	}
+
+	public static bool CanStop(this InstanceStatus status) {
+		return status is InstanceStatus.Downloading or InstanceStatus.Running;
+	}
+
+	public static bool CanSendCommand(this InstanceStatus status) {
+		return status is InstanceStatus.Running;
+	}
 }

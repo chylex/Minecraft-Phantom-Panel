@@ -1,24 +1,29 @@
 ﻿using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using MessagePack;
 
 namespace Phantom.Common.Data.Agent;
 
+[MessagePackObject]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed class AllowedPorts {
-	private readonly ImmutableArray<PortRange> allDefinitions;
+	[Key(0)]
+	public ImmutableArray<PortRange> AllDefinitions { get; }
 
-	private AllowedPorts(ImmutableArray<PortRange> allDefinitions) {
+	public AllowedPorts(ImmutableArray<PortRange> allDefinitions) {
 		// TODO normalize and deduplicate ranges
-		this.allDefinitions = allDefinitions.Sort(static (def1, def2) => def1.FirstPort - def2.FirstPort);
+		this.AllDefinitions = allDefinitions.Sort(static (def1, def2) => def1.FirstPort - def2.FirstPort);
 	}
 
 	public bool Contains(ushort port) {
-		return allDefinitions.Any(definition => definition.Contains(port));
+		return AllDefinitions.Any(definition => definition.Contains(port));
 	}
 
 	public override string ToString() {
 		var builder = new StringBuilder();
 
-		foreach (var definition in allDefinitions) {
+		foreach (var definition in AllDefinitions) {
 			definition.ToString(builder);
 			builder.Append(',');
 		}
@@ -30,14 +35,18 @@ public sealed class AllowedPorts {
 		return builder.ToString();
 	}
 
-	private readonly record struct PortRange(ushort FirstPort, ushort LastPort) {
+	[MessagePackObject]
+	public readonly record struct PortRange(
+		[property: Key(0)] ushort FirstPort,
+		[property: Key(1)] ushort LastPort
+	) {
 		private PortRange(ushort port) : this(port, port) {}
 
-		public bool Contains(ushort port) {
+		internal bool Contains(ushort port) {
 			return port >= FirstPort && port <= LastPort;
 		}
 
-		public void ToString(StringBuilder builder) {
+		internal void ToString(StringBuilder builder) {
 			builder.Append(FirstPort);
 
 			if (LastPort != FirstPort) {
@@ -46,7 +55,7 @@ public sealed class AllowedPorts {
 			}
 		}
 
-		public static PortRange Parse(ReadOnlySpan<char> definition) {
+		internal static PortRange Parse(ReadOnlySpan<char> definition) {
 			int separatorIndex = definition.IndexOf('-');
 			if (separatorIndex == -1) {
 				var port = ParsePort(definition.Trim());

@@ -1,7 +1,8 @@
 ﻿@page "/instances"
-@using System.Collections.Immutable
+@using Phantom.Common.Data.Instance
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Instances
+@using System.Collections.Immutable
 @implements IDisposable
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager
@@ -18,6 +19,7 @@
       <th>Port</th>
       <th class="text-end">Memory</th>
       <th>Identifier</th>
+      <th>Status</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -29,10 +31,43 @@
         <tr>
           <td>@configuration.InstanceName</td>
           <td>@(agentNames.TryGetValue(configuration.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
-          <td><code>@configuration.ServerPort</code></td>
+          <td>
+            <code>@configuration.ServerPort</code>
+          </td>
           <td class="text-end">@configuration.MemoryAllocation.InMegabytes MB</td>
           <td>
             <code class="text-uppercase">@instanceGuid</code>
+          </td>
+          <td>
+            @switch (instance.Status) {
+              case InstanceStatus.Offline:
+                <text>Offline</text>
+                break;
+
+              case InstanceStatus.Invalid invalid:
+                <text>Invalid <sup title="@invalid.Reason">[?]</sup></text>
+                break;
+
+              case InstanceStatus.NotRunning:
+                <text>Not Running</text>
+                break;
+
+              case InstanceStatus.Downloading downloading:
+                <text>Downloading Server (@downloading.Progress%)</text>
+                break;
+
+              case InstanceStatus.Running:
+                <text>Running</text>
+                break;
+
+              case InstanceStatus.Stopping:
+                <text>Stopping</text>
+                break;
+
+              case InstanceStatus.Failed failed:
+                <text>Failed <sup title="@failed.Reason.ToSentence()">[?]</sup></text>
+                break;
+            }
           </td>
           <td>
             <a href="/instances/@instanceGuid" class="btn btn-outline-info btn-sm">Detail</a>
@@ -43,7 +78,7 @@
   }
   <tfoot>
     <tr>
-      <td colspan="6">
+      <td colspan="7">
         @if (instances.IsEmpty) {
           <text>No instances.</text>
         }
@@ -58,20 +93,20 @@
   private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
 
   protected override void OnInitialized() {
-    AgentManager.AgentsChanged.Subscribe(this, agents => {
-      this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
+    InstanceManager.InstancesChanged.Subscribe(this, instances => {
+      this.instances = instances.Values.OrderBy(static instance => instance.Configuration.InstanceName).ToImmutableArray();
       InvokeAsync(StateHasChanged);
     });
-    
-    InstanceManager.InstancesChanged.Subscribe(this, instances => {
-      this.instances = instances;
+
+    AgentManager.AgentsChanged.Subscribe(this, agents => {
+      this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
       InvokeAsync(StateHasChanged);
     });
   }
 
   void IDisposable.Dispose() {
-    AgentManager.AgentsChanged.Unsubscribe(this);
     InstanceManager.InstancesChanged.Unsubscribe(this);
+    AgentManager.AgentsChanged.Unsubscribe(this);
   }
 
 }

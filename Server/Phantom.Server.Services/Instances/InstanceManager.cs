@@ -17,7 +17,7 @@ public sealed class InstanceManager {
 
 	private readonly ObservableInstances instances = new (PhantomLogger.Create<InstanceManager, ObservableInstances>());
 
-	public EventSubscribers<ImmutableArray<Instance>> InstancesChanged => instances.Subs;
+	public EventSubscribers<ImmutableDictionary<Guid, Instance>> InstancesChanged => instances.Subs;
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentManager agentManager;
@@ -112,6 +112,16 @@ public sealed class InstanceManager {
 		return reply ?? LaunchInstanceResult.CommunicationError;
 	}
 
+	public async Task<StopInstanceResult> StopInstance(Guid instanceGuid) {
+		var instance = GetInstance(instanceGuid);
+		if (instance == null) {
+			return StopInstanceResult.InstanceDoesNotExist;
+		}
+
+		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(300));
+		return reply ?? StopInstanceResult.CommunicationError;
+	}
+
 	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
 		var instance = GetInstance(instanceGuid);
 		if (instance != null) {
@@ -127,10 +137,10 @@ public sealed class InstanceManager {
 	}
 
 	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {
-		return instances.GetInstances().Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
+		return instances.GetInstances().Values.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
 	}
 
-	private sealed class ObservableInstances : ObservableState<ImmutableArray<Instance>> {
+	private sealed class ObservableInstances : ObservableState<ImmutableDictionary<Guid, Instance>> {
 		private readonly RwLockedDictionary<Guid, Instance> instances = new (LockRecursionPolicy.NoRecursion);
 
 		public ObservableInstances(ILogger logger) : base(logger) {}
@@ -170,12 +180,12 @@ public sealed class InstanceManager {
 			return instances.TryGetValue(instanceGuid, out var instance) ? instance : null;
 		}
 
-		public ImmutableArray<Instance> GetInstances() {
-			return instances.ValuesCopy;
+		public ImmutableDictionary<Guid, Instance> GetInstances() {
+			return instances.ToImmutable();
 		}
 
-		protected override ImmutableArray<Instance> GetData() {
-			return instances.ValuesCopy;
+		protected override ImmutableDictionary<Guid, Instance> GetData() {
+			return instances.ToImmutable();
 		}
 	}
 }

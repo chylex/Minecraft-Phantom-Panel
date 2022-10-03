@@ -36,8 +36,8 @@ public sealed class AgentStatsManager {
 			Update();
 		}
 
-		public void UpdateInstances(ImmutableArray<Instance> newInstances) {
-			instancesByAgentGuid = newInstances.GroupBy(static instance => instance.Configuration.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
+		public void UpdateInstances(ImmutableDictionary<Guid, Instance> newInstances) {
+			instancesByAgentGuid = newInstances.Values.GroupBy(static instance => instance.Configuration.AgentGuid, static (agentGuid, instances) => KeyValuePair.Create(agentGuid, instances.ToImmutableArray())).ToImmutableDictionary();
 			Update();
 		}
 

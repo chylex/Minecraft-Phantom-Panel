@@ -5,11 +5,11 @@ using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Serilog;
 
-namespace Phantom.Agent.Minecraft.Server; 
+namespace Phantom.Agent.Minecraft.Server;
 
 sealed class MinecraftServerExecutableDownloader {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutableDownloader>();
-	
+
 	private const string VersionManifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
 
 	public Task<string?> Task { get; }
@@ -42,6 +42,9 @@ sealed class MinecraftServerExecutableDownloader {
 
 			Logger.Information("Server version {Version} downloaded.", version);
 			return filePath;
+		} catch (OperationCanceledException) {
+			Logger.Information("Download for server version {Version} was cancelled.", version);
+			throw;
 		} catch (StopProcedureException) {
 			return null;
 		} catch (Exception e) {
@@ -78,18 +81,14 @@ sealed class MinecraftServerExecutableDownloader {
 		Sha1String downloadedFileHash;
 
 		try {
+			var response = await http.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+			response.EnsureSuccessStatusCode();
+
 			await using var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-
-			try {
-				var response = await http.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-				response.EnsureSuccessStatusCode();
-
-				await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-				downloadedFileHash = await StreamHasher.Copy(responseStream, fileStream, cancellationToken);
-			} catch (Exception e) {
-				Logger.Error(e, "Unable to download server executable.");
-				throw StopProcedureException.Instance;
-			}
+			await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+			downloadedFileHash = await StreamHasher.Copy(responseStream, fileStream, cancellationToken);
+		} catch (OperationCanceledException) {
+			throw;
 		} catch (Exception e) {
 			Logger.Error(e, "Unable to download server executable.");
 			throw StopProcedureException.Instance;

@@ -43,6 +43,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		context.TransitionState(() => {
 			if (cancellationTokenSource.IsCancellationRequested) {
 				context.PortManager.Release(context.Configuration);
+				context.ReportStatus(InstanceStatus.IsNotRunning);
 				return new InstanceNotRunningState();
 			}
 			else {
@@ -55,6 +56,9 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		if (task.Exception is { InnerException: LaunchFailureException e }) {
 			context.Logger.Error(e.LogMessage);
 			context.ReportStatus(new InstanceStatus.Failed(e.Reason));
+		}
+		else {
+			context.ReportStatus(new InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
 		}
 		
 		context.PortManager.Release(context.Configuration);

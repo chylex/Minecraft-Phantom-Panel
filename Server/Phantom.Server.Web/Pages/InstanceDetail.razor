@@ -1,8 +1,9 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
+@using Phantom.Common.Data.Instance
+@using Phantom.Common.Data.Replies
 @using Phantom.Server.Services.Instances
 @using Phantom.Utils.Collections
 @using Phantom.Utils.Events
-@using Phantom.Common.Data.Replies
 @implements IDisposable
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
@@ -14,9 +15,10 @@
 }
 else {
   <h1>Instance: @Instance.Configuration.InstanceName</h1>
-  <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@isLaunchingInstance">Launch</button>
-  @if (launchError != null) {
-    <p class="text-danger">@launchError</p>
+  <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
+  <button type="button" class="btn btn-danger" @onclick="StopInstance" disabled="@(isStoppingInstance || !Instance.Status.CanStop())">Stop</button>
+  @if (lastError != null) {
+    <p class="text-danger">@lastError</p>
   }
   <div id="log" class="font-monospace mb-3">
     @foreach (var line in instanceLogs.EnumerateLast(uint.MaxValue)) {
@@ -29,7 +31,7 @@ else {
       <label for="command-input" class="form-label">Instance Name</label>
       <div class="input-group flex-nowrap">
         <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
-        <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" disabled="@isSendingCommand" @ref="commandInputElement" />
+        <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" disabled="@(isSendingCommand || !Instance.Status.CanSendCommand())" @ref="commandInputElement" />
         <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(commandInput) || isSendingCommand)">Execute</button>
       </div>
     </form>
@@ -41,8 +43,9 @@ else {
   [Parameter]
   public Guid InstanceGuid { get; set; }
 
-  private string? launchError = null;
+  private string? lastError = null;
   private bool isLaunchingInstance = false;
+  private bool isStoppingInstance = false;
 
   private ElementReference commandInputElement;
   private string commandInput = string.Empty;
@@ -55,7 +58,14 @@ else {
   private RingBuffer<string> instanceLogs = null!;
 
   protected override void OnInitialized() {
-    Instance = InstanceManager.GetInstance(InstanceGuid);
+    InstanceManager.InstancesChanged.Subscribe(this, instances => {
+      var newInstance = instances.TryGetValue(InstanceGuid, out var instance) ? instance : null;
+      if (newInstance != Instance) {
+        Instance = newInstance;
+        InvokeAsync(StateHasChanged);
+      }
+    });
+    
     instanceLogsSubs = InstanceLogManager.GetSubs(InstanceGuid);
     instanceLogsSubs.Subscribe(this, buffer => {
       instanceLogs = buffer;
@@ -74,11 +84,20 @@ else {
 
   private async Task LaunchInstance() {
     isLaunchingInstance = true;
-    launchError = null;
+    lastError = null;
     
     var result = await InstanceManager.LaunchInstance(InstanceGuid);
-    launchError = GetLaunchResultError(result);
+    lastError = result == LaunchInstanceResult.LaunchInitiated ? null : result.ToSentence();
     isLaunchingInstance = false;
+  }
+
+  private async Task StopInstance() {
+    isStoppingInstance = true;
+    lastError = null;
+    
+    var result = await InstanceManager.StopInstance(InstanceGuid);
+    lastError = result == StopInstanceResult.StopInitiated ? null : result.ToSentence();
+    isStoppingInstance = false;
   }
 
   private async Task RefreshLog() {
@@ -106,23 +125,7 @@ else {
 
   public void Dispose() {
     instanceLogsSubs.Unsubscribe(this);
-  }
-
-  private static string? GetLaunchResultError(LaunchInstanceResult result) {
-    return result switch {
-           LaunchInstanceResult.LaunchInitiated => null,
-           LaunchInstanceResult.AgentShuttingDown => "Agent is shutting down.",
-           LaunchInstanceResult.InstanceDoesNotExist => "Instance does not exist.",
-           LaunchInstanceResult.InstanceAlreadyRunning => "Instance is already running.",
-           // LaunchInstanceResult.JavaRuntimeNotFound => "Java runtime not found.",
-           // LaunchInstanceResult.CouldNotDownloadMinecraftServer => "Could not download Minecraft server.",
-           // LaunchInstanceResult.ServerPortNotAllowed => "Server port is not allowed.",
-           // LaunchInstanceResult.ServerPortAlreadyInUse => "Server port is already in use.",
-           // LaunchInstanceResult.RconPortNotAllowed => "Rcon port is not allowed.",
-           // LaunchInstanceResult.RconPortAlreadyInUse => "Rcon port is already in use.",
-           LaunchInstanceResult.CommunicationError => "Communication error.",
-           _ => "Unknown error."
-           };
+    InstanceManager.InstancesChanged.Unsubscribe(this);
   }
 
 }

@@ -1,7 +1,7 @@
 ﻿@page "/instances/create"
 @using Phantom.Server.Web.Components.Utils
-@using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Instances
+@using Phantom.Server.Services.Agents
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
@@ -15,8 +15,8 @@
 
 <h1>New Instance</h1>
 
-<EditForm EditContext="editContext" OnSubmit="Submit">
-  <DataAnnotationsValidator />
+<editform EditContext="  editContext" OnSubmit="Submit">
+  <dataannotationsvalidator />
 
   <div class="row">
     <div class="col-xl-7 mb-3">
@@ -38,7 +38,7 @@
       <FormTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
     </div>
   </div>
-  
+
   <div class="row">
     <div class="col-xl-4 mb-3">
       <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
@@ -83,7 +83,7 @@
   </div>
 
   <FormButtonSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
-</EditForm>
+</editform>
 
 @code {
 
@@ -199,23 +199,10 @@
     var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);
-      return;
     }
-
-    submitModel.StopSubmitting(GetResultError(result));
-  }
-
-  private static string? GetResultError(AddInstanceResult result) {
-    return result switch {
-           AddInstanceResult.Success                     => null,
-           AddInstanceResult.InstanceNameMustNotBeEmpty  => "Instance name must not be empty.",
-           AddInstanceResult.InstanceMemoryMustNotBeZero => "Memory must not be 0 MB.",
-           AddInstanceResult.AgentNotFound               => "Agent not found.",
-           AddInstanceResult.AgentInstanceLimitExceeded  => "Agent instance limit exceeded.",
-           AddInstanceResult.AgentMemoryLimitExceeded    => "Agent memory limit exceeded.",
-           AddInstanceResult.AgentCommunicationError     => "Agent did not reply in time.",
-           _                                             => "Unknown error."
-           };
+    else {
+      submitModel.StopSubmitting(result.ToSentence());
+    }
   }
 
 }
