@@ -130,6 +130,7 @@ sealed class Instance : IDisposable {
 
 	private sealed class InstanceContextImpl : InstanceContext {
 		private readonly Instance instance;
+		private int statusUpdateCounter;
 
 		public InstanceContextImpl(Instance instance) : base(instance.Configuration, instance.Launcher) {
 			this.instance = instance;
@@ -141,9 +142,13 @@ sealed class Instance : IDisposable {
 		public override string ShortName => instance.shortName;
 
 		public override void ReportStatus(InstanceStatus newStatus) {
+			int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
+			
 			Task.Run(async () => {
-				instance.currentStatus = newStatus;
-				await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
+				if (myStatusUpdateCounter == statusUpdateCounter) {
+					instance.currentStatus = newStatus;
+					await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
+				}
 			});
 		}
 

@@ -52,7 +52,9 @@
                 break;
 
               case InstanceStatus.Downloading downloading:
-                <text>Downloading Server (@downloading.Progress%)</text>
+                <ProgressBar Value="@downloading.Progress" Maximum="100">
+                  Downloading Server (@downloading.Progress%)
+                </ProgressBar>
                 break;
 
               case InstanceStatus.Launching:
