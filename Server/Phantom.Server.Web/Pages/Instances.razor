@@ -19,7 +19,7 @@
       <th style="width: 125px;" class="text-center">Port</th>
       <th style="width: 125px;" class="text-end">Memory</th>
       <th style="width: 350px;">Identifier</th>
-      <th style="width: 200px;">Status</th>
+      <th style="width: 225px;">Status</th>
       <th style="width: 200px;">Actions</th>
     </tr>
   </thead>
@@ -53,6 +53,10 @@
 
               case InstanceStatus.Downloading downloading:
                 <text>Downloading Server (@downloading.Progress%)</text>
+                break;
+
+              case InstanceStatus.Launching:
+                <text>Launching</text>
                 break;
 
               case InstanceStatus.Running:

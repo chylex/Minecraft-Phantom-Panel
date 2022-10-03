@@ -35,6 +35,7 @@ public sealed class MinecraftServerExecutables {
 
 		lock (this) {
 			if (runningDownloadersByVersion.TryGetValue(version, out var existingTask)) {
+				// TODO handle cancellation tokens so that individual calls can be cancelled without interrupting others
 				Logger.Information("A download for server version {Version} is already running, waiting for it to finish...", version);
 				downloader = existingTask;
 			}

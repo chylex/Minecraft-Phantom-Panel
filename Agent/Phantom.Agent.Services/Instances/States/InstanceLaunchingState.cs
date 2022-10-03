@@ -8,11 +8,12 @@ namespace Phantom.Agent.Services.Instances.States;
 sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	private readonly InstanceContext context;
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
+	private byte lastDownloadProgress = byte.MaxValue;
 
 	public InstanceLaunchingState(InstanceContext context) {
 		this.context = context;
 		this.context.Logger.Information("Session starting...");
-		this.context.ReportStatus(new InstanceStatus.Downloading(0)); // TODO
+		this.context.ReportStatus(InstanceStatus.IsLaunching);
 		
 		var launchTask = Task.Run(DoLaunch);
 		launchTask.ContinueWith(OnLaunchSuccess, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
@@ -22,10 +23,14 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	private async Task<InstanceSession> DoLaunch() {
 		var cancellationToken = cancellationTokenSource.Token;
 		cancellationToken.ThrowIfCancellationRequested();
-
+		
 		void OnDownloadProgress(object? sender, DownloadProgressEventArgs args) {
-			ulong progress = Math.Min(args.DownloadedBytes * 100 / args.TotalBytes, 100);
-			context.ReportStatus(new InstanceStatus.Downloading((byte) progress));
+			byte progress = (byte) Math.Min(args.DownloadedBytes * 100 / args.TotalBytes, 100);
+			
+			if (lastDownloadProgress != progress) {
+				lastDownloadProgress = progress;
+				context.ReportStatus(new InstanceStatus.Downloading(progress));
+			}
 		}
 
 		var launchResult = await context.Launcher.Launch(context.LaunchServices, OnDownloadProgress, cancellationToken);
@@ -40,7 +45,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 			throw new LaunchFailureException(InstanceLaunchFailReason.UnknownError, "Session failed to launch.");
 		}
 
-		context.ReportStatus(new InstanceStatus.Downloading(100));
+		context.ReportStatus(InstanceStatus.IsLaunching);
 		return launchSuccess.Session;
 	}
 

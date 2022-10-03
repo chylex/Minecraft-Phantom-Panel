@@ -45,6 +45,7 @@ sealed class MinecraftServerExecutableDownloader : IDisposable {
 		Logger.Information("Downloading server version {Version}...", version);
 
 		HttpClient http = new HttpClient();
+		string tmpFilePath = filePath + ".tmp";
 
 		try {
 			Logger.Information("Fetching version manifest from: {Url}", VersionManifestUrl);
@@ -57,13 +58,15 @@ sealed class MinecraftServerExecutableDownloader : IDisposable {
 
 			Logger.Information("Downloading server executable from: {Url} ({Size})", serverExecutableInfo.DownloadUrl, serverExecutableInfo.Size.ToHumanReadable(decimalPlaces: 1));
 			try {
-				await FetchServerExecutableFile(http, new DownloadProgressCallback(this), serverExecutableInfo, filePath, cancellationToken);
+				await FetchServerExecutableFile(http, new DownloadProgressCallback(this), serverExecutableInfo, tmpFilePath, cancellationToken);
 			} catch (Exception) {
-				TryDeleteExecutableAfterFailure(filePath);
+				TryDeleteExecutableAfterFailure(tmpFilePath);
 				throw;
 			}
 
+			File.Move(tmpFilePath, filePath, true);
 			Logger.Information("Server version {Version} downloaded.", version);
+			
 			return filePath;
 		} catch (OperationCanceledException) {
 			Logger.Information("Download for server version {Version} was cancelled.", version);

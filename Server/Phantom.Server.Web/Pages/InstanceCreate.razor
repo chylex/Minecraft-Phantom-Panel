@@ -15,8 +15,8 @@
 
 <h1>New Instance</h1>
 
-<editform EditContext="  editContext" OnSubmit="Submit">
-  <dataannotationsvalidator />
+<EditForm EditContext="editContext" OnSubmit="Submit">
+  <DataAnnotationsValidator />
 
   <div class="row">
     <div class="col-xl-7 mb-3">
@@ -83,7 +83,7 @@
   </div>
 
   <FormButtonSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
-</editform>
+</EditForm>
 
 @code {
 
