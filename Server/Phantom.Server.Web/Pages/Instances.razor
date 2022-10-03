@@ -14,24 +14,23 @@
 <table class="table align-middle">
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Agent</th>
-      <th>Port</th>
-      <th class="text-end">Memory</th>
-      <th>Identifier</th>
-      <th>Status</th>
-      <th>Actions</th>
+      <th style="min-width: 200px;">Name</th>
+      <th style="min-width: 200px;">Agent</th>
+      <th style="width: 125px;" class="text-center">Port</th>
+      <th style="width: 125px;" class="text-end">Memory</th>
+      <th style="width: 350px;">Identifier</th>
+      <th style="width: 200px;">Status</th>
+      <th style="width: 200px;">Actions</th>
     </tr>
   </thead>
   @if (!instances.IsEmpty) {
     <tbody>
-      @foreach (var instance in instances) {
-        var configuration = instance.Configuration;
+      @foreach (var (configuration, status) in instances) {
         var instanceGuid = configuration.InstanceGuid.ToString();
         <tr>
           <td>@configuration.InstanceName</td>
           <td>@(agentNames.TryGetValue(configuration.AgentGuid, out var agentName) ? agentName : string.Empty)</td>
-          <td>
+          <td class="text-center">
             <code>@configuration.ServerPort</code>
           </td>
           <td class="text-end">@configuration.MemoryAllocation.InMegabytes MB</td>
@@ -39,7 +38,7 @@
             <code class="text-uppercase">@instanceGuid</code>
           </td>
           <td>
-            @switch (instance.Status) {
+            @switch (status) {
               case InstanceStatus.Offline:
                 <text>Offline</text>
                 break;

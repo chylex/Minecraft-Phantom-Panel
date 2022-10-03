@@ -1,8 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
-using Phantom.Common.Messages.ToServer;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -21,13 +19,10 @@ abstract class InstanceContext {
 		Launcher = launcher;
 	}
 
+	public abstract void ReportStatus(InstanceStatus newStatus);
 	public abstract void TransitionState(Func<IInstanceState> newState);
 
 	public void TransitionState(IInstanceState newState) {
 		TransitionState(() => newState);
-	}
-
-	public void ReportStatus(InstanceStatus status) {
-		Task.Run(() => ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status)));
 	}
 }

@@ -19,7 +19,7 @@ sealed class Instance : IDisposable {
 
 	public static async Task<Instance> Create(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
 		var instance = new Instance(configuration, launcher, launchServices, portManager);
-		await instance.ReportNotRunningState();
+		await instance.ReportLastStatus();
 		return instance;
 	}
 
@@ -32,6 +32,7 @@ sealed class Instance : IDisposable {
 	private readonly LaunchServices launchServices;
 	private readonly PortManager portManager;
 
+	private InstanceStatus currentStatus;
 	private IInstanceState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
@@ -45,8 +46,13 @@ sealed class Instance : IDisposable {
 		this.launchServices = launchServices;
 		this.portManager = portManager;
 		this.currentState = new InstanceNotRunningState();
+		this.currentStatus = InstanceStatus.IsNotRunning;
 	}
 
+	private async Task ReportLastStatus() {
+		await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
+	}
+	
 	private bool TransitionState(IInstanceState newState) {
 		if (currentState == newState) {
 			return false;
@@ -65,22 +71,16 @@ sealed class Instance : IDisposable {
 		try {
 			Configuration = configuration;
 			Launcher = launcher;
-			await ReportNotRunningState();
+			await ReportLastStatus();
 		} finally {
 			stateTransitioningActionSemaphore.Release();
-		}
-	}
-
-	private async Task ReportNotRunningState() {
-		if (currentState is InstanceNotRunningState) {
-			await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, InstanceStatus.IsNotRunning));
 		}
 	}
 
 	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
 		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
-			if (TransitionState(currentState.Launch(CreateContext()))) {
+			if (TransitionState(currentState.Launch(new InstanceContextImpl(this)))) {
 				return LaunchInstanceResult.LaunchInitiated;
 			}
 
@@ -98,7 +98,7 @@ sealed class Instance : IDisposable {
 	public async Task<StopInstanceResult> Stop() {
 		await stateTransitioningActionSemaphore.WaitAsync();
 		try {
-			if (TransitionState(currentState.Stop(CreateContext()))) {
+			if (TransitionState(currentState.Stop(new InstanceContextImpl(this)))) {
 				return StopInstanceResult.StopInitiated;
 			}
 
@@ -128,10 +128,6 @@ sealed class Instance : IDisposable {
 		return await currentState.SendCommand(command, cancellationToken);
 	}
 
-	private InstanceContext CreateContext() {
-		return new InstanceContextImpl(this);
-	}
-
 	private sealed class InstanceContextImpl : InstanceContext {
 		private readonly Instance instance;
 
@@ -143,6 +139,13 @@ sealed class Instance : IDisposable {
 		public override PortManager PortManager => instance.portManager;
 		public override ILogger Logger => instance.logger;
 		public override string ShortName => instance.shortName;
+
+		public override void ReportStatus(InstanceStatus newStatus) {
+			Task.Run(async () => {
+				instance.currentStatus = newStatus;
+				await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
+			});
+		}
 
 		public override void TransitionState(Func<IInstanceState> newState) {
 			instance.stateTransitioningActionSemaphore.Wait();
