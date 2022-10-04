@@ -39,7 +39,7 @@ code {
 }
 
 .table > :not(:first-child) {
-  border-top-color: #a6a6a6;
+  border-top: 2px solid #a6a6a6;
 }
 
 .form-range {

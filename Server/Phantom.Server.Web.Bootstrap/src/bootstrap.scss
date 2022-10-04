@@ -1,6 +1,12 @@
 ﻿@import "./theme";
 
-$min-contrast-ratio: 4.5 !default;
-$btn-disabled-opacity: 0.75 !default;
+$btn-disabled-opacity: 0.7;
+$green: darken($green, 10%);
+$success: $green;
+$link-color: $success;
 
 @import "./components";
+
+.spinner-border-sm {
+  --bs-spinner-border-width: 0.15em;
+}

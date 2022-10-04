@@ -15,8 +15,13 @@
 }
 else {
   <h1>Instance: @Instance.Configuration.InstanceName</h1>
-  <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
-  <button type="button" class="btn btn-danger" @onclick="StopInstance" disabled="@(isStoppingInstance || !Instance.Status.CanStop())">Stop</button>
+  <div class="d-flex flex-row align-items-center gap-2">
+    <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
+    <button type="button" class="btn btn-danger" @onclick="StopInstance" disabled="@(isStoppingInstance || !Instance.Status.CanStop())">Stop</button>
+    <div class="ms-2">
+      <InstanceStatusText Status="Instance.Status" />
+    </div>
+  </div>
   @if (lastError != null) {
     <p class="text-danger">@lastError</p>
   }
@@ -65,7 +70,7 @@ else {
         InvokeAsync(StateHasChanged);
       }
     });
-    
+
     instanceLogsSubs = InstanceLogManager.GetSubs(InstanceGuid);
     instanceLogsSubs.Subscribe(this, buffer => {
       instanceLogs = buffer;
@@ -85,7 +90,7 @@ else {
   private async Task LaunchInstance() {
     isLaunchingInstance = true;
     lastError = null;
-    
+
     var result = await InstanceManager.LaunchInstance(InstanceGuid);
     lastError = result == LaunchInstanceResult.LaunchInitiated ? null : result.ToSentence();
     isLaunchingInstance = false;
@@ -94,7 +99,7 @@ else {
   private async Task StopInstance() {
     isStoppingInstance = true;
     lastError = null;
-    
+
     var result = await InstanceManager.StopInstance(InstanceGuid);
     lastError = result == StopInstanceResult.StopInitiated ? null : result.ToSentence();
     isStoppingInstance = false;

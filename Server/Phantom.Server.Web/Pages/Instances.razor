@@ -1,8 +1,7 @@
 ﻿@page "/instances"
-@using Phantom.Common.Data.Instance
+@using System.Collections.Immutable
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Instances
-@using System.Collections.Immutable
 @implements IDisposable
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager
@@ -33,46 +32,14 @@
           <td class="text-center">
             <code>@configuration.ServerPort</code>
           </td>
-          <td class="text-end">@configuration.MemoryAllocation.InMegabytes MB</td>
+          <td class="text-end">
+            <code>@configuration.MemoryAllocation.InMegabytes MB</code>
+          </td>
           <td>
             <code class="text-uppercase">@instanceGuid</code>
           </td>
           <td>
-            @switch (status) {
-              case InstanceStatus.Offline:
-                <text>Offline</text>
-                break;
-
-              case InstanceStatus.Invalid invalid:
-                <text>Invalid <sup title="@invalid.Reason">[?]</sup></text>
-                break;
-
-              case InstanceStatus.NotRunning:
-                <text>Not Running</text>
-                break;
-
-              case InstanceStatus.Downloading downloading:
-                <ProgressBar Value="@downloading.Progress" Maximum="100">
-                  Downloading Server (@downloading.Progress%)
-                </ProgressBar>
-                break;
-
-              case InstanceStatus.Launching:
-                <text>Launching</text>
-                break;
-
-              case InstanceStatus.Running:
-                <text>Running</text>
-                break;
-
-              case InstanceStatus.Stopping:
-                <text>Stopping</text>
-                break;
-
-              case InstanceStatus.Failed failed:
-                <text>Failed <sup title="@failed.Reason.ToSentence()">[?]</sup></text>
-                break;
-            }
+            <InstanceStatusText Status="status" />
           </td>
           <td>
             <a href="/instances/@instanceGuid" class="btn btn-info btn-sm">Detail</a>
@@ -81,15 +48,15 @@
       }
     </tbody>
   }
-  <tfoot>
-    <tr>
-      <td colspan="7">
-        @if (instances.IsEmpty) {
-          <text>No instances.</text>
-        }
-      </td>
-    </tr>
-  </tfoot>
+  @if (instances.IsEmpty) {
+    <tfoot>
+      <tr>
+        <td colspan="7">
+          No instances.
+        </td>
+      </tr>
+    </tfoot>
+  }
 </table>
 
 @code {
