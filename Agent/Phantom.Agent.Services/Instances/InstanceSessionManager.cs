@@ -6,6 +6,7 @@ using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances;
@@ -17,7 +18,7 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly LaunchServices launchServices;
 	private readonly PortManager portManager;
 	private readonly Dictionary<Guid, Instance> instances = new ();
-	
+
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
@@ -38,9 +39,9 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 
 		var instanceGuid = configuration.InstanceGuid;
-		
+
 		try {
-			var otherInstances = instances.Values.Where(instance => instance.Configuration.InstanceGuid != instanceGuid).ToArray();
+			var otherInstances = instances.Values.Where(inst => inst.Configuration.InstanceGuid != instanceGuid).ToArray();
 			if (otherInstances.Length + 1 >= agentInfo.MaxInstances) {
 				return ConfigureInstanceResult.InstanceLimitExceeded;
 			}
@@ -67,15 +68,23 @@ sealed class InstanceSessionManager : IDisposable {
 				new ServerProperties(configuration.ServerPort, configuration.RconPort)
 			);
 
-			var launcher = new VanillaLauncher(properties);
-			
-			if (instances.TryGetValue(instanceGuid, out var existingInstance)) {
-				await existingInstance.Reconfigure(configuration, launcher, shutdownCancellationToken);
+			BaseLauncher launcher = configuration.MinecraftServerKind switch {
+				MinecraftServerKind.Forge  => new ForgeLauncher(properties),
+				MinecraftServerKind.Fabric => new FabricLauncher(properties),
+				_                          => new VanillaLauncher(properties)
+			};
+
+			if (instances.TryGetValue(instanceGuid, out var instance)) {
+				await instance.Reconfigure(configuration, launcher, shutdownCancellationToken);
 			}
 			else {
-				instances[instanceGuid] = await Instance.Create(configuration, launcher, launchServices, portManager);
+				instances[instanceGuid] = instance = await Instance.Create(configuration, launcher, launchServices, portManager);
 			}
-			
+
+			if (configuration.LaunchAutomatically) {
+				await instance.Launch(shutdownCancellationToken);
+			}
+
 			return ConfigureInstanceResult.Success;
 		} finally {
 			semaphore.Release();
@@ -135,7 +144,7 @@ sealed class InstanceSessionManager : IDisposable {
 			if (!await instance.SendCommand(command, shutdownCancellationToken)) {
 				return SendCommandToInstanceResult.UnknownError;
 			}
-			
+
 			return SendCommandToInstanceResult.Success;
 		} finally {
 			semaphore.Release();
@@ -144,7 +153,7 @@ sealed class InstanceSessionManager : IDisposable {
 
 	public async Task StopAll() {
 		shutdownCancellationTokenSource.Cancel();
-		
+
 		await semaphore.WaitAsync(CancellationToken.None);
 		try {
 			await Task.WhenAll(instances.Values.Select(static instance => instance.StopAndWait(TimeSpan.FromSeconds(30))));

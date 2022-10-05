@@ -18,9 +18,9 @@ public abstract class BaseLauncher {
 		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
 			return new LaunchResult.InvalidJavaRuntime();
 		}
-		
-		var serverJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
-		if (serverJarPath == null) {
+
+		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
+		if (vanillaServerJarPath == null) {
 			return new LaunchResult.CouldNotDownloadMinecraftServer();
 		}
 
@@ -37,6 +37,7 @@ public abstract class BaseLauncher {
 		var jvmArguments = new JvmArgumentBuilder(instanceProperties.JvmProperties);
 		CustomizeJvmArguments(jvmArguments);
 
+		var serverJarPath = await PrepareServerJar(vanillaServerJarPath, instanceProperties.InstanceFolder, cancellationToken);
 		var processArguments = startInfo.ArgumentList;
 		jvmArguments.Build(processArguments);
 		processArguments.Add("-jar");
@@ -57,6 +58,10 @@ public abstract class BaseLauncher {
 	}
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}
+
+	private protected virtual Task<string> PrepareServerJar(string serverJarPath, string instanceFolderPath, CancellationToken cancellationToken) {
+		return Task.FromResult(serverJarPath);
+	}
 
 	private static async Task AcceptEula(InstanceProperties instanceProperties) {
 		var eulaFilePath = Path.Combine(instanceProperties.InstanceFolder, "eula.txt");

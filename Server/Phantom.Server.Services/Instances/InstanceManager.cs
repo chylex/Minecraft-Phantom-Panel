@@ -42,7 +42,8 @@ public sealed class InstanceManager {
 				instance.MinecraftVersion,
 				instance.MinecraftServerKind,
 				instance.MemoryAllocation,
-				instance.JavaRuntimeGuid
+				instance.JavaRuntimeGuid,
+				instance.LaunchAutomatically
 			);
 			
 			instances.AddOrReplace(new Instance(configuration));
@@ -70,6 +71,7 @@ public sealed class InstanceManager {
 			entity.MinecraftServerKind = configuration.MinecraftServerKind;
 			entity.MemoryAllocation = configuration.MemoryAllocation;
 			entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
+			entity.LaunchAutomatically = configuration.LaunchAutomatically;
 			
 			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
@@ -94,11 +96,11 @@ public sealed class InstanceManager {
 		}
 	}
 
-	public Instance? GetInstance(Guid instanceGuid) {
+	private Instance? GetInstance(Guid instanceGuid) {
 		return instances.GetInstance(instanceGuid);
 	}
 
-	public void SetInstanceState(Guid instanceGuid, InstanceStatus instanceStatus) {
+	internal void SetInstanceState(Guid instanceGuid, InstanceStatus instanceStatus) {
 		instances.Update(instanceGuid, instance => instance with { Status = instanceStatus });
 	}
 
@@ -108,6 +110,8 @@ public sealed class InstanceManager {
 			return LaunchInstanceResult.InstanceDoesNotExist;
 		}
 
+		await SetInstanceShouldLaunchAutomatically(instanceGuid, true);
+		
 		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(300));
 		return reply ?? LaunchInstanceResult.CommunicationError;
 	}
@@ -117,9 +121,20 @@ public sealed class InstanceManager {
 		if (instance == null) {
 			return StopInstanceResult.InstanceDoesNotExist;
 		}
+		
+		await SetInstanceShouldLaunchAutomatically(instanceGuid, false);
 
 		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(300));
 		return reply ?? StopInstanceResult.CommunicationError;
+	}
+
+	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
+		using var scope = databaseProvider.CreateScope();
+		var entity = await scope.Ctx.Instances.FindAsync(instanceGuid, cancellationToken);
+		if (entity != null) {
+			entity.LaunchAutomatically = shouldLaunchAutomatically;
+			await scope.Ctx.SaveChangesAsync(cancellationToken);
+		}
 	}
 
 	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {

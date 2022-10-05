@@ -13,5 +13,6 @@ public sealed record InstanceConfiguration(
 	[property: Key(5)] string MinecraftVersion,
 	[property: Key(6)] MinecraftServerKind MinecraftServerKind,
 	[property: Key(7)] RamAllocationUnits MemoryAllocation,
-	[property: Key(8)] Guid JavaRuntimeGuid
+	[property: Key(8)] Guid JavaRuntimeGuid,
+	[property: Key(9)] bool LaunchAutomatically
 );

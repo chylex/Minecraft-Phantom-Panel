@@ -21,6 +21,7 @@ public sealed class InstanceEntity {
 	public MinecraftServerKind MinecraftServerKind { get; set; }
 	public RamAllocationUnits MemoryAllocation { get; set; }
 	public Guid JavaRuntimeGuid { get; set; }
+	public bool LaunchAutomatically { get; set; }
 
 	internal InstanceEntity(Guid instanceGuid) {
 		InstanceGuid = instanceGuid;
