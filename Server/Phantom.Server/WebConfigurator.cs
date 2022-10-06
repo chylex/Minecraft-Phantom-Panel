@@ -22,4 +22,8 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<MessageToServerListenerFactory>();
 	}
+
+	public Task LoadFromDatabase(IServiceProvider serviceProvider) {
+		return Task.CompletedTask;
+	}
 }

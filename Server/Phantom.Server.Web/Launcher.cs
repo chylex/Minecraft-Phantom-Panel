@@ -1,9 +1,12 @@
-﻿using Serilog;
+﻿using Microsoft.EntityFrameworkCore;
+using Phantom.Server.Database;
+using Phantom.Server.Web.Components.Utils;
+using Serilog;
 
 namespace Phantom.Server.Web;
 
 public static class Launcher {
-	public static WebApplication CreateApplication(Configuration config, IConfigurator configurator) {
+	public static async Task<WebApplication> CreateApplication(Configuration config, IConfigurator configurator, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = typeof(Launcher).Assembly.GetName().Name
 		});
@@ -21,10 +24,18 @@ public static class Launcher {
 		
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
 		
+		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
+		builder.Services.AddSingleton<DatabaseProvider>();
+		
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
 
-		return builder.Build();
+		var application = builder.Build();
+		
+		await MigrateDatabase(config, application.Services.GetRequiredService<DatabaseProvider>());
+		await configurator.LoadFromDatabase(application.Services);
+		
+		return application;
 	}
 	
 	public static async Task Launch(Configuration config, WebApplication application) {
@@ -59,7 +70,26 @@ public static class Launcher {
 		}
 	}
 
+	private static async Task MigrateDatabase(Configuration config, DatabaseProvider databaseProvider) {
+		var logger = config.Logger;
+
+		using var scope = databaseProvider.CreateScope();
+		var database = scope.Ctx.Database;
+
+		logger.Information("Connecting to database...");
+		
+		var retryConnection = new Throttler(TimeSpan.FromSeconds(10));
+		while (!await database.CanConnectAsync(config.CancellationToken)) {
+			logger.Warning("Cannot connect to database, retrying...");
+			await retryConnection.Wait();
+		}
+
+		logger.Information("Running database migrations...");
+		await database.MigrateAsync(); // Do not allow cancellation.
+	}
+
 	public interface IConfigurator {
 		void ConfigureServices(IServiceCollection services);
+		Task LoadFromDatabase(IServiceProvider serviceProvider);
 	}
 }

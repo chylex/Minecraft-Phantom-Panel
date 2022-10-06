@@ -22,6 +22,7 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\Phantom.Server.Database\Phantom.Server.Database.csproj" />
     <ProjectReference Include="..\Phantom.Server.Web.Components\Phantom.Server.Web.Components.csproj" />
   </ItemGroup>
   

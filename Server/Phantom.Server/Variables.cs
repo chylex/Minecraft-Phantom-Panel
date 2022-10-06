@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Logging;
+﻿using Npgsql;
+using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Server;
@@ -7,14 +8,24 @@ sealed record Variables(
 	string WebServerHost,
 	ushort WebServerPort,
 	string RpcServerHost,
-	ushort RpcServerPort
+	ushort RpcServerPort,
+	string SqlConnectionString
 ) {
 	private static Variables LoadOrThrow() {
+		var connectionStringBuilder = new NpgsqlConnectionStringBuilder {
+			Host = EnvironmentVariables.GetString("PG_HOST").OrThrow,
+			Port = EnvironmentVariables.GetPortNumber("PG_PORT").OrThrow,
+			Username = EnvironmentVariables.GetString("PG_USER").OrThrow,
+			Password = EnvironmentVariables.GetString("PG_PASS").OrThrow,
+			Database = EnvironmentVariables.GetString("PG_DATABASE").OrThrow
+		};
+
 		return new Variables(
 			EnvironmentVariables.GetString("WEB_SERVER_HOST").OrDefault("0.0.0.0"),
 			EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").OrDefault(9400),
 			EnvironmentVariables.GetString("RPC_SERVER_HOST").OrDefault("0.0.0.0"),
-			EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").OrDefault(9401)
+			EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").OrDefault(9401),
+			connectionStringBuilder.ToString()
 		);
 	}
 

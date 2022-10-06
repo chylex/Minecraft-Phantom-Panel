@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Logging;
 using Phantom.Server;
+using Phantom.Server.Database.Postgres;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.IO;
@@ -18,7 +20,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel server...");
 	
-	var (webServerHost, webServerPort, rpcServerHost, rpcServerPort) = Variables.LoadOrExit();
+	var (webServerHost, webServerPort, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrExit();
 
 	string secretsPath = Path.GetFullPath("./secrets");
 	if (!Directory.Exists(secretsPath)) {
@@ -46,7 +48,9 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
 	var webConfigurator = new WebConfigurator(agentToken, cancellationTokenSource.Token);
-	var webApplication = WebLauncher.CreateApplication(webConfiguration, webConfigurator);
+	var webApplication = await WebLauncher.CreateApplication(webConfiguration, webConfigurator, options => options.UseNpgsql(sqlConnectionString, static options => {
+		options.CommandTimeout(10).MigrationsAssembly(typeof(ApplicationDbContextDesignFactory).Assembly.FullName);
+	}));
 
 	await Task.WhenAll(
 		RpcLauncher.Launch(rpcConfiguration, webApplication.Services.GetRequiredService<MessageToServerListenerFactory>().CreateListener),
