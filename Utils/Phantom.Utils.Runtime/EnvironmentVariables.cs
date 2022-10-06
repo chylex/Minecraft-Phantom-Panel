@@ -64,6 +64,21 @@ public static class EnvironmentVariables {
 		return value == null ? Value<string>.Missing(variableName, "Missing environment variable") : Value<string>.Of(value, variableName);
 	}
 
+	public static Value<(string?, string?)> GetEitherString(string leftVariableName, string rightVariableName) {
+		string? leftValue = Environment.GetEnvironmentVariable(leftVariableName);
+		string? rightValue = Environment.GetEnvironmentVariable(rightVariableName);
+
+		if (leftValue == null && rightValue == null) {
+			return Value<(string?, string?)>.Missing(leftVariableName + " / " + rightVariableName, "Missing environment variable");
+		}
+
+		if (leftValue != null && rightValue != null) {
+			return Value<(string?, string?)>.Missing(leftVariableName + " / " + rightVariableName, "Only one of these environment variables must be used, but not both");
+		}
+		
+		return Value<(string?, string?)>.Of((leftValue, rightValue), leftValue == null ? rightVariableName : leftVariableName);
+	}
+
 	public static Value<int> GetInteger(string variableName) {
 		return GetString(variableName).Map(int.Parse, "Environment variable must be a 32-bit integer");
 	}

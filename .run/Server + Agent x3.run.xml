@@ -1,0 +1,9 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Server + Agent x3" type="CompoundRunConfigurationType">
+    <toRun name="Agent 1" type="DotNetProject" />
+    <toRun name="Agent 2" type="DotNetProject" />
+    <toRun name="Agent 3" type="DotNetProject" />
+    <toRun name="Server" type="DotNetProject" />
+    <method v="2" />
+  </configuration>
+</component>
