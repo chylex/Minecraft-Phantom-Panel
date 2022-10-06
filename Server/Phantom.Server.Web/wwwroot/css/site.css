@@ -38,6 +38,10 @@ code {
   font-size: 0.925rem;
 }
 
+.table > :not(:first-child) {
+  border-top: 2px solid #a6a6a6;
+}
+
 .form-range {
   height: 2.5rem;
 }

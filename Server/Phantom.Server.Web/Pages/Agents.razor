@@ -1,0 +1,77 @@
+﻿@page "/agents"
+@using Phantom.Common.Data.Agent
+@using Phantom.Server.Services.Agents
+@using Phantom.Utils.Collections
+@implements IDisposable
+@inject AgentAuthToken AgentAuthToken
+@inject AgentManager AgentManager
+
+<h1>Agents</h1>
+
+<table class="table align-middle">
+  <thead>
+    <tr>
+      <th style="min-width: 200px;">Name</th>
+      <th style="width: 150px;" class="text-end">Version</th>
+      <th style="width: 350px;">Identifier</th>
+      <th style="width: 150px;" class="text-center">Status</th>
+      <th style="width: 250px;" class="text-right">Last Ping</th>
+    </tr>
+  </thead>
+  @if (!agentTable.IsEmpty) {
+    <tbody>
+      @foreach (var agent in agentTable) {
+        <tr>
+          <td>@agent.Name</td>
+          <td class="text-end">@agent.Version</td>
+          <td>
+            <code class="text-uppercase">@agent.Guid.ToString()</code>
+          </td>
+          @if (agent.IsOnline) {
+            <td class="text-center text-success">Online</td>
+            <td class="text-right"></td>
+          }
+          else {
+            <td class="text-center text-danger">Offline</td>
+            @if (agent.LastPing is {} lastPing) {
+              <td class="text-right">
+                <time datetime="@lastPing.ToString("o")" data-time-type="relative">@lastPing.ToString()</time>
+              </td>
+            }
+            else {
+              <td class="text-right">-</td>
+            }
+          }
+        </tr>
+      }
+    </tbody>
+  }
+  <tfoot>
+    <tr>
+      <td colspan="5">
+        @if (agentTable.IsEmpty) {
+          <text>No agents registered.</text>
+        }
+        Register agents using the token: <code>@AgentAuthToken</code>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+@code {
+
+  private readonly Table<Agent, Guid> agentTable = new();
+
+  protected override void OnInitialized() {
+    AgentManager.AgentsChanged.Subscribe(this, agents => {
+      var sortedAgents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
+      agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => agent, static (agent, _) => agent);
+      InvokeAsync(StateHasChanged);
+    });
+  }
+
+  void IDisposable.Dispose() {
+    AgentManager.AgentsChanged.Unsubscribe(this);
+  }
+
+}
