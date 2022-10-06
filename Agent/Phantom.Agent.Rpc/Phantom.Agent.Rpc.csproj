@@ -7,12 +7,11 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="MessagePack.Annotations" Version="2.4.35" />
+    <PackageReference Include="Serilog" Version="2.12.0" />
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.Cryptography\Phantom.Utils.Cryptography.csproj" />
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Messages\Phantom.Common.Messages.csproj" />
   </ItemGroup>
 
 </Project>

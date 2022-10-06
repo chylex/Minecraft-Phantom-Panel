@@ -6,6 +6,7 @@
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
       <env name="ASPNETCORE_ENVIRONMENT" value="Development" />
+      <env name="RPC_SERVER_HOST" value="localhost" />
       <env name="WEB_SERVER_HOST" value="localhost" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />

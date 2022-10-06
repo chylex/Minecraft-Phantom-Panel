@@ -1,16 +1,22 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using System.Text;
+using MessagePack;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 
 namespace Phantom.Common.Data.Agent;
 
+[MessagePackObject]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed class AgentAuthToken {
 	private const int MinimumTokenLength = 30;
 	private const int MaximumTokenLength = 100;
 
+	[Key(0)]
 	public string Value { get; }
 
+	[IgnoreMember]
 	private readonly byte[] bytes;
 
 	public AgentAuthToken(string? value) {

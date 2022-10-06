@@ -5,12 +5,16 @@ namespace Phantom.Server;
 
 sealed record Variables(
 	string WebServerHost,
-	ushort WebServerPort
+	ushort WebServerPort,
+	string RpcServerHost,
+	ushort RpcServerPort
 ) {
 	private static Variables LoadOrThrow() {
 		return new Variables(
 			EnvironmentVariables.GetString("WEB_SERVER_HOST").OrDefault("0.0.0.0"),
-			EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").OrDefault(9400)
+			EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").OrDefault(9400),
+			EnvironmentVariables.GetString("RPC_SERVER_HOST").OrDefault("0.0.0.0"),
+			EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").OrDefault(9401)
 		);
 	}
 
