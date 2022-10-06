@@ -1,0 +1,11 @@
+﻿<Project>
+  
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="**" />
+  </ItemGroup>
+  
+</Project>

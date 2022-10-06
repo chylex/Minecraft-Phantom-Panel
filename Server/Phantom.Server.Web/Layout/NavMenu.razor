@@ -1,0 +1,26 @@
+﻿<div class="navbar navbar-dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="">Phantom Panel</a>
+    <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+  <nav class="flex-column">
+    <NavMenuItem Label="Home" Icon="home" Match="NavLinkMatch.All" />
+  </nav>
+</div>
+
+@code {
+
+  private bool collapseNavMenu = true;
+
+  private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+  private void ToggleNavMenu() {
+    collapseNavMenu = !collapseNavMenu;
+  }
+
+}

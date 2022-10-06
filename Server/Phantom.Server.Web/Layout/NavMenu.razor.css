@@ -1,0 +1,19 @@
+﻿.navbar {
+  padding-left: 1rem;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.navbar-toggler {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+@media (min-width: 801px) {
+  .navbar-toggler {
+    display: none;
+  }
+  
+  .collapse {
+    /* Never collapse the sidebar for wide screens */
+    display: block;
+  }
+}

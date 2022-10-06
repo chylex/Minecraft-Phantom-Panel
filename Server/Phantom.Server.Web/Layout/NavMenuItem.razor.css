@@ -1,0 +1,38 @@
+﻿.nav-item {
+  font-size: 1.1rem;
+  padding: 0 1rem 0.6rem;
+}
+
+.nav-item:first-of-type {
+  padding-top: 1rem;
+}
+
+.nav-item:last-of-type {
+  padding-bottom: 1rem;
+}
+
+.oi {
+  width: 2rem;
+  font-size: 1.2rem;
+  vertical-align: -10%;
+}
+
+.nav-label {
+  vertical-align: text-top;
+}
+
+.nav-item ::deep a {
+  color: #d7d7d7;
+  border-radius: 4px;
+  padding: 0.6rem 1rem;
+}
+
+.nav-item ::deep a.active {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.nav-item ::deep a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
