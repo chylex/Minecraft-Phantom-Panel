@@ -20,6 +20,7 @@
       <th style="width: 125px;" class="text-end">Memory</th>
       <th style="width: 350px;">Identifier</th>
       <th style="width: 225px;">Status</th>
+      <th style="width: 200px;">Actions</th>
     </tr>
   </thead>
   @if (!instances.IsEmpty) {
@@ -45,6 +46,9 @@
           <td>
             <InstanceStatusText Status="status" />
           </td>
+          <td>
+            <a href="/instances/@instanceGuid" class="btn btn-info btn-sm">Detail</a>
+          </td>
         </tr>
       }
     </tbody>
@@ -52,7 +56,7 @@
   @if (instances.IsEmpty) {
     <tfoot>
       <tr>
-        <td colspan="7">
+        <td colspan="8">
           No instances.
         </td>
       </tr>

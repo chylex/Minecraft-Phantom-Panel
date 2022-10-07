@@ -1,0 +1,69 @@
+﻿@page "/instances/{InstanceGuid:guid}"
+@using Phantom.Common.Data.Instance
+@using Phantom.Common.Data.Replies
+@using Phantom.Server.Services.Instances
+@implements IDisposable
+@inject InstanceManager InstanceManager;
+
+@if (Instance == null) {
+  <h1>Instance Not Found</h1>
+  <p>Return to <a href="/instances">all instances</a>.</p>
+}
+else {
+  <h1>Instance: @Instance.Configuration.InstanceName</h1>
+  <div class="d-flex flex-row align-items-center gap-2">
+    <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
+    <button type="button" class="btn btn-danger" @onclick="StopInstance" disabled="@(isStoppingInstance || !Instance.Status.CanStop())">Stop</button>
+    <div class="ms-2">
+      <InstanceStatusText Status="Instance.Status" />
+    </div>
+  </div>
+  @if (lastError != null) {
+    <p class="text-danger">@lastError</p>
+  }
+}
+
+@code {
+
+  [Parameter]
+  public Guid InstanceGuid { get; set; }
+
+  private string? lastError = null;
+  private bool isLaunchingInstance = false;
+  private bool isStoppingInstance = false;
+
+  private Instance? Instance { get; set; }
+
+  protected override void OnInitialized() {
+    InstanceManager.InstancesChanged.Subscribe(this, instances => {
+      var newInstance = instances.TryGetValue(InstanceGuid, out var instance) ? instance : null;
+      if (newInstance != Instance) {
+        Instance = newInstance;
+        InvokeAsync(StateHasChanged);
+      }
+    });
+  }
+
+  private async Task LaunchInstance() {
+    isLaunchingInstance = true;
+    lastError = null;
+
+    var result = await InstanceManager.LaunchInstance(InstanceGuid);
+    lastError = result == LaunchInstanceResult.LaunchInitiated ? null : result.ToSentence();
+    isLaunchingInstance = false;
+  }
+
+  private async Task StopInstance() {
+    isStoppingInstance = true;
+    lastError = null;
+
+    var result = await InstanceManager.StopInstance(InstanceGuid);
+    lastError = result == StopInstanceResult.StopInitiated ? null : result.ToSentence();
+    isStoppingInstance = false;
+  }
+
+  public void Dispose() {
+    InstanceManager.InstancesChanged.Unsubscribe(this);
+  }
+
+}

@@ -53,4 +53,12 @@ public sealed class MessageListener : IMessageToAgentListener {
 	public async Task HandleConfigureInstance(ConfigureInstanceMessage message) {
 		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Configure(message.Configuration));
 	}
+
+	public async Task HandleLaunchInstance(LaunchInstanceMessage message) {
+		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Launch(message.InstanceGuid));
+	}
+
+	public async Task HandleStopInstance(StopInstanceMessage message) {
+		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Stop(message.InstanceGuid));
+	}
 }

@@ -53,6 +53,7 @@ try {
 	
 	await agentServices.Initialize();
 	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
+	await agentServices.Shutdown();
 } catch (OperationCanceledException) {
 	// Ignore.
 } finally {

@@ -13,12 +13,16 @@ public sealed class AgentServices {
 	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders) {
 		this.AgentFolders = agentFolders;
 		this.JavaRuntimeRepository = new JavaRuntimeRepository();
-		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders);
+		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository);
 	}
 
 	public async Task Initialize() {
 		await foreach (var runtime in JavaRuntimeDiscovery.Scan(AgentFolders.JavaSearchFolderPath)) {
 			JavaRuntimeRepository.Include(runtime);
 		}
+	}
+
+	public async Task Shutdown() {
+		await InstanceSessionManager.StopAll();
 	}
 }

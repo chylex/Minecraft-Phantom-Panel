@@ -99,12 +99,49 @@ public sealed class InstanceManager {
 		}
 	}
 
+	private Instance? GetInstance(Guid instanceGuid) {
+		return instances.GetInstance(instanceGuid);
+	}
+
 	internal void SetInstanceState(Guid instanceGuid, InstanceStatus instanceStatus) {
 		instances.Update(instanceGuid, instance => instance with { Status = instanceStatus });
 	}
 
 	internal void SetInstanceStatesForAgent(Guid agentGuid, InstanceStatus instanceStatus) {
 		instances.UpdateAllForAgent(agentGuid, instance => instance with { Status = instanceStatus });
+	}
+
+	public async Task<LaunchInstanceResult> LaunchInstance(Guid instanceGuid) {
+		var instance = GetInstance(instanceGuid);
+		if (instance == null) {
+			return LaunchInstanceResult.InstanceDoesNotExist;
+		}
+
+		await SetInstanceShouldLaunchAutomatically(instanceGuid, true);
+		
+		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
+		return reply ?? LaunchInstanceResult.CommunicationError;
+	}
+
+	public async Task<StopInstanceResult> StopInstance(Guid instanceGuid) {
+		var instance = GetInstance(instanceGuid);
+		if (instance == null) {
+			return StopInstanceResult.InstanceDoesNotExist;
+		}
+		
+		await SetInstanceShouldLaunchAutomatically(instanceGuid, false);
+
+		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
+		return reply ?? StopInstanceResult.CommunicationError;
+	}
+
+	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
+		using var scope = databaseProvider.CreateScope();
+		var entity = await scope.Ctx.Instances.FindAsync(instanceGuid, cancellationToken);
+		if (entity != null) {
+			entity.LaunchAutomatically = shouldLaunchAutomatically;
+			await scope.Ctx.SaveChangesAsync(cancellationToken);
+		}
 	}
 
 	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {
@@ -135,6 +172,10 @@ public sealed class InstanceManager {
 
 		public void UpdateAllForAgent(Guid agentGuid, Func<Instance, Instance> updater) {
 			UpdateIf(instances.TryReplaceAllIf(updater, instance => instance.Configuration.AgentGuid == agentGuid));
+		}
+
+		public Instance? GetInstance(Guid instanceGuid) {
+			return instances.TryGetValue(instanceGuid, out var instance) ? instance : null;
 		}
 
 		public ImmutableDictionary<Guid, Instance> GetInstances() {
