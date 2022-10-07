@@ -3,6 +3,8 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Server.Database;
+using Phantom.Server.Database.Entities;
 using Phantom.Server.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -19,10 +21,33 @@ public sealed class InstanceManager {
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentManager agentManager;
+	private readonly DatabaseProvider databaseProvider;
 
-	public InstanceManager(ServiceConfiguration configuration, AgentManager agentManager) {
+	public InstanceManager(ServiceConfiguration configuration, AgentManager agentManager, DatabaseProvider databaseProvider) {
 		this.cancellationToken = configuration.CancellationToken;
 		this.agentManager = agentManager;
+		this.databaseProvider = databaseProvider;
+	}
+
+	public async Task Initialize() {
+		using var scope = databaseProvider.CreateScope();
+
+		await foreach (var instance in scope.Ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+			var configuration = new InstanceConfiguration(
+				instance.AgentGuid,
+				instance.InstanceGuid,
+				instance.InstanceName,
+				instance.ServerPort,
+				instance.RconPort,
+				instance.MinecraftVersion,
+				instance.MinecraftServerKind,
+				instance.MemoryAllocation,
+				instance.JavaRuntimeGuid,
+				instance.LaunchAutomatically
+			);
+			
+			instances.AddOrReplace(new Instance(configuration));
+		}
 	}
 
 	public async Task<AddInstanceResult> AddInstance(InstanceConfiguration configuration) {
@@ -33,6 +58,22 @@ public sealed class InstanceManager {
 
 		if (!instances.TryAdd(new Instance(configuration))) {
 			return AddInstanceResult.InstanceAlreadyExists;
+		}
+
+		using (var scope = databaseProvider.CreateScope()) {
+			InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
+			
+			entity.AgentGuid = configuration.AgentGuid;
+			entity.InstanceName = configuration.InstanceName;
+			entity.ServerPort = configuration.ServerPort;
+			entity.RconPort = configuration.RconPort;
+			entity.MinecraftVersion = configuration.MinecraftVersion;
+			entity.MinecraftServerKind = configuration.MinecraftServerKind;
+			entity.MemoryAllocation = configuration.MemoryAllocation;
+			entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
+			entity.LaunchAutomatically = configuration.LaunchAutomatically;
+			
+			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
 
 		var agentName = agent.Name;
@@ -74,6 +115,11 @@ public sealed class InstanceManager {
 		private readonly RwLockedDictionary<Guid, Instance> instances = new (LockRecursionPolicy.NoRecursion);
 
 		public ObservableInstances(ILogger logger) : base(logger) {}
+
+		public void AddOrReplace(Instance configuration) {
+			instances[configuration.Configuration.InstanceGuid] = configuration;
+			Update();
+		}
 
 		public bool TryAdd(Instance configuration) {
 			return UpdateIf(instances.TryAdd(configuration.Configuration.InstanceGuid, configuration));

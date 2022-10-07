@@ -29,5 +29,6 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 
 	public async Task LoadFromDatabase(IServiceProvider serviceProvider) {
 		await serviceProvider.GetRequiredService<AgentManager>().Initialize();
+		await serviceProvider.GetRequiredService<InstanceManager>().Initialize();
 	}
 }
