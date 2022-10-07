@@ -1,0 +1,53 @@
+﻿@using Phantom.Server.Services.Instances
+@using Phantom.Utils.Collections
+@using Phantom.Utils.Events
+@implements IDisposable
+@inject IJSRuntime Js;
+@inject InstanceLogManager InstanceLogManager
+
+<div id="log" class="font-monospace mb-3">
+  @foreach (var line in instanceLogs.EnumerateLast(uint.MaxValue)) {
+    <p>@line</p>
+  }
+</div>
+
+
+@code {
+
+  [Parameter, EditorRequired]
+  public Guid InstanceGuid { get; set; }
+  
+  private IJSObjectReference? PageJs { get; set; }
+
+  private EventSubscribers<RingBuffer<string>> instanceLogsSubs = null!;
+  private RingBuffer<string> instanceLogs = null!;
+
+  protected override void OnInitialized() {
+    instanceLogsSubs = InstanceLogManager.GetSubs(InstanceGuid);
+    instanceLogsSubs.Subscribe(this, buffer => {
+      instanceLogs = buffer;
+      InvokeAsync(RefreshLog);
+    });
+  }
+
+  protected override async Task OnAfterRenderAsync(bool firstRender) {
+    if (firstRender) {
+      PageJs = await Js.InvokeAsync<IJSObjectReference>("import", "./Shared/InstanceLog.razor.js");
+      StateHasChanged();
+
+      await PageJs.InvokeVoidAsync("initLog");
+    }
+  }
+
+  private async Task RefreshLog() {
+    StateHasChanged();
+
+    if (PageJs != null) {
+      await PageJs.InvokeVoidAsync("scrollLog");
+    }
+  }
+
+  public void Dispose() {
+    instanceLogsSubs.Unsubscribe(this);
+  }
+}

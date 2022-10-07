@@ -1,0 +1,17 @@
+#log {
+  min-height: 15rem;
+  height: 60vh;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #666666;
+  border-radius: 0.25rem;
+  color: #282828;
+  background-color: #fafafa;
+  overflow-y: auto;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+#log > p {
+  margin: 0;
+}

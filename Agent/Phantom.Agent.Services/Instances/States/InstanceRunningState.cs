@@ -6,12 +6,14 @@ namespace Phantom.Agent.Services.Instances.States;
 sealed class InstanceRunningState : IInstanceState {
 	private readonly InstanceContext context;
 	private readonly InstanceSession session;
+	private readonly InstanceLogSenderThread logSenderThread;
 	private readonly SessionObjects sessionObjects;
 
 	public InstanceRunningState(InstanceContext context, InstanceSession session) {
 		this.context = context;
 		this.session = session;
-		this.sessionObjects = new SessionObjects(context, session);
+		this.logSenderThread = new InstanceLogSenderThread(context.Configuration.InstanceGuid, context.ShortName);
+		this.sessionObjects = new SessionObjects(context, session, logSenderThread);
 
 		this.session.AddOutputListener(SessionOutput);
 		this.session.SessionEnded += SessionEnded;
@@ -31,6 +33,7 @@ sealed class InstanceRunningState : IInstanceState {
 
 	private void SessionOutput(object? sender, string e) {
 		context.Logger.Verbose("[Server] {Line}", e);
+		logSenderThread.Enqueue(e);
 	}
 
 	private void SessionEnded(object? sender, EventArgs e) {
@@ -53,11 +56,13 @@ sealed class InstanceRunningState : IInstanceState {
 	public sealed class SessionObjects {
 		private readonly InstanceContext context;
 		private readonly InstanceSession session;
+		private readonly InstanceLogSenderThread logSenderThread;
 		private bool isDisposed;
 
-		public SessionObjects(InstanceContext context, InstanceSession session) {
+		public SessionObjects(InstanceContext context, InstanceSession session, InstanceLogSenderThread logSenderThread) {
 			this.context = context;
 			this.session = session;
+			this.logSenderThread = logSenderThread;
 		}
 
 		public bool Dispose() {
@@ -69,6 +74,7 @@ sealed class InstanceRunningState : IInstanceState {
 				isDisposed = true;
 			}
 
+			logSenderThread.Cancel();
 			session.Dispose();
 			context.PortManager.Release(context.Configuration);
 			return true;

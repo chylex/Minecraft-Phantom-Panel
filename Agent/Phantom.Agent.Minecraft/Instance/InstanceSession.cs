@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics;
+using Phantom.Utils.Collections;
 
 namespace Phantom.Agent.Minecraft.Instance; 
 
 public sealed class InstanceSession : IDisposable {
+	private readonly RingBuffer<string> outputBuffer = new (10000);
 	private event EventHandler<string>? OutputEvent;
 
 	public event EventHandler? SessionEnded;
@@ -22,8 +24,12 @@ public sealed class InstanceSession : IDisposable {
 		await process.StandardInput.WriteLineAsync(command.AsMemory(), cancellationToken);
 	}
 
-	public void AddOutputListener(EventHandler<string> listener) {
+	public void AddOutputListener(EventHandler<string> listener, uint maxLinesToReadFromHistory = uint.MaxValue) {
 		OutputEvent += listener;
+		
+		foreach (var line in outputBuffer.EnumerateLast(maxLinesToReadFromHistory)) {
+			listener(this, line);
+		}
 	}
 
 	public void RemoveOutputListener(EventHandler<string> listener) {
@@ -32,6 +38,7 @@ public sealed class InstanceSession : IDisposable {
 
 	private void HandleOutputLine(object sender, DataReceivedEventArgs args) {
 		if (args.Data is {} line) {
+			outputBuffer.Add(line);
 			OutputEvent?.Invoke(this, line);
 		}
 	}

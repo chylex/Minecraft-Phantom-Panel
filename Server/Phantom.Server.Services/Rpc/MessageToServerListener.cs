@@ -15,18 +15,20 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	private readonly AgentManager agentManager;
 	private readonly AgentJavaRuntimesManager agentJavaRuntimesManager;
 	private readonly InstanceManager instanceManager;
+	private readonly InstanceLogManager instanceLogManager;
 
 	private Guid? agentGuid;
 	private readonly TaskCompletionSource<Guid> agentGuidWaiter = new ();
 
 	public bool IsDisposed { get; private set; }
 
-	internal MessageToServerListener(RpcClientConnection connection, ServiceConfiguration configuration, AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, InstanceManager instanceManager) {
+	internal MessageToServerListener(RpcClientConnection connection, ServiceConfiguration configuration, AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, InstanceManager instanceManager, InstanceLogManager instanceLogManager) {
 		this.connection = connection;
 		this.cancellationToken = configuration.CancellationToken;
 		this.agentManager = agentManager;
 		this.agentJavaRuntimesManager = agentJavaRuntimesManager;
 		this.instanceManager = instanceManager;
+		this.instanceLogManager = instanceLogManager;
 	}
 
 	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
@@ -64,6 +66,11 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 
 	public Task HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
 		instanceManager.SetInstanceState(message.InstanceGuid, message.InstanceStatus);
+		return Task.CompletedTask;
+	}
+
+	public Task HandleInstanceOutput(InstanceOutputMessage message) {
+		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
 		return Task.CompletedTask;
 	}
 

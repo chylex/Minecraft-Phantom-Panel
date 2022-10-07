@@ -24,6 +24,7 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton<AgentJavaRuntimesManager>();
 		services.AddSingleton<AgentStatsManager>();
 		services.AddSingleton<InstanceManager>();
+		services.AddSingleton<InstanceLogManager>();
 		services.AddSingleton<MessageToServerListenerFactory>();
 	}
 
