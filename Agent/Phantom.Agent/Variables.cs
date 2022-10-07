@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Logging;
+﻿using Phantom.Common.Data;
+using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Agent;
@@ -8,7 +9,11 @@ sealed record Variables(
 	ushort ServerPort,
 	string? AuthToken,
 	string? AuthTokenFilePath,
-	string AgentName
+	string AgentName,
+	ushort MaxInstances,
+	RamAllocationUnits MaxMemory,
+	AllowedPorts AllowedServerPorts,
+	AllowedPorts AllowedRconPorts
 ) {
 	private static Variables LoadOrThrow() {
 		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
@@ -18,7 +23,11 @@ sealed record Variables(
 			EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401),
 			authToken,
 			authTokenFilePath,
-			EnvironmentVariables.GetString("AGENT_NAME").OrThrow
+			EnvironmentVariables.GetString("AGENT_NAME").OrThrow,
+			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES", min: 1, max: 10000).OrThrow,
+			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).OrThrow,
+			EnvironmentVariables.GetString("ALLOWED_SERVER_PORTS").MapParse(AllowedPorts.FromString).OrThrow,
+			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).OrThrow
 		);
 	}
 

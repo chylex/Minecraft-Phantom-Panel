@@ -83,6 +83,10 @@ public static class EnvironmentVariables {
 		return GetString(variableName).Map(int.Parse, "Environment variable must be a 32-bit integer");
 	}
 
+	public static Value<int> GetInteger(string variableName, int min, int max) {
+		return GetInteger(variableName).Map(value => value >= min && value <= max ? value : throw new Exception(), "Environment variable must be between " + min + " and " + max);
+	}
+
 	public static Value<ushort> GetPortNumber(string variableName) {
 		return GetString(variableName).Map(ushort.Parse, "Environment variable must be a port number");
 	}

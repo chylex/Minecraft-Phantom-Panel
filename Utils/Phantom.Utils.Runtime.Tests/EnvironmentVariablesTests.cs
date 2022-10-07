@@ -108,6 +108,33 @@ public class EnvironmentVariablesTests {
 		}
 	}
 
+	public sealed class GetIntegerInRange : Base<int> {
+		protected override int ExampleValue => 5000;
+		protected override string ExampleValueString => "5000";
+
+		protected override EnvironmentVariables.Value<int> GetValue(string variableName) {
+			return EnvironmentVariables.GetInteger(variableName, min: 1000, max: 6000);
+		}
+
+		[TestCase("1000", 1000)]
+		[TestCase("6000", 6000)]
+		public void JustInRangeOrThrowReturnsActualValue(string inputValue, int returnedValue) {
+			Assert.That(GetValue(CreateVariable(inputValue)).OrThrow, Is.EqualTo(returnedValue));
+		}
+
+		[TestCase("999")]
+		[TestCase("6001")]
+		public void OutsideRangeOrThrowThrows(string value) {
+			Assert.That(CallGetValueOrThrow(CreateVariable(value)), Throws.Exception.Message.StartsWith("Environment variable must be between 1000 and 6000: " + VariableNameExistingPrefix));
+		}
+
+		[TestCase("999")]
+		[TestCase("6001")]
+		public void OutsideRangeOrDefaultReturnsDefaultValue(string value) {
+			Assert.That(GetValue(CreateVariable(value)).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
+		}
+	}
+
 	public sealed class GetPortNumber : Base<ushort> {
 		protected override ushort ExampleValue => 12345;
 		protected override string ExampleValueString => "12345";

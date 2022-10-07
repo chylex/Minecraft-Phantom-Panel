@@ -6,6 +6,10 @@
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
       <env name="AGENT_NAME" value="Agent 2" />
+      <env name="ALLOWED_RCON_PORTS" value="27002-27006" />
+      <env name="ALLOWED_SERVER_PORTS" value="26002-26006" />
+      <env name="MAX_INSTANCES" value="5" />
+      <env name="MAX_MEMORY" value="10G" />
       <env name="SERVER_AUTH_TOKEN_FILE" value="./secrets/agent.token" />
       <env name="SERVER_HOST" value="localhost" />
     </envs>
