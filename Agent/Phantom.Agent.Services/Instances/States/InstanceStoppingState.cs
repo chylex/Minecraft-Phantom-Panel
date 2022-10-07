@@ -65,6 +65,10 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 		return this; // TODO maybe provide a way to kill?
 	}
 
+	public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		return Task.FromResult(false);
+	}
+
 	public void Dispose() {
 		sessionObjects.Dispose();
 	}

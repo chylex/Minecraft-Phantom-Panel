@@ -53,6 +53,19 @@ sealed class InstanceRunningState : IInstanceState {
 		return new InstanceStoppingState(context, session, sessionObjects);
 	}
 
+	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		try {
+			context.Logger.Information("Sending command: {Command}", command);
+			await session.SendCommand(command, cancellationToken);
+			return true;
+		} catch (OperationCanceledException) {
+			return false;
+		} catch (Exception e) {
+			context.Logger.Warning(e, "Caught exception while sending command.");
+			return false;
+		}
+	}
+
 	public sealed class SessionObjects {
 		private readonly InstanceContext context;
 		private readonly InstanceSession session;

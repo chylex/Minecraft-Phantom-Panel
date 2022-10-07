@@ -94,6 +94,10 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		return this;
 	}
 
+	public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		return Task.FromResult(false);
+	}
+
 	public void Dispose() {
 		cancellationTokenSource.Dispose();
 	}

@@ -23,4 +23,8 @@ sealed class InstanceNotRunningState : IInstanceState {
 	public IInstanceState Stop() {
 		return this;
 	}
+
+	public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		return Task.FromResult(false);
+	}
 }

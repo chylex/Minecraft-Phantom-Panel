@@ -23,6 +23,20 @@ else {
   }
   
   <InstanceLog InstanceGuid="InstanceGuid" />
+  
+  <div class="mb-3">
+    <form @onsubmit="ExecuteCommand" class="@(commandError == null ? "" : "is-invalid")">
+      <label for="command-input" class="form-label">Instance Name</label>
+      <div class="input-group flex-nowrap">
+        <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
+        <input id="command-input" class="form-control" type="text" placeholder="command" @bind="commandInput" @bind:event="oninput" disabled="@(isSendingCommand || !Instance.Status.CanSendCommand())" @ref="commandInputElement" />
+        <button type="submit" class="btn btn-primary" disabled="@(string.IsNullOrWhiteSpace(commandInput) || isSendingCommand)">Execute</button>
+      </div>
+    </form>
+    <div class="invalid-feedback mt-2">
+      @commandError
+    </div>
+  </div>
 }
 
 @code {
@@ -33,6 +47,11 @@ else {
   private string? lastError = null;
   private bool isLaunchingInstance = false;
   private bool isStoppingInstance = false;
+
+  private ElementReference commandInputElement;
+  private string commandInput = string.Empty;
+  private string? commandError = null;
+  private bool isSendingCommand = false;
 
   private Instance? Instance { get; set; }
 
@@ -62,6 +81,23 @@ else {
     var result = await InstanceManager.StopInstance(InstanceGuid);
     lastError = result == StopInstanceResult.StopInitiated ? null : result.ToSentence();
     isStoppingInstance = false;
+  }
+
+  private async Task ExecuteCommand() {
+    isSendingCommand = true;
+    commandError = null;
+    await Task.Yield();
+
+    var result = await InstanceManager.SendCommand(InstanceGuid, commandInput);
+    if (result == SendCommandToInstanceResult.Success) {
+      commandInput = string.Empty;
+    }
+    else {
+      commandError = result.ToSentence();
+    }
+
+    isSendingCommand = false;
+    await commandInputElement.FocusAsync(preventScroll: true);
   }
 
   public void Dispose() {

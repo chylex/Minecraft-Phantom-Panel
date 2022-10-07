@@ -131,6 +131,28 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 	}
 
+	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
+		try {
+			await semaphore.WaitAsync(shutdownCancellationToken);
+		} catch (OperationCanceledException) {
+			return SendCommandToInstanceResult.AgentShuttingDown;
+		}
+
+		try {
+			if (!instances.TryGetValue(instanceGuid, out var instance)) {
+				return SendCommandToInstanceResult.InstanceDoesNotExist;
+			}
+
+			if (!await instance.SendCommand(command, shutdownCancellationToken)) {
+				return SendCommandToInstanceResult.UnknownError;
+			}
+
+			return SendCommandToInstanceResult.Success;
+		} finally {
+			semaphore.Release();
+		}
+	}
+
 	public async Task StopAll() {
 		shutdownCancellationTokenSource.Cancel();
 

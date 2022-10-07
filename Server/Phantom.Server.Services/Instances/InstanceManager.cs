@@ -144,6 +144,16 @@ public sealed class InstanceManager {
 		}
 	}
 
+	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
+		var instance = GetInstance(instanceGuid);
+		if (instance != null) {
+			var reply = (SendCommandToInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
+			return reply ?? SendCommandToInstanceResult.AgentCommunicationError;
+		}
+
+		return SendCommandToInstanceResult.InstanceDoesNotExist;
+	}
+
 	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {
 		return instances.GetInstances().Values.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
 	}

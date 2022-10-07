@@ -124,6 +124,10 @@ sealed class Instance : IDisposable {
 		}
 	}
 
+	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+		return await currentState.SendCommand(command, cancellationToken);
+	}
+
 	private sealed class InstanceContextImpl : InstanceContext {
 		private readonly Instance instance;
 		private int statusUpdateCounter;
