@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
+  </ItemGroup>
+
+</Project>

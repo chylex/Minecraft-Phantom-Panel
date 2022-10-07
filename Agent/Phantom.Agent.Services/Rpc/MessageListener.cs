@@ -1,8 +1,10 @@
 ﻿using NetMQ.Sockets;
+using Phantom.Agent.Rpc;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.ToServer;
 using Serilog;
 
 namespace Phantom.Agent.Services.Rpc;
@@ -11,16 +13,19 @@ public sealed class MessageListener : IMessageToAgentListener {
 	private static ILogger Logger { get; } = PhantomLogger.Create<MessageListener>();
 
 	private readonly ClientSocket socket;
+	private readonly AgentServices agent;
 	private readonly CancellationTokenSource shutdownTokenSource;
 
-	public MessageListener(ClientSocket socket, CancellationTokenSource shutdownTokenSource) {
+	public MessageListener(ClientSocket socket, AgentServices agent, CancellationTokenSource shutdownTokenSource) {
 		this.socket = socket;
+		this.agent = agent;
 		this.shutdownTokenSource = shutdownTokenSource;
 	}
 
-	public Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
+	public async Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
-		return Task.CompletedTask;
+		
+		await ServerMessaging.SendMessage(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
 	}
 
 	public Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message) {

@@ -7,4 +7,5 @@ public interface IMessageToServerListener {
 	Task HandleRegisterAgent(RegisterAgentMessage message);
 	Task HandleUnregisterAgent(UnregisterAgentMessage message);
 	Task HandleAgentIsAlive(AgentIsAliveMessage message);
+	Task HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message);
 }

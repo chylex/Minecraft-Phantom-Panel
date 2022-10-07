@@ -9,10 +9,12 @@ public sealed class AgentFolders {
 
 	public string DataFolderPath { get; }
 	public string TemporaryFolderPath { get; }
+	public string JavaSearchFolderPath { get; }
 
-	public AgentFolders(string dataFolderPath, string temporaryFolderPath) {
+	public AgentFolders(string dataFolderPath, string temporaryFolderPath, string javaSearchFolderPath) {
 		this.DataFolderPath = Path.GetFullPath(dataFolderPath);
 		this.TemporaryFolderPath = Path.GetFullPath(temporaryFolderPath);
+		this.JavaSearchFolderPath = javaSearchFolderPath;
 	}
 
 	public bool TryCreate() {

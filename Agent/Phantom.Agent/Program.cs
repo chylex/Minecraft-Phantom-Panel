@@ -18,7 +18,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 
-	var (serverHost, serverPort, authToken, authTokenFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
+	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
 	
 	AgentAuthToken agentAuthToken;
 	try {
@@ -35,7 +35,7 @@ try {
 		Environment.Exit(1);
 	}
 
-	var folders = new AgentFolders("./data", "./temp");
+	var folders = new AgentFolders("./data", "./temp", javaSearchPath);
 	if (!folders.TryCreate()) {
 		Environment.Exit(1);
 	}
@@ -47,10 +47,12 @@ try {
 	}
 
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
+	var agentServices = new AgentServices(folders);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 	
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, cancellationTokenSource));
+	await agentServices.Initialize();
+	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
 } catch (OperationCanceledException) {
 	// Ignore.
 } finally {

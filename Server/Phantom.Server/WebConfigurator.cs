@@ -20,6 +20,7 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton(new ServiceConfiguration(cancellationToken));
 		services.AddSingleton(agentToken);
 		services.AddSingleton<AgentManager>();
+		services.AddSingleton<AgentJavaRuntimesManager>();
 		services.AddSingleton<MessageToServerListenerFactory>();
 	}
 
