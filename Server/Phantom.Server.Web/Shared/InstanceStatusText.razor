@@ -1,0 +1,45 @@
+﻿@using Phantom.Common.Data.Instance
+@switch (Status) {
+  case InstanceStatus.Offline:
+    <text>Offline</text>
+    break;
+
+  case InstanceStatus.Invalid invalid:
+    <text>Invalid <sup title="@invalid.Reason">[?]</sup></text>
+    break;
+
+  case InstanceStatus.NotRunning:
+    <text>Not Running</text>
+    break;
+
+  case InstanceStatus.Downloading downloading:
+    <ProgressBar Value="@downloading.Progress" Maximum="100">
+      Downloading Server (@downloading.Progress%)
+    </ProgressBar>
+    break;
+
+  case InstanceStatus.Launching:
+    <div class="spinner-border spinner-border-sm" role="status"></div>
+    <text>&nbsp;Launching</text>
+    break;
+
+  case InstanceStatus.Running:
+    <text>Running</text>
+    break;
+
+  case InstanceStatus.Stopping:
+    <div class="spinner-border spinner-border-sm" role="status"></div>
+    <text>&nbsp;Stopping</text>
+    break;
+
+  case InstanceStatus.Failed failed:
+    <text>Failed <sup title="@failed.Reason.ToSentence()">[?]</sup></text>
+    break;
+}
+
+@code {
+
+  [Parameter]
+  public InstanceStatus? Status { get; set; }
+
+}

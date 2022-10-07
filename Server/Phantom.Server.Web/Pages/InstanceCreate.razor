@@ -1,0 +1,251 @@
+﻿@page "/instances/create"
+@using Phantom.Server.Web.Components.Utils
+@using Phantom.Server.Services.Instances
+@using Phantom.Server.Services.Agents
+@using System.Collections.Immutable
+@using System.ComponentModel.DataAnnotations
+@using System.Diagnostics.CodeAnalysis
+@using Phantom.Common.Data.Java
+@using Phantom.Common.Data.Minecraft
+@using Phantom.Common.Data
+@using Phantom.Common.Data.Instance
+@inject NavigationManager Nav
+@inject AgentJavaRuntimesManager AgentJavaRuntimesManager
+@inject AgentStatsManager AgentStatsManager
+@inject InstanceManager InstanceManager
+
+<h1>New Instance</h1>
+
+<EditForm EditContext="editContext" OnSubmit="Submit">
+  <DataAnnotationsValidator />
+
+  <div class="row">
+    <div class="col-xl-7 mb-3">
+      <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
+        <option value="" selected>Select which agent will run the instance...</option>
+        @foreach (var (agent, usedInstances, usedMemory) in form.AgentsByGuid.Values.OrderBy(static item => item.Agent.Name)) {
+          <option value="@agent.Guid">
+            @agent.Name
+            &bullet;
+            @(usedInstances)/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
+            &bullet;
+            @(usedMemory.InMegabytes)/@(agent.MaxMemory.InMegabytes) MB RAM
+          </option>
+        }
+      </FormSelectInput>
+    </div>
+
+    <div class="col-xl-5 mb-3">
+      <FormTextInput Id="instance-name" Label="Instance Name" @bind-Value="form.InstanceName" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xl-4 mb-3">
+      <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
+        @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
+          <option value="@kind">@kind</option>
+        }
+      </FormSelectInput>
+    </div>
+
+    <div class="col-xl-4 mb-3">
+      <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid" disabled="@(form.JavaRuntimesForSelectedAgent.IsEmpty)">
+        <option value="" selected>Select Java runtime...</option>
+        @foreach (var (guid, runtime) in form.JavaRuntimesForSelectedAgent) {
+          <option value="@guid">@runtime.DisplayName</option>
+        }
+      </FormSelectInput>
+    </div>
+
+    @{
+      var selectedAgent = form.SelectedAgent;
+      
+      string? allowedServerPorts = selectedAgent?.Agent.AllowedServerPorts?.ToString();
+      string? allowedRconPorts = selectedAgent?.Agent.AllowedRconPorts?.ToString();
+      
+      RenderFragment serverPortLabel;
+      RenderFragment rconPortLabel;
+
+      if (string.IsNullOrEmpty(allowedServerPorts)) {
+        serverPortLabel = @<text>Server Port</text>;
+      }
+      else {
+        serverPortLabel = @<text>Server Port <sup title="Allowed: @allowedServerPorts">[?]</sup></text>;
+      }
+
+      if (string.IsNullOrEmpty(allowedRconPorts)) {
+        rconPortLabel = @<text>Rcon Port</text>;
+      }
+      else {
+        rconPortLabel = @<text>Rcon Port <sup title="Allowed: @allowedRconPorts">[?]</sup></text>;
+      }
+    }
+    <div class="col-xl-2 mb-3">
+      <FormNumberInput Id="instance-server-port" LabelFragment="@serverPortLabel" @bind-Value="form.ServerPort" min="0" max="65535" />
+    </div>
+
+    <div class="col-xl-2 mb-3">
+      <FormNumberInput Id="instance-rcon-port" LabelFragment="@rconPortLabel" @bind-Value="form.RconPort" min="0" max="65535" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-xl-12 mb-3">
+      @{
+        ushort maximumMemoryUnits = form.MaximumMemoryUnits;
+        RenderFragment label;
+        if (maximumMemoryUnits == 0) {
+          label = @<text>RAM</text>;
+        }
+        else {
+          label = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
+        }
+      }
+      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+    </div>
+  </div>
+
+  <FormButtonSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
+</EditForm>
+
+@code {
+
+  private FormModel form = null!;
+  private EditContext editContext = null!;
+  private readonly FormButtonSubmit.SubmitModel submitModel = new();
+
+  private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
+
+  private readonly Guid instanceGuid = Guid.NewGuid();
+
+  private sealed class FormModel {
+    public ImmutableDictionary<Guid, AgentStats> AgentsByGuid { get; }
+    private readonly ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> javaRuntimesByAgentGuid;
+
+    public FormModel(AgentJavaRuntimesManager agentJavaRuntimesManager, AgentStatsManager agentStatsManager) {
+      AgentsByGuid = agentStatsManager.GetOnlineAgentStats();
+      javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
+    }
+
+    private bool TryGet<TValue>(ImmutableDictionary<Guid, TValue> dictionary, Guid? agentGuid, [MaybeNullWhen(false)] out TValue value) {
+      if (agentGuid == null) {
+        value = default;
+        return false;
+      }
+      else {
+        return dictionary.TryGetValue(agentGuid.Value, out value);
+      }
+    }
+
+    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentStats? stats) {
+      return TryGet(AgentsByGuid, agentGuid, out stats);
+    }
+
+    public AgentStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agentStats) ? agentStats : null;
+    public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(javaRuntimesByAgentGuid, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
+    public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
+    private ushort selectedMemoryUnits = 4;
+
+    [Required(ErrorMessage = "You must select an agent.")]
+    [AgentHasInstances(ErrorMessage = "This agent has no remaining instances.")]
+    [AgentHasMemory(ErrorMessage = "This agent has no remaining RAM.")]
+    public Guid? SelectedAgentGuid { get; set; } = null;
+
+    [Required(ErrorMessage = "Instance name is required.")]
+    [StringLength(100, ErrorMessage = "Instance name must be at most 100 characters.")]
+    public string InstanceName { get; set; } = string.Empty;
+
+    [Range(minimum: 0, maximum: 65535, ErrorMessage = "Server port must be between 0 and 65535.")]
+    [ServerPortMustBeAllowed(ErrorMessage = "Server port is not allowed.")]
+    public int ServerPort { get; set; } = 25565;
+
+    [Range(minimum: 0, maximum: 65535, ErrorMessage = "Rcon port must be between 0 and 65535.")]
+    [RconPortMustBeAllowed(ErrorMessage = "Rcon port is not allowed.")]
+    [RconPortMustDifferFromServerPort(ErrorMessage = "Rcon port must not be the same as Server port.")]
+    public int RconPort { get; set; } = 25575;
+
+    public MinecraftServerKind MinecraftServerKind { get; set; } = MinecraftServerKind.Vanilla;
+
+    [Required(ErrorMessage = "You must select a Java runtime.")]
+    public Guid? JavaRuntimeGuid { get; set; }
+
+    public string MinecraftVersion { get; set; } = "1.19";
+
+    [Range(minimum: 0, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory is out of range.")]
+    public ushort MemoryUnits {
+      get => Math.Min(selectedMemoryUnits, MaximumMemoryUnits);
+      set => selectedMemoryUnits = value;
+    }
+
+    public RamAllocationUnits? MemoryAllocation => new RamAllocationUnits(MemoryUnits);
+
+    public sealed class AgentHasInstancesAttribute : FormValidationAttribute {
+      protected override string FieldName => nameof(SelectedAgentGuid);
+      protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.UsedInstances < agent.Agent.MaxInstances;
+    }
+
+    public sealed class AgentHasMemoryAttribute : FormValidationAttribute {
+      protected override string FieldName => nameof(SelectedAgentGuid);
+      protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.AvailableMemory > RamAllocationUnits.Zero;
+    }
+
+    public sealed class ServerPortMustBeAllowed : FormValidationAttribute {
+      protected override string FieldName => nameof(ServerPort);
+      protected override bool IsValid(object model, object? value) => value is not int port || M(model).SelectedAgent is not {} agent || agent.Agent.AllowedServerPorts?.Contains((ushort) port) == true;
+    }
+
+    public sealed class RconPortMustBeAllowed : FormValidationAttribute {
+      protected override string FieldName => nameof(RconPort);
+      protected override bool IsValid(object model, object? value) => value is not int port || M(model).SelectedAgent is not {} agent || agent.Agent.AllowedRconPorts?.Contains((ushort) port) == true;
+    }
+
+    public sealed class RconPortMustDifferFromServerPort : FormValidationAttribute {
+      protected override string FieldName => nameof(RconPort);
+      protected override bool IsValid(object model, object? value) => (int?) value != M(model).ServerPort;
+    }
+
+    private static FormModel M(object model) {
+      return (FormModel) model;
+    }
+  }
+
+  protected override void OnInitialized() {
+    form = new FormModel(AgentJavaRuntimesManager, AgentStatsManager);
+    editContext = BootstrapEditContext.Create(form);
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.MemoryUnits));
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.JavaRuntimeGuid));
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.ServerPort));
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.RconPort));
+    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.ServerPort), revalidated: nameof(FormModel.RconPort));
+  }
+
+  private async Task Submit(EditContext context) {
+    if (!context.Validate()) {
+      return;
+    }
+
+    var selectedAgent = form.SelectedAgent;
+    if (selectedAgent == null) {
+      return;
+    }
+
+    submitModel.StartSubmitting();
+    await Task.Yield();
+
+    var serverPort = (ushort) form.ServerPort;
+    var rconPort = (ushort) form.RconPort;
+    var memoryAllocation = form.MemoryAllocation ?? RamAllocationUnits.Zero;
+    var javaRuntimeGuid = form.JavaRuntimeGuid.GetValueOrDefault();
+    
+    var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, LaunchAutomatically: false);
+    var result = await InstanceManager.AddInstance(instance);
+    if (result == AddInstanceResult.Success) {
+      Nav.NavigateTo("/instances");
+    }
+    else {
+      submitModel.StopSubmitting(result.ToSentence());
+    }
+  }
+
+}

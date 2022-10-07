@@ -2,6 +2,7 @@
 using Phantom.Common.Data.Agent;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
+using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using WebLauncher = Phantom.Server.Web.Launcher;
 
@@ -21,6 +22,8 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton(agentToken);
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<AgentJavaRuntimesManager>();
+		services.AddSingleton<AgentStatsManager>();
+		services.AddSingleton<InstanceManager>();
 		services.AddSingleton<MessageToServerListenerFactory>();
 	}
 

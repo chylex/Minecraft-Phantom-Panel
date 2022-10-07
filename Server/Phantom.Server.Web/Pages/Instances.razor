@@ -1,0 +1,85 @@
+﻿@page "/instances"
+@using System.Collections.Immutable
+@using Phantom.Server.Services.Agents
+@using Phantom.Server.Services.Instances
+@implements IDisposable
+@inject AgentManager AgentManager
+@inject InstanceManager InstanceManager
+
+<h1>Instances</h1>
+
+<a href="/instances/create" class="btn btn-primary" role="button">New Instance</a>
+
+<table class="table align-middle">
+  <thead>
+    <tr>
+      <th style="min-width: 200px;">Agent</th>
+      <th style="min-width: 200px;">Name</th>
+      <th style="width: 125px;" class="text-center">Server Port</th>
+      <th style="width: 125px;" class="text-center">Rcon Port</th>
+      <th style="width: 125px;" class="text-end">Memory</th>
+      <th style="width: 350px;">Identifier</th>
+      <th style="width: 225px;">Status</th>
+    </tr>
+  </thead>
+  @if (!instances.IsEmpty) {
+    <tbody>
+      @foreach (var (configuration, status) in instances) {
+        var agentName = agentNames.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
+        var instanceGuid = configuration.InstanceGuid.ToString();
+        <tr>
+          <td>@agentName</td>
+          <td>@configuration.InstanceName</td>
+          <td class="text-center">
+            <code>@configuration.ServerPort</code>
+          </td>
+          <td class="text-center">
+            <code>@configuration.RconPort</code>
+          </td>
+          <td class="text-end">
+            <code>@configuration.MemoryAllocation.InMegabytes MB</code>
+          </td>
+          <td>
+            <code class="text-uppercase">@instanceGuid</code>
+          </td>
+          <td>
+            <InstanceStatusText Status="status" />
+          </td>
+        </tr>
+      }
+    </tbody>
+  }
+  @if (instances.IsEmpty) {
+    <tfoot>
+      <tr>
+        <td colspan="7">
+          No instances.
+        </td>
+      </tr>
+    </tfoot>
+  }
+</table>
+
+@code {
+
+  private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
+  private ImmutableArray<Instance> instances = ImmutableArray<Instance>.Empty;
+
+  protected override void OnInitialized() {
+    AgentManager.AgentsChanged.Subscribe(this, agents => {
+      this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
+      InvokeAsync(StateHasChanged);
+    });
+    
+    InstanceManager.InstancesChanged.Subscribe(this, instances => {
+      this.instances = instances.Values.OrderBy(instance => agentNames.TryGetValue(instance.Configuration.AgentGuid, out var agentName) ? agentName : string.Empty).ThenBy(static instance => instance.Configuration.InstanceName).ToImmutableArray();
+      InvokeAsync(StateHasChanged);
+    });
+  }
+
+  void IDisposable.Dispose() {
+    AgentManager.AgentsChanged.Unsubscribe(this);
+    InstanceManager.InstancesChanged.Unsubscribe(this);
+  }
+
+}

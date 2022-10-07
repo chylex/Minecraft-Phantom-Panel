@@ -1,0 +1,9 @@
+﻿.progress {
+  height: 4px;
+}
+
+.progress-label {
+  width: 100%;
+  margin-bottom: 0.15rem;
+  font-size: 0.9rem;
+}

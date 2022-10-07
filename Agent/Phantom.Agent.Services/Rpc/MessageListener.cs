@@ -24,7 +24,16 @@ public sealed class MessageListener : IMessageToAgentListener {
 
 	public async Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
-		
+
+		foreach (var instanceInfo in message.InitialInstances) {
+			if (await agent.InstanceSessionManager.Configure(instanceInfo) != ConfigureInstanceResult.Success) {
+				Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
+
+				shutdownTokenSource.Cancel();
+				return;
+			}
+		}
+
 		await ServerMessaging.SendMessage(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
 	}
 
@@ -39,5 +48,9 @@ public sealed class MessageListener : IMessageToAgentListener {
 		Environment.Exit(1);
 
 		return Task.CompletedTask;
+	}
+	
+	public async Task HandleConfigureInstance(ConfigureInstanceMessage message) {
+		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Configure(message.Configuration));
 	}
 }

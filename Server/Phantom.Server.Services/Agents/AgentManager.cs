@@ -2,9 +2,12 @@
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
+using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Server.Database;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services.Instances;
+using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Serilog;
@@ -40,7 +43,7 @@ public sealed class AgentManager {
 		}
 	}
 
-	internal async Task<bool> RegisterAgent(AgentAuthToken authToken, AgentInfo agentInfo, RpcClientConnection connection) {
+	internal async Task<bool> RegisterAgent(AgentAuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcClientConnection connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
 			return false;
@@ -66,13 +69,17 @@ public sealed class AgentManager {
 
 		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
 
-		await connection.Send(new RegisterAgentSuccessMessage());
+		await connection.Send(new RegisterAgentSuccessMessage(instanceManager.GetInstanceConfigurationsForAgent(agent.Guid)));
 		return true;
 	}
 
-	internal void UnregisterAgent(Guid agentGuid, RpcClientConnection connection) {
+	internal bool UnregisterAgent(Guid agentGuid, RpcClientConnection connection) {
 		if (agents.TryUnregister(agentGuid, connection)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", agentGuid);
+			return true;
+		}
+		else {
+			return false;
 		}
 	}
 
@@ -83,6 +90,30 @@ public sealed class AgentManager {
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
 		// TODO automatically mark agent as offline if it doesn't send pings
 		agents.Update(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
+	}
+
+	private async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
+		var connection = agents.GetConnection(guid);
+		if (connection != null) {
+			await connection.SendMessage(message);
+			return true;
+		}
+		else {
+			// TODO handle missing agent?
+			return false;
+		}
+	}
+
+	internal async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
+		var sequenceId = MessageReplyTracker.Instance.RegisterReply();
+		var message = messageFactory(sequenceId);
+
+		if (!await SendMessage(guid, message)) {
+			MessageReplyTracker.Instance.ForgetReply(sequenceId);
+			return null;
+		}
+
+		return await MessageReplyTracker.Instance.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
 	private sealed class ObservableAgents : ObservableState<ImmutableArray<Agent>> {
@@ -112,6 +143,10 @@ public sealed class AgentManager {
 
 		public Agent? GetAgent(Guid guid) {
 			return agents.TryGetValue(guid, out var agent) ? agent : null;
+		}
+
+		public AgentConnection? GetConnection(Guid guid) {
+			return agents.TryGetValue(guid, out var agent) ? agent.Connection : null;
 		}
 
 		protected override ImmutableArray<Agent> GetData() {

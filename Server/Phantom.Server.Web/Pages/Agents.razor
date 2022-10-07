@@ -1,10 +1,12 @@
 ﻿@page "/agents"
+@using System.Collections.Immutable
 @using Phantom.Common.Data.Agent
 @using Phantom.Server.Services.Agents
 @using Phantom.Utils.Collections
 @implements IDisposable
 @inject AgentAuthToken AgentAuthToken
 @inject AgentManager AgentManager
+@inject AgentStatsManager AgentStatsManager
 
 <h1>Agents</h1>
 
@@ -12,6 +14,8 @@
   <thead>
     <tr>
       <th style="min-width: 200px;">Name</th>
+      <th style="width: 275px;" class="text-end">Instances</th>
+      <th style="width: 275px;" class="text-end">Memory</th>
       <th style="width: 150px;" class="text-end">Version</th>
       <th style="width: 350px;">Identifier</th>
       <th style="width: 150px;" class="text-center">Status</th>
@@ -21,8 +25,22 @@
   @if (!agentTable.IsEmpty) {
     <tbody>
       @foreach (var agent in agentTable) {
+        var stats = agentStats.TryGetValue(agent.Guid, out var s) ? s : null;
+        var usedInstances = stats?.UsedInstances;
+        var usedMemory = stats?.UsedMemory.InMegabytes;
+        
         <tr>
           <td>@agent.Name</td>
+          <td class="text-end">
+            <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@agent.MaxInstances">
+              @(usedInstances?.ToString() ?? "?") / @agent.MaxInstances
+            </ProgressBar>
+          </td>
+          <td class="text-end">
+            <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@agent.MaxMemory.InMegabytes">
+              @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes MB
+            </ProgressBar>
+          </td>
           <td class="text-end">@agent.Version</td>
           <td>
             <code class="text-uppercase">@agent.Guid.ToString()</code>
@@ -48,7 +66,7 @@
   }
   <tfoot>
     <tr>
-      <td colspan="5">
+      <td colspan="7">
         @if (agentTable.IsEmpty) {
           <text>No agents registered.</text>
         }
@@ -61,6 +79,7 @@
 @code {
 
   private readonly Table<Agent, Guid> agentTable = new();
+  private ImmutableDictionary<Guid, AgentStats> agentStats = ImmutableDictionary<Guid, AgentStats>.Empty;
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
@@ -68,10 +87,16 @@
       agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => agent, static (agent, _) => agent);
       InvokeAsync(StateHasChanged);
     });
+
+    AgentStatsManager.AgentStatsChanged.Subscribe(this, agentStats => {
+      this.agentStats = agentStats.ToImmutableDictionary(static stats => stats.Agent.Guid);
+      InvokeAsync(StateHasChanged);
+    });
   }
 
   void IDisposable.Dispose() {
     AgentManager.AgentsChanged.Unsubscribe(this);
+    AgentStatsManager.AgentStatsChanged.Unsubscribe(this);
   }
 
 }

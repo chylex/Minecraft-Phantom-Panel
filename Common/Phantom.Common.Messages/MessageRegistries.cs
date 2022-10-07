@@ -12,10 +12,13 @@ public static class MessageRegistries {
 	static MessageRegistries() {
 		ToAgent.Add<RegisterAgentSuccessMessage>(0);
 		ToAgent.Add<RegisterAgentFailureMessage>(1);
+		ToAgent.Add<ConfigureInstanceMessage>(2);
 		
 		ToServer.Add<RegisterAgentMessage>(0);
 		ToServer.Add<UnregisterAgentMessage>(1);
 		ToServer.Add<AgentIsAliveMessage>(2);
 		ToServer.Add<AdvertiseJavaRuntimesMessage>(3);
+		ToServer.Add<ReportInstanceStatusMessage>(4);
+		ToServer.Add<SimpleReplyMessage>(127);
 	}
 }

@@ -1,0 +1,19 @@
+﻿<div>
+  <div class="progress-label">@ChildContent</div>
+  <div class="progress">
+    <div class="progress-bar" role="progressbar" style="width: @(100 * Value / Maximum)%;" aria-valuenow="@Value" aria-valuemin="0" aria-valuemax="@Maximum"></div>
+  </div>
+</div>
+
+@code {
+
+  [Parameter]
+  public long Value { get; set; }
+
+  [Parameter]
+  public long Maximum { get; set; }
+
+  [Parameter]
+  public RenderFragment? ChildContent { get; set; }
+
+}

@@ -47,7 +47,7 @@ try {
 	}
 
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
-	var agentServices = new AgentServices(folders);
+	var agentServices = new AgentServices(agentInfo, folders);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 	

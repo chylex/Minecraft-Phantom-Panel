@@ -9,11 +9,13 @@ public sealed record Agent(
 	ushort Version,
 	ushort MaxInstances,
 	RamAllocationUnits MaxMemory,
+	AllowedPorts? AllowedServerPorts = null,
+	AllowedPorts? AllowedRconPorts = null,
 	DateTimeOffset? LastPing = null
 ) {
 	internal AgentConnection? Connection { get; init; }
 	
-	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.Version, info.MaxInstances, info.MaxMemory) {}
+	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.Version, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
 
 	public bool IsOnline => Connection is not null;
 	public bool IsOffline => Connection is null;
