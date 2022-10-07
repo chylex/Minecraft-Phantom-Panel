@@ -92,7 +92,7 @@ public sealed class AgentManager {
 		agents.Update(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
 	}
 
-	private async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
+	public async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
 		var connection = agents.GetConnection(guid);
 		if (connection != null) {
 			await connection.SendMessage(message);

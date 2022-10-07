@@ -1,7 +1,6 @@
 ﻿using NetMQ.Sockets;
 using Phantom.Agent.Rpc;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
@@ -50,6 +49,11 @@ public sealed class MessageListener : IMessageToAgentListener {
 		return Task.CompletedTask;
 	}
 	
+	public Task HandleShutdownAgent(ShutdownAgentMessage message) {
+		shutdownTokenSource.Cancel();
+		return Task.CompletedTask;
+	}
+
 	public async Task HandleConfigureInstance(ConfigureInstanceMessage message) {
 		await socket.SendSimpleReply(message, await agent.InstanceSessionManager.Configure(message.Configuration));
 	}

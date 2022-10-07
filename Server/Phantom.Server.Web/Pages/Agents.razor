@@ -1,6 +1,7 @@
 ﻿@page "/agents"
 @using System.Collections.Immutable
 @using Phantom.Common.Data.Agent
+@using Phantom.Common.Messages.ToAgent
 @using Phantom.Server.Services.Agents
 @using Phantom.Utils.Collections
 @implements IDisposable
@@ -20,11 +21,13 @@
       <th style="width: 350px;">Identifier</th>
       <th style="width: 150px;" class="text-center">Status</th>
       <th style="width: 250px;" class="text-right">Last Ping</th>
+      <th style="width: 200px;">Actions</th>
     </tr>
   </thead>
   @if (!agentTable.IsEmpty) {
     <tbody>
-      @foreach (var agent in agentTable) {
+      @foreach (var row in agentTable) {
+        var agent = row.Agent;
         var stats = agentStats.TryGetValue(agent.Guid, out var s) ? s : null;
         var usedInstances = stats?.UsedInstances;
         var usedMemory = stats?.UsedMemory.InMegabytes;
@@ -48,6 +51,9 @@
           @if (agent.IsOnline) {
             <td class="text-center text-success">Online</td>
             <td class="text-right"></td>
+            <td>
+              <button type="button" class="btn btn-danger btn-sm" @onclick="() => ShutdownAgent(agent.Guid)" disabled="@row.IsShutdownButtonDisabled">Shutdown</button>
+            </td>
           }
           else {
             <td class="text-center text-danger">Offline</td>
@@ -59,6 +65,7 @@
             else {
               <td class="text-right">-</td>
             }
+            <td>-</td>
           }
         </tr>
       }
@@ -66,7 +73,7 @@
   }
   <tfoot>
     <tr>
-      <td colspan="7">
+      <td colspan="8">
         @if (agentTable.IsEmpty) {
           <text>No agents registered.</text>
         }
@@ -78,13 +85,15 @@
 
 @code {
 
-  private readonly Table<Agent, Guid> agentTable = new();
+  private readonly Table<AgentRow, Guid> agentTable = new();
   private ImmutableDictionary<Guid, AgentStats> agentStats = ImmutableDictionary<Guid, AgentStats>.Empty;
+
+  private readonly record struct AgentRow(Agent Agent, bool IsShutdownButtonDisabled = false);
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
       var sortedAgents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
-      agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => agent, static (agent, _) => agent);
+      agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => new AgentRow(agent), static (agent, row) => row with { Agent = agent });
       InvokeAsync(StateHasChanged);
     });
 
@@ -92,6 +101,12 @@
       this.agentStats = agentStats.ToImmutableDictionary(static stats => stats.Agent.Guid);
       InvokeAsync(StateHasChanged);
     });
+  }
+
+  private async Task ShutdownAgent(Guid guid) {
+    if (agentTable.TryUpdateRow(guid, static row => row with { IsShutdownButtonDisabled = true })) {
+      await AgentManager.SendMessage(guid, new ShutdownAgentMessage());
+    }
   }
 
   void IDisposable.Dispose() {

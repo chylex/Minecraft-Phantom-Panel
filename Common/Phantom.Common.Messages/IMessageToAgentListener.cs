@@ -9,4 +9,5 @@ public interface IMessageToAgentListener {
 	Task HandleLaunchInstance(LaunchInstanceMessage message);
 	Task HandleStopInstance(StopInstanceMessage message);
 	Task HandleSendCommandToInstance(SendCommandToInstanceMessage message);
+	Task HandleShutdownAgent(ShutdownAgentMessage message);
 }
