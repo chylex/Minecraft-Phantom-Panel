@@ -9,6 +9,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
+using Phantom.Utils.Threading;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -27,10 +28,10 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
-	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository) {
+	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
-		this.launchServices = new LaunchServices(new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath), javaRuntimeRepository);
+		this.launchServices = new LaunchServices(taskManager, new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath), javaRuntimeRepository);
 		this.portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}

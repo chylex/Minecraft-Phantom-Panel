@@ -22,7 +22,7 @@ sealed class InstanceRunningState : IInstanceState {
 			if (sessionObjects.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
 				context.ReportStatus(new InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
-				Task.Run(() => context.TransitionState(new InstanceNotRunningState()));
+				context.LaunchServices.TaskManager.Run(() => context.TransitionState(new InstanceNotRunningState()));
 			}
 		}
 		else {

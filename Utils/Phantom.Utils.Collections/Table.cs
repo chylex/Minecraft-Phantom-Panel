@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 
 namespace Phantom.Utils.Collections;
 
@@ -48,7 +47,7 @@ public sealed class Table<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictionary
 	}
 
 	public void UpdateFrom<TSource>(ImmutableArray<TSource> sourceItems, Func<TSource, TKey> getKey, Func<TSource, TRow> createRow, Func<TSource, TRow, TRow> updateRow) {
-		Dictionary<TRow, int> rowIndices = Enumerable.Range(0, rowList.Count).ToDictionary(i => rowList[i], static i => i, RowReferenceEqualityComparer.Instance);
+		Dictionary<TRow, int> rowIndices = Enumerable.Range(0, rowList.Count).ToDictionary(i => rowList[i], static i => i, ReferenceEqualityComparer<TRow>.Instance);
 		HashSet<TKey> removedKeys = rowDictionary.Keys.ToHashSet();
 
 		foreach (var sourceItem in sourceItems) {
@@ -79,17 +78,5 @@ public sealed class Table<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictionary
 
 	IEnumerator<KeyValuePair<TKey, TRow>> IEnumerable<KeyValuePair<TKey, TRow>>.GetEnumerator() {
 		return rowDictionary.GetEnumerator();
-	}
-
-	private sealed class RowReferenceEqualityComparer : IEqualityComparer<TRow> {
-		public static readonly RowReferenceEqualityComparer Instance = new ();
-
-		public bool Equals(TRow? x, TRow? y) {
-			return ReferenceEquals(x, y);
-		}
-
-		public int GetHashCode(TRow obj) {
-			return RuntimeHelpers.GetHashCode(obj);
-		}
 	}
 }

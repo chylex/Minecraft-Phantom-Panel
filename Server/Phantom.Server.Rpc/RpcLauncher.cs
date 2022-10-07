@@ -34,8 +34,10 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		logger.Information("ZeroMQ server initialized, listening for agent connections on port {Port}.", config.Port);
 	}
 
-	protected override async Task Run(ServerSocket socket, CancellationToken cancellationToken) {
+	protected override async Task Run(ServerSocket socket) {
 		var logger = config.Logger;
+		var taskManager = config.TaskManager;
+		var cancellationToken = config.CancellationToken;
 
 		var clients = new Dictionary<ulong, Client>();
 
@@ -67,7 +69,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 				clients[routingId] = client;
 			}
 
-			MessageRegistries.ToServer.Handle(bytes, client.Listener, cancellationToken);
+			MessageRegistries.ToServer.Handle(bytes, client.Listener, taskManager, cancellationToken);
 
 			if (client.Listener.IsDisposed) {
 				client.Connection.Close();

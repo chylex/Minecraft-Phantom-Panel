@@ -15,7 +15,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		this.context.Logger.Information("Session starting...");
 		this.context.ReportStatus(InstanceStatus.IsLaunching);
 		
-		var launchTask = Task.Run(DoLaunch);
+		var launchTask = context.LaunchServices.TaskManager.Run(DoLaunch);
 		launchTask.ContinueWith(OnLaunchSuccess, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
 		launchTask.ContinueWith(OnLaunchFailure, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
 	}

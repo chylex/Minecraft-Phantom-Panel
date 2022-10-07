@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Phantom.Utils.Threading;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
@@ -49,7 +50,7 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 		}
 	}
 
-	public void Handle(byte[] bytes, TListener listener, CancellationToken cancellationToken) {
+	public void Handle(byte[] bytes, TListener listener, TaskManager taskManager, CancellationToken cancellationToken) {
 		var memory = new ReadOnlyMemory<byte>(bytes);
 
 		ushort code;
@@ -81,6 +82,7 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 			}
 		}
 
-		Task.Run(HandleMessage, cancellationToken);
+		cancellationToken.ThrowIfCancellationRequested();
+		taskManager.Run(HandleMessage);
 	}
 }

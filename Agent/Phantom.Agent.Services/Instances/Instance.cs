@@ -144,7 +144,7 @@ sealed class Instance : IDisposable {
 		public override void ReportStatus(InstanceStatus newStatus) {
 			int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
 			
-			Task.Run(async () => {
+			instance.launchServices.TaskManager.Run(async () => {
 				if (myStatusUpdateCounter == statusUpdateCounter) {
 					instance.currentStatus = newStatus;
 					await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));

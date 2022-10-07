@@ -15,7 +15,7 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 		this.context.Logger.Information("Session stopping.");
 		this.context.ReportStatus(InstanceStatus.IsStopping);
 		
-		Task.Run(DoStop);
+		context.LaunchServices.TaskManager.Run(DoStop);
 	}
 
 	private async Task DoStop() {

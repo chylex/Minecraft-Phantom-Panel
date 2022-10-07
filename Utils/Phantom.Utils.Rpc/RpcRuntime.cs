@@ -23,20 +23,18 @@ static class RpcRuntime {
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new() {
 	private readonly TSocket socket;
-	private readonly CancellationToken cancellationToken;
 
 	protected RpcRuntime(TSocket socket, CancellationToken cancellationToken) {
 		RpcRuntime.MarkRuntimeCreated();
 		RpcRuntime.SetDefaultSocketOptions(socket.Options);
 		this.socket = socket;
-		this.cancellationToken = cancellationToken;
 	}
 
 	protected async Task Launch() {
 		Connect(socket);
 		
 		try {
-			await Run(socket, cancellationToken);
+			await Run(socket);
 		} catch (OperationCanceledException) {
 			// ignore
 		} finally {
@@ -48,7 +46,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 	}
 	
 	protected abstract void Connect(TSocket socket);
-	protected abstract Task Run(TSocket socket, CancellationToken cancellationToken);
+	protected abstract Task Run(TSocket socket);
 	
 	protected virtual Task Disconnect(TSocket socket) {
 		return Task.CompletedTask;

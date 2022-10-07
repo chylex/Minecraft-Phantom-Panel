@@ -39,8 +39,10 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		logger.Information("ZeroMQ client ready.");
 	}
 
-	protected override async Task Run(ClientSocket socket, CancellationToken cancellationToken) {
+	protected override async Task Run(ClientSocket socket) {
 		var logger = config.Logger;
+		var taskManager = config.TaskManager;
+		var cancellationToken = config.CancellationToken;
 		
 		var listener = messageListenerFactory(socket);
 		
@@ -58,7 +60,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 			}
 
 			if (bytes.Length > 0) {
-				MessageRegistries.ToAgent.Handle(bytes, listener, cancellationToken);
+				MessageRegistries.ToAgent.Handle(bytes, listener, taskManager, cancellationToken);
 			}
 		}
 	}

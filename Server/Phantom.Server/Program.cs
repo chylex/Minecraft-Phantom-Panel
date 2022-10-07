@@ -8,6 +8,7 @@ using Phantom.Server.Services.Rpc;
 using Phantom.Utils.IO;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
+using Phantom.Utils.Threading;
 using WebConfiguration = Phantom.Server.Web.Configuration;
 using WebLauncher = Phantom.Server.Web.Launcher;
 
@@ -42,7 +43,8 @@ try {
 		Environment.Exit(1);
 	}
 
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token);
+	var taskManager = new TaskManager();
+	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, taskManager, cancellationTokenSource.Token);
 	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, cancellationTokenSource.Token);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
@@ -56,6 +58,8 @@ try {
 		RpcLauncher.Launch(rpcConfiguration, webApplication.Services.GetRequiredService<MessageToServerListenerFactory>().CreateListener),
 		WebLauncher.Launch(webConfiguration, webApplication)
 	);
+	
+	await taskManager.Stop();
 } catch (OperationCanceledException) {
 	// Ignore.
 } finally {
