@@ -1,0 +1,18 @@
+﻿@inherits FormInputBaseDebounced<string>
+
+<FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
+<InputFieldText @ref="FormField"
+                Value="@Value"
+                ValueChanged="@ValueChanged"
+                ValueExpression="@ValueExpression"
+                OnChange="@OnChangeDebounced"
+                OnBlur="@OnBlur"
+                AdditionalAttributes="@GetAttributes("form-control")" />
+<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+
+@code {
+  
+  protected override ICustomFormField FormField { get; set; } = null!;
+  
+}
+

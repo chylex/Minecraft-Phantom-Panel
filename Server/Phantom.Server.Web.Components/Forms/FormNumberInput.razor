@@ -1,0 +1,22 @@
+﻿@typeparam TValue
+@inherits FormInputBaseDebounced<TValue>
+
+<FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
+<InputFieldNumeric @ref="FormField"
+                   Type="@Type"
+                   Value="@Value"
+                   ValueChanged="@ValueChanged"
+                   ValueExpression="@ValueExpression"
+                   OnChange="@OnChangeDebounced"
+                   OnBlur="@OnBlur"
+                   AdditionalAttributes="@GetAttributes(Type.GetBootstrapCssClass())" />
+<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+
+@code {
+
+  [Parameter]
+  public FormNumberInputType Type { get; set; } = FormNumberInputType.Number;
+
+  protected override ICustomFormField FormField { get; set; } = null!;
+  
+}

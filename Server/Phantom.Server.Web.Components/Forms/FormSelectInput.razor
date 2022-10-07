@@ -1,0 +1,17 @@
+﻿@typeparam TValue
+@using System.Diagnostics.CodeAnalysis
+@inherits Phantom.Server.Web.Components.Forms.Base.FormInputBase<TValue>
+
+<FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
+<InputSelect Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-select")">
+  @ChildContent
+</InputSelect>
+<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+
+@code {
+
+  [Parameter]
+  [DisallowNull]
+  public RenderFragment? ChildContent { get; set; }
+
+}

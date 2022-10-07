@@ -1,0 +1,19 @@
+﻿@if (Label != null) {
+  <label for="@Id" class="form-label">@Label</label>
+}
+else if (LabelFragment != null) {
+  <label for="@Id" class="form-label">@LabelFragment</label>
+}
+
+@code {
+
+  [Parameter, EditorRequired]
+  public string Id { get; set; } = null!;
+  
+  [Parameter]
+  public string? Label { get; set; }
+
+  [Parameter]
+  public RenderFragment? LabelFragment { get; set; }
+  
+}
