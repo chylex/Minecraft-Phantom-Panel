@@ -3,6 +3,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Server.Database;
 using Phantom.Server.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -19,10 +20,24 @@ public sealed class AgentManager {
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentAuthToken authToken;
+	private readonly DatabaseProvider databaseProvider;
 
-	public AgentManager(ServiceConfiguration configuration, AgentAuthToken authToken) {
+	public AgentManager(ServiceConfiguration configuration, AgentAuthToken authToken, DatabaseProvider databaseProvider) {
 		this.cancellationToken = configuration.CancellationToken;
 		this.authToken = authToken;
+		this.databaseProvider = databaseProvider;
+	}
+
+	public async Task Initialize() {
+		using var scope = databaseProvider.CreateScope();
+
+		await foreach (var entity in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+			var agent = new Agent(entity.AgentGuid, entity.Name, entity.Version, entity.MaxInstances, entity.MaxMemory);
+			if (!agents.TryRegister(agent)) {
+				// TODO
+				throw new InvalidOperationException("Unable to register agent from database: " + agent.Guid);
+			}
+		}
 	}
 
 	internal async Task<bool> RegisterAgent(AgentAuthToken authToken, AgentInfo agentInfo, RpcClientConnection connection) {
@@ -37,6 +52,17 @@ public sealed class AgentManager {
 		};
 
 		agents.Register(agent);
+
+		using (var scope = databaseProvider.CreateScope()) {
+			var entity = scope.Ctx.AgentUpsert.Fetch(agent.Guid);
+			
+			entity.Name = agent.Name;
+			entity.Version = agent.Version;
+			entity.MaxInstances = agent.MaxInstances;
+			entity.MaxMemory = agent.MaxMemory;
+			
+			await scope.Ctx.SaveChangesAsync(cancellationToken);
+		}
 
 		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
 
@@ -63,6 +89,10 @@ public sealed class AgentManager {
 		private readonly RwLockedDictionary<Guid, Agent> agents = new (LockRecursionPolicy.NoRecursion);
 
 		public ObservableAgents(ILogger logger) : base(logger) {}
+
+		public bool TryRegister(Agent agent) {
+			return UpdateIf(agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent.IsOffline));
+		}
 
 		public void Register(Agent agent) {
 			if (agents.AddOrReplace(agent.Guid, agent, out var oldAgent) && oldAgent.Connection is {} oldConnection) {
