@@ -16,7 +16,7 @@
 
 <h1>New Instance</h1>
 
-<EditForm EditContext="editContext" OnSubmit="Submit">
+<EditForm EditContext="form.EditContext" OnSubmit="Submit">
   <DataAnnotationsValidator />
 
   <div class="row">
@@ -106,24 +106,22 @@
     </div>
   </div>
 
-  <FormButtonSubmit Label="Create Instance" Model="@submitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
+  <FormButtonSubmit Label="Create Instance" Model="@form.SubmitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
 </EditForm>
 
 @code {
 
-  private FormModel form = null!;
-  private EditContext editContext = null!;
-  private readonly FormButtonSubmit.SubmitModel submitModel = new();
+  private CreateInstanceFormModel form = null!;
 
-  private bool IsSubmittable => form.SelectedAgentGuid != null && !editContext.GetValidationMessages(editContext.Field(nameof(FormModel.SelectedAgentGuid))).Any();
+  private bool IsSubmittable => form.SelectedAgentGuid != null && !form.EditContext.GetValidationMessages(form.EditContext.Field(nameof(CreateInstanceFormModel.SelectedAgentGuid))).Any();
 
   private readonly Guid instanceGuid = Guid.NewGuid();
 
-  private sealed class FormModel {
+  private sealed class CreateInstanceFormModel : FormModel {
     public ImmutableDictionary<Guid, AgentStats> AgentsByGuid { get; }
     private readonly ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> javaRuntimesByAgentGuid;
 
-    public FormModel(AgentJavaRuntimesManager agentJavaRuntimesManager, AgentStatsManager agentStatsManager) {
+    public CreateInstanceFormModel(AgentJavaRuntimesManager agentJavaRuntimesManager, AgentStatsManager agentStatsManager) {
       AgentsByGuid = agentStatsManager.GetOnlineAgentStats();
       javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
     }
@@ -205,19 +203,18 @@
       protected override bool IsValid(object model, object? value) => (int?) value != M(model).ServerPort;
     }
 
-    private static FormModel M(object model) {
-      return (FormModel) model;
+    private static CreateInstanceFormModel M(object model) {
+      return (CreateInstanceFormModel) model;
     }
   }
 
   protected override void OnInitialized() {
-    form = new FormModel(AgentJavaRuntimesManager, AgentStatsManager);
-    editContext = BootstrapEditContext.Create(form);
-    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.MemoryUnits));
-    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.JavaRuntimeGuid));
-    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.ServerPort));
-    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.SelectedAgentGuid), revalidated: nameof(FormModel.RconPort));
-    editContext.RevalidateWhenFieldChanges(tracked: nameof(FormModel.ServerPort), revalidated: nameof(FormModel.RconPort));
+    form = new CreateInstanceFormModel(AgentJavaRuntimesManager, AgentStatsManager);
+    form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.MemoryUnits));
+    form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.JavaRuntimeGuid));
+    form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.ServerPort));
+    form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.RconPort));
+    form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.ServerPort), revalidated: nameof(CreateInstanceFormModel.RconPort));
   }
 
   private async Task Submit(EditContext context) {
@@ -230,7 +227,7 @@
       return;
     }
 
-    submitModel.StartSubmitting();
+    form.SubmitModel.StartSubmitting();
     await Task.Yield();
 
     var serverPort = (ushort) form.ServerPort;
@@ -244,7 +241,7 @@
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);
     }
     else {
-      submitModel.StopSubmitting(result.ToSentence());
+      form.SubmitModel.StopSubmitting(result.ToSentence());
     }
   }
 
