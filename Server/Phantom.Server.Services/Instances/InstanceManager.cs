@@ -61,26 +61,26 @@ public sealed class InstanceManager {
 			return AddInstanceResult.InstanceAlreadyExists;
 		}
 
-		using (var scope = databaseProvider.CreateScope()) {
-			InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
-			
-			entity.AgentGuid = configuration.AgentGuid;
-			entity.InstanceName = configuration.InstanceName;
-			entity.ServerPort = configuration.ServerPort;
-			entity.RconPort = configuration.RconPort;
-			entity.MinecraftVersion = configuration.MinecraftVersion;
-			entity.MinecraftServerKind = configuration.MinecraftServerKind;
-			entity.MemoryAllocation = configuration.MemoryAllocation;
-			entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
-			entity.LaunchAutomatically = configuration.LaunchAutomatically;
-			
-			await scope.Ctx.SaveChangesAsync(cancellationToken);
-		}
-
 		var agentName = agent.Name;
 
 		var reply = (ConfigureInstanceResult?) await agentManager.SendMessageWithReply(configuration.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, configuration), TimeSpan.FromSeconds(10));
 		if (reply == ConfigureInstanceResult.Success) {
+			using (var scope = databaseProvider.CreateScope()) {
+				InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
+
+				entity.AgentGuid = configuration.AgentGuid;
+				entity.InstanceName = configuration.InstanceName;
+				entity.ServerPort = configuration.ServerPort;
+				entity.RconPort = configuration.RconPort;
+				entity.MinecraftVersion = configuration.MinecraftVersion;
+				entity.MinecraftServerKind = configuration.MinecraftServerKind;
+				entity.MemoryAllocation = configuration.MemoryAllocation;
+				entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
+				entity.LaunchAutomatically = configuration.LaunchAutomatically;
+
+				await scope.Ctx.SaveChangesAsync(cancellationToken);
+			}
+
 			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", configuration.InstanceName, configuration.InstanceGuid, agentName);
 			return AddInstanceResult.Success;
 		}
