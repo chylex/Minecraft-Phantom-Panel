@@ -107,6 +107,7 @@
   </div>
 
   <FormButtonSubmit Label="Create Instance" Model="@form.SubmitModel" class="btn btn-primary" disabled="@(!IsSubmittable)" />
+  <FormSubmitError Message="@form.SubmitModel.SubmitError" />
 </EditForm>
 
 @code {

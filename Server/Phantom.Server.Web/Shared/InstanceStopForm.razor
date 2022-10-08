@@ -1,0 +1,72 @@
+﻿@using Phantom.Common.Data.Replies
+@using Phantom.Server.Services.Instances
+@using System.ComponentModel.DataAnnotations
+@using Phantom.Common.Data.Minecraft
+@inject IJSRuntime Js;
+@inject InstanceManager InstanceManager;
+
+<div id="@ModalId" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <EditForm EditContext="form.EditContext" OnSubmit="StopInstance">
+        <div class="modal-header">
+          <h5 class="modal-title">Stop Instance</h5>
+        </div>
+        <div class="modal-body">
+          <FormSelectInput Id="stop-in-seconds" Label="Stop In..." @bind-Value="form.StopInSeconds">
+            <option value="0">Immediately</option>
+            <option value="10">10 Seconds</option>
+            <option value="30">30 Seconds</option>
+            <option value="60">1 Minute</option>
+            <option value="120">2 Minutes</option>
+            <option value="180">3 Minutes</option>
+            <option value="240">4 Minutes</option>
+            <option value="300">5 Minutes</option>
+          </FormSelectInput>
+        </div>
+        <div class="modal-footer">
+          <FormSubmitError Message="@form.SubmitModel.SubmitError" />
+          <FormButtonSubmit Label="Stop Instance" Model="@form.SubmitModel" class="btn btn-danger" disabled="@Disabled" /> 
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </EditForm>
+    </div>
+  </div>
+</div>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public Guid InstanceGuid { get; set; }
+
+  [Parameter, EditorRequired]
+  public string ModalId { get; set; } = string.Empty;
+
+  [Parameter]
+  public bool Disabled { get; set; }
+
+  private StopInstanceFormModel form = new ();
+
+  private sealed class StopInstanceFormModel : FormModel {
+    [Range(minimum: 0, maximum: 300, ErrorMessage = "Stop delay must be between 0 and 300 seconds.")]
+    public ushort StopInSeconds { get; set; } = 0;
+  }
+
+  private async Task StopInstance(EditContext context) {
+    if (!context.Validate()) {
+      return;
+    }
+    
+    form.SubmitModel.StartSubmitting();
+    await Task.Yield();
+    
+    var result = await InstanceManager.StopInstance(InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds));
+    if (result == StopInstanceResult.StopInitiated) {
+      await Js.InvokeVoidAsync("closeModal", ModalId);
+      form.SubmitModel.StopSubmitting();
+    }
+    else {
+      form.SubmitModel.StopSubmitting(result.ToSentence());
+    }
+  }
+}

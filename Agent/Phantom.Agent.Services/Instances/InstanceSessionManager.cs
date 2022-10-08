@@ -7,6 +7,7 @@ using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Utils.Threading;
@@ -113,7 +114,7 @@ sealed class InstanceSessionManager : IDisposable {
 		}
 	}
 
-	public async Task<StopInstanceResult> Stop(Guid instanceGuid) {
+	public async Task<StopInstanceResult> Stop(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
@@ -125,7 +126,7 @@ sealed class InstanceSessionManager : IDisposable {
 				return StopInstanceResult.InstanceDoesNotExist;
 			}
 			else {
-				return await instance.Stop();
+				return await instance.Stop(stopStrategy);
 			}
 		} finally {
 			semaphore.Release();

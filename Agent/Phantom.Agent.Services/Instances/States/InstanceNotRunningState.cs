@@ -1,4 +1,5 @@
 ﻿using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States; 
@@ -23,7 +24,7 @@ sealed class InstanceNotRunningState : IInstanceState {
 		return (new InstanceLaunchingState(context), LaunchInstanceResult.LaunchInitiated);
 	}
 
-	public (IInstanceState, StopInstanceResult) Stop() {
+	public (IInstanceState, StopInstanceResult) Stop(MinecraftStopStrategy stopStrategy) {
 		return (this, StopInstanceResult.InstanceAlreadyStopped);
 	}
 

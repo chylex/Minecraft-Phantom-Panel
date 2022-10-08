@@ -2,6 +2,7 @@
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States;
@@ -93,7 +94,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		return (this, LaunchInstanceResult.InstanceAlreadyLaunching);
 	}
 
-	public (IInstanceState, StopInstanceResult) Stop() {
+	public (IInstanceState, StopInstanceResult) Stop(MinecraftStopStrategy stopStrategy) {
 		cancellationTokenSource.Cancel();
 		return (this, StopInstanceResult.StopInitiated);
 	}

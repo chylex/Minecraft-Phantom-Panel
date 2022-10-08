@@ -27,11 +27,6 @@ public sealed class FormButtonSubmit : ComponentBase {
 		builder.AddAttribute(4, "disabled", BlazorUtils.CombineBooleansWithOr(AdditionalAttributes, "disabled", Model.IsSubmitting));
 		builder.AddAttribute(5, "value", Label);
 		builder.CloseElement();
-		
-		builder.OpenElement(6, "div");
-		builder.AddAttribute(7, "class", "invalid-feedback");
-		builder.AddContent(8, Model.SubmitError);
-		builder.CloseElement();
 	}
 
 	public sealed class SubmitModel {

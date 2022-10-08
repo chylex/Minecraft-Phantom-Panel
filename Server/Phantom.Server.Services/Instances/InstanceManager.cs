@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
@@ -123,7 +124,7 @@ public sealed class InstanceManager {
 		return reply ?? LaunchInstanceResult.CommunicationError;
 	}
 
-	public async Task<StopInstanceResult> StopInstance(Guid instanceGuid) {
+	public async Task<StopInstanceResult> StopInstance(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
 		var instance = GetInstance(instanceGuid);
 		if (instance == null) {
 			return StopInstanceResult.InstanceDoesNotExist;
@@ -131,7 +132,7 @@ public sealed class InstanceManager {
 		
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, false);
 
-		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
+		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid, stopStrategy), TimeSpan.FromSeconds(10));
 		return reply ?? StopInstanceResult.CommunicationError;
 	}
 

@@ -1,5 +1,7 @@
-﻿using Phantom.Agent.Minecraft.Instance;
+﻿using Phantom.Agent.Minecraft.Command;
+using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States; 
@@ -38,7 +40,7 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	private async Task DoSendStopCommand() {
 		using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		try {
-			await session.SendCommand("stop", cts.Token);
+			await session.SendCommand(MinecraftCommand.Stop, cts.Token);
 		} catch (OperationCanceledException) {
 			// ignore
 		} catch (Exception e) {
@@ -64,7 +66,7 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 		return (this, LaunchInstanceResult.InstanceIsStopping);
 	}
 
-	public (IInstanceState, StopInstanceResult) Stop() {
+	public (IInstanceState, StopInstanceResult) Stop(MinecraftStopStrategy stopStrategy) {
 		return (this, StopInstanceResult.InstanceAlreadyStopping); // TODO maybe provide a way to kill?
 	}
 

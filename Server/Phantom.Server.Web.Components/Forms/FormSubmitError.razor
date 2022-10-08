@@ -1,0 +1,10 @@
+﻿@if (!string.IsNullOrEmpty(Message)) {
+  <div class="text-danger my-2 w-100">@Message</div>
+}
+
+@code {
+
+  [Parameter]
+  public string? Message { get; set; }
+
+}

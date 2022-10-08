@@ -2,6 +2,7 @@
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToServer;
@@ -96,10 +97,10 @@ sealed class Instance : IDisposable {
 		}
 	}
 
-	public async Task<StopInstanceResult> Stop() {
+	public async Task<StopInstanceResult> Stop(MinecraftStopStrategy stopStrategy) {
 		await stateTransitioningActionSemaphore.WaitAsync();
 		try {
-			return TransitionStateAndReturn(currentState.Stop());
+			return TransitionStateAndReturn(currentState.Stop(stopStrategy));
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception while stopping instance.");
 			return StopInstanceResult.UnknownError;
@@ -109,7 +110,7 @@ sealed class Instance : IDisposable {
 	}
 
 	public async Task StopAndWait(TimeSpan waitTime) {
-		await Stop();
+		await Stop(MinecraftStopStrategy.Instant);
 
 		using var waitTokenSource = new CancellationTokenSource(waitTime);
 		var waitToken = waitTokenSource.Token;
