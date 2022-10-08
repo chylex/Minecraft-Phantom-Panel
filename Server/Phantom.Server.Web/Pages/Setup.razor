@@ -1,0 +1,101 @@
+﻿@page "/setup"
+@using Phantom.Server.Web.Authentication
+@using Phantom.Server.Services
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@using Phantom.Utils.Cryptography
+@using System.Security.Cryptography
+@attribute [AllowAnonymous]
+@inject PhantomLoginManager LoginManager
+@inject ServiceConfiguration ServiceConfiguration
+@inject UserManager<IdentityUser> UserManager
+
+<h1>Administrator Setup</h1>
+
+<EditForm EditContext="form.EditContext" OnSubmit="DoLogin">
+  <DataAnnotationsValidator />
+
+  <div style="max-width: 400px;">
+    <div class="row">
+      <div class="mb-3">
+        <FormTextInput Id="account-username" Label="Username" @bind-Value="form.Username" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="mb-3">
+        <FormTextInput Id="account-password" Label="Password" Type="FormTextInputType.Password" @bind-Value="form.Password" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="mb-3">
+        <FormTextInput Id="administration-token" Label="Administration Token" Type="FormTextInputType.Password" @bind-Value="form.AdministrationToken" />
+      </div>
+    </div>
+
+    <FormButtonSubmit Label="Continue" Model="@form.SubmitModel" class="btn btn-primary" />
+  </div>
+  
+  <FormSubmitError Message="@form.SubmitModel.SubmitError" />
+</EditForm>
+
+@code {
+
+  private readonly CreateAdministratorAccountFormModel form = new ();
+  
+  private sealed class CreateAdministratorAccountFormModel : FormModel {
+    [Required]
+    public string Username { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
+    
+    [Required]
+    public string AdministrationToken { get; set; } = string.Empty;
+  }
+
+  private async Task DoLogin(EditContext context) {
+    if (!context.Validate()) {
+      return;
+    }
+    
+    form.SubmitModel.StartSubmitting();
+
+    if (!IsAdministratorTokenValid()) {
+      form.SubmitModel.StopSubmitting("Invalid administrator token.");
+      return;
+    }
+    
+    IdentityResult createUserResult;
+    var existingUser = await UserManager.FindByNameAsync(form.Username);
+    if (existingUser != null) {
+      await UserManager.RemovePasswordAsync(existingUser);
+      createUserResult = await UserManager.AddPasswordAsync(existingUser, form.Password);
+    }
+    else {
+      createUserResult = await UserManager.CreateAsync(new IdentityUser(form.Username), form.Password);
+    }
+    
+    if (!createUserResult.Succeeded) {
+      form.SubmitModel.StopSubmitting(string.Join("\n", createUserResult.Errors.Select(static error => error.Description)));
+      return;
+    }
+
+    var signInResult = await LoginManager.SignIn(form.Username, form.Password, "/");
+    if (!signInResult.Succeeded) {
+      form.SubmitModel.StopSubmitting("Error logging in.");
+    }
+  }
+
+  private bool IsAdministratorTokenValid() {
+    byte[] formTokenBytes;
+    try {
+      formTokenBytes = TokenGenerator.GetBytesOrThrow(form.AdministrationToken);
+    } catch (Exception) {
+      return false;
+    }
+    
+    return CryptographicOperations.FixedTimeEquals(formTokenBytes, ServiceConfiguration.AdministratorToken);
+  }
+}

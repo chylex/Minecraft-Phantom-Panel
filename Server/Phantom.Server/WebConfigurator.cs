@@ -10,15 +10,15 @@ namespace Phantom.Server;
 
 sealed class WebConfigurator : WebLauncher.IConfigurator {
 	private readonly AgentAuthToken agentToken;
-	private readonly CancellationToken cancellationToken;
+	private readonly ServiceConfiguration serviceConfiguration;
 
-	public WebConfigurator(AgentAuthToken agentToken, CancellationToken cancellationToken) {
+	public WebConfigurator(AgentAuthToken agentToken, ServiceConfiguration serviceConfiguration) {
 		this.agentToken = agentToken;
-		this.cancellationToken = cancellationToken;
+		this.serviceConfiguration = serviceConfiguration;
 	}
 
 	public void ConfigureServices(IServiceCollection services) {
-		services.AddSingleton(new ServiceConfiguration(cancellationToken));
+		services.AddSingleton(serviceConfiguration);
 		services.AddSingleton(agentToken);
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<AgentJavaRuntimesManager>();

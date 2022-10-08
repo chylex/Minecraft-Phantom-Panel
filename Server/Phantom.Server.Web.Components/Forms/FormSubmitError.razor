@@ -1,10 +1,23 @@
-﻿@if (!string.IsNullOrEmpty(Message)) {
-  <div class="text-danger my-2 w-100">@Message</div>
+﻿@if (messageLines.Length > 0) {
+  <div class="text-danger my-2 w-100">
+    @for (int i = 0; i < messageLines.Length; i++) {
+      @messageLines[i]
+      if (i < messageLines.Length - 1) {
+        <br />
+      }
+    }
+  </div>
 }
 
 @code {
 
   [Parameter]
   public string? Message { get; set; }
+
+  private string[] messageLines = Array.Empty<string>();
+  
+  protected override void OnParametersSet() {
+    messageLines = Message?.Split('\n') ?? Array.Empty<string>();
+  }
 
 }

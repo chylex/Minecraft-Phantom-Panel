@@ -4,7 +4,9 @@ using Phantom.Common.Logging;
 using Phantom.Server;
 using Phantom.Server.Database.Postgres;
 using Phantom.Server.Rpc;
+using Phantom.Server.Services;
 using Phantom.Server.Services.Rpc;
+using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
@@ -49,7 +51,12 @@ try {
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
-	var webConfigurator = new WebConfigurator(agentToken, cancellationTokenSource.Token);
+	var administratorToken = TokenGenerator.Create(60);
+	PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
+	PhantomLogger.Root.Information("For administrator setup, visit: {BaseUrl}/setup", webConfiguration.HttpUrl);
+
+	var serviceConfiguration = new ServiceConfiguration(TokenGenerator.GetBytesOrThrow(administratorToken), taskManager, cancellationTokenSource.Token);
+	var webConfigurator = new WebConfigurator(agentToken, serviceConfiguration);
 	var webApplication = await WebLauncher.CreateApplication(webConfiguration, webConfigurator, options => options.UseNpgsql(sqlConnectionString, static options => {
 		options.CommandTimeout(10).MigrationsAssembly(typeof(ApplicationDbContextDesignFactory).Assembly.FullName);
 	}));

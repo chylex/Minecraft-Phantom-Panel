@@ -1,0 +1,78 @@
+﻿@page "/login"
+@using Phantom.Server.Web.Authentication
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@using Phantom.Server.Web.Components.Utils
+@attribute [AllowAnonymous]
+@inject NavigationManager Nav
+@inject PhantomLoginManager LoginManager
+
+<h1>Login</h1>
+
+<EditForm EditContext="form.EditContext" OnSubmit="DoLogin">
+  <DataAnnotationsValidator />
+
+  <div style="max-width: 400px;">
+    <div class="row">
+      <div class="mb-3">
+        <FormTextInput Id="account-username" Label="Username" @bind-Value="form.Username" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="mb-3">
+        <FormTextInput Id="account-password" Label="Password" Type="FormTextInputType.Password" @bind-Value="form.Password" />
+      </div>
+    </div>
+
+    <FormButtonSubmit Label="Login" Model="@form.SubmitModel" class="btn btn-primary" />
+  </div>
+  
+  <FormSubmitError Message="@form.SubmitModel.SubmitError" />
+</EditForm>
+
+@code {
+
+  private readonly LoginFormModel form = new ();
+  
+  private sealed class LoginFormModel : FormModel {
+    [Required]
+    public string Username { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
+  }
+
+  protected override void OnInitialized() {
+    if (Query.GetParameter(Nav, "token", out _)) {
+      form.SubmitModel.StopSubmitting("Please login again.");
+    }
+  }
+
+  private async Task DoLogin(EditContext context) {
+    if (!context.Validate()) {
+      return;
+    }
+    
+    form.SubmitModel.StartSubmitting();
+    
+    string? returnUrl = Query.GetParameter(Nav, "return", out var url) ? url : null;
+    var result = await LoginManager.SignIn(form.Username, form.Password, returnUrl ?? "/");
+    if (result != SignInResult.Success) {
+      form.SubmitModel.StopSubmitting(GetErrorMessage(result));
+    }
+  }
+
+  private static string GetErrorMessage(SignInResult result) {
+    if (result == SignInResult.Failed) {
+      return "Invalid username or password.";
+    }
+    else if (result == SignInResult.LockedOut) {
+      return "Too many failed login attempts. Please try again later.";
+    }
+    else {
+      return "Unknown error.";
+    }
+  }
+
+}

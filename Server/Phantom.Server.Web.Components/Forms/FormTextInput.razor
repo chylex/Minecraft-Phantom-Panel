@@ -2,6 +2,7 @@
 
 <FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
 <InputFieldText @ref="FormField"
+                Type="@Type"
                 Value="@Value"
                 ValueChanged="@ValueChanged"
                 ValueExpression="@ValueExpression"
@@ -11,7 +12,10 @@
 <ValidationMessage For="@ValueExpression" class="invalid-feedback" />
 
 @code {
-  
+
+  [Parameter]
+  public FormTextInputType Type { get; set; } = FormTextInputType.Text;
+
   protected override ICustomFormField FormField { get; set; } = null!;
   
 }

@@ -1,5 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Database;
+using Phantom.Server.Web.Authentication;
 using Phantom.Server.Web.Components.Utils;
 using Serilog;
 
@@ -27,9 +31,17 @@ public static class Launcher {
 		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
 		builder.Services.AddSingleton<DatabaseProvider>();
 		
+		builder.Services.AddSingleton<PhantomLoginStore>();
+		builder.Services.AddScoped<PhantomLoginManager>();
+		builder.Services.AddIdentity<IdentityUser, IdentityRole>(ConfigureIdentity).AddEntityFrameworkStores<ApplicationDbContext>();
+		builder.Services.ConfigureApplicationCookie(ConfigureIdentityCookie);
+		builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
+		builder.Services.AddAuthorization();
+		
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
-
+		builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+		
 		var application = builder.Build();
 		
 		await MigrateDatabase(config, application.Services.GetRequiredService<DatabaseProvider>());
@@ -51,6 +63,7 @@ public static class Launcher {
 		application.UseRouting();
 		application.UseAuthentication();
 		application.UseAuthorization();
+		application.UseMiddleware<BlazorIdentityMiddleware>();
 
 		application.MapControllers();
 		application.MapBlazorHub();
@@ -68,6 +81,36 @@ public static class Launcher {
 		public Task StopAsync(CancellationToken cancellationToken) {
 			return Task.CompletedTask;
 		}
+	}
+
+	private static void ConfigureIdentity(IdentityOptions o) {
+		o.SignIn.RequireConfirmedAccount = false;
+		o.SignIn.RequireConfirmedEmail = false;
+		o.SignIn.RequireConfirmedPhoneNumber = false;
+		
+		o.Password.RequireLowercase = true;
+		o.Password.RequireUppercase = true;
+		o.Password.RequireDigit = true;
+		o.Password.RequiredLength = 16;
+		
+		o.Lockout.AllowedForNewUsers = true;
+		o.Lockout.MaxFailedAccessAttempts = 10;
+		o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
+		
+		o.Stores.MaxLengthForKeys = 128;
+	}
+
+	private static void ConfigureIdentityCookie(CookieAuthenticationOptions o) {
+		o.Cookie.Name = "Phantom.Identity";
+		o.Cookie.HttpOnly = true;
+		o.Cookie.SameSite = SameSiteMode.Lax;
+		
+		o.ExpireTimeSpan = TimeSpan.FromDays(30);
+		o.SlidingExpiration = true;
+		
+		o.LoginPath = "/login";
+		o.LogoutPath = "/logout";
+		o.AccessDeniedPath = "/login";
 	}
 
 	private static async Task MigrateDatabase(Configuration config, DatabaseProvider databaseProvider) {
@@ -89,7 +132,7 @@ public static class Launcher {
 	}
 
 	public interface IConfigurator {
-		void ConfigureServices(IServiceCollection services);
+		void ConfigureServices( IServiceCollection services);
 		Task LoadFromDatabase(IServiceProvider serviceProvider);
 	}
 }
