@@ -1,5 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States;
 
@@ -14,10 +15,12 @@ sealed class InstanceRunningState : IInstanceState {
 		this.session = session;
 		this.logSenderThread = new InstanceLogSenderThread(context.Configuration.InstanceGuid, context.ShortName);
 		this.sessionObjects = new SessionObjects(context, session, logSenderThread);
+	}
 
-		this.session.AddOutputListener(SessionOutput);
-		this.session.SessionEnded += SessionEnded;
-
+	public void Initialize() {
+		session.AddOutputListener(SessionOutput);
+		session.SessionEnded += SessionEnded;
+		
 		if (session.HasEnded) {
 			if (sessionObjects.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
@@ -44,13 +47,13 @@ sealed class InstanceRunningState : IInstanceState {
 		}
 	}
 
-	public IInstanceState Launch(InstanceContext context) {
-		return this;
+	public (IInstanceState, LaunchInstanceResult) Launch(InstanceContext context) {
+		return (this, LaunchInstanceResult.InstanceAlreadyRunning);
 	}
 
-	public IInstanceState Stop() {
+	public (IInstanceState, StopInstanceResult) Stop() {
 		session.SessionEnded -= SessionEnded;
-		return new InstanceStoppingState(context, session, sessionObjects);
+		return (new InstanceStoppingState(context, session, sessionObjects), StopInstanceResult.StopInitiated);
 	}
 
 	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {

@@ -1,9 +1,12 @@
 ﻿using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States; 
 
 sealed class InstanceNotRunningState : IInstanceState {
-	public IInstanceState Launch(InstanceContext context) {
+	public void Initialize() {}
+
+	public (IInstanceState, LaunchInstanceResult) Launch(InstanceContext context) {
 		InstanceLaunchFailReason? failReason = context.PortManager.Reserve(context.Configuration) switch {
 			PortManager.Result.ServerPortNotAllowed   => InstanceLaunchFailReason.ServerPortNotAllowed,
 			PortManager.Result.ServerPortAlreadyInUse => InstanceLaunchFailReason.ServerPortAlreadyInUse,
@@ -14,14 +17,14 @@ sealed class InstanceNotRunningState : IInstanceState {
 
 		if (failReason != null) {
 			context.ReportStatus(new InstanceStatus.Failed(failReason.Value));
-			return this;
+			return (this, LaunchInstanceResult.LaunchInitiated);
 		}
 		
-		return new InstanceLaunchingState(context);
+		return (new InstanceLaunchingState(context), LaunchInstanceResult.LaunchInitiated);
 	}
 
-	public IInstanceState Stop() {
-		return this;
+	public (IInstanceState, StopInstanceResult) Stop() {
+		return (this, StopInstanceResult.InstanceAlreadyStopped);
 	}
 
 	public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {

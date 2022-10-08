@@ -53,17 +53,24 @@ sealed class Instance : IDisposable {
 		await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
 	}
 	
-	private bool TransitionState(IInstanceState newState) {
+	private void TransitionState(IInstanceState newState) {
 		if (currentState == newState) {
-			return false;
+			return;
 		}
 
 		if (currentState is IDisposable disposable) {
 			disposable.Dispose();
 		}
 
+		logger.Verbose("Transitioning instance state to: {NewState}", newState.GetType().Name);
+		
 		currentState = newState;
-		return true;
+		currentState.Initialize();
+	}
+
+	private T TransitionStateAndReturn<T>((IInstanceState State, T Result) newStateAndResult) {
+		TransitionState(newStateAndResult.State);
+		return newStateAndResult.Result;
 	}
 
 	public async Task Reconfigure(InstanceConfiguration configuration, BaseLauncher launcher, CancellationToken cancellationToken) {
@@ -80,16 +87,10 @@ sealed class Instance : IDisposable {
 	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
 		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
-			if (TransitionState(currentState.Launch(new InstanceContextImpl(this)))) {
-				return LaunchInstanceResult.LaunchInitiated;
-			}
-
-			return currentState switch {
-				InstanceLaunchingState => LaunchInstanceResult.InstanceAlreadyLaunching,
-				InstanceRunningState   => LaunchInstanceResult.InstanceAlreadyRunning,
-				InstanceStoppingState  => LaunchInstanceResult.InstanceIsStopping,
-				_                      => LaunchInstanceResult.UnknownError
-			};
+			return TransitionStateAndReturn(currentState.Launch(new InstanceContextImpl(this)));
+		} catch (Exception e) {
+			logger.Error(e, "Caught exception while launching instance.");
+			return LaunchInstanceResult.UnknownError;
 		} finally {
 			stateTransitioningActionSemaphore.Release();
 		}
@@ -98,16 +99,10 @@ sealed class Instance : IDisposable {
 	public async Task<StopInstanceResult> Stop() {
 		await stateTransitioningActionSemaphore.WaitAsync();
 		try {
-			if (TransitionState(currentState.Stop())) {
-				return StopInstanceResult.StopInitiated;
-			}
-
-			return currentState switch {
-				InstanceNotRunningState => StopInstanceResult.InstanceAlreadyStopped,
-				InstanceLaunchingState  => StopInstanceResult.StopInitiated,
-				InstanceStoppingState   => StopInstanceResult.InstanceAlreadyStopping,
-				_                       => StopInstanceResult.UnknownError
-			};
+			return TransitionStateAndReturn(currentState.Stop());
+		} catch (Exception e) {
+			logger.Error(e, "Caught exception while stopping instance.");
+			return StopInstanceResult.UnknownError;
 		} finally {
 			stateTransitioningActionSemaphore.Release();
 		}
@@ -156,6 +151,8 @@ sealed class Instance : IDisposable {
 			instance.stateTransitioningActionSemaphore.Wait();
 			try {
 				instance.TransitionState(newState());
+			} catch (Exception e) {
+				instance.logger.Error(e, "Caught exception during state transition.");
 			} finally {
 				instance.stateTransitioningActionSemaphore.Release();
 			}

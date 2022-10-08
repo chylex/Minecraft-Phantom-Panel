@@ -2,6 +2,7 @@
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States;
 
@@ -12,8 +13,11 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 
 	public InstanceLaunchingState(InstanceContext context) {
 		this.context = context;
-		this.context.Logger.Information("Session starting...");
-		this.context.ReportStatus(InstanceStatus.IsLaunching);
+	}
+	
+	public void Initialize() {
+		context.Logger.Information("Session starting...");
+		context.ReportStatus(InstanceStatus.IsLaunching);
 		
 		var launchTask = context.LaunchServices.TaskManager.Run(DoLaunch);
 		launchTask.ContinueWith(OnLaunchSuccess, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
@@ -85,13 +89,13 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		}
 	}
 
-	public IInstanceState Launch(InstanceContext context) {
-		return this;
+	public (IInstanceState, LaunchInstanceResult) Launch(InstanceContext context) {
+		return (this, LaunchInstanceResult.InstanceAlreadyLaunching);
 	}
 
-	public IInstanceState Stop() {
+	public (IInstanceState, StopInstanceResult) Stop() {
 		cancellationTokenSource.Cancel();
-		return this;
+		return (this, StopInstanceResult.StopInitiated);
 	}
 
 	public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {

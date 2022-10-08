@@ -1,5 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Replies;
 
 namespace Phantom.Agent.Services.Instances.States; 
 
@@ -12,9 +13,11 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 		this.sessionObjects = sessionObjects;
 		this.session = session;
 		this.context = context;
-		this.context.Logger.Information("Session stopping.");
-		this.context.ReportStatus(InstanceStatus.IsStopping);
-		
+	}
+
+	public void Initialize() {
+		context.Logger.Information("Session stopping.");
+		context.ReportStatus(InstanceStatus.IsStopping);
 		context.LaunchServices.TaskManager.Run(DoStop);
 	}
 
@@ -57,12 +60,12 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 		}
 	}
 
-	public IInstanceState Launch(InstanceContext context) {
-		return this;
+	public (IInstanceState, LaunchInstanceResult) Launch(InstanceContext context) {
+		return (this, LaunchInstanceResult.InstanceIsStopping);
 	}
 
-	public IInstanceState Stop() {
-		return this; // TODO maybe provide a way to kill?
+	public (IInstanceState, StopInstanceResult) Stop() {
+		return (this, StopInstanceResult.InstanceAlreadyStopping); // TODO maybe provide a way to kill?
 	}
 
 	public Task<bool> SendCommand(string command, CancellationToken cancellationToken) {

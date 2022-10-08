@@ -1,7 +1,10 @@
-﻿namespace Phantom.Agent.Services.Instances.States; 
+﻿using Phantom.Common.Data.Replies;
+
+namespace Phantom.Agent.Services.Instances.States; 
 
 interface IInstanceState {
-	IInstanceState Launch(InstanceContext context);
-	IInstanceState Stop();
+	void Initialize();
+	(IInstanceState, LaunchInstanceResult) Launch(InstanceContext context);
+	(IInstanceState, StopInstanceResult) Stop();
 	Task<bool> SendCommand(string command, CancellationToken cancellationToken);
 }
