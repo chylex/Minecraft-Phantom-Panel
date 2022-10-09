@@ -9,6 +9,7 @@
 @inject PhantomLoginManager LoginManager
 @inject ServiceConfiguration ServiceConfiguration
 @inject UserManager<IdentityUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
 
 <h1>Administrator Setup</h1>
 
@@ -28,27 +29,27 @@
 
     <div class="row">
       <div class="mb-3">
-        <FormTextInput Id="administration-token" Label="Administration Token" Type="FormTextInputType.Password" @bind-Value="form.AdministrationToken" />
+        <FormTextInput Id="administration-token" Label="Administration Token" Type="FormTextInputType.Password" @bind-Value="form.AdministrationToken" autocomplete="off" />
       </div>
     </div>
 
     <FormButtonSubmit Label="Continue" class="btn btn-primary" />
   </div>
-  
+
   <FormSubmitError />
 </Form>
 
 @code {
 
-  private readonly CreateAdministratorAccountFormModel form = new ();
-  
+  private readonly CreateAdministratorAccountFormModel form = new();
+
   private sealed class CreateAdministratorAccountFormModel : FormModel {
     [Required]
     public string Username { get; set; } = string.Empty;
 
     [Required]
     public string Password { get; set; } = string.Empty;
-    
+
     [Required]
     public string AdministrationToken { get; set; } = string.Empty;
   }
@@ -57,7 +58,7 @@
     if (!context.Validate()) {
       return;
     }
-    
+
     form.SubmitModel.StartSubmitting();
 
     if (!IsAdministratorTokenValid()) {
@@ -65,18 +66,14 @@
       return;
     }
     
-    IdentityResult createUserResult;
-    var existingUser = await UserManager.FindByNameAsync(form.Username);
-    if (existingUser != null) {
-      await UserManager.RemovePasswordAsync(existingUser);
-      createUserResult = await UserManager.AddPasswordAsync(existingUser, form.Password);
+    var createRolesResult = await CreateDefaultRoles();
+    if (!createRolesResult.Succeeded) {
+      form.SubmitModel.StopSubmitting(GetErrors(createRolesResult));
     }
-    else {
-      createUserResult = await UserManager.CreateAsync(new IdentityUser(form.Username), form.Password);
-    }
-    
+
+    var createUserResult = await CreateOrUpdateAdministrator();
     if (!createUserResult.Succeeded) {
-      form.SubmitModel.StopSubmitting(string.Join("\n", createUserResult.Errors.Select(static error => error.Description)));
+      form.SubmitModel.StopSubmitting(GetErrors(createUserResult));
       return;
     }
 
@@ -93,7 +90,37 @@
     } catch (Exception) {
       return false;
     }
-    
+
     return CryptographicOperations.FixedTimeEquals(formTokenBytes, ServiceConfiguration.AdministratorToken);
   }
+
+  private async Task<IdentityResult> CreateDefaultRoles() {
+    if (!await RoleManager.RoleExistsAsync("Administrator")) {
+      return await RoleManager.CreateAsync(new IdentityRole("Administrator"));
+    }
+    
+    return IdentityResult.Success;
+  }
+
+  private async Task<IdentityResult> CreateOrUpdateAdministrator() {
+    var existingUser = await UserManager.FindByNameAsync(form.Username);
+    if (existingUser != null) {
+      await UserManager.RemovePasswordAsync(existingUser);
+      return await UserManager.AddPasswordAsync(existingUser, form.Password);
+    }
+    
+    var newUser = new IdentityUser(form.Username);
+    var createUserResult = await UserManager.CreateAsync(newUser, form.Password);
+    if (!createUserResult.Succeeded) {
+      return createUserResult;
+    }
+
+    var addToRoleResult = await UserManager.AddToRoleAsync(newUser, "Administrator");
+    return addToRoleResult;
+  }
+
+  private string GetErrors(IdentityResult result) {
+    return string.Join("\n", result.Errors.Select(static error => error.Description));
+  }
+  
 }
