@@ -1,9 +1,9 @@
 ﻿using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 
-namespace Phantom.Agent.Minecraft.Server; 
+namespace Phantom.Common.Minecraft; 
 
-sealed record ServerExecutableInfo(
+public sealed record MinecraftServerExecutableInfo(
 	string DownloadUrl,
 	Sha1String Hash,
 	FileSize Size

@@ -1,15 +1,17 @@
 ﻿@page "/instances/create"
 @using Phantom.Server.Web.Components.Utils
-@using Phantom.Server.Services.Instances
-@using Phantom.Server.Services.Agents
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
-@using Phantom.Common.Data.Java
+@using Phantom.Server.Services.Instances
+@using Phantom.Common.Minecraft
+@using Phantom.Server.Services.Agents
 @using Phantom.Common.Data.Minecraft
+@using Phantom.Common.Data.Java
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Instance
 @inject NavigationManager Nav
+@inject MinecraftVersions MinecraftVersions
 @inject AgentJavaRuntimesManager AgentJavaRuntimesManager
 @inject AgentStatsManager AgentStatsManager
 @inject InstanceManager InstanceManager
@@ -39,10 +41,18 @@
   </div>
 
   <div class="row">
-    <div class="col-xl-4 mb-3">
+    <div class="col-xl-2 mb-3">
       <FormSelectInput Id="instance-server-kind" Label="Server Software" @bind-Value="form.MinecraftServerKind">
         @foreach (var kind in Enum.GetValues<MinecraftServerKind>()) {
           <option value="@kind">@kind</option>
+        }
+      </FormSelectInput>
+    </div>
+    
+    <div class="col-xl-2 mb-3">
+      <FormSelectInput Id="instance-minecraft-version" Label="Minecraft Version" @bind-Value="form.MinecraftVersion">
+        @foreach (var version in availableMinecraftVersions) {
+          <option value="@version.Id">@version.Id</option>
         }
       </FormSelectInput>
     </div>
@@ -111,6 +121,7 @@
 @code {
 
   private CreateInstanceFormModel form = null!;
+  private ImmutableArray<MinecraftVersion> availableMinecraftVersions = ImmutableArray<MinecraftVersion>.Empty;
 
   private bool IsSubmittable => form.SelectedAgentGuid != null && !form.EditContext.GetValidationMessages(form.EditContext.Field(nameof(CreateInstanceFormModel.SelectedAgentGuid))).Any();
 
@@ -167,7 +178,8 @@
     [Required(ErrorMessage = "You must select a Java runtime.")]
     public Guid? JavaRuntimeGuid { get; set; }
 
-    public string MinecraftVersion { get; set; } = "1.19";
+    [Required(ErrorMessage = "You must select a Minecraft version.")]
+    public string MinecraftVersion { get; set; } = string.Empty;
 
     [Range(minimum: 0, maximum: RamAllocationUnits.MaximumUnits, ErrorMessage = "Memory is out of range.")]
     public ushort MemoryUnits {
@@ -214,6 +226,15 @@
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.ServerPort));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.RconPort));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.ServerPort), revalidated: nameof(CreateInstanceFormModel.RconPort));
+  }
+
+  protected override async Task OnInitializedAsync() {
+    var allMinecraftVersions = await MinecraftVersions.GetVersions(CancellationToken.None);
+    availableMinecraftVersions = allMinecraftVersions.Where(static version => version.Type == MinecraftVersionType.Release).ToImmutableArray();
+    
+    if (!availableMinecraftVersions.IsEmpty) {
+      form.MinecraftVersion = allMinecraftVersions[0].Id;
+    }
   }
 
   private async Task Submit(EditContext context) {

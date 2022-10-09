@@ -21,6 +21,7 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 
+	private readonly MinecraftServerExecutables minecraftServerExecutables;
 	private readonly LaunchServices launchServices;
 	private readonly PortManager portManager;
 	private readonly Dictionary<Guid, Instance> instances = new ();
@@ -32,7 +33,8 @@ sealed class InstanceSessionManager : IDisposable {
 	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
-		this.launchServices = new LaunchServices(taskManager, new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath), javaRuntimeRepository);
+		this.minecraftServerExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
+		this.launchServices = new LaunchServices(taskManager, minecraftServerExecutables, javaRuntimeRepository);
 		this.portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
@@ -168,6 +170,7 @@ sealed class InstanceSessionManager : IDisposable {
 	}
 
 	public void Dispose() {
+		minecraftServerExecutables.Dispose();
 		shutdownCancellationTokenSource.Dispose();
 		semaphore.Dispose();
 	}

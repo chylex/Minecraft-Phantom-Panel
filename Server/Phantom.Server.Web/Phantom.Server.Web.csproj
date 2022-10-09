@@ -22,6 +22,7 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\Common\Phantom.Common.Minecraft\Phantom.Common.Minecraft.csproj" />
     <ProjectReference Include="..\Phantom.Server.Database\Phantom.Server.Database.csproj" />
     <ProjectReference Include="..\Phantom.Server.Services\Phantom.Server.Services.csproj" />
     <ProjectReference Include="..\Phantom.Server.Web.Components\Phantom.Server.Web.Components.csproj" />

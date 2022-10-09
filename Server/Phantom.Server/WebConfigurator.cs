@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Data.Agent;
+using Phantom.Common.Minecraft;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Instances;
@@ -25,6 +26,7 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton<AgentStatsManager>();
 		services.AddSingleton<InstanceManager>();
 		services.AddSingleton<InstanceLogManager>();
+		services.AddSingleton<MinecraftVersions>();
 		services.AddSingleton<MessageToServerListenerFactory>();
 	}
 

@@ -15,6 +15,7 @@
     <tr>
       <th style="min-width: 200px;">Agent</th>
       <th style="min-width: 200px;">Name</th>
+      <th style="width: 200px;">Version</th>
       <th style="width: 125px;" class="text-center">Server Port</th>
       <th style="width: 125px;" class="text-center">Rcon Port</th>
       <th style="width: 125px;" class="text-end">Memory</th>
@@ -31,6 +32,7 @@
         <tr>
           <td>@agentName</td>
           <td>@configuration.InstanceName</td>
+          <td>@configuration.MinecraftServerKind @configuration.MinecraftVersion</td>
           <td class="text-center">
             <code>@configuration.ServerPort</code>
           </td>

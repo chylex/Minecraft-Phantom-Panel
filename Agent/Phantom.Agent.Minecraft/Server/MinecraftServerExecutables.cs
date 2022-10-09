@@ -1,15 +1,17 @@
 ﻿using System.Text.RegularExpressions;
 using Phantom.Common.Logging;
+using Phantom.Common.Minecraft;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
 
-public sealed class MinecraftServerExecutables {
+public sealed class MinecraftServerExecutables : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutables>();
 
 	private static readonly Regex VersionFolderSanitizeRegex = new (@"[^a-zA-Z0-9_\-\.]", RegexOptions.Compiled);
 
 	private readonly string basePath;
+	private readonly MinecraftVersions minecraftVersions = new ();
 	private readonly Dictionary<string, MinecraftServerExecutableDownloader> runningDownloadersByVersion = new ();
 
 	public MinecraftServerExecutables(string basePath) {
@@ -40,7 +42,7 @@ public sealed class MinecraftServerExecutables {
 				downloader.Register(listener);
 			}
 			else {
-				downloader = new MinecraftServerExecutableDownloader(version, serverExecutableFilePath, listener);
+				downloader = new MinecraftServerExecutableDownloader(minecraftVersions, version, serverExecutableFilePath, listener);
 				downloader.Completed += (_, _) => {
 					lock (this) {
 						runningDownloadersByVersion.Remove(version);
@@ -52,5 +54,9 @@ public sealed class MinecraftServerExecutables {
 		}
 
 		return await downloader.Task.WaitAsync(cancellationToken);
+	}
+
+	public void Dispose() {
+		minecraftVersions.Dispose();
 	}
 }
