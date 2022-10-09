@@ -8,23 +8,34 @@ public sealed class FormButtonSubmit : ComponentBase {
 	[Parameter]
 	public string Label { get; set; } = "Submit";
 
-	[Parameter, EditorRequired]
-	public SubmitModel Model { get; set; } = null!;
+	[CascadingParameter]
+	public Form? Form { get; set; }
+
+	[Parameter]
+	public SubmitModel? Model { get; set; }
 
 	[Parameter(CaptureUnmatchedValues = true)]
 	public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
+	protected override void OnParametersSet() {
+		if (Form == null && Model == null) {
+			throw new InvalidOperationException("Either the Form or Model parameter must be set.");
+		}
+	}
+
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
+		var model = Form?.Model.SubmitModel ?? Model ?? throw new InvalidOperationException();
+		
 		builder.OpenElement(0, "input");
 		builder.AddMultipleAttributes(1, AdditionalAttributes);
 		builder.AddAttribute(2, "type", "submit");
 
-		string? cssClass = BlazorUtils.CombineClassNames(AdditionalAttributes, Model.SubmitError == null ? null : "is-invalid");
+		string? cssClass = BlazorUtils.CombineClassNames(AdditionalAttributes, model.SubmitError == null ? null : "is-invalid");
 		if (!string.IsNullOrEmpty(cssClass)) {
 			builder.AddAttribute(3, "class", cssClass);
 		}
 		
-		builder.AddAttribute(4, "disabled", BlazorUtils.CombineBooleansWithOr(AdditionalAttributes, "disabled", Model.IsSubmitting));
+		builder.AddAttribute(4, "disabled", BlazorUtils.CombineBooleansWithOr(AdditionalAttributes, "disabled", model.IsSubmitting));
 		builder.AddAttribute(5, "value", Label);
 		builder.CloseElement();
 	}

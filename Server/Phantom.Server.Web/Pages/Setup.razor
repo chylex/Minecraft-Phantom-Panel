@@ -12,9 +12,7 @@
 
 <h1>Administrator Setup</h1>
 
-<EditForm EditContext="form.EditContext" OnSubmit="DoLogin">
-  <DataAnnotationsValidator />
-
+<Form Model="form" OnSubmit="DoLogin">
   <div style="max-width: 400px;">
     <div class="row">
       <div class="mb-3">
@@ -34,11 +32,11 @@
       </div>
     </div>
 
-    <FormButtonSubmit Label="Continue" Model="@form.SubmitModel" class="btn btn-primary" />
+    <FormButtonSubmit Label="Continue" class="btn btn-primary" />
   </div>
   
-  <FormSubmitError Message="@form.SubmitModel.SubmitError" />
-</EditForm>
+  <FormSubmitError />
+</Form>
 
 @code {
 

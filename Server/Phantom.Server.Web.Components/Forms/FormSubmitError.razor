@@ -11,13 +11,17 @@
 
 @code {
 
+  [CascadingParameter]
+  public Form? Form { get; set; }
+
   [Parameter]
   public string? Message { get; set; }
 
   private string[] messageLines = Array.Empty<string>();
   
   protected override void OnParametersSet() {
-    messageLines = Message?.Split('\n') ?? Array.Empty<string>();
+    var message = Form?.Model.SubmitModel.SubmitError ?? Message;
+    messageLines = message?.Split('\n') ?? Array.Empty<string>();
   }
 
 }

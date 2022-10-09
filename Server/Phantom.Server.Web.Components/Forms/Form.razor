@@ -1,0 +1,32 @@
+﻿@implements IDisposable
+
+<EditForm EditContext="Model.EditContext" OnSubmit="Submit">
+  <DataAnnotationsValidator />
+  <CascadingValue Value="this">
+    @ChildContent
+  </CascadingValue>
+</EditForm>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public FormModel Model { get; set; } = null!;
+
+  [Parameter, EditorRequired]
+  public EventCallback<EditContext> OnSubmit { get; set; }
+
+  [Parameter]
+  public RenderFragment? ChildContent { get; set; }
+
+  public event EventHandler? BeforeSubmit;
+  
+  private void Submit(EditContext obj) {
+    BeforeSubmit?.Invoke(this, EventArgs.Empty);
+    OnSubmit.InvokeAsync(obj);
+  }
+
+  public void Dispose() {
+    BeforeSubmit = null;
+  }
+  
+}

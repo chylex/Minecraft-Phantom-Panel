@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Phantom.Server.Web.Components.Utils;
 
@@ -6,8 +7,14 @@ namespace Phantom.Server.Web.Components.Forms.Base;
 
 public abstract class FormInputBaseDebounced<TValue> : FormInputBase<TValue>, IDisposable {
 	private const uint DefaultDebounceMillis = 700;
-	
+
 	protected abstract ICustomFormField FormField { get; set; }
+
+	[CascadingParameter]
+	public EditContext EditContext { get; set; } = null!;
+
+	[CascadingParameter]
+	public Form? Form { get; set; }
 
 	[Parameter]
 	public bool DisableTwoWayBinding { get; set; }
@@ -19,9 +26,13 @@ public abstract class FormInputBaseDebounced<TValue> : FormInputBase<TValue>, ID
 
 	private string? debouncedValue;
 	private bool debouncedValueIsSet = false;
-	
+
 	protected sealed override void OnInitialized() {
 		debounceTimer.Fired += OnDebounceTimerFired;
+
+		if (Form != null) {
+			Form.BeforeSubmit += OnBeforeFormSubmit;
+		}
 	}
 
 	protected override void OnParametersSet() {
@@ -43,7 +54,7 @@ public abstract class FormInputBaseDebounced<TValue> : FormInputBase<TValue>, ID
 		if (DisableTwoWayBinding) {
 			FormField.TwoWayValueBinding = false;
 		}
-		
+
 		debounceTimer.Stop();
 		debouncedValue = (string?) e.Value;
 		debouncedValueIsSet = true;
@@ -51,6 +62,11 @@ public abstract class FormInputBaseDebounced<TValue> : FormInputBase<TValue>, ID
 	}
 
 	protected void OnBlur(FocusEventArgs e) {
+		debounceTimer.Stop();
+		SetDebouncedValue();
+	}
+
+	private void OnBeforeFormSubmit(object? sender, EventArgs e) {
 		debounceTimer.Stop();
 		SetDebouncedValue();
 	}
