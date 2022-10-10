@@ -7,7 +7,7 @@
   background-color: rgba(255, 255, 255, 0.15);
 }
 
-@media (min-width: 801px) {
+@media (min-width: 960px) {
   .navbar-toggler {
     display: none;
   }
