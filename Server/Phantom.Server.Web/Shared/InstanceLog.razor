@@ -7,7 +7,7 @@
 
 <div id="log" class="font-monospace mb-3">
   @foreach (var line in instanceLogs.EnumerateLast(uint.MaxValue)) {
-    <p>@line</p>
+    <p>@(new MarkupString(line))</p>
   }
 </div>
 

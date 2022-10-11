@@ -31,7 +31,7 @@ public sealed class InstanceLogManager {
 
 		public void Add(ImmutableArray<string> lines) {
 			foreach (var line in lines) {
-				log.Add(line);
+				log.Add(InstanceLogHtmlFilters.Process(line));
 			}
 
 			Update();

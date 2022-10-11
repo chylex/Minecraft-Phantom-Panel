@@ -45,3 +45,7 @@ code {
 .form-range {
   height: 2.5rem;
 }
+
+.text-redacted {
+  opacity: 0.5;
+}
