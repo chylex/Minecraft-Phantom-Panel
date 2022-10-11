@@ -1,14 +1,16 @@
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using Phantom.Agent.Rpc;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Collections;
+using Phantom.Utils.Threading;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances; 
 
-sealed class InstanceLogSenderThread {
+sealed class InstanceLogSender {
+	private static readonly TimeSpan SendDelay = TimeSpan.FromMilliseconds(200);
+	
 	private readonly Guid instanceGuid;
 	private readonly ILogger logger;
 	private readonly CancellationTokenSource cancellationTokenSource;
@@ -16,51 +18,46 @@ sealed class InstanceLogSenderThread {
 	
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 	private readonly RingBuffer<string> buffer = new (1000);
-	
-	public InstanceLogSenderThread(Guid instanceGuid, string name) {
+
+	public InstanceLogSender(TaskManager taskManager, Guid instanceGuid, string name) {
 		this.instanceGuid = instanceGuid;
-		this.logger = PhantomLogger.Create<InstanceLogSenderThread>(name);
+		this.logger = PhantomLogger.Create<InstanceLogSender>(name);
 		this.cancellationTokenSource = new CancellationTokenSource();
 		this.cancellationToken = cancellationTokenSource.Token;
-		
-		var thread = new Thread(Run) {
-			IsBackground = true,
-			Name = "Instance Log Sender (" + name + ")"
-		};
-		
-		thread.Start();
+		taskManager.Run(Run);
 	}
 
-	[SuppressMessage("ReSharper", "LocalVariableHidesMember")]
 	private async void Run() {
-		logger.Verbose("Thread started.");
+		logger.Verbose("Task started.");
 		
 		try {
 			while (!cancellationToken.IsCancellationRequested) {
-				await semaphore.WaitAsync(cancellationToken);
-
-				ImmutableArray<string> lines;
-				
-				try {
-					lines = buffer.Count > 0 ? buffer.EnumerateLast(uint.MaxValue).ToImmutableArray() : ImmutableArray<string>.Empty;
-					buffer.Clear();
-				} finally {
-					semaphore.Release();
-				}
-
-				if (lines.Length > 0) {
+				var lines = await DequeueOrThrow();
+				if (!lines.IsEmpty) {
 					await ServerMessaging.SendMessage(new InstanceOutputMessage(instanceGuid, lines));
 				}
 
-				await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
+				await Task.Delay(SendDelay, cancellationToken);
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} catch (Exception e) {
-			logger.Error(e, "Caught exception in thread.");
+			logger.Error(e, "Caught exception in task.");
 		} finally {
 			cancellationTokenSource.Dispose();
-			logger.Verbose("Thread stopped.");
+			logger.Verbose("Task stopped.");
+		}
+	}
+
+	private async Task<ImmutableArray<string>> DequeueOrThrow() {
+		await semaphore.WaitAsync(cancellationToken);
+
+		try {
+			ImmutableArray<string> lines = buffer.Count > 0 ? buffer.EnumerateLast(uint.MaxValue).ToImmutableArray() : ImmutableArray<string>.Empty;
+			buffer.Clear();
+			return lines;
+		} finally {
+			semaphore.Release();
 		}
 	}
 
@@ -79,6 +76,10 @@ sealed class InstanceLogSenderThread {
 	}
 
 	public void Cancel() {
-		cancellationTokenSource.Cancel();
+		try {
+			cancellationTokenSource.Cancel();
+		} catch (ObjectDisposedException) {
+			// Ignore.
+		}
 	}
 }

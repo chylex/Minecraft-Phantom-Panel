@@ -9,7 +9,7 @@ namespace Phantom.Agent.Services.Instances.States;
 sealed class InstanceRunningState : IInstanceState {
 	private readonly InstanceContext context;
 	private readonly InstanceSession session;
-	private readonly InstanceLogSenderThread logSenderThread;
+	private readonly InstanceLogSender logSender;
 	private readonly SessionObjects sessionObjects;
 	
 	private readonly CancellationTokenSource delayedStopCancellationTokenSource = new ();
@@ -19,7 +19,7 @@ sealed class InstanceRunningState : IInstanceState {
 	public InstanceRunningState(InstanceContext context, InstanceSession session) {
 		this.context = context;
 		this.session = session;
-		this.logSenderThread = new InstanceLogSenderThread(context.Configuration.InstanceGuid, context.ShortName);
+		this.logSender = new InstanceLogSender(context.LaunchServices.TaskManager, context.Configuration.InstanceGuid, context.ShortName);
 		this.sessionObjects = new SessionObjects(this);
 	}
 
@@ -42,7 +42,7 @@ sealed class InstanceRunningState : IInstanceState {
 
 	private void SessionOutput(object? sender, string e) {
 		context.Logger.Verbose("[Server] {Line}", e);
-		logSenderThread.Enqueue(e);
+		logSender.Enqueue(e);
 	}
 
 	private void SessionEnded(object? sender, EventArgs e) {
@@ -153,7 +153,7 @@ sealed class InstanceRunningState : IInstanceState {
 				state.CancelDelayedStop();
 			}
 			
-			state.logSenderThread.Cancel();
+			state.logSender.Cancel();
 			state.session.Dispose();
 			state.context.PortManager.Release(state.context.Configuration);
 			return true;
