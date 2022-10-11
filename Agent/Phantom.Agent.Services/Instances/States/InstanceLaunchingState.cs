@@ -15,11 +15,11 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	public InstanceLaunchingState(InstanceContext context) {
 		this.context = context;
 	}
-	
+
 	public void Initialize() {
 		context.Logger.Information("Session starting...");
 		context.ReportStatus(InstanceStatus.IsLaunching);
-		
+
 		var launchTask = context.LaunchServices.TaskManager.Run(DoLaunch);
 		launchTask.ContinueWith(OnLaunchSuccess, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
 		launchTask.ContinueWith(OnLaunchFailure, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
@@ -28,10 +28,10 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	private async Task<InstanceSession> DoLaunch() {
 		var cancellationToken = cancellationTokenSource.Token;
 		cancellationToken.ThrowIfCancellationRequested();
-		
+
 		void OnDownloadProgress(object? sender, DownloadProgressEventArgs args) {
 			byte progress = (byte) Math.Min(args.DownloadedBytes * 100 / args.TotalBytes, 100);
-			
+
 			if (lastDownloadProgress != progress) {
 				lastDownloadProgress = progress;
 				context.ReportStatus(new InstanceStatus.Downloading(progress));
@@ -39,11 +39,14 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		}
 
 		var launchResult = await context.Launcher.Launch(context.LaunchServices, OnDownloadProgress, cancellationToken);
-		if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
-			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotDownloadMinecraftServer, "Session failed to launch, could not download Minecraft server.");
-		}
-		else if (launchResult is LaunchResult.InvalidJavaRuntime) {
+		if (launchResult is LaunchResult.InvalidJavaRuntime) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.JavaRuntimeNotFound, "Session failed to launch, invalid Java runtime.");
+		}
+		else if (launchResult is LaunchResult.InvalidJvmArguments) {
+			throw new LaunchFailureException(InstanceLaunchFailReason.InvalidJvmArguments, "Session failed to launch, invalid JVM arguments.");
+		}
+		else if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
+			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotDownloadMinecraftServer, "Session failed to launch, could not download Minecraft server.");
 		}
 
 		if (launchResult is not LaunchResult.Success launchSuccess) {
@@ -75,7 +78,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		else {
 			context.ReportStatus(new InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
 		}
-		
+
 		context.PortManager.Release(context.Configuration);
 		context.TransitionState(new InstanceNotRunningState());
 	}
@@ -83,7 +86,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	private sealed class LaunchFailureException : Exception {
 		public InstanceLaunchFailReason Reason { get; }
 		public string LogMessage { get; }
-		
+
 		public LaunchFailureException(InstanceLaunchFailReason reason, string logMessage) {
 			this.Reason = reason;
 			this.LogMessage = logMessage;

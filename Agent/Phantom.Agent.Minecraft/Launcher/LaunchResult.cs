@@ -8,6 +8,8 @@ public abstract record LaunchResult {
 	public sealed record Success(InstanceSession Session) : LaunchResult;
 
 	public sealed record InvalidJavaRuntime : LaunchResult;
+	
+	public sealed record InvalidJvmArguments : LaunchResult;
 
 	public sealed record CouldNotDownloadMinecraftServer : LaunchResult;
 }

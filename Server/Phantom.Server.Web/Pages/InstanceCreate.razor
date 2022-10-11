@@ -1,11 +1,11 @@
 ﻿@page "/instances/create"
+@using Phantom.Common.Minecraft
+@using Phantom.Server.Services.Agents
+@using Phantom.Server.Services.Instances
 @using Phantom.Server.Web.Components.Utils
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
-@using Phantom.Server.Services.Instances
-@using Phantom.Common.Minecraft
-@using Phantom.Server.Services.Agents
 @using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
@@ -48,7 +48,7 @@
         }
       </FormSelectInput>
     </div>
-    
+
     <div class="col-sm-6 col-xl-2 mb-3">
       <FormSelectInput Id="instance-minecraft-version" Label="Minecraft Version" @bind-Value="form.MinecraftVersion">
         @foreach (var version in availableMinecraftVersions) {
@@ -68,10 +68,10 @@
 
     @{
       var selectedAgent = form.SelectedAgent;
-      
+
       string? allowedServerPorts = selectedAgent?.Agent.AllowedServerPorts?.ToString();
       string? allowedRconPorts = selectedAgent?.Agent.AllowedRconPorts?.ToString();
-      
+
       RenderFragment serverPortLabel;
       RenderFragment rconPortLabel;
 
@@ -102,15 +102,24 @@
     <div class="col-xl-12 mb-3">
       @{
         ushort maximumMemoryUnits = form.MaximumMemoryUnits;
-        RenderFragment label;
+        RenderFragment ramLabel;
         if (maximumMemoryUnits == 0) {
-          label = @<text>RAM</text>;
+          ramLabel = @<text>RAM</text>;
         }
         else {
-          label = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
+          ramLabel = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
         }
       }
-      <FormNumberInput Id="instance-memory" LabelFragment="@label" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+      <FormNumberInput Id="instance-memory" LabelFragment="@ramLabel" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="mb-3">
+      @{
+        RenderFragment jvmArgumentsLabel = @<text>JVM Arguments <span class="text-black-50">(one per line)</span></text>;
+      }
+      <FormTextInput Id="instance-jvm-arguments" LabelFragment="@jvmArgumentsLabel" Type="FormTextInputType.Textarea" @bind-Value="form.JvmArguments" rows="4" />
     </div>
   </div>
 
@@ -189,6 +198,9 @@
 
     public RamAllocationUnits? MemoryAllocation => new RamAllocationUnits(MemoryUnits);
 
+    [JvmArgumentsMustBeValid(ErrorMessage = "JVM arguments are not valid.")]
+    public string JvmArguments { get; set; } = string.Empty;
+
     public sealed class AgentHasInstancesAttribute : FormValidationAttribute {
       protected override string FieldName => nameof(SelectedAgentGuid);
       protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.UsedInstances < agent.Agent.MaxInstances;
@@ -214,6 +226,19 @@
       protected override bool IsValid(object model, object? value) => (int?) value != M(model).ServerPort;
     }
 
+    public sealed class JvmArgumentsMustBeValid : FormCustomValidationAttribute {
+      protected override string FieldName => nameof(JvmArguments);
+
+      protected override ValidationResult? Validate(object model, object? value) {
+        if (value is not string arguments) {
+          return new ValidationResult(null);
+        }
+        
+        var error = JvmArgumentsHelper.Validate(arguments);
+        return error == null ? ValidationResult.Success : new ValidationResult(error.ToSentence());
+      }
+    }
+
     private static CreateInstanceFormModel M(object model) {
       return (CreateInstanceFormModel) model;
     }
@@ -231,7 +256,7 @@
   protected override async Task OnInitializedAsync() {
     var allMinecraftVersions = await MinecraftVersions.GetVersions(CancellationToken.None);
     availableMinecraftVersions = allMinecraftVersions.Where(static version => version.Type == MinecraftVersionType.Release).ToImmutableArray();
-    
+
     if (!availableMinecraftVersions.IsEmpty) {
       form.MinecraftVersion = allMinecraftVersions[0].Id;
     }
@@ -254,8 +279,9 @@
     var rconPort = (ushort) form.RconPort;
     var memoryAllocation = form.MemoryAllocation ?? RamAllocationUnits.Zero;
     var javaRuntimeGuid = form.JavaRuntimeGuid.GetValueOrDefault();
-    
-    var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, LaunchAutomatically: false);
+    var jvmArguments = JvmArgumentsHelper.Split(form.JvmArguments);
+
+    var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, jvmArguments, LaunchAutomatically: false);
     var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
       Nav.NavigateTo("/instances/" + instance.InstanceGuid);

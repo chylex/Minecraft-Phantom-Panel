@@ -1,7 +1,8 @@
-﻿using MessagePack;
+﻿using System.Collections.Immutable;
+using MessagePack;
 using Phantom.Common.Data.Minecraft;
 
-namespace Phantom.Common.Data.Instance; 
+namespace Phantom.Common.Data.Instance;
 
 [MessagePackObject]
 public sealed record InstanceConfiguration(
@@ -14,5 +15,6 @@ public sealed record InstanceConfiguration(
 	[property: Key(6)] MinecraftServerKind MinecraftServerKind,
 	[property: Key(7)] RamAllocationUnits MemoryAllocation,
 	[property: Key(8)] Guid JavaRuntimeGuid,
-	[property: Key(9)] bool LaunchAutomatically
+	[property: Key(9)] ImmutableArray<string> JvmArguments,
+	[property: Key(10)] bool LaunchAutomatically
 );

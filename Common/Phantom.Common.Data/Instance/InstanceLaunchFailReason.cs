@@ -1,13 +1,14 @@
 ﻿namespace Phantom.Common.Data.Instance;
 
 public enum InstanceLaunchFailReason {
+	UnknownError,
 	ServerPortNotAllowed,
 	ServerPortAlreadyInUse,
 	RconPortNotAllowed,
 	RconPortAlreadyInUse,
 	JavaRuntimeNotFound,
-	CouldNotDownloadMinecraftServer,
-	UnknownError
+	InvalidJvmArguments,
+	CouldNotDownloadMinecraftServer
 }
 
 public static class InstanceLaunchFailReasonExtensions {
@@ -18,6 +19,7 @@ public static class InstanceLaunchFailReasonExtensions {
 			InstanceLaunchFailReason.RconPortNotAllowed              => "Rcon port not allowed.",
 			InstanceLaunchFailReason.RconPortAlreadyInUse            => "Rcon port already in use.",
 			InstanceLaunchFailReason.JavaRuntimeNotFound             => "Java runtime not found.",
+			InstanceLaunchFailReason.InvalidJvmArguments             => "Invalid JVM arguments.",
 			InstanceLaunchFailReason.CouldNotDownloadMinecraftServer => "Could not download Minecraft server.",
 			_                                                        => "Unknown error."
 		};

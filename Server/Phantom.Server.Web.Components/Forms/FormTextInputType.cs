@@ -2,7 +2,8 @@
 
 public enum FormTextInputType {
 	Text,
-	Password
+	Password,
+	Textarea
 }
 
 static class FormTextInputTypes {

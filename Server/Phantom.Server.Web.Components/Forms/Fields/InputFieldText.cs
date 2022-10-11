@@ -27,9 +27,15 @@ public sealed class InputFieldText : InputBase<string?>, ICustomFormField {
 	}
 
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
-		builder.OpenElement(0, "input");
-		builder.AddMultipleAttributes(1, AdditionalAttributes);
-		builder.AddAttribute(2, "type", Type.GetHtmlInputType());
+		if (Type == FormTextInputType.Textarea) {
+			builder.OpenElement(0, "textarea");
+			builder.AddMultipleAttributes(1, AdditionalAttributes);
+		}
+		else {
+			builder.OpenElement(0, "input");
+			builder.AddMultipleAttributes(1, AdditionalAttributes);
+			builder.AddAttribute(2, "type", Type.GetHtmlInputType());
+		}
 
 		if (!string.IsNullOrEmpty(CssClass)) {
 			builder.AddAttribute(3, "class", CssClass);

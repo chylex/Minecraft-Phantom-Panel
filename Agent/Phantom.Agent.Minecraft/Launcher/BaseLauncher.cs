@@ -4,6 +4,7 @@ using Kajabity.Tools.Java;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Common.Minecraft;
 
 namespace Phantom.Agent.Minecraft.Launcher;
 
@@ -17,6 +18,10 @@ public abstract class BaseLauncher {
 	public async Task<LaunchResult> Launch(LaunchServices services, EventHandler<DownloadProgressEventArgs> downloadProgressEventHandler, CancellationToken cancellationToken) {
 		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
 			return new LaunchResult.InvalidJavaRuntime();
+		}
+
+		if (JvmArgumentsHelper.Validate(instanceProperties.JvmArguments) != null) {
+			return new LaunchResult.InvalidJvmArguments();
 		}
 
 		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
@@ -33,8 +38,8 @@ public abstract class BaseLauncher {
 			UseShellExecute = false,
 			CreateNoWindow = false
 		};
-
-		var jvmArguments = new JvmArgumentBuilder(instanceProperties.JvmProperties);
+		
+		var jvmArguments = new JvmArgumentBuilder(instanceProperties.JvmProperties, instanceProperties.JvmArguments);
 		CustomizeJvmArguments(jvmArguments);
 
 		var serverJarPath = await PrepareServerJar(vanillaServerJarPath, instanceProperties.InstanceFolder, cancellationToken);

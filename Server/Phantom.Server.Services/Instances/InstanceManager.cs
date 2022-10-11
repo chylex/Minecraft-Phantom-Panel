@@ -4,6 +4,7 @@ using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Minecraft;
 using Phantom.Server.Database;
 using Phantom.Server.Database.Entities;
 using Phantom.Server.Services.Agents;
@@ -44,6 +45,7 @@ public sealed class InstanceManager {
 				instance.MinecraftServerKind,
 				instance.MemoryAllocation,
 				instance.JavaRuntimeGuid,
+				JvmArgumentsHelper.Split(instance.JvmArguments),
 				instance.LaunchAutomatically
 			);
 			
@@ -76,6 +78,7 @@ public sealed class InstanceManager {
 				entity.MinecraftServerKind = configuration.MinecraftServerKind;
 				entity.MemoryAllocation = configuration.MemoryAllocation;
 				entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
+				entity.JvmArguments = JvmArgumentsHelper.Join(configuration.JvmArguments);
 				entity.LaunchAutomatically = configuration.LaunchAutomatically;
 
 				await scope.Ctx.SaveChangesAsync(cancellationToken);

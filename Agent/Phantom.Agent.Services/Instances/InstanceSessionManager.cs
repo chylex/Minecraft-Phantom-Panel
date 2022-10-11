@@ -71,6 +71,7 @@ sealed class InstanceSessionManager : IDisposable {
 			var properties = new InstanceProperties(
 				configuration.JavaRuntimeGuid,
 				jvmProperties,
+				configuration.JvmArguments,
 				instanceFolder,
 				configuration.MinecraftVersion,
 				new ServerProperties(configuration.ServerPort, configuration.RconPort)
