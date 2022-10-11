@@ -8,13 +8,15 @@ namespace Phantom.Common.Data.Instance;
 [Union(3, typeof(Downloading))]
 [Union(4, typeof(Launching))]
 [Union(5, typeof(Running))]
-[Union(6, typeof(Stopping))]
-[Union(7, typeof(Failed))]
+[Union(6, typeof(Restarting))]
+[Union(7, typeof(Stopping))]
+[Union(8, typeof(Failed))]
 public abstract record InstanceStatus {
 	public static readonly InstanceStatus IsOffline = new Offline();
 	public static readonly InstanceStatus IsNotRunning = new NotRunning();
 	public static readonly InstanceStatus IsLaunching = new Launching();
 	public static readonly InstanceStatus IsRunning = new Running();
+	public static readonly InstanceStatus IsRestarting = new Restarting();
 	public static readonly InstanceStatus IsStopping = new Stopping();
 
 	[MessagePackObject]
@@ -39,6 +41,9 @@ public abstract record InstanceStatus {
 	[MessagePackObject]
 	public sealed record Running : InstanceStatus;
 
+	[MessagePackObject]
+	public sealed record Restarting : InstanceStatus;
+	
 	[MessagePackObject]
 	public sealed record Stopping : InstanceStatus;
 

@@ -46,10 +46,19 @@ sealed class InstanceRunningState : IInstanceState {
 	}
 
 	private void SessionEnded(object? sender, EventArgs e) {
-		if (sessionObjects.Dispose()) {
+		if (!sessionObjects.Dispose()) {
+			return;
+		}
+
+		if (isStopping) {
 			context.Logger.Information("Session ended.");
 			context.ReportStatus(InstanceStatus.IsNotRunning);
 			context.TransitionState(new InstanceNotRunningState());
+		}
+		else {
+			context.Logger.Information("Session ended unexpectedly, restarting...");
+			context.ReportStatus(InstanceStatus.IsRestarting);
+			context.TransitionState(new InstanceLaunchingState(context));
 		}
 	}
 

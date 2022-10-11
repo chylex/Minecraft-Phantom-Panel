@@ -21,6 +21,7 @@ sealed class InstanceNotRunningState : IInstanceState {
 			return (this, LaunchInstanceResult.LaunchInitiated);
 		}
 		
+		context.ReportStatus(InstanceStatus.IsLaunching);
 		return (new InstanceLaunchingState(context), LaunchInstanceResult.LaunchInitiated);
 	}
 
