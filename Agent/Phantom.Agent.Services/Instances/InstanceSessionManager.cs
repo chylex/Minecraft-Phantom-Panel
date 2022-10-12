@@ -78,7 +78,11 @@ sealed class InstanceSessionManager : IDisposable {
 				new ServerProperties(configuration.ServerPort, configuration.RconPort)
 			);
 
-			BaseLauncher launcher = new VanillaLauncher(properties);
+			BaseLauncher launcher = configuration.MinecraftServerKind switch {
+				MinecraftServerKind.Forge  => new ForgeLauncher(properties),
+				MinecraftServerKind.Fabric => new FabricLauncher(properties),
+				_                          => new VanillaLauncher(properties)
+			};
 
 			if (instances.TryGetValue(instanceGuid, out var instance)) {
 				await instance.Reconfigure(configuration, launcher, shutdownCancellationToken);
