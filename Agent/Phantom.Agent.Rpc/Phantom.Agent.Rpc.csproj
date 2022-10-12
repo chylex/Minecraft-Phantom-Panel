@@ -7,10 +7,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="2.12.0" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Messages\Phantom.Common.Messages.csproj" />
   </ItemGroup>
 
