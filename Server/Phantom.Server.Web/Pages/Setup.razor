@@ -77,7 +77,7 @@
       return;
     }
 
-    var signInResult = await LoginManager.SignIn(form.Username, form.Password, "/");
+    var signInResult = await LoginManager.SignIn(form.Username, form.Password);
     if (!signInResult.Succeeded) {
       form.SubmitModel.StopSubmitting("Error logging in.");
     }

@@ -1,5 +1,6 @@
 ﻿@namespace Phantom.Server.Web.Layout
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject Navigation Navigation
 
 <!DOCTYPE html>
 <html lang="en">
@@ -7,7 +8,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <base href="~/" />
+    <base href="@Navigation.BasePath" />
     <link href="css/site.css" rel="stylesheet" />
     @* ReSharper disable once Html.PathError *@
     <link href="Phantom.Server.Web.styles.css" rel="stylesheet" />

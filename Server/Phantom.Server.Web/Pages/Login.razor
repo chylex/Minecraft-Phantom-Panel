@@ -2,9 +2,8 @@
 @using Phantom.Server.Web.Authentication
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
-@using Phantom.Server.Web.Components.Utils
 @attribute [AllowAnonymous]
-@inject NavigationManager Nav
+@inject Navigation Navigation
 @inject PhantomLoginManager LoginManager
 
 <h1>Login</h1>
@@ -42,7 +41,7 @@
   }
 
   protected override void OnInitialized() {
-    if (Query.GetParameter(Nav, "token", out _)) {
+    if (Navigation.GetQueryParameter("token", out _)) {
       form.SubmitModel.StopSubmitting("Please login again.");
     }
   }
@@ -54,8 +53,8 @@
     
     form.SubmitModel.StartSubmitting();
     
-    string? returnUrl = Query.GetParameter(Nav, "return", out var url) ? url : null;
-    var result = await LoginManager.SignIn(form.Username, form.Password, returnUrl ?? "/");
+    string? returnUrl = Navigation.GetQueryParameter("return", out var url) ? url : null;
+    var result = await LoginManager.SignIn(form.Username, form.Password, returnUrl);
     if (result != SignInResult.Success) {
       form.SubmitModel.StopSubmitting(GetErrorMessage(result));
     }

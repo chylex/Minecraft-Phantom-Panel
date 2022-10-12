@@ -10,7 +10,7 @@
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Instance
-@inject NavigationManager Nav
+@inject Navigation Nav
 @inject MinecraftVersions MinecraftVersions
 @inject AgentJavaRuntimesManager AgentJavaRuntimesManager
 @inject AgentStatsManager AgentStatsManager
@@ -284,7 +284,7 @@
     var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, jvmArguments, LaunchAutomatically: false);
     var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
-      Nav.NavigateTo("/instances/" + instance.InstanceGuid);
+      Nav.NavigateTo("instances/" + instance.InstanceGuid);
     }
     else {
       form.SubmitModel.StopSubmitting(result.ToSentence());

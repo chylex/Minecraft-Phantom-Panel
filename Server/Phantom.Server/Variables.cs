@@ -7,6 +7,7 @@ namespace Phantom.Server;
 sealed record Variables(
 	string WebServerHost,
 	ushort WebServerPort,
+	string WebBasePath,
 	string RpcServerHost,
 	ushort RpcServerPort,
 	string SqlConnectionString
@@ -23,6 +24,7 @@ sealed record Variables(
 		return new Variables(
 			EnvironmentVariables.GetString("WEB_SERVER_HOST").WithDefault("0.0.0.0"),
 			EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").WithDefault(9400),
+			EnvironmentVariables.GetString("WEB_BASE_PATH").Validate(static value => value.StartsWith('/') && value.EndsWith('/'), "Environment variable must begin and end with '/'").WithDefault("/"),
 			EnvironmentVariables.GetString("RPC_SERVER_HOST").WithDefault("0.0.0.0"),
 			EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").WithDefault(9401),
 			connectionStringBuilder.ToString()

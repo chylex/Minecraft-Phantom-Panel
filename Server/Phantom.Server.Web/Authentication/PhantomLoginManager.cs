@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
 using ILogger = Serilog.ILogger;
@@ -9,19 +8,19 @@ namespace Phantom.Server.Web.Authentication;
 sealed class PhantomLoginManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginManager>();
 
+	private readonly Navigation navigation;
 	private readonly PhantomLoginStore loginStore;
-	private readonly NavigationManager navigationManager;
 	private readonly UserManager<IdentityUser> userManager;
 	private readonly SignInManager<IdentityUser> signInManager;
 
-	public PhantomLoginManager(PhantomLoginStore loginStore, NavigationManager navigationManager, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager) {
+	public PhantomLoginManager(Navigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager) {
+		this.navigation = navigation;
 		this.loginStore = loginStore;
-		this.navigationManager = navigationManager;
 		this.userManager = userManager;
 		this.signInManager = signInManager;
 	}
 
-	public async Task<SignInResult> SignIn(string username, string password, string returnUrl) {
+	public async Task<SignInResult> SignIn(string username, string password, string? returnUrl = null) {
 		var user = await userManager.FindByNameAsync(username);
 		if (user == null) {
 			return SignInResult.Failed;
@@ -32,8 +31,8 @@ sealed class PhantomLoginManager {
 			Logger.Verbose("Created login token for {Username}.", username);
 			
 			string token = TokenGenerator.Create(60);
-			loginStore.Add(token, user, password, returnUrl);
-			navigationManager.NavigateTo("/login" + QueryString.Create("token", token), forceLoad: true);
+			loginStore.Add(token, user, password, returnUrl ?? string.Empty);
+			navigation.NavigateTo("login" + QueryString.Create("token", token), forceLoad: true);
 		}
 		
 		return result;

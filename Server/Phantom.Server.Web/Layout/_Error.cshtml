@@ -1,5 +1,7 @@
 ﻿@page
+@using Phantom.Server.Web
 @model Phantom.Server.Web.Layout.ErrorModel
+@inject Navigation Navigation
 
 <!DOCTYPE html>
 <html lang="en">
@@ -7,7 +9,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <base href="~/" />
+    <base href="@Navigation.BasePath" />
     <link href="css/site.css" rel="stylesheet" />
     <title>Phantom Panel - Error</title>
   </head>

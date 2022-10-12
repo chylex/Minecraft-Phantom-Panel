@@ -23,7 +23,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel server...");
 	
-	var (webServerHost, webServerPort, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrExit();
+	var (webServerHost, webServerPort, webBasePath, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrExit();
 
 	string secretsPath = Path.GetFullPath("./secrets");
 	if (!Directory.Exists(secretsPath)) {
@@ -47,13 +47,13 @@ try {
 
 	var taskManager = new TaskManager();
 	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, taskManager, cancellationTokenSource.Token);
-	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, cancellationTokenSource.Token);
+	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, cancellationTokenSource.Token);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
 	var administratorToken = TokenGenerator.Create(60);
 	PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
-	PhantomLogger.Root.Information("For administrator setup, visit: {BaseUrl}/setup", webConfiguration.HttpUrl);
+	PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", webConfiguration.HttpUrl, webConfiguration.BasePath + "setup");
 
 	var serviceConfiguration = new ServiceConfiguration(TokenGenerator.GetBytesOrThrow(administratorToken), taskManager, cancellationTokenSource.Token);
 	var webConfigurator = new WebConfigurator(agentToken, serviceConfiguration);
