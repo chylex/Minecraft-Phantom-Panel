@@ -34,46 +34,50 @@ public class EnvironmentVariablesTests {
 
 		protected abstract EnvironmentVariables.Value<T> GetValue(string variableName);
 
-		protected Action CallGetValueOrThrow(string variableName) {
-			return () => Discard(GetValue(variableName).OrThrow);
+		protected Action CallGetValueAndRequire(string variableName) {
+			return () => Discard(GetValue(variableName).Require);
+		}
+
+		protected Action CallGetValueWithDefault(string variableName) {
+			return () => Discard(GetValue(variableName).WithDefault(ExampleValue));
 		}
 
 		[Test]
-		public void MissingOrThrowThrows() {
-			Assert.That(CallGetValueOrThrow(VariableNameMissing), Throws.Exception.Message.EqualTo("Missing environment variable: " + VariableNameMissing));
+		public void RequireWithMissingThrows() {
+			Assert.That(CallGetValueAndRequire(VariableNameMissing), Throws.Exception.Message.EqualTo("Missing environment variable: " + VariableNameMissing));
 		}
 
 		[Test]
-		public void MissingOrDefaultReturnsDefaultValue() {
-			Assert.That(GetValue(VariableNameMissing).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
+		public void MissingWithDefaultReturnsDefaultValue() {
+			Assert.That(GetValue(VariableNameMissing).WithDefault(ExampleValue), Is.EqualTo(ExampleValue));
 		}
 
 		[Test]
-		public void MissingOrGetDefaultReturnsDefaultValue() {
-			Assert.That(GetValue(VariableNameMissing).OrGetDefault(() => ExampleValue), Is.EqualTo(ExampleValue));
+		public void MissingWithDefaultGetterReturnsDefaultValue() {
+			Assert.That(GetValue(VariableNameMissing).WithDefaultGetter(() => ExampleValue), Is.EqualTo(ExampleValue));
 		}
 		
 		[Test]
-		public void ExistingOrThrowReturnsActualValue() {
+		public void RequireWithExistingReturnsActualValue() {
 			Assume.That(ExampleValue, Is.Not.EqualTo(default));
-			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrThrow, Is.EqualTo(ExampleValue));
+			Assert.That(GetValue(CreateVariable(ExampleValueString)).Require, Is.EqualTo(ExampleValue));
 		}
 
 		[Test]
-		public void ExistingOrDefaultReturnsActualValue() {
+		public void ExistingWithDefaultReturnsActualValue() {
 			Assume.That(ExampleValue, Is.Not.EqualTo(default));
-			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrDefault(default!), Is.EqualTo(ExampleValue));
+			Assert.That(GetValue(CreateVariable(ExampleValueString)).WithDefault(default!), Is.EqualTo(ExampleValue));
 		}
 
 		[Test]
-		public void ExistingOrGetDefaultReturnsActualValue() {
+		public void ExistingWithDefaultGetterReturnsActualValue() {
 			Assume.That(ExampleValue, Is.Not.EqualTo(default));
-			Assert.That(GetValue(CreateVariable(ExampleValueString)).OrGetDefault(static () => default!), Is.EqualTo(ExampleValue));
+			Assert.That(GetValue(CreateVariable(ExampleValueString)).WithDefaultGetter(static () => default!), Is.EqualTo(ExampleValue));
 		}
 
 		[Test]
-		public void ExistingOrGetDefaultDoesNotCallDefaultGetter() {
-			GetValue(CreateVariable(ExampleValueString)).OrGetDefault(static () => {
+		public void ExistingWithDefaultGetterDoesNotCallDefaultGetter() {
+			GetValue(CreateVariable(ExampleValueString)).WithDefaultGetter(static () => {
 				Assert.Fail();
 				return default!;
 			});
@@ -99,12 +103,12 @@ public class EnvironmentVariablesTests {
 
 		[Test]
 		public void UnparseableOrThrowThrows() {
-			Assert.That(CallGetValueOrThrow(CreateVariable("2147483648")), Throws.Exception.Message.StartsWith("Environment variable must be a 32-bit integer: " + VariableNameExistingPrefix));
+			Assert.That(CallGetValueAndRequire(CreateVariable("2147483648")), Throws.Exception.Message.StartsWith("Environment variable must be a 32-bit integer: " + VariableNameExistingPrefix));
 		}
 
 		[Test]
-		public void UnparseableOrDefaultReturnsDefaultValue() {
-			Assert.That(GetValue(CreateVariable("2147483648")).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
+		public void UnparseableWithDefaultThrows() {
+			Assert.That(CallGetValueWithDefault(CreateVariable("2147483648")), Throws.Exception.Message.StartsWith("Environment variable must be a 32-bit integer: " + VariableNameExistingPrefix));
 		}
 	}
 
@@ -119,19 +123,19 @@ public class EnvironmentVariablesTests {
 		[TestCase("1000", 1000)]
 		[TestCase("6000", 6000)]
 		public void JustInRangeOrThrowReturnsActualValue(string inputValue, int returnedValue) {
-			Assert.That(GetValue(CreateVariable(inputValue)).OrThrow, Is.EqualTo(returnedValue));
+			Assert.That(GetValue(CreateVariable(inputValue)).Require, Is.EqualTo(returnedValue));
 		}
 
 		[TestCase("999")]
 		[TestCase("6001")]
 		public void OutsideRangeOrThrowThrows(string value) {
-			Assert.That(CallGetValueOrThrow(CreateVariable(value)), Throws.Exception.Message.StartsWith("Environment variable must be between 1000 and 6000: " + VariableNameExistingPrefix));
+			Assert.That(CallGetValueAndRequire(CreateVariable(value)), Throws.Exception.Message.StartsWith("Environment variable must be between 1000 and 6000: " + VariableNameExistingPrefix));
 		}
 
 		[TestCase("999")]
 		[TestCase("6001")]
-		public void OutsideRangeOrDefaultReturnsDefaultValue(string value) {
-			Assert.That(GetValue(CreateVariable(value)).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
+		public void OutsideRangeWithDefaultThrows(string value) {
+			Assert.That(CallGetValueWithDefault(CreateVariable(value)), Throws.Exception.Message.StartsWith("Environment variable must be between 1000 and 6000: " + VariableNameExistingPrefix));
 		}
 	}
 
@@ -145,12 +149,12 @@ public class EnvironmentVariablesTests {
 
 		[Test]
 		public void UnparseableOrThrowThrows() {
-			Assert.That(CallGetValueOrThrow(CreateVariable("654321")), Throws.Exception.Message.StartsWith("Environment variable must be a port number: " + VariableNameExistingPrefix));
+			Assert.That(CallGetValueAndRequire(CreateVariable("654321")), Throws.Exception.Message.StartsWith("Environment variable must be a port number: " + VariableNameExistingPrefix));
 		}
 
 		[Test]
-		public void UnparseableOrDefaultReturnsDefaultValue() {
-			Assert.That(GetValue(CreateVariable("654321")).OrDefault(ExampleValue), Is.EqualTo(ExampleValue));
+		public void UnparseableWithDefaultThrows() {
+			Assert.That(CallGetValueWithDefault(CreateVariable("654321")), Throws.Exception.Message.StartsWith("Environment variable must be a port number: " + VariableNameExistingPrefix));
 		}
 	}
 }

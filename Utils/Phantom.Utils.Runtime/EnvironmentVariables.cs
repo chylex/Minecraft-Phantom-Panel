@@ -26,6 +26,7 @@ public static class EnvironmentVariables {
 		private readonly string errorMessage;
 
 		private bool HasValue => kind == ValueKind.HasValue;
+		private bool IsMissing => kind == ValueKind.Missing;
 
 		private Value(T? value, ValueKind kind, string variableName, string errorMessage) {
 			this.value = value;
@@ -33,10 +34,10 @@ public static class EnvironmentVariables {
 			this.variableName = variableName;
 			this.errorMessage = errorMessage;
 		}
-
-		public T OrThrow                               => HasValue ? value! : throw new Exception(errorMessage + ": " + variableName);
-		public T OrDefault(T defaultValue)             => HasValue ? value! : defaultValue;
-		public T OrGetDefault(Func<T> getDefaultValue) => HasValue ? value! : getDefaultValue();
+		
+		public T Require                                    => HasValue ? value! : throw new Exception(errorMessage + ": " + variableName);
+		public T WithDefault(T defaultValue)                => IsMissing ? defaultValue : Require;
+		public T WithDefaultGetter(Func<T> getDefaultValue) => IsMissing ? getDefaultValue() : Require;
 
 		internal Value<TResult> Map<TResult>(Func<T, TResult> mapper, Func<Exception, string> mapperThrowingErrorMessage) where TResult : notnull {
 			if (kind is ValueKind.Missing or ValueKind.HasError) {
@@ -56,6 +57,10 @@ public static class EnvironmentVariables {
 
 		public Value<TResult> MapParse<TResult>(Func<T, TResult> mapper) where TResult : notnull {
 			return Map(mapper, static e => "Environment variable has invalid format: " + e.Message);
+		}
+
+		public Value<T> Validate(Predicate<T> predicate, string errorMessage) {
+			return Map(value => predicate(value) ? value : throw new Exception(), errorMessage);
 		}
 	}
 

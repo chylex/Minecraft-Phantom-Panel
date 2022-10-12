@@ -18,20 +18,20 @@ sealed record Variables(
 	AllowedPorts AllowedRconPorts
 ) {
 	private static Variables LoadOrThrow() {
-		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").OrThrow;
-		var javaSearchPath = EnvironmentVariables.GetString("JAVA_SEARCH_PATH").OrGetDefault(GetDefaultJavaSearchPath);
+		var (authToken, authTokenFilePath) = EnvironmentVariables.GetEitherString("SERVER_AUTH_TOKEN", "SERVER_AUTH_TOKEN_FILE").Require;
+		var javaSearchPath = EnvironmentVariables.GetString("JAVA_SEARCH_PATH").WithDefaultGetter(GetDefaultJavaSearchPath);
 
 		return new Variables(
-			EnvironmentVariables.GetString("SERVER_HOST").OrThrow,
-			EnvironmentVariables.GetPortNumber("SERVER_PORT").OrDefault(9401),
+			EnvironmentVariables.GetString("SERVER_HOST").Require,
+			EnvironmentVariables.GetPortNumber("SERVER_PORT").WithDefault(9401),
 			javaSearchPath,
 			authToken,
 			authTokenFilePath,
-			EnvironmentVariables.GetString("AGENT_NAME").OrThrow,
-			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES", min: 1, max: 10000).OrThrow,
-			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).OrThrow,
-			EnvironmentVariables.GetString("ALLOWED_SERVER_PORTS").MapParse(AllowedPorts.FromString).OrThrow,
-			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).OrThrow
+			EnvironmentVariables.GetString("AGENT_NAME").Require,
+			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES", min: 1, max: 10000).Require,
+			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).Require,
+			EnvironmentVariables.GetString("ALLOWED_SERVER_PORTS").MapParse(AllowedPorts.FromString).Require,
+			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).Require
 		);
 	}
 

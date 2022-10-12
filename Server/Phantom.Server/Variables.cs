@@ -13,18 +13,18 @@ sealed record Variables(
 ) {
 	private static Variables LoadOrThrow() {
 		var connectionStringBuilder = new NpgsqlConnectionStringBuilder {
-			Host = EnvironmentVariables.GetString("PG_HOST").OrThrow,
-			Port = EnvironmentVariables.GetPortNumber("PG_PORT").OrThrow,
-			Username = EnvironmentVariables.GetString("PG_USER").OrThrow,
-			Password = EnvironmentVariables.GetString("PG_PASS").OrThrow,
-			Database = EnvironmentVariables.GetString("PG_DATABASE").OrThrow
+			Host = EnvironmentVariables.GetString("PG_HOST").Require,
+			Port = EnvironmentVariables.GetPortNumber("PG_PORT").Require,
+			Username = EnvironmentVariables.GetString("PG_USER").Require,
+			Password = EnvironmentVariables.GetString("PG_PASS").Require,
+			Database = EnvironmentVariables.GetString("PG_DATABASE").Require
 		};
 
 		return new Variables(
-			EnvironmentVariables.GetString("WEB_SERVER_HOST").OrDefault("0.0.0.0"),
-			EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").OrDefault(9400),
-			EnvironmentVariables.GetString("RPC_SERVER_HOST").OrDefault("0.0.0.0"),
-			EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").OrDefault(9401),
+			EnvironmentVariables.GetString("WEB_SERVER_HOST").WithDefault("0.0.0.0"),
+			EnvironmentVariables.GetPortNumber("WEB_SERVER_PORT").WithDefault(9400),
+			EnvironmentVariables.GetString("RPC_SERVER_HOST").WithDefault("0.0.0.0"),
+			EnvironmentVariables.GetPortNumber("RPC_SERVER_PORT").WithDefault(9401),
 			connectionStringBuilder.ToString()
 		);
 	}
