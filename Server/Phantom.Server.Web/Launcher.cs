@@ -11,8 +11,10 @@ namespace Phantom.Server.Web;
 
 public static class Launcher {
 	public static async Task<WebApplication> CreateApplication(Configuration config, IConfigurator configurator, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
+		var assembly = typeof(Launcher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
-			ApplicationName = typeof(Launcher).Assembly.GetName().Name
+			ApplicationName = assembly.GetName().Name,
+			ContentRootPath = Path.GetDirectoryName(assembly.Location)
 		});
 
 		builder.Host.UseSerilog(config.Logger, dispose: true);
