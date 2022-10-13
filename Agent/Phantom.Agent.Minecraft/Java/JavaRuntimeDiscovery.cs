@@ -38,28 +38,38 @@ public sealed class JavaRuntimeDiscovery {
 			AttributesToSkip = FileAttributes.Hidden | FileAttributes.ReparsePoint | FileAttributes.System
 		}).Order()) {
 			var javaExecutablePath = Paths.NormalizeSlashes(Path.Combine(binFolderPath, javaExecutableName));
-			if (File.Exists(javaExecutablePath)) {
-				Logger.Information("Found candidate Java executable: {JavaExecutablePath}", javaExecutablePath);
-
-				JavaRuntime? foundRuntime;
-				try {
-					foundRuntime = await TryReadJavaRuntimeInformationFromProcess(javaExecutablePath);
-				} catch (OperationCanceledException) {
-					Logger.Error("Java process did not exit in time.");
-					continue;
-				} catch (Exception e) {
-					Logger.Error(e, "Caught exception while reading Java version information.");
-					continue;
-				}
-
-				if (foundRuntime == null) {
-					Logger.Error("Java executable did not output version information.");
-					continue;
-				}
-
-				Logger.Information("Found Java {DisplayName} at: {Path}", foundRuntime.DisplayName, javaExecutablePath);
-				yield return new JavaRuntimeExecutable(javaExecutablePath, foundRuntime);
+			
+			FileAttributes javaExecutableAttributes;
+			try {
+				javaExecutableAttributes = File.GetAttributes(javaExecutablePath);
+			} catch (Exception) {
+				continue;
 			}
+
+			if (javaExecutableAttributes.HasFlag(FileAttributes.ReparsePoint)) {
+				continue;
+			}
+
+			Logger.Information("Found candidate Java executable: {JavaExecutablePath}", javaExecutablePath);
+
+			JavaRuntime? foundRuntime;
+			try {
+				foundRuntime = await TryReadJavaRuntimeInformationFromProcess(javaExecutablePath);
+			} catch (OperationCanceledException) {
+				Logger.Error("Java process did not exit in time.");
+				continue;
+			} catch (Exception e) {
+				Logger.Error(e, "Caught exception while reading Java version information.");
+				continue;
+			}
+
+			if (foundRuntime == null) {
+				Logger.Error("Java executable did not output version information.");
+				continue;
+			}
+
+			Logger.Information("Found Java {DisplayName} at: {Path}", foundRuntime.DisplayName, javaExecutablePath);
+			yield return new JavaRuntimeExecutable(javaExecutablePath, foundRuntime);
 		}
 	}
 
