@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
 using Phantom.Server.Services;
+using Phantom.Utils.Threading;
 using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Web.Authentication; 
@@ -14,9 +15,9 @@ sealed class PhantomLoginStore {
 	private readonly ConcurrentDictionary<string, LoginEntry> loginEntries = new ();
 	private readonly CancellationToken cancellationToken;
 
-	public PhantomLoginStore(ServiceConfiguration serviceConfiguration) {
-		this.cancellationToken = serviceConfiguration.CancellationToken;
-		serviceConfiguration.TaskManager.Run(RunExpirationLoop);
+	public PhantomLoginStore(ServiceConfiguration configuration, TaskManager taskManager) {
+		this.cancellationToken = configuration.CancellationToken;
+		taskManager.Run(RunExpirationLoop);
 	}
 	
 	private async Task RunExpirationLoop() {

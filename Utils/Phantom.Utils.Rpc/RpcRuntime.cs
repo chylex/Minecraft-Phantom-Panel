@@ -1,4 +1,6 @@
 ﻿using NetMQ;
+using Phantom.Utils.Threading;
+using Serilog;
 
 namespace Phantom.Utils.Rpc;
 
@@ -23,30 +25,37 @@ static class RpcRuntime {
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new() {
 	private readonly TSocket socket;
+	private readonly TaskManager taskManager;
+	private readonly ILogger logger;
 
-	protected RpcRuntime(TSocket socket, CancellationToken cancellationToken) {
+	protected RpcRuntime(TSocket socket, ILogger logger) {
 		RpcRuntime.MarkRuntimeCreated();
 		RpcRuntime.SetDefaultSocketOptions(socket.Options);
 		this.socket = socket;
+		this.logger = logger;
+		this.taskManager = new TaskManager();
 	}
 
 	protected async Task Launch() {
 		Connect(socket);
 		
 		try {
-			await Run(socket);
+			await Run(socket, taskManager);
 		} catch (OperationCanceledException) {
 			// ignore
 		} finally {
-			// TODO wait for all tasks started by MessageRegistry.Handle to complete
+			logger.Information("Stopping task manager...");
+			await taskManager.Stop();
 			await Disconnect(socket);
+			
 			socket.Dispose();
 			NetMQConfig.Cleanup();
+			logger.Information("ZeroMQ client stopped.");
 		}
 	}
 	
 	protected abstract void Connect(TSocket socket);
-	protected abstract Task Run(TSocket socket);
+	protected abstract Task Run(TSocket socket, TaskManager taskManager);
 	
 	protected virtual Task Disconnect(TSocket socket) {
 		return Task.CompletedTask;

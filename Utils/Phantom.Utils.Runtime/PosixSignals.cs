@@ -4,10 +4,12 @@ namespace Phantom.Utils.Runtime;
 
 public static class PosixSignals {
 	public static void RegisterCancellation(CancellationTokenSource cancellationTokenSource, Action? callback = null) {
-		var shutdown = new CancellationCallback(cancellationTokenSource, callback).Run;
-		PosixSignalRegistration.Create(PosixSignal.SIGINT, shutdown);
-		PosixSignalRegistration.Create(PosixSignal.SIGTERM, shutdown);
-		PosixSignalRegistration.Create(PosixSignal.SIGQUIT, shutdown);
+		var cancellationCallback = new CancellationCallback(cancellationTokenSource, callback);
+		var handlePosixSignal = cancellationCallback.HandlePosixSignal;
+		PosixSignalRegistration.Create(PosixSignal.SIGINT, handlePosixSignal);
+		PosixSignalRegistration.Create(PosixSignal.SIGTERM, handlePosixSignal);
+		PosixSignalRegistration.Create(PosixSignal.SIGQUIT, handlePosixSignal);
+		Console.CancelKeyPress += cancellationCallback.HandleConsoleCancel;
 	}
 
 	private sealed class CancellationCallback {
@@ -19,11 +21,22 @@ public static class PosixSignals {
 			this.callback = callback;
 		}
 
-		public void Run(PosixSignalContext context) {
+		public void HandlePosixSignal(PosixSignalContext context) {
 			context.Cancel = true;
-			if (!cancellationTokenSource.IsCancellationRequested) {
-				cancellationTokenSource.Cancel();
-				callback?.Invoke();
+			Run();
+		}
+
+		public void HandleConsoleCancel(object? sender, ConsoleCancelEventArgs e) {
+			e.Cancel = true;
+			Run();
+		}
+
+		private void Run() {
+			lock (this) {
+				if (!cancellationTokenSource.IsCancellationRequested) {
+					cancellationTokenSource.Cancel();
+					callback?.Invoke();
+				}
 			}
 		}
 	}

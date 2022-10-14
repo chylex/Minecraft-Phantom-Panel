@@ -4,6 +4,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
+using Phantom.Utils.Threading;
 using Serilog.Events;
 
 namespace Phantom.Agent.Rpc;
@@ -24,7 +25,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	private readonly Guid agentGuid;
 	private readonly Func<ClientSocket, IMessageToAgentListener> messageListenerFactory;
 
-	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Guid agentGuid, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) : base(socket, config.CancellationToken) {
+	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Guid agentGuid, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory) : base(socket, config.Logger) {
 		this.config = config;
 		this.agentGuid = agentGuid;
 		this.messageListenerFactory = messageListenerFactory;
@@ -39,9 +40,8 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		logger.Information("ZeroMQ client ready.");
 	}
 
-	protected override async Task Run(ClientSocket socket) {
+	protected override async Task Run(ClientSocket socket, TaskManager taskManager) {
 		var logger = config.Logger;
-		var taskManager = config.TaskManager;
 		var cancellationToken = config.CancellationToken;
 		
 		var listener = messageListenerFactory(socket);

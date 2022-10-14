@@ -2,6 +2,7 @@
 using NetMQ.Sockets;
 using Phantom.Common.Messages;
 using Phantom.Utils.Rpc;
+using Phantom.Utils.Threading;
 using Serilog.Events;
 
 namespace Phantom.Server.Rpc;
@@ -20,7 +21,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	private readonly RpcConfiguration config;
 	private readonly Func<RpcClientConnection, IMessageToServerListener> listenerFactory;
 
-	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) : base(socket, config.CancellationToken) {
+	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) : base(socket, config.Logger) {
 		this.config = config;
 		this.listenerFactory = listenerFactory;
 	}
@@ -34,9 +35,8 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		logger.Information("ZeroMQ server initialized, listening for agent connections on port {Port}.", config.Port);
 	}
 
-	protected override async Task Run(ServerSocket socket) {
+	protected override async Task Run(ServerSocket socket, TaskManager taskManager) {
 		var logger = config.Logger;
-		var taskManager = config.TaskManager;
 		var cancellationToken = config.CancellationToken;
 
 		var clients = new Dictionary<ulong, Client>();

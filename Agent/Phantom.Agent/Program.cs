@@ -11,6 +11,7 @@ using Phantom.Utils.Threading;
 const int AgentVersion = 1;
 
 var cancellationTokenSource = new CancellationTokenSource();
+var taskManager = new TaskManager();
 
 PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
@@ -47,18 +48,24 @@ try {
 		return;
 	}
 
-	var taskManager = new TaskManager();
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
 	var agentServices = new AgentServices(agentInfo, folders, taskManager);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 	
 	await agentServices.Initialize();
-	await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, taskManager, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
-	await agentServices.Shutdown();
+	try {
+		await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentAuthToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
+	} finally {
+		cancellationTokenSource.Cancel();
+		await agentServices.Shutdown();
+	}
 } catch (OperationCanceledException) {
 	// Ignore.
 } finally {
+	PhantomLogger.Root.Information("Stopping task manager...");
+	await taskManager.Stop();
+
 	cancellationTokenSource.Dispose();
 	PhantomLogger.Root.Information("Bye!");
 	PhantomLogger.Dispose();
