@@ -10,12 +10,16 @@ using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
+using Phantom.Utils.Threading;
 using Serilog;
 
 namespace Phantom.Server.Services.Agents;
 
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
+
+	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
+	private static readonly TimeSpan DisconnectionThreshold = TimeSpan.FromSeconds(12);
 
 	private readonly ObservableAgents agents = new (PhantomLogger.Create<AgentManager, ObservableAgents>());
 
@@ -25,10 +29,11 @@ public sealed class AgentManager {
 	private readonly AgentAuthToken authToken;
 	private readonly DatabaseProvider databaseProvider;
 
-	public AgentManager(ServiceConfiguration configuration, AgentAuthToken authToken, DatabaseProvider databaseProvider) {
+	public AgentManager(ServiceConfiguration configuration, AgentAuthToken authToken, DatabaseProvider databaseProvider, TaskManager taskManager) {
 		this.cancellationToken = configuration.CancellationToken;
 		this.authToken = authToken;
 		this.databaseProvider = databaseProvider;
+		taskManager.Run(RefreshAgentStatus);
 	}
 
 	public async Task Initialize() {
@@ -51,6 +56,7 @@ public sealed class AgentManager {
 
 		var agent = new Agent(agentInfo) {
 			LastPing = DateTimeOffset.Now,
+			IsOnline = true,
 			Connection = new AgentConnection(connection)
 		};
 
@@ -58,12 +64,12 @@ public sealed class AgentManager {
 
 		using (var scope = databaseProvider.CreateScope()) {
 			var entity = scope.Ctx.AgentUpsert.Fetch(agent.Guid);
-			
+
 			entity.Name = agent.Name;
 			entity.Version = agent.Version;
 			entity.MaxInstances = agent.MaxInstances;
 			entity.MaxMemory = agent.MaxMemory;
-			
+
 			await scope.Ctx.SaveChangesAsync(cancellationToken);
 		}
 
@@ -90,6 +96,20 @@ public sealed class AgentManager {
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
 		// TODO automatically mark agent as offline if it doesn't send pings
 		agents.Update(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
+	}
+
+	private async Task RefreshAgentStatus() {
+		static Agent MarkAgentAsOffline(Agent agent) {
+			Logger.Warning("Lost connection to agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
+			return agent.AsDisconnected();
+		}
+
+		while (!cancellationToken.IsCancellationRequested) {
+			await Task.Delay(DisconnectionRecheckInterval, cancellationToken);
+
+			var now = DateTimeOffset.Now;
+			agents.UpdateAllIf(MarkAgentAsOffline, agent => agent.IsOnline && agent.LastPing is {} lastPing && now - lastPing >= DisconnectionThreshold);
+		}
 	}
 
 	private async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
@@ -135,6 +155,10 @@ public sealed class AgentManager {
 
 		public void Update(Guid guid, Func<Agent, Agent> updater) {
 			UpdateIf(agents.TryReplace(guid, updater));
+		}
+
+		public void UpdateAllIf(Func<Agent, Agent> updater, Predicate<Agent> predicate) {
+			UpdateIf(agents.TryReplaceAllIf(updater, predicate));
 		}
 
 		public bool TryUnregister(Guid guid, RpcClientConnection connection) {

@@ -15,12 +15,17 @@ public sealed record Agent(
 ) {
 	internal AgentConnection? Connection { get; init; }
 	
+	public bool IsOnline { get; internal init; }
+	public bool IsOffline => !IsOnline;
+
 	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.Version, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
 
-	public bool IsOnline => Connection is not null;
-	public bool IsOffline => Connection is null;
+	internal Agent AsDisconnected() => this with {
+		IsOnline = false
+	};
 	
 	internal Agent AsOffline() => this with {
-		Connection = null
+		Connection = null,
+		IsOnline = false
 	};
 }
