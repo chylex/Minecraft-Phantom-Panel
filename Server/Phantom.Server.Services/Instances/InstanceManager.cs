@@ -140,6 +140,10 @@ public sealed class InstanceManager {
 	}
 
 	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
+		instances.Update(instanceGuid, instance => instance with {
+			Configuration = instance.Configuration with { LaunchAutomatically = shouldLaunchAutomatically }
+		});
+		
 		using var scope = databaseProvider.CreateScope();
 		var entity = await scope.Ctx.Instances.FindAsync(instanceGuid, cancellationToken);
 		if (entity != null) {
