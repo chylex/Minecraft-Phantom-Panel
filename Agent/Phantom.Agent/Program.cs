@@ -1,4 +1,5 @@
-﻿using Phantom.Agent;
+﻿using System.Reflection;
+using Phantom.Agent;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
@@ -19,6 +20,7 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 
 try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
+	PhantomLogger.Root.Information("Agent version: {Version}", AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly()));
 
 	var (serverHost, serverPort, javaSearchPath, authToken, authTokenFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
 	

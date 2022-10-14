@@ -1,4 +1,7 @@
-﻿<div class="navbar navbar-dark">
+﻿@using Phantom.Server.Services
+@inject ServiceConfiguration Configuration
+
+<div class="navbar navbar-dark">
   <div class="container-fluid">
     <a class="navbar-brand" href="">Phantom Panel</a>
     <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -7,8 +10,8 @@
   </div>
 </div>
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
-  <nav class="flex-column">
+<div class="navbar-menu @NavMenuCssClass" @onclick="ToggleNavMenu">
+  <nav>
     <NavMenuItem Label="Home" Icon="home" Match="NavLinkMatch.All" />
     <AuthorizeView>
       <NotAuthorized>
@@ -21,6 +24,9 @@
       </Authorized>
     </AuthorizeView>
   </nav>
+  <footer>
+    Build @Configuration.Version
+  </footer>
 </div>
 
 @code {

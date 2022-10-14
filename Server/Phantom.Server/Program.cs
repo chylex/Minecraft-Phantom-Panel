@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Logging;
 using Phantom.Server;
@@ -22,7 +23,10 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 });
 
 try {
+	var fullVersion = AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly());
+	
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel server...");
+	PhantomLogger.Root.Information("Server version: {Version}", fullVersion);
 	
 	var (webServerHost, webServerPort, webBasePath, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrExit();
 
@@ -55,7 +59,7 @@ try {
 	PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
 	PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", webConfiguration.HttpUrl, webConfiguration.BasePath + "setup");
 
-	var serviceConfiguration = new ServiceConfiguration(TokenGenerator.GetBytesOrThrow(administratorToken), cancellationTokenSource.Token);
+	var serviceConfiguration = new ServiceConfiguration(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken), cancellationTokenSource.Token);
 	var webConfigurator = new WebConfigurator(serviceConfiguration, taskManager, agentToken);
 	var webApplication = await WebLauncher.CreateApplication(webConfiguration, webConfigurator, options => options.UseNpgsql(sqlConnectionString, static options => {
 		options.CommandTimeout(10).MigrationsAssembly(typeof(ApplicationDbContextDesignFactory).Assembly.FullName);
