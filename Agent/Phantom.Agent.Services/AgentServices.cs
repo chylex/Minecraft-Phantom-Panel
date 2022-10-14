@@ -27,6 +27,5 @@ public sealed class AgentServices {
 
 	public async Task Shutdown() {
 		await InstanceSessionManager.StopAll();
-		await TaskManager.Stop();
 	}
 }

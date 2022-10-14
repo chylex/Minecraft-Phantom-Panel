@@ -5,21 +5,25 @@ using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
+using Phantom.Utils.Threading;
 using WebLauncher = Phantom.Server.Web.Launcher;
 
 namespace Phantom.Server;
 
 sealed class WebConfigurator : WebLauncher.IConfigurator {
-	private readonly AgentAuthToken agentToken;
 	private readonly ServiceConfiguration serviceConfiguration;
+	private readonly TaskManager taskManager;
+	private readonly AgentAuthToken agentToken;
 
-	public WebConfigurator(AgentAuthToken agentToken, ServiceConfiguration serviceConfiguration) {
-		this.agentToken = agentToken;
+	public WebConfigurator(ServiceConfiguration serviceConfiguration, TaskManager taskManager, AgentAuthToken agentToken) {
 		this.serviceConfiguration = serviceConfiguration;
+		this.taskManager = taskManager;
+		this.agentToken = agentToken;
 	}
 
 	public void ConfigureServices(IServiceCollection services) {
 		services.AddSingleton(serviceConfiguration);
+		services.AddSingleton(taskManager);
 		services.AddSingleton(agentToken);
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<AgentJavaRuntimesManager>();

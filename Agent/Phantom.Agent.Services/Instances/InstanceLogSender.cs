@@ -27,7 +27,7 @@ sealed class InstanceLogSender {
 		taskManager.Run(Run);
 	}
 
-	private async void Run() {
+	private async Task Run() {
 		logger.Verbose("Task started.");
 		
 		try {
