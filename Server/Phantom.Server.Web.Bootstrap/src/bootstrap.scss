@@ -27,3 +27,7 @@ $grid-breakpoints: (
 .spinner-border-sm {
   --bs-spinner-border-width: 0.15em;
 }
+
+.progress {
+  --bs-progress-bar-transition: width 0.2s ease;
+}
