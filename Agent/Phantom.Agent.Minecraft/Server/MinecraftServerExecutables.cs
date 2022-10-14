@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Phantom.Common.Logging;
 using Phantom.Common.Minecraft;
+using Phantom.Utils.IO;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
@@ -27,7 +28,7 @@ public sealed class MinecraftServerExecutables : IDisposable {
 		}
 
 		try {
-			Directory.CreateDirectory(serverExecutableFolderPath);
+			Directories.Create(serverExecutableFolderPath, Chmod.URWX_GRX);
 		} catch (Exception e) {
 			Logger.Error(e, "Unable to create folder for server executable: {ServerExecutableFolderPath}", serverExecutableFolderPath);
 			return null;

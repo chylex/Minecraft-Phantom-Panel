@@ -10,6 +10,7 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
+using Phantom.Utils.IO;
 using Phantom.Utils.Threading;
 using Serilog;
 
@@ -66,7 +67,7 @@ sealed class InstanceSessionManager : IDisposable {
 			);
 
 			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
-			Directory.CreateDirectory(instanceFolder);
+			Directories.Create(instanceFolder, Chmod.URWX_GRX);
 
 			var properties = new InstanceProperties(
 				configuration.JavaRuntimeGuid,
