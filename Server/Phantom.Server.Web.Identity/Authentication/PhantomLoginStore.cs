@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
 using Phantom.Server.Services;
 using Phantom.Utils.Threading;
-using ILogger = Serilog.ILogger;
+using Serilog;
 
-namespace Phantom.Server.Web.Authentication; 
+namespace Phantom.Server.Web.Identity.Authentication; 
 
-sealed class PhantomLoginStore {
+public sealed class PhantomLoginStore {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginStore>();
 	private static readonly TimeSpan ExpirationTime = TimeSpan.FromMinutes(1);
 	
@@ -36,12 +36,12 @@ sealed class PhantomLoginStore {
 			Logger.Information("Expiration loop stopped.");
 		}
 	}
-	
-	public void Add(string token, IdentityUser user, string password, string returnUrl) {
+
+	internal void Add(string token, IdentityUser user, string password, string returnUrl) {
 		loginEntries[token] = new LoginEntry(user, password, returnUrl, Stopwatch.StartNew());
 	}
 
-	public LoginEntry? Pop(string token) {
+	internal LoginEntry? Pop(string token) {
 		if (!loginEntries.TryRemove(token, out var entry)) {
 			return null;
 		}
@@ -54,7 +54,7 @@ sealed class PhantomLoginStore {
 		return entry;
 	}
 
-	public sealed record LoginEntry(IdentityUser User, string Password, string ReturnUrl, Stopwatch AddedTime) {
+	internal sealed record LoginEntry(IdentityUser User, string Password, string ReturnUrl, Stopwatch AddedTime) {
 		public bool IsExpired => AddedTime.Elapsed >= ExpirationTime;
 	}
 }

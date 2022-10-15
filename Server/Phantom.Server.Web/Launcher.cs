@@ -1,10 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Database;
-using Phantom.Server.Web.Authentication;
 using Phantom.Server.Web.Components.Utils;
+using Phantom.Server.Web.Identity;
 using Serilog;
 
 namespace Phantom.Server.Web;
@@ -29,21 +28,19 @@ public static class Launcher {
 		configurator.ConfigureServices(builder.Services);
 
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
+		builder.Services.AddScoped<INavigation>(Navigation.Create(config.BasePath));
 
 		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
 		builder.Services.AddSingleton<DatabaseProvider>();
 
-		builder.Services.AddSingleton<PhantomLoginStore>();
-		builder.Services.AddScoped<PhantomLoginManager>();
 		builder.Services.AddIdentity<IdentityUser, IdentityRole>(ConfigureIdentity).AddEntityFrameworkStores<ApplicationDbContext>();
 		builder.Services.ConfigureApplicationCookie(ConfigureIdentityCookie);
 		builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
 		builder.Services.AddAuthorization();
+		builder.Services.AddPhantomIdentity<IdentityUser>();
 
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
-		builder.Services.AddScoped(Navigation.Create(config.BasePath));
-		builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
 
 		var application = builder.Build();
 
@@ -67,7 +64,7 @@ public static class Launcher {
 		application.UseRouting();
 		application.UseAuthentication();
 		application.UseAuthorization();
-		application.UseMiddleware<BlazorIdentityMiddleware>();
+		application.UsePhantomIdentity();
 
 		application.MapControllers();
 		application.MapBlazorHub();

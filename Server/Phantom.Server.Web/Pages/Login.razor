@@ -1,9 +1,9 @@
 ﻿@page "/login"
-@using Phantom.Server.Web.Authentication
+@using Phantom.Server.Web.Identity.Authentication
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @attribute [AllowAnonymous]
-@inject Navigation Navigation
+@inject INavigation Navigation
 @inject PhantomLoginManager LoginManager
 
 <h1>Login</h1>

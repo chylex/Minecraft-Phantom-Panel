@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Phantom.Server.Web.Authentication;
+namespace Phantom.Server.Web.Identity.Authentication;
 
-public sealed class RevalidatingIdentityAuthenticationStateProvider<TUser> : RevalidatingServerAuthenticationStateProvider where TUser : class {
+sealed class RevalidatingIdentityAuthenticationStateProvider<TUser> : RevalidatingServerAuthenticationStateProvider where TUser : class {
 	private readonly IServiceScopeFactory scopeFactory;
 	private readonly IdentityOptions options;
 

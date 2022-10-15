@@ -1,19 +1,20 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
-using ILogger = Serilog.ILogger;
+using Serilog;
 
-namespace Phantom.Server.Web.Authentication; 
+namespace Phantom.Server.Web.Identity.Authentication;
 
-sealed class PhantomLoginManager {
+public sealed class PhantomLoginManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginManager>();
 
-	private readonly Navigation navigation;
+	private readonly INavigation navigation;
 	private readonly PhantomLoginStore loginStore;
 	private readonly UserManager<IdentityUser> userManager;
 	private readonly SignInManager<IdentityUser> signInManager;
 
-	public PhantomLoginManager(Navigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager) {
+	public PhantomLoginManager(INavigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager) {
 		this.navigation = navigation;
 		this.loginStore = loginStore;
 		this.userManager = userManager;
@@ -38,11 +39,11 @@ sealed class PhantomLoginManager {
 		return result;
 	}
 
-	public async Task SignOut() {
+	internal async Task SignOut() {
 		await signInManager.SignOutAsync();
 	}
 
-	public async Task<string?> ProcessTokenAndGetReturnUrl(string token) {
+	internal async Task<string?> ProcessTokenAndGetReturnUrl(string token) {
 		var entry = loginStore.Pop(token);
 		if (entry == null) {
 			return null;

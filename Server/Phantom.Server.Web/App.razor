@@ -1,4 +1,5 @@
-﻿@inject Navigation Nav
+﻿@inject INavigation Nav
+@inject NavigationManager NavigationManager
 
 <CascadingAuthenticationState>
   <Router AppAssembly="@typeof(App).Assembly">
@@ -6,7 +7,7 @@
       <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
         <NotAuthorized>
           @{
-            var returnUrl = Nav.CurrentRelativePath.TrimEnd('/');
+            var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimEnd('/');
             Nav.NavigateTo("login" + QueryString.Create("return", returnUrl), forceLoad: true);
           }
         </NotAuthorized>

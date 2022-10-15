@@ -1,16 +1,16 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Web;
 using Microsoft.AspNetCore.Components;
+using Phantom.Server.Web.Identity;
 
 namespace Phantom.Server.Web; 
 
-sealed class Navigation {
+sealed class Navigation : INavigation {
 	public static Func<IServiceProvider, Navigation> Create(string basePath) {
 		return provider => new Navigation(basePath, provider.GetRequiredService<NavigationManager>());
 	}
 
 	public string BasePath { get; }
-	public string CurrentRelativePath => navigationManager.ToBaseRelativePath(navigationManager.Uri);
 	
 	private readonly NavigationManager navigationManager;
 
