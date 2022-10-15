@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Phantom.Utils.Collections;
 
+[SuppressMessage("ReSharper", "MemberCanBeInternal")]
 public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 	private readonly Dictionary<TKey, TValue> dict;
 	private readonly ReaderWriterLockSlim rwLock;
@@ -59,26 +60,6 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool AddOrReplace(TKey key, TValue newValue, [MaybeNullWhen(false)] out TValue oldValue) {
-		rwLock.EnterWriteLock();
-		try {
-			bool hadValue = dict.TryGetValue(key, out oldValue);
-			dict[key] = newValue;
-			return hadValue;
-		} finally {
-			rwLock.ExitWriteLock();
-		}
-	}
-
-	public bool Remove(TKey key) {
-		rwLock.EnterWriteLock();
-		try {
-			return dict.Remove(key);
-		} finally {
-			rwLock.ExitWriteLock();
-		}
-	}
-
 	public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value) {
 		rwLock.EnterReadLock();
 		try {
@@ -97,18 +78,33 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool TryAddOrReplace(TKey key, TValue newValue, Predicate<TValue> replaceCondition) {
+	public bool AddOrReplace(TKey key, TValue newValue, [MaybeNullWhen(false)] out TValue oldValue) {
 		rwLock.EnterWriteLock();
 		try {
-			if (!dict.TryGetValue(key, out var oldValue) || replaceCondition(oldValue)) {
-				dict[key] = newValue;
-				return true;
-			}
-			else {
-				return false;
-			}
+			bool hadValue = dict.TryGetValue(key, out oldValue);
+			dict[key] = newValue;
+			return hadValue;
 		} finally {
 			rwLock.ExitWriteLock();
+		}
+	}
+
+	public bool AddOrReplaceIf(TKey key, TValue newValue, Predicate<TValue> replaceCondition) {
+		rwLock.EnterUpgradeableReadLock();
+		try {
+			if (dict.TryGetValue(key, out var oldValue) && !replaceCondition(oldValue)) {
+				return false;
+			}
+
+			rwLock.EnterWriteLock();
+			try {
+				dict[key] = newValue;
+				return true;
+			} finally {
+				rwLock.ExitWriteLock();
+			}
+		} finally {
+			rwLock.ExitUpgradeableReadLock();
 		}
 	}
 
@@ -117,43 +113,66 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 	}
 
 	public bool TryReplaceIf(TKey key, Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
-		rwLock.EnterWriteLock();
+		rwLock.EnterUpgradeableReadLock();
 		try {
-			if (dict.TryGetValue(key, out var oldValue) && replaceCondition(oldValue)) {
-				dict[key] = replacementValue(oldValue);
-				return true;
-			}
-			else {
+			if (!dict.TryGetValue(key, out var oldValue) || !replaceCondition(oldValue)) {
 				return false;
 			}
+
+			rwLock.EnterWriteLock();
+			try {
+				dict[key] = replacementValue(oldValue);
+				return true;
+			} finally {
+				rwLock.ExitWriteLock();
+			}
 		} finally {
-			rwLock.ExitWriteLock();
+			rwLock.ExitUpgradeableReadLock();
 		}
 	}
 
-	public bool TryReplaceAll(Func<TValue, TValue> replacementValue) {
-		return TryReplaceAllIf(replacementValue, static _ => true);
-	}
-
-	public bool TryReplaceAllIf(Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
+	public bool ReplaceAll(Func<TValue, TValue> replacementValue) {
 		rwLock.EnterWriteLock();
 		try {
-			bool hasChanged = false;
-			
 			foreach (var (key, oldValue) in dict) {
-				if (replaceCondition(oldValue)) {
-					dict[key] = replacementValue(oldValue);
-					hasChanged = true;
-				}
+				dict[key] = replacementValue(oldValue);
 			}
-			
-			return hasChanged;
+
+			return dict.Count > 0;
 		} finally {
 			rwLock.ExitWriteLock();
 		}
 	}
 
-	public bool TryRemove(TKey key) {
+	public bool ReplaceAllIf(Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
+		rwLock.EnterUpgradeableReadLock();
+		try {
+			bool hasChanged = false;
+
+			try {
+				foreach (var (key, oldValue) in dict) {
+					if (replaceCondition(oldValue)) {
+						if (!hasChanged) {
+							rwLock.EnterWriteLock();
+						}
+
+						hasChanged = true;
+						dict[key] = replacementValue(oldValue);
+					}
+				}
+			} finally {
+				if (hasChanged) {
+					rwLock.ExitWriteLock();
+				}
+			}
+
+			return hasChanged;
+		} finally {
+			rwLock.ExitUpgradeableReadLock();
+		}
+	}
+
+	public bool Remove(TKey key) {
 		rwLock.EnterWriteLock();
 		try {
 			return dict.Remove(key);
@@ -162,12 +181,21 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool TryRemoveIf(TKey key, Predicate<TValue> removeCondition) {
-		rwLock.EnterWriteLock();
+	public bool RemoveIf(TKey key, Predicate<TValue> removeCondition) {
+		rwLock.EnterUpgradeableReadLock();
 		try {
-			return dict.TryGetValue(key, out var oldValue) && removeCondition(oldValue) && dict.Remove(key);
+			if (!dict.TryGetValue(key, out var oldValue) || !removeCondition(oldValue)) {
+				return false;
+			}
+
+			rwLock.EnterWriteLock();
+			try {
+				return dict.Remove(key);
+			} finally {
+				rwLock.ExitWriteLock();
+			}
 		} finally {
-			rwLock.ExitWriteLock();
+			rwLock.ExitUpgradeableReadLock();
 		}
 	}
 

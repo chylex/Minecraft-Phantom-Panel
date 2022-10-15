@@ -41,7 +41,7 @@ public sealed class AgentManager {
 
 		await foreach (var entity in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var agent = new Agent(entity.AgentGuid, entity.Name, entity.Version, entity.MaxInstances, entity.MaxMemory);
-			if (!agents.TryRegister(agent)) {
+			if (!agents.ByGuid.AddOrReplaceIf(agent.Guid, agent, static oldAgent => oldAgent.IsOffline)) {
 				// TODO
 				throw new InvalidOperationException("Unable to register agent from database: " + agent.Guid);
 			}
@@ -60,7 +60,9 @@ public sealed class AgentManager {
 			Connection = new AgentConnection(connection)
 		};
 
-		agents.Register(agent);
+		if (agents.ByGuid.AddOrReplace(agent.Guid, agent, out var oldAgent)) {
+			oldAgent.Connection?.Close();
+		}
 
 		using (var scope = databaseProvider.CreateScope()) {
 			var entity = scope.Ctx.AgentUpsert.Fetch(agent.Guid);
@@ -80,7 +82,7 @@ public sealed class AgentManager {
 	}
 
 	internal bool UnregisterAgent(Guid agentGuid, RpcClientConnection connection) {
-		if (agents.TryUnregister(agentGuid, connection)) {
+		if (agents.ByGuid.TryReplaceIf(agentGuid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent.Connection?.IsSame(connection) == true)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", agentGuid);
 			return true;
 		}
@@ -90,12 +92,11 @@ public sealed class AgentManager {
 	}
 
 	internal Agent? GetAgent(Guid guid) {
-		return agents.GetAgent(guid);
+		return agents.ByGuid.TryGetValue(guid, out var agent) ? agent : null;
 	}
 
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
-		// TODO automatically mark agent as offline if it doesn't send pings
-		agents.Update(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
+		agents.ByGuid.TryReplace(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
 	}
 
 	private async Task RefreshAgentStatus() {
@@ -108,12 +109,12 @@ public sealed class AgentManager {
 			await Task.Delay(DisconnectionRecheckInterval, cancellationToken);
 
 			var now = DateTimeOffset.Now;
-			agents.UpdateAllIf(MarkAgentAsOffline, agent => agent.IsOnline && agent.LastPing is {} lastPing && now - lastPing >= DisconnectionThreshold);
+			agents.ByGuid.ReplaceAllIf(MarkAgentAsOffline, agent => agent.IsOnline && agent.LastPing is {} lastPing && now - lastPing >= DisconnectionThreshold);
 		}
 	}
 
 	private async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
-		var connection = agents.GetConnection(guid);
+		var connection = agents.ByGuid.TryGetValue(guid, out var agent) ? agent.Connection : null;
 		if (connection != null) {
 			await connection.SendMessage(message);
 			return true;
@@ -137,44 +138,14 @@ public sealed class AgentManager {
 	}
 
 	private sealed class ObservableAgents : ObservableState<ImmutableArray<Agent>> {
-		private readonly RwLockedDictionary<Guid, Agent> agents = new (LockRecursionPolicy.NoRecursion);
+		public RwLockedObservableDictionary<Guid, Agent> ByGuid { get; } = new (LockRecursionPolicy.NoRecursion);
 
-		public ObservableAgents(ILogger logger) : base(logger) {}
-
-		public bool TryRegister(Agent agent) {
-			return UpdateIf(agents.TryAddOrReplace(agent.Guid, agent, static oldAgent => oldAgent.IsOffline));
-		}
-
-		public void Register(Agent agent) {
-			if (agents.AddOrReplace(agent.Guid, agent, out var oldAgent) && oldAgent.Connection is {} oldConnection) {
-				oldConnection.Close();
-			}
-
-			Update();
-		}
-
-		public void Update(Guid guid, Func<Agent, Agent> updater) {
-			UpdateIf(agents.TryReplace(guid, updater));
-		}
-
-		public void UpdateAllIf(Func<Agent, Agent> updater, Predicate<Agent> predicate) {
-			UpdateIf(agents.TryReplaceAllIf(updater, predicate));
-		}
-
-		public bool TryUnregister(Guid guid, RpcClientConnection connection) {
-			return UpdateIf(agents.TryReplaceIf(guid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent.Connection?.IsSame(connection) == true));
-		}
-
-		public Agent? GetAgent(Guid guid) {
-			return agents.TryGetValue(guid, out var agent) ? agent : null;
-		}
-
-		public AgentConnection? GetConnection(Guid guid) {
-			return agents.TryGetValue(guid, out var agent) ? agent.Connection : null;
+		public ObservableAgents(ILogger logger) : base(logger) {
+			ByGuid.CollectionChanged += Update;
 		}
 
 		protected override ImmutableArray<Agent> GetData() {
-			return agents.ValuesCopy;
+			return ByGuid.ValuesCopy;
 		}
 	}
 }

@@ -34,22 +34,23 @@ public sealed class InstanceManager {
 	public async Task Initialize() {
 		using var scope = databaseProvider.CreateScope();
 
-		await foreach (var instance in scope.Ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+		await foreach (var entity in scope.Ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var configuration = new InstanceConfiguration(
-				instance.AgentGuid,
-				instance.InstanceGuid,
-				instance.InstanceName,
-				instance.ServerPort,
-				instance.RconPort,
-				instance.MinecraftVersion,
-				instance.MinecraftServerKind,
-				instance.MemoryAllocation,
-				instance.JavaRuntimeGuid,
-				JvmArgumentsHelper.Split(instance.JvmArguments),
-				instance.LaunchAutomatically
+				entity.AgentGuid,
+				entity.InstanceGuid,
+				entity.InstanceName,
+				entity.ServerPort,
+				entity.RconPort,
+				entity.MinecraftVersion,
+				entity.MinecraftServerKind,
+				entity.MemoryAllocation,
+				entity.JavaRuntimeGuid,
+				JvmArgumentsHelper.Split(entity.JvmArguments),
+				entity.LaunchAutomatically
 			);
-			
-			instances.AddOrReplace(new Instance(configuration));
+
+			var instance = new Instance(configuration);
+			instances.ByGuid[instance.Configuration.InstanceGuid] = instance;
 		}
 	}
 
@@ -59,7 +60,8 @@ public sealed class InstanceManager {
 			return AddInstanceResult.AgentNotFound;
 		}
 
-		if (!instances.TryAdd(new Instance(configuration))) {
+		var instance = new Instance(configuration);
+		if (!instances.ByGuid.TryAdd(instance.Configuration.InstanceGuid, instance)) {
 			return AddInstanceResult.InstanceAlreadyExists;
 		}
 
@@ -88,7 +90,7 @@ public sealed class InstanceManager {
 			return AddInstanceResult.Success;
 		}
 		else {
-			instances.TryRemove(configuration.InstanceGuid);
+			instances.ByGuid.Remove(configuration.InstanceGuid);
 
 			var result = reply switch {
 				null                                          => AddInstanceResult.AgentCommunicationError,
@@ -104,15 +106,15 @@ public sealed class InstanceManager {
 	}
 
 	private Instance? GetInstance(Guid instanceGuid) {
-		return instances.GetInstance(instanceGuid);
+		return instances.ByGuid.TryGetValue(instanceGuid, out var instance) ? instance : null;
 	}
 
 	internal void SetInstanceState(Guid instanceGuid, InstanceStatus instanceStatus) {
-		instances.Update(instanceGuid, instance => instance with { Status = instanceStatus });
+		instances.ByGuid.TryReplace(instanceGuid, instance => instance with { Status = instanceStatus });
 	}
 
 	internal void SetInstanceStatesForAgent(Guid agentGuid, InstanceStatus instanceStatus) {
-		instances.UpdateAllForAgent(agentGuid, instance => instance with { Status = instanceStatus });
+		instances.ByGuid.ReplaceAllIf(instance => instance with { Status = instanceStatus }, instance => instance.Configuration.AgentGuid == agentGuid);
 	}
 
 	public async Task<LaunchInstanceResult> LaunchInstance(Guid instanceGuid) {
@@ -122,7 +124,7 @@ public sealed class InstanceManager {
 		}
 
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, true);
-		
+
 		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
 		return reply ?? LaunchInstanceResult.CommunicationError;
 	}
@@ -132,7 +134,7 @@ public sealed class InstanceManager {
 		if (instance == null) {
 			return StopInstanceResult.InstanceDoesNotExist;
 		}
-		
+
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, false);
 
 		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid, stopStrategy), TimeSpan.FromSeconds(10));
@@ -140,10 +142,10 @@ public sealed class InstanceManager {
 	}
 
 	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
-		instances.Update(instanceGuid, instance => instance with {
+		instances.ByGuid.TryReplace(instanceGuid, instance => instance with {
 			Configuration = instance.Configuration with { LaunchAutomatically = shouldLaunchAutomatically }
 		});
-		
+
 		using var scope = databaseProvider.CreateScope();
 		var entity = await scope.Ctx.Instances.FindAsync(instanceGuid, cancellationToken);
 		if (entity != null) {
@@ -163,45 +165,18 @@ public sealed class InstanceManager {
 	}
 
 	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {
-		return instances.GetInstances().Values.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
+		return instances.ByGuid.ValuesCopy.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
 	}
 
 	private sealed class ObservableInstances : ObservableState<ImmutableDictionary<Guid, Instance>> {
-		private readonly RwLockedDictionary<Guid, Instance> instances = new (LockRecursionPolicy.NoRecursion);
+		public RwLockedObservableDictionary<Guid, Instance> ByGuid { get; } = new (LockRecursionPolicy.NoRecursion);
 
-		public ObservableInstances(ILogger logger) : base(logger) {}
-
-		public void AddOrReplace(Instance configuration) {
-			instances[configuration.Configuration.InstanceGuid] = configuration;
-			Update();
-		}
-
-		public bool TryAdd(Instance configuration) {
-			return UpdateIf(instances.TryAdd(configuration.Configuration.InstanceGuid, configuration));
-		}
-
-		public bool TryRemove(Guid instanceGuid) {
-			return UpdateIf(instances.TryRemove(instanceGuid));
-		}
-
-		public void Update(Guid instanceGuid, Func<Instance, Instance> updater) {
-			UpdateIf(instances.TryReplace(instanceGuid, updater));
-		}
-
-		public void UpdateAllForAgent(Guid agentGuid, Func<Instance, Instance> updater) {
-			UpdateIf(instances.TryReplaceAllIf(updater, instance => instance.Configuration.AgentGuid == agentGuid));
-		}
-
-		public Instance? GetInstance(Guid instanceGuid) {
-			return instances.TryGetValue(instanceGuid, out var instance) ? instance : null;
-		}
-
-		public ImmutableDictionary<Guid, Instance> GetInstances() {
-			return instances.ToImmutable();
+		public ObservableInstances(ILogger logger) : base(logger) {
+			ByGuid.CollectionChanged += Update;
 		}
 
 		protected override ImmutableDictionary<Guid, Instance> GetData() {
-			return instances.ToImmutable();
+			return ByGuid.ToImmutable();
 		}
 	}
 }

@@ -13,16 +13,10 @@ public abstract class ObservableState<T> {
 		Subs.Publish(GetData());
 	}
 
-	protected bool UpdateIf(bool result) {
-		if (result) {
-			Update();
-			return true;
-		}
-		else {
-			return false;
-		}
+	protected void Update(object? sender, EventArgs e) {
+		Subs.Publish(GetData());
 	}
-	
+
 	protected abstract T GetData();
 
 	private sealed class Subscribers : EventSubscribers<T> {
