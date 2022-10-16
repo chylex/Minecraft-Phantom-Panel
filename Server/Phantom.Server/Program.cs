@@ -21,6 +21,17 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel server...");
 });
 
+static void CreateFolderOrExit(string path, UnixFileMode chmod) {
+	if (!Directory.Exists(path)) {
+		try {
+			Directories.Create(path, chmod);
+		} catch (Exception e) {
+			PhantomLogger.Root.Fatal(e, "Error creating folder: {FolderName}", path);
+			Environment.Exit(1);
+		}
+	}
+}
+
 try {
 	var fullVersion = AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly());
 	
@@ -30,14 +41,10 @@ try {
 	var (webServerHost, webServerPort, webBasePath, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrExit();
 
 	string secretsPath = Path.GetFullPath("./secrets");
-	if (!Directory.Exists(secretsPath)) {
-		try {
-			Directories.Create(secretsPath, Chmod.URWX_GRX);
-		} catch (Exception e) {
-			PhantomLogger.Root.Fatal(e, "Error creating secrets folder.");
-			Environment.Exit(1);
-		}
-	}
+	CreateFolderOrExit(secretsPath, Chmod.URWX_GRX);
+	
+	string webKeysPath = Path.GetFullPath("./keys");
+	CreateFolderOrExit(webKeysPath, Chmod.URWX);
 
 	var agentToken = await AgentTokenFile.CreateOrLoad(secretsPath);
 	if (agentToken == null) {
@@ -50,7 +57,7 @@ try {
 	}
 
 	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token);
-	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, cancellationTokenSource.Token);
+	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, webKeysPath, cancellationTokenSource.Token);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	

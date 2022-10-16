@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Database;
@@ -29,6 +30,8 @@ public static class Launcher {
 
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
 		builder.Services.AddScoped<INavigation>(Navigation.Create(config.BasePath));
+		
+		builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(config.KeyFolderPath));
 
 		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
 		builder.Services.AddSingleton<DatabaseProvider>();
