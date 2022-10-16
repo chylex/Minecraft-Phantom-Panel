@@ -40,8 +40,16 @@ code {
   font-size: 0.925rem;
 }
 
+.table {
+  margin-top: 0.5rem;
+}
+
 .table > :not(:first-child) {
   border-top: 2px solid #a6a6a6;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.5rem 0.75rem;
 }
 
 .form-range {

@@ -13,13 +13,13 @@
 <table class="table align-middle">
   <thead>
     <tr>
-      <th style="min-width: 200px;">Name</th>
-      <th style="width: 275px;" class="text-end">Instances</th>
-      <th style="width: 275px;" class="text-end">Memory</th>
-      <th style="width: 150px;" class="text-end">Version</th>
-      <th style="width: 350px;">Identifier</th>
-      <th style="width: 150px;" class="text-center">Status</th>
-      <th style="width: 250px;" class="text-right">Last Ping</th>
+      <Column Width="200px; 46%">Name</Column>
+      <Column Width=" 90px; 19%" Class="text-end">Instances</Column>
+      <Column Width="145px; 21%" Class="text-end">Memory</Column>
+      <Column Width=" 90px;  6%" Class="text-end">Version</Column>
+      <Column Width="315px">Identifier</Column>
+      <Column Width="100px;  8%" Class="text-center">Status</Column>
+      <Column Width="215px" Class="text-end">Last Ping</Column>
     </tr>
   </thead>
   @if (!agentTable.IsEmpty) {
@@ -47,17 +47,17 @@
           </td>
           @if (agent.IsOnline) {
             <td class="text-center text-success">Online</td>
-            <td class="text-right"></td>
+            <td class="text-end"></td>
           }
           else {
             <td class="text-center text-danger">Offline</td>
             @if (agent.LastPing is {} lastPing) {
-              <td class="text-right">
+              <td class="text-end">
                 <time datetime="@lastPing.ToString("o")" data-time-type="relative">@lastPing.ToString()</time>
               </td>
             }
             else {
-              <td class="text-right">-</td>
+              <td class="text-end">-</td>
             }
           }
         </tr>

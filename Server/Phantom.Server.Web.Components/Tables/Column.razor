@@ -1,0 +1,38 @@
+﻿<th style="min-width: @minWidth; width: @preferredWidth;" class="@Class">
+  @ChildContent
+</th>
+
+@code {
+
+  [Parameter]
+  public string Class { get; set; } = string.Empty;
+
+  [Parameter]
+  public string? Width { get; set; }
+
+  [Parameter]
+  public RenderFragment? ChildContent { get; set; }
+
+  private string minWidth = string.Empty;
+  private string preferredWidth = string.Empty;
+  
+  protected override void OnParametersSet() {
+    if (string.IsNullOrEmpty(Width)) {
+      minWidth = string.Empty;
+      preferredWidth = string.Empty;
+      return;
+    }
+    
+    int separator = Width.IndexOf(';');
+    if (separator == -1) {
+      minWidth = Width;
+      preferredWidth = Width;
+      return;
+    }
+    
+    var span = Width.AsSpan();
+    minWidth = span[..separator].Trim().ToString();
+    preferredWidth = span[(separator + 1)..].Trim().ToString();
+  }
+  
+}
