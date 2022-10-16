@@ -105,6 +105,10 @@ public sealed class InstanceManager {
 		}
 	}
 
+	public ImmutableDictionary<Guid, string> GetInstanceNames() {
+		return instances.ByGuid.ToImmutable<string>(static instance => instance.Configuration.InstanceName);
+	}
+
 	private Instance? GetInstance(Guid instanceGuid) {
 		return instances.ByGuid.TryGetValue(instanceGuid, out var instance) ? instance : null;
 	}

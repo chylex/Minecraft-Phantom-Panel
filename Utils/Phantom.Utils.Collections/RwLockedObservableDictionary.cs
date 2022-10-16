@@ -87,4 +87,8 @@ public sealed class RwLockedObservableDictionary<TKey, TValue> where TKey : notn
 	public ImmutableDictionary<TKey, TValue> ToImmutable() {
 		return dict.ToImmutable();
 	}
+
+	public ImmutableDictionary<TKey, TNewValue> ToImmutable<TNewValue>(Func<TValue, TNewValue> valueSelector) {
+		return dict.ToImmutable(valueSelector);
+	}
 }

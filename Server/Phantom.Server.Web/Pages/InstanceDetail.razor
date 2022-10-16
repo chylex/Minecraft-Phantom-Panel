@@ -1,9 +1,11 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Replies
+@using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances
 @implements IDisposable
-@inject InstanceManager InstanceManager;
+@inject InstanceManager InstanceManager
+@inject AuditLog AuditLog
 
 @if (Instance == null) {
   <h1>Instance Not Found</h1>
@@ -71,7 +73,13 @@ else {
     lastError = null;
 
     var result = await InstanceManager.LaunchInstance(InstanceGuid);
-    lastError = result == LaunchInstanceResult.LaunchInitiated ? null : result.ToSentence();
+    if (result == LaunchInstanceResult.LaunchInitiated) {
+      await AuditLog.AddInstanceLaunchedEvent(InstanceGuid);
+    }
+    else {
+      lastError = result.ToSentence();
+    }
+    
     isLaunchingInstance = false;
   }
 
@@ -82,6 +90,7 @@ else {
 
     var result = await InstanceManager.SendCommand(InstanceGuid, commandInput);
     if (result == SendCommandToInstanceResult.Success) {
+      await AuditLog.AddInstanceCommandExecutedEvent(InstanceGuid, commandInput);
       commandInput = string.Empty;
     }
     else {

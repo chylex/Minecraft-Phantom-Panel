@@ -3,6 +3,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Minecraft;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
+using Phantom.Server.Services.Audit;
 using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Runtime;
@@ -32,6 +33,8 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton<InstanceLogManager>();
 		services.AddSingleton<MinecraftVersions>();
 		services.AddSingleton<MessageToServerListenerFactory>();
+		
+		services.AddScoped<AuditLog>();
 	}
 
 	public async Task LoadFromDatabase(IServiceProvider serviceProvider) {

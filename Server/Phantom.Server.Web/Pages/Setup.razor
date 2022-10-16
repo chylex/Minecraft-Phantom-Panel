@@ -1,15 +1,17 @@
 ﻿@page "/setup"
-@using Phantom.Server.Web.Identity.Authentication
 @using Phantom.Server.Services
+@using Phantom.Server.Services.Audit
+@using Phantom.Server.Web.Identity.Authentication
 @using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @using Phantom.Utils.Cryptography
 @using System.Security.Cryptography
 @attribute [AllowAnonymous]
-@inject PhantomLoginManager LoginManager
 @inject ServiceConfiguration ServiceConfiguration
+@inject PhantomLoginManager LoginManager
 @inject UserManager<IdentityUser> UserManager
 @inject RoleManager<IdentityRole> RoleManager
+@inject AuditLog AuditLog
 
 <h1>Administrator Setup</h1>
 
@@ -104,19 +106,30 @@
 
   private async Task<IdentityResult> CreateOrUpdateAdministrator() {
     var existingUser = await UserManager.FindByNameAsync(form.Username);
-    if (existingUser != null) {
-      await UserManager.RemovePasswordAsync(existingUser);
-      return await UserManager.AddPasswordAsync(existingUser, form.Password);
-    }
-    
+    return existingUser == null ? await CreateAdministrator() : await UpdateAdministrator(existingUser);
+  }
+
+  private async Task<IdentityResult> CreateAdministrator() {
     var newUser = new IdentityUser(form.Username);
     var createUserResult = await UserManager.CreateAsync(newUser, form.Password);
     if (!createUserResult.Succeeded) {
       return createUserResult;
     }
+    
+    await AuditLog.AddAdministratorUserCreatedEvent(newUser);
 
     var addToRoleResult = await UserManager.AddToRoleAsync(newUser, "Administrator");
     return addToRoleResult;
+  }
+
+  private async Task<IdentityResult> UpdateAdministrator(IdentityUser existingUser) {
+    await UserManager.RemovePasswordAsync(existingUser);
+    var result = await UserManager.AddPasswordAsync(existingUser, form.Password);
+    if (result.Succeeded) {
+      await AuditLog.AddAdministratorUserModifiedEvent(existingUser);
+    }
+    
+    return result;
   }
 
   private string GetErrors(IdentityResult result) {
