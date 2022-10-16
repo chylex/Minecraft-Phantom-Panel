@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
+using Phantom.Server.Services.Audit;
 using Phantom.Utils.Cryptography;
 using Serilog;
 
@@ -13,12 +14,14 @@ public sealed class PhantomLoginManager {
 	private readonly PhantomLoginStore loginStore;
 	private readonly UserManager<IdentityUser> userManager;
 	private readonly SignInManager<IdentityUser> signInManager;
+	private readonly AuditLog auditLog;
 
-	public PhantomLoginManager(INavigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager) {
+	public PhantomLoginManager(INavigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, AuditLog auditLog) {
 		this.navigation = navigation;
 		this.loginStore = loginStore;
 		this.userManager = userManager;
 		this.signInManager = signInManager;
+		this.auditLog = auditLog;
 	}
 
 	public async Task<SignInResult> SignIn(string username, string password, string? returnUrl = null) {
@@ -40,6 +43,7 @@ public sealed class PhantomLoginManager {
 	}
 
 	internal async Task SignOut() {
+		auditLog.AddUserLoggedOutEvent(signInManager.Context.User);
 		await signInManager.SignOutAsync();
 	}
 
@@ -48,14 +52,16 @@ public sealed class PhantomLoginManager {
 		if (entry == null) {
 			return null;
 		}
-		
-		var result = await signInManager.PasswordSignInAsync(entry.User, entry.Password, lockoutOnFailure: false, isPersistent: true);
+
+		var user = entry.User;
+		var result = await signInManager.PasswordSignInAsync(user, entry.Password, lockoutOnFailure: false, isPersistent: true);
 		if (result == SignInResult.Success) {
-			Logger.Information("Successful login for {Username}.", entry.User.UserName);
+			Logger.Information("Successful login for {Username}.", user.UserName);
+			auditLog.AddUserLoggedInEvent(user.Id);
 			return entry.ReturnUrl;
 		}
 		else {
-			Logger.Warning("Error logging in {Username}: {Result}.", entry.User.UserName, result);
+			Logger.Warning("Error logging in {Username}: {Result}.", user.UserName, result);
 			return null;
 		}
 	}

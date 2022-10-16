@@ -207,4 +207,13 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitReadLock();
 		}
 	}
+
+	public ImmutableDictionary<TKey, TNewValue> ToImmutable<TNewValue>(Func<TValue, TNewValue> valueSelector) {
+		rwLock.EnterReadLock();
+		try {
+			return dict.ToImmutableDictionary(static kvp => kvp.Key, kvp => valueSelector(kvp.Value));
+		} finally {
+			rwLock.ExitReadLock();
+		}
+	}
 }

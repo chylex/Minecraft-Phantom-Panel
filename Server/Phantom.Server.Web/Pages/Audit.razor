@@ -1,0 +1,87 @@
+﻿@page "/audit"
+@using Phantom.Server.Database.Enums
+@using Phantom.Server.Services.Audit
+@using Phantom.Server.Services.Instances
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@using System.Collections.Immutable
+@implements IDisposable
+@inject AuditLog AuditLog
+@inject InstanceManager InstanceManager
+@inject UserManager<IdentityUser> UserManager
+
+<h1>Audit Log</h1>
+
+<table class="table">
+  <thead>
+    <tr>
+      <Column Width="165px" Class="text-end">Time</Column>
+      <Column Width="320px; 20%">User</Column>
+      <Column Width="160px">Event Type</Column>
+      <Column Width="320px; 20%">Subject</Column>
+      <Column Width="100px; 60%">Data</Column>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach (var eventEntity in events) {
+      DateTimeOffset time = eventEntity.UtcTime.ToLocalTime();
+      <tr>
+        <td class="text-end">
+          <time datetime="@time.ToString("o")">@time.ToString()</time>
+        </td>
+        <td>
+          @(eventEntity.UserName ?? "-")
+          <br>
+          <code class="text-uppercase">@eventEntity.UserId</code>
+        </td>
+        <td>@eventEntity.EventType.ToNiceString()</td>
+        <td>
+          @if (eventEntity.SubjectId is {} subjectId && GetSubjectName(eventEntity.SubjectType, subjectId) is {} subjectName) {
+            @subjectName
+            <br>
+          }
+          <code class="text-uppercase">@(eventEntity.SubjectId ?? "-")</code>
+        </td>
+        <td>
+          <code>@eventEntity.Data?.RootElement.ToString()</code>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>
+
+@code {
+
+  private CancellationTokenSource? initializationCancellationTokenSource;
+  private AuditEvent[] events = Array.Empty<AuditEvent>();
+  private Dictionary<string, string>? userNamesById;
+  private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
+
+  protected override async Task OnInitializedAsync() {
+    initializationCancellationTokenSource = new CancellationTokenSource();
+    var cancellationToken = initializationCancellationTokenSource.Token;
+
+    try {
+      events = await AuditLog.GetEvents(50, cancellationToken);
+      userNamesById = await UserManager.Users.ToDictionaryAsync(static user => user.Id, static user => user.UserName ?? user.Id, cancellationToken);
+      instanceNamesByGuid = InstanceManager.GetInstanceNames();
+    } finally {
+      initializationCancellationTokenSource.Dispose();
+    }
+  }
+  
+  private string? GetSubjectName(AuditSubjectType type, string id) {
+    return type switch {
+           AuditSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
+           AuditSubjectType.User     => userNamesById != null && userNamesById.TryGetValue(id, out var name) ? name : null,
+           _                         => null
+   };
+  }
+
+  public void Dispose() {
+    try {
+      initializationCancellationTokenSource?.Cancel();
+    } catch (ObjectDisposedException) {}
+  }
+
+}

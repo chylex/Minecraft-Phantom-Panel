@@ -1,6 +1,7 @@
 ﻿@page "/instances/create"
 @using Phantom.Common.Minecraft
 @using Phantom.Server.Services.Agents
+@using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances
 @using Phantom.Server.Web.Components.Utils
 @using System.Collections.Immutable
@@ -15,6 +16,7 @@
 @inject AgentJavaRuntimesManager AgentJavaRuntimesManager
 @inject AgentStatsManager AgentStatsManager
 @inject InstanceManager InstanceManager
+@inject AuditLog AuditLog
 
 <h1>New Instance</h1>
 
@@ -284,6 +286,7 @@
     var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, jvmArguments, LaunchAutomatically: false);
     var result = await InstanceManager.AddInstance(instance);
     if (result == AddInstanceResult.Success) {
+      await AuditLog.AddInstanceCreatedEvent(instance.InstanceGuid);
       Nav.NavigateTo("instances/" + instance.InstanceGuid);
     }
     else {

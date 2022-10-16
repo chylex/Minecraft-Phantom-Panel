@@ -1,9 +1,11 @@
 ﻿@using Phantom.Common.Data.Replies
+@using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances
 @using System.ComponentModel.DataAnnotations
 @using Phantom.Common.Data.Minecraft
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
+@inject AuditLog AuditLog
 
 <div id="@ModalId" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -62,6 +64,7 @@
     
     var result = await InstanceManager.StopInstance(InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds));
     if (result == StopInstanceResult.StopInitiated) {
+      await AuditLog.AddInstanceStoppedEvent(InstanceGuid, form.StopInSeconds);
       await Js.InvokeVoidAsync("closeModal", ModalId);
       form.SubmitModel.StopSubmitting();
     }

@@ -7,6 +7,7 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Server.Database.Converters;
 using Phantom.Server.Database.Entities;
+using Phantom.Server.Database.Enums;
 using Phantom.Server.Database.Factories;
 
 namespace Phantom.Server.Database;
@@ -15,6 +16,7 @@ namespace Phantom.Server.Database;
 public class ApplicationDbContext : IdentityDbContext {
 	public DbSet<AgentEntity> Agents { get; set; } = null!;
 	public DbSet<InstanceEntity> Instances { get; set; } = null!;
+	public DbSet<AuditEventEntity> AuditEvents { get; set; } = null!;
 
 	public AgentEntityUpsert AgentUpsert { get; }
 	public InstanceEntityUpsert InstanceUpsert { get; }
@@ -42,6 +44,8 @@ public class ApplicationDbContext : IdentityDbContext {
 	protected override void ConfigureConventions(ModelConfigurationBuilder builder) {
 		base.ConfigureConventions(builder);
 
+		builder.Properties<AuditEventType>().HaveConversion<EnumToStringConverter<AuditEventType>>();
+		builder.Properties<AuditSubjectType>().HaveConversion<EnumToStringConverter<AuditSubjectType>>();
 		builder.Properties<MinecraftServerKind>().HaveConversion<EnumToStringConverter<MinecraftServerKind>>();
 		builder.Properties<RamAllocationUnits>().HaveConversion<RamAllocationUnitsConverter>();
 	}
