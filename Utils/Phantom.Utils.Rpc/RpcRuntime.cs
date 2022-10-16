@@ -1,5 +1,5 @@
 ﻿using NetMQ;
-using Phantom.Utils.Threading;
+using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Utils.Rpc;

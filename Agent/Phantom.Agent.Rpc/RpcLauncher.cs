@@ -4,7 +4,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
-using Phantom.Utils.Threading;
+using Phantom.Utils.Runtime;
 using Serilog.Events;
 
 namespace Phantom.Agent.Rpc;

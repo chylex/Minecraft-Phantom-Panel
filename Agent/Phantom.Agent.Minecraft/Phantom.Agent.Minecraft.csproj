@@ -17,7 +17,7 @@
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Cryptography\Phantom.Utils.Cryptography.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.Threading\Phantom.Utils.Threading.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

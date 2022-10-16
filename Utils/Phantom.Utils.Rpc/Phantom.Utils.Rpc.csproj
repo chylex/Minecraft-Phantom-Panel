@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Phantom.Utils.Threading\Phantom.Utils.Threading.csproj" />
+    <ProjectReference Include="..\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
   </ItemGroup>
 
 </Project>

@@ -11,7 +11,7 @@ using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Utils.IO;
-using Phantom.Utils.Threading;
+using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;

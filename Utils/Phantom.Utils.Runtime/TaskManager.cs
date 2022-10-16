@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Phantom.Utils.Collections;
 
-namespace Phantom.Utils.Threading; 
+namespace Phantom.Utils.Runtime; 
 
 public sealed class TaskManager {
 	private readonly CancellationTokenSource cancellationTokenSource = new ();

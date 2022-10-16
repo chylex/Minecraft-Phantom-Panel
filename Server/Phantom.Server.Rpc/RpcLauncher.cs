@@ -2,7 +2,7 @@
 using NetMQ.Sockets;
 using Phantom.Common.Messages;
 using Phantom.Utils.Rpc;
-using Phantom.Utils.Threading;
+using Phantom.Utils.Runtime;
 using Serilog.Events;
 
 namespace Phantom.Server.Rpc;

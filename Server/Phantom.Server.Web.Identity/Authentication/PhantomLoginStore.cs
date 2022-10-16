@@ -3,7 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
 using Phantom.Server.Services;
-using Phantom.Utils.Threading;
+using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Server.Web.Identity.Authentication; 
