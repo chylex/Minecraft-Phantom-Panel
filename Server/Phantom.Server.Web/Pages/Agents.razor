@@ -64,16 +64,13 @@
       }
     </tbody>
   }
-  <tfoot>
-    <tr>
-      <td colspan="7">
-        @if (agentTable.IsEmpty) {
-          <text>No agents registered.</text>
-        }
-        Register agents using the token: <code>@AgentAuthToken</code>
-      </td>
-    </tr>
-  </tfoot>
+  else {
+    <tfoot>
+      <tr>
+        <td colspan="7">No agents registered.</td>
+      </tr>
+    </tfoot>
+  }
 </table>
 
 @code {

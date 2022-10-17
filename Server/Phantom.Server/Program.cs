@@ -46,16 +46,13 @@ try {
 	string webKeysPath = Path.GetFullPath("./keys");
 	CreateFolderOrExit(webKeysPath, Chmod.URWX);
 
-	var agentToken = await AgentTokenFile.CreateOrLoad(secretsPath);
-	if (agentToken == null) {
+	var certificateData = await CertificateFiles.CreateOrLoad(secretsPath);
+	if (certificateData == null) {
 		Environment.Exit(1);
 	}
-
-	var certificate = await CertificateFiles.CreateOrLoad(secretsPath);
-	if (certificate == null) {
-		Environment.Exit(1);
-	}
-
+	
+	var (certificate, agentToken) = certificateData.Value;
+	
 	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token);
 	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, webKeysPath, cancellationTokenSource.Token);
 

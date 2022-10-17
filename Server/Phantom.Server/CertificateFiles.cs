@@ -1,4 +1,5 @@
 ﻿using NetMQ;
+using Phantom.Common.Data.Agent;
 using Phantom.Common.Logging;
 using Phantom.Utils.IO;
 using Serilog;
@@ -9,18 +10,18 @@ static class CertificateFiles {
 	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(CertificateFiles));
 
 	private const string SecretKeyFileName = "secret.key";
-	private const string PublicKeyFileName = "agent.key";
+	private const string AgentKeyFileName = "agent.key";
 
-	public static async Task<NetMQCertificate?> CreateOrLoad(string folderPath) {
+	public static async Task<(NetMQCertificate, AgentAuthToken)?> CreateOrLoad(string folderPath) {
 		string secretKeyFilePath = Path.Combine(folderPath, SecretKeyFileName);
-		string publicKeyFilePath = Path.Combine(folderPath, PublicKeyFileName);
+		string agentKeyFilePath = Path.Combine(folderPath, AgentKeyFileName);
 
 		bool secretKeyFileExists = File.Exists(secretKeyFilePath);
-		bool publicKeyFileExists = File.Exists(publicKeyFilePath);
+		bool agentKeyFileExists = File.Exists(agentKeyFilePath);
 
-		if (secretKeyFileExists && publicKeyFileExists) {
+		if (secretKeyFileExists && agentKeyFileExists) {
 			try {
-				return await LoadCertificatesFromFiles(secretKeyFilePath, publicKeyFilePath);
+				return await LoadCertificatesFromFiles(secretKeyFilePath, agentKeyFilePath);
 			} catch (Exception e) {
 				Logger.Fatal("Error reading certificate files.");
 				Logger.Fatal(e.Message);
@@ -28,9 +29,9 @@ static class CertificateFiles {
 			}
 		}
 
-		if (secretKeyFileExists || publicKeyFileExists) {
-			string existingKeyFilePath = secretKeyFileExists ? secretKeyFilePath : publicKeyFilePath;
-			string missingKeyFileName = secretKeyFileExists ? PublicKeyFileName : SecretKeyFileName;
+		if (secretKeyFileExists || agentKeyFileExists) {
+			string existingKeyFilePath = secretKeyFileExists ? secretKeyFilePath : agentKeyFilePath;
+			string missingKeyFileName = secretKeyFileExists ? AgentKeyFileName : SecretKeyFileName;
 			Logger.Fatal("The certificate file {ExistingKeyFilePath} exists but {MissingKeyFileName} does not. Please delete it to regenerate both certificate files.", existingKeyFilePath, missingKeyFileName);
 			return null;
 		}
@@ -38,7 +39,7 @@ static class CertificateFiles {
 		Logger.Information("Creating certificate files in: {FolderPath}", folderPath);
 		
 		try {
-			return await GenerateCertificateFiles(secretKeyFilePath, publicKeyFilePath);
+			return await GenerateCertificateFiles(secretKeyFilePath, agentKeyFilePath);
 		} catch (Exception e) {
 			Logger.Fatal("Error creating certificate files.");
 			Logger.Fatal(e.Message);
@@ -46,27 +47,30 @@ static class CertificateFiles {
 		}
 	}
 
-	private static async Task<NetMQCertificate?> LoadCertificatesFromFiles(string secretKeyFilePath, string publicKeyFilePath) {
+	private static async Task<(NetMQCertificate, AgentAuthToken)?> LoadCertificatesFromFiles(string secretKeyFilePath, string agentKeyFilePath) {
 		byte[] secretKey = await ReadCertificateFile(secretKeyFilePath);
-		byte[] publicKey = await ReadCertificateFile(publicKeyFilePath);
+		byte[] agentKey = await ReadCertificateFile(agentKeyFilePath);
 
+		var (publicKey, agentToken) = AgentKeyData.FromBytes(agentKey);
 		var certificate = new NetMQCertificate(secretKey, publicKey);
-		Logger.Information("Loaded existing certificates. Remember that agents will need {PublicKeyFilePath} to connect.", publicKeyFilePath);
-		return certificate;
-	}
-	
-	private static async Task<byte[]> ReadCertificateFile(string filePath) {
-		Files.RequireMaximumFileSize(filePath, 1024);
-		return await File.ReadAllBytesAsync(filePath);
+		
+		Logger.Information("Loaded existing certificate files. Agents will need {AgentKeyFilePath} to connect.", agentKeyFilePath);
+		return (certificate, agentToken);
 	}
 
-	private static async Task<NetMQCertificate?> GenerateCertificateFiles(string secretKeyFilePath, string publicKeyFilePath) {
+	private static Task<byte[]> ReadCertificateFile(string filePath) {
+		Files.RequireMaximumFileSize(filePath, 64);
+		return File.ReadAllBytesAsync(filePath);
+	}
+
+	private static async Task<(NetMQCertificate, AgentAuthToken)> GenerateCertificateFiles(string secretKeyFilePath, string agentKeyFilePath) {
 		var certificate = new NetMQCertificate();
+		var agentToken = AgentAuthToken.Generate();
 
 		await Files.WriteBytesAsync(secretKeyFilePath, certificate.SecretKey, FileMode.Create, Chmod.URW_GR);
-		await Files.WriteBytesAsync(publicKeyFilePath, certificate.PublicKey, FileMode.Create, Chmod.URW_GR);
+		await Files.WriteBytesAsync(agentKeyFilePath, AgentKeyData.ToBytes(certificate.PublicKey, agentToken), FileMode.Create, Chmod.URW_GR);
 
-		Logger.Information("Certificates created. Agents will need {PublicKeyFilePath} to connect.", publicKeyFilePath);
-		return certificate;
+		Logger.Information("Certificates created. Agents will need {AgentKeyFilePath} to connect.", agentKeyFilePath);
+		return (certificate, agentToken);
 	}
 }

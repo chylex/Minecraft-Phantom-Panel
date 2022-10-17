@@ -1,56 +1,38 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
-using System.Text;
 using MessagePack;
-using Phantom.Utils.Cryptography;
-using Phantom.Utils.IO;
 
 namespace Phantom.Common.Data.Agent;
 
 [MessagePackObject]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed class AgentAuthToken {
-	private const int MinimumTokenLength = 30;
-	private const int MaximumTokenLength = 100;
+	internal const int Length = 12;
 
 	[Key(0)]
-	public string Value { get; }
+	public byte[] Bytes { get; }
 
-	[IgnoreMember]
-	private readonly byte[] bytes;
-
-	public AgentAuthToken(string? value) {
-		if (value == null) {
-			throw new ArgumentNullException(nameof(value));
+	public AgentAuthToken(byte[]? bytes) {
+		if (bytes == null) {
+			throw new ArgumentNullException(nameof(bytes));
 		}
 
-		if (value.Length is < MinimumTokenLength or > MaximumTokenLength) {
-			throw new ArgumentOutOfRangeException(nameof(value), "Invalid token length: " + value.Length + ". Token length must be between " + MinimumTokenLength + " and " + MaximumTokenLength + ".");
+		if (bytes.Length != Length) {
+			throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid token length: " + bytes.Length + ". Token length must be exactly " + Length + " bytes.");
 		}
 
-		this.Value = value;
-		this.bytes = TokenGenerator.GetBytesOrThrow(value);
+		this.Bytes = bytes;
 	}
 
 	public bool FixedTimeEquals(AgentAuthToken providedAuthToken) {
-		return CryptographicOperations.FixedTimeEquals(bytes, providedAuthToken.bytes);
+		return CryptographicOperations.FixedTimeEquals(Bytes, providedAuthToken.Bytes);
 	}
 
-	public override string ToString() {
-		return Value;
-	}
-
-	public async Task WriteToFile(string filePath) {
-		await Files.WriteBytesAsync(filePath, bytes, FileMode.Create, Chmod.URW_GR);
-	}
-
-	public static async Task<AgentAuthToken> ReadFromFile(string filePath) {
-		Files.RequireMaximumFileSize(filePath, MaximumTokenLength + 1);
-		string contents = await File.ReadAllTextAsync(filePath, Encoding.ASCII);
-		return new AgentAuthToken(contents.Trim());
+	internal void WriteTo(Span<byte> span) {
+		Bytes.CopyTo(span);
 	}
 
 	public static AgentAuthToken Generate() {
-		return new AgentAuthToken(TokenGenerator.Create(MinimumTokenLength));
+		return new AgentAuthToken(RandomNumberGenerator.GetBytes(Length));
 	}
 }
