@@ -1,6 +1,7 @@
 ﻿using NetMQ;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Logging;
+using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Serilog;
 
@@ -22,9 +23,12 @@ static class CertificateFiles {
 		if (secretKeyFileExists && agentKeyFileExists) {
 			try {
 				return await LoadCertificatesFromFiles(secretKeyFilePath, agentKeyFilePath);
-			} catch (Exception e) {
+			} catch (IOException e) {
 				Logger.Fatal("Error reading certificate files.");
 				Logger.Fatal(e.Message);
+				return null;
+			} catch (Exception) {
+				Logger.Fatal("Certificate files contain invalid data.");
 				return null;
 			}
 		}
@@ -54,7 +58,7 @@ static class CertificateFiles {
 		var (publicKey, agentToken) = AgentKeyData.FromBytes(agentKey);
 		var certificate = new NetMQCertificate(secretKey, publicKey);
 		
-		Logger.Information("Loaded existing certificate files. Agents will need {AgentKeyFilePath} to connect.", agentKeyFilePath);
+		LogAgentConnectionInfo("Loaded existing certificate files.", agentKeyFilePath, agentKey);
 		return (certificate, agentToken);
 	}
 
@@ -66,11 +70,18 @@ static class CertificateFiles {
 	private static async Task<(NetMQCertificate, AgentAuthToken)> GenerateCertificateFiles(string secretKeyFilePath, string agentKeyFilePath) {
 		var certificate = new NetMQCertificate();
 		var agentToken = AgentAuthToken.Generate();
+		var agentKey = AgentKeyData.ToBytes(certificate.PublicKey, agentToken);
 
 		await Files.WriteBytesAsync(secretKeyFilePath, certificate.SecretKey, FileMode.Create, Chmod.URW_GR);
-		await Files.WriteBytesAsync(agentKeyFilePath, AgentKeyData.ToBytes(certificate.PublicKey, agentToken), FileMode.Create, Chmod.URW_GR);
+		await Files.WriteBytesAsync(agentKeyFilePath, agentKey, FileMode.Create, Chmod.URW_GR);
 
-		Logger.Information("Certificates created. Agents will need {AgentKeyFilePath} to connect.", agentKeyFilePath);
+		LogAgentConnectionInfo("Created new certificate files.", agentKeyFilePath, agentKey);
 		return (certificate, agentToken);
+	}
+
+	private static void LogAgentConnectionInfo(string message, string agentKeyFilePath, byte[] agentKey) {
+		Logger.Information(message + " Agents will need the agent key to connect.");
+		Logger.Information("Agent key file: {AgentKeyFilePath}", agentKeyFilePath);
+		Logger.Information("Agent key: {AgentKey}", TokenGenerator.EncodeBytes(agentKey));
 	}
 }

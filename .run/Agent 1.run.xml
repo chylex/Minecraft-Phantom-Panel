@@ -5,6 +5,7 @@
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Agent1" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
+      <env name="AGENT_KEY" value="JXBQQYG5T267RQS75MXWBTCJZY5CKTCCGQY22MCZPHSQQSJYCHH2NG2TCNXQY6TBSXM9NQDRS2CMX" />
       <env name="AGENT_NAME" value="Agent 1" />
       <env name="ALLOWED_RCON_PORTS" value="25575,27000,27001" />
       <env name="ALLOWED_SERVER_PORTS" value="25565,26000,26001" />

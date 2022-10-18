@@ -9,6 +9,8 @@ sealed record Variables(
 	string ServerHost,
 	ushort ServerPort,
 	string JavaSearchPath,
+	string? AgentKeyToken,
+	string? AgentKeyFilePath,
 	string AgentName,
 	ushort MaxInstances,
 	RamAllocationUnits MaxMemory,
@@ -16,12 +18,15 @@ sealed record Variables(
 	AllowedPorts AllowedRconPorts
 ) {
 	private static Variables LoadOrThrow() {
+		var (agentKeyToken, agentKeyFilePath) = EnvironmentVariables.GetEitherString("AGENT_KEY", "AGENT_KEY_FILE").Require;
 		var javaSearchPath = EnvironmentVariables.GetString("JAVA_SEARCH_PATH").WithDefaultGetter(GetDefaultJavaSearchPath);
 
 		return new Variables(
 			EnvironmentVariables.GetString("SERVER_HOST").Require,
 			EnvironmentVariables.GetPortNumber("SERVER_PORT").WithDefault(9401),
 			javaSearchPath,
+			agentKeyToken,
+			agentKeyFilePath,
 			EnvironmentVariables.GetString("AGENT_NAME").Require,
 			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES", min: 1, max: 10000).Require,
 			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).Require,

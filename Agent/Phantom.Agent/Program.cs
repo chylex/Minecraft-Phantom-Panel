@@ -21,10 +21,9 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	PhantomLogger.Root.Information("Agent version: {Version}", AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly()));
 
-	var (serverHost, serverPort, javaSearchPath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
-	
-	string agentKeyPath = Path.GetFullPath("./secrets/agent.key");
-	var agentKey = await AgentKey.LoadFromFile(agentKeyPath);
+	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
+
+	var agentKey = await AgentKey.Load(agentKeyToken, agentKeyFilePath);
 	if (agentKey == null) {
 		Environment.Exit(1);
 	}
