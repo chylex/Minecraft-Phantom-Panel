@@ -8,7 +8,7 @@ using Phantom.Common.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 
-const int AgentVersion = 1;
+const int ProtocolVersion = 1;
 
 var cancellationTokenSource = new CancellationTokenSource();
 var taskManager = new TaskManager();
@@ -18,8 +18,10 @@ PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 });
 
 try {
+	var fullVersion = AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly());
+	
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
-	PhantomLogger.Root.Information("Agent version: {Version}", AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly()));
+	PhantomLogger.Root.Information("Agent version: {Version}", fullVersion);
 
 	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
 
@@ -39,7 +41,7 @@ try {
 	}
 
 	var (serverCertificate, agentToken) = agentKey.Value;
-	var agentInfo = new AgentInfo(agentGuid.Value, agentName, AgentVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
+	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
 	var agentServices = new AgentServices(agentInfo, folders, taskManager);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");

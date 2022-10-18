@@ -40,7 +40,7 @@ public sealed class AgentManager {
 		using var scope = databaseProvider.CreateScope();
 
 		await foreach (var entity in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			var agent = new Agent(entity.AgentGuid, entity.Name, entity.Version, entity.MaxInstances, entity.MaxMemory);
+			var agent = new Agent(entity.AgentGuid, entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
 			if (!agents.ByGuid.AddOrReplaceIf(agent.Guid, agent, static oldAgent => oldAgent.IsOffline)) {
 				// TODO
 				throw new InvalidOperationException("Unable to register agent from database: " + agent.Guid);
@@ -68,7 +68,8 @@ public sealed class AgentManager {
 			var entity = scope.Ctx.AgentUpsert.Fetch(agent.Guid);
 
 			entity.Name = agent.Name;
-			entity.Version = agent.Version;
+			entity.ProtocolVersion = agent.ProtocolVersion;
+			entity.BuildVersion = agent.BuildVersion;
 			entity.MaxInstances = agent.MaxInstances;
 			entity.MaxMemory = agent.MaxMemory;
 

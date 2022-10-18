@@ -59,3 +59,12 @@ code {
 .text-redacted {
   opacity: 0.5;
 }
+
+.text-condensed {
+  font-size: 0.9rem;
+  line-height: 1.05rem;
+}
+
+.text-condensed code {
+  font-size: 0.9rem;
+}

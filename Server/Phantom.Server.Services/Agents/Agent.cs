@@ -6,7 +6,8 @@ namespace Phantom.Server.Services.Agents;
 public sealed record Agent(
 	Guid Guid,
 	string Name,
-	ushort Version,
+	ushort ProtocolVersion,
+	string BuildVersion,
 	ushort MaxInstances,
 	RamAllocationUnits MaxMemory,
 	AllowedPorts? AllowedServerPorts = null,
@@ -18,7 +19,7 @@ public sealed record Agent(
 	public bool IsOnline { get; internal init; }
 	public bool IsOffline => !IsOnline;
 
-	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.Version, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
+	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.ProtocolVersion, info.BuildVersion, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
 
 	internal Agent AsDisconnected() => this with {
 		IsOnline = false

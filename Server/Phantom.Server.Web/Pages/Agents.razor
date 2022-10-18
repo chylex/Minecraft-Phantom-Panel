@@ -1,10 +1,8 @@
 ﻿@page "/agents"
 @using System.Collections.Immutable
-@using Phantom.Common.Data.Agent
 @using Phantom.Server.Services.Agents
 @using Phantom.Utils.Collections
 @implements IDisposable
-@inject AgentAuthToken AgentAuthToken
 @inject AgentManager AgentManager
 @inject AgentStatsManager AgentStatsManager
 
@@ -13,10 +11,10 @@
 <table class="table align-middle">
   <thead>
     <tr>
-      <Column Width="200px; 46%">Name</Column>
+      <Column Width="200px; 44%">Name</Column>
       <Column Width=" 90px; 19%" Class="text-end">Instances</Column>
       <Column Width="145px; 21%" Class="text-end">Memory</Column>
-      <Column Width=" 90px;  6%" Class="text-end">Version</Column>
+      <Column Width="180px;  8%">Version</Column>
       <Column Width="315px">Identifier</Column>
       <Column Width="100px;  8%" Class="text-center">Status</Column>
       <Column Width="215px" Class="text-end">Last Ping</Column>
@@ -41,7 +39,11 @@
               @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes MB
             </ProgressBar>
           </td>
-          <td class="text-end">@agent.Version</td>
+          <td class="text-condensed">
+            Build: <code>@agent.BuildVersion</code>
+            <br>
+            Protocol: <code>v@(agent.ProtocolVersion)</code>
+          </td>
           <td>
             <code class="text-uppercase">@agent.Guid.ToString()</code>
           </td>

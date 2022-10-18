@@ -10,12 +10,14 @@ public sealed class AgentEntity {
 	public Guid AgentGuid { get; set; }
 	
 	public string Name { get; set; }
-	public ushort Version { get; set; }
+	public ushort ProtocolVersion { get; set; }
+	public string BuildVersion { get; set; }
 	public ushort MaxInstances { get; set; }
 	public RamAllocationUnits MaxMemory { get; set; }
 
 	internal AgentEntity(Guid agentGuid) {
 		AgentGuid = agentGuid;
 		Name = null!;
+		BuildVersion = null!;
 	}
 }
