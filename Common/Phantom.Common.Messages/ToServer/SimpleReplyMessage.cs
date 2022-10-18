@@ -1,12 +1,12 @@
 ﻿using System.Runtime.CompilerServices;
-using MessagePack;
+using MemoryPack;
 
 namespace Phantom.Common.Messages.ToServer;
 
-[MessagePackObject]
-public sealed record SimpleReplyMessage(
-	[property: Key(0)] uint SequenceId,
-	[property: Key(1)] int EnumValue
+[MemoryPackable]
+public sealed partial record SimpleReplyMessage(
+	[property: MemoryPackOrder(0)] uint SequenceId,
+	[property: MemoryPackOrder(1)] int EnumValue
 ) : IMessageToServer {
 	public static SimpleReplyMessage FromEnum<TEnum>(uint sequenceId, TEnum enumValue) where TEnum : Enum {
 		if (Unsafe.SizeOf<TEnum>() != Unsafe.SizeOf<int>()) {

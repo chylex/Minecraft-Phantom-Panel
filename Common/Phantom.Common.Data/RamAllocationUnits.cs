@@ -1,17 +1,17 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using MessagePack;
+using MemoryPack;
 
 namespace Phantom.Common.Data;
 
 /// <summary>
 /// Represents a number of RAM allocation units, using the conversion factor of 256 MB per unit. Supports allocations up to 16 TB minus 256 MB (65535 units).
 /// </summary>
-[MessagePackObject]
+[MemoryPackable]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-public readonly record struct RamAllocationUnits(
-	[property: Key(0)] ushort RawValue
+public readonly partial record struct RamAllocationUnits(
+	[property: MemoryPackOrder(0)] ushort RawValue
 ) : IComparable<RamAllocationUnits> {
-	[IgnoreMember]
+	[MemoryPackIgnore]
 	public uint InMegabytes => (uint) RawValue * MegabytesPerUnit;
 
 	public int CompareTo(RamAllocationUnits other) {

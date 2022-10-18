@@ -1,12 +1,12 @@
-﻿using MessagePack;
+﻿using MemoryPack;
 using Phantom.Common.Data.Agent;
 
 namespace Phantom.Common.Messages.ToServer;
 
-[MessagePackObject]
-public sealed record RegisterAgentMessage(
-	[property: Key(0)] AgentAuthToken AuthToken,
-	[property: Key(1)] AgentInfo AgentInfo
+[MemoryPackable]
+public sealed partial record RegisterAgentMessage(
+	[property: MemoryPackOrder(0)] AgentAuthToken AuthToken,
+	[property: MemoryPackOrder(1)] AgentInfo AgentInfo
 ) : IMessageToServer {
 	public Task Accept(IMessageToServerListener listener) {
 		return listener.HandleRegisterAgent(this);

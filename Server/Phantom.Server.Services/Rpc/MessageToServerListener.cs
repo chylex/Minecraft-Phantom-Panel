@@ -50,7 +50,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		IsDisposed = true;
 		
 		if (agentManager.UnregisterAgent(message.AgentGuid, connection)) {
-			instanceManager.SetInstanceStatesForAgent(message.AgentGuid, InstanceStatus.IsOffline);
+			instanceManager.SetInstanceStatesForAgent(message.AgentGuid, InstanceStatus.Offline);
 		}
 
 		return Task.CompletedTask;

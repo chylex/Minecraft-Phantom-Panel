@@ -12,9 +12,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="MessagePack"             Version="2.4.35" />
-    <PackageReference Update="MessagePack.Annotations" Version="2.4.35" />
-    <PackageReference Update="NetMQ"                   Version="4.0.1.10" />
+    <PackageReference Update="MemoryPack" Version="1.4.1" />
+    <PackageReference Update="NetMQ"      Version="4.0.1.10" />
   </ItemGroup>
   
   <ItemGroup>

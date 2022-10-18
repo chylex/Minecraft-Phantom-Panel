@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using MessagePack;
+using MemoryPack;
 
 namespace Phantom.Common.Data.Java;
 
-[MessagePackObject]
-public sealed record JavaRuntime(
-	[property: Key(0)] string MainVersion,
-	[property: Key(1)] string FullVersion,
-	[property: Key(2)] string DisplayName
+[MemoryPackable]
+public sealed partial record JavaRuntime(
+	[property: MemoryPackOrder(0)] string MainVersion,
+	[property: MemoryPackOrder(1)] string FullVersion,
+	[property: MemoryPackOrder(2)] string DisplayName
 ) : IComparable<JavaRuntime> {
 	public int CompareTo(JavaRuntime? other) {
 		if (ReferenceEquals(this, other)) {

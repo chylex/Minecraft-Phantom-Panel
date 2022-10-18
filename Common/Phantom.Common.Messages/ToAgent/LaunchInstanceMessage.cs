@@ -1,11 +1,11 @@
-﻿using MessagePack;
+﻿using MemoryPack;
 
 namespace Phantom.Common.Messages.ToAgent; 
 
-[MessagePackObject]
-public sealed record LaunchInstanceMessage(
-	[property: Key(0)] uint SequenceId,
-	[property: Key(1)] Guid InstanceGuid
+[MemoryPackable]
+public sealed partial record LaunchInstanceMessage(
+	[property: MemoryPackOrder(0)] uint SequenceId,
+	[property: MemoryPackOrder(1)] Guid InstanceGuid
 ) : IMessageToAgent, IMessageWithReply {
 	public Task Accept(IMessageToAgentListener listener) {
 		return listener.HandleLaunchInstance(this);

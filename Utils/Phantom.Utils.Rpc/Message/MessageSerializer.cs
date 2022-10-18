@@ -1,29 +1,24 @@
-﻿using System.Buffers.Binary;
-using MessagePack;
-using MessagePack.Resolvers;
+﻿using System.Buffers;
+using System.Buffers.Binary;
+using MemoryPack;
 
 namespace Phantom.Utils.Rpc.Message;
 
 static class MessageSerializer {
-	private static readonly MessagePackSerializerOptions SerializerOptions =
-		MessagePackSerializerOptions
-			.Standard
-			.WithResolver(CompositeResolver.Create(NativeGuidResolver.Instance, StandardResolver.Instance))
-			.WithCompression(MessagePackCompression.None)
-			.WithSecurity(MessagePackSecurity.UntrustedData.WithMaximumObjectGraphDepth(10));
+	private static readonly MemoryPackSerializeOptions SerializerOptions = MemoryPackSerializeOptions.Utf8;
 
-	public static void Serialize<TMessage, TListener>(Stream stream, TMessage message, CancellationToken cancellationToken) where TMessage : IMessage<TListener> {
-		MessagePackSerializer.Serialize(stream, message, SerializerOptions, cancellationToken);
+	public static void Serialize<TMessage, TListener>(IBufferWriter<byte> destination, TMessage message) where TMessage : IMessage<TListener> {
+		MemoryPackSerializer.Serialize(typeof(TMessage), destination, message, SerializerOptions);
 	}
 
-	public static Func<ReadOnlyMemory<byte>, CancellationToken, TMessageBase> Deserialize<TMessage, TMessageBase, TListener>() where TMessageBase : IMessage<TListener> where TMessage : TMessageBase {
-		return static (memory, cancellationToken) => MessagePackSerializer.Deserialize<TMessage>(memory, SerializerOptions, cancellationToken);
+	public static Func<ReadOnlyMemory<byte>, TMessageBase> Deserialize<TMessage, TMessageBase, TListener>() where TMessageBase : IMessage<TListener> where TMessage : TMessageBase {
+		return static memory => MemoryPackSerializer.Deserialize<TMessage>(memory.Span) ?? throw new NullReferenceException();
 	}
 
-	public static void WriteCode(Stream stream, ushort value) {
+	public static void WriteCode(IBufferWriter<byte> destination, ushort value) {
 		Span<byte> buffer = stackalloc byte[2];
 		BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
-		stream.Write(buffer);
+		destination.Write(buffer);
 	}
 
 	public static ushort ReadCode(ref ReadOnlyMemory<byte> memory) {

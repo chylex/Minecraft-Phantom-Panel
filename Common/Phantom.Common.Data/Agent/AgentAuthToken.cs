@@ -1,16 +1,17 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
-using MessagePack;
+using MemoryPack;
 
 namespace Phantom.Common.Data.Agent;
 
-[MessagePackObject]
+[MemoryPackable]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-public sealed class AgentAuthToken {
+public sealed partial class AgentAuthToken {
 	internal const int Length = 12;
 
-	[Key(0)]
-	public byte[] Bytes { get; }
+	[MemoryPackOrder(0)]
+	[MemoryPackInclude]
+	private readonly byte[] bytes;
 
 	public AgentAuthToken(byte[]? bytes) {
 		if (bytes == null) {
@@ -21,15 +22,15 @@ public sealed class AgentAuthToken {
 			throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid token length: " + bytes.Length + ". Token length must be exactly " + Length + " bytes.");
 		}
 
-		this.Bytes = bytes;
+		this.bytes = bytes;
 	}
 
 	public bool FixedTimeEquals(AgentAuthToken providedAuthToken) {
-		return CryptographicOperations.FixedTimeEquals(Bytes, providedAuthToken.Bytes);
+		return CryptographicOperations.FixedTimeEquals(bytes, providedAuthToken.bytes);
 	}
 
 	internal void WriteTo(Span<byte> span) {
-		Bytes.CopyTo(span);
+		bytes.CopyTo(span);
 	}
 
 	public static AgentAuthToken Generate() {

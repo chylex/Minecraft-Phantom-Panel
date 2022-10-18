@@ -19,7 +19,7 @@ abstract class InstanceContext {
 		Launcher = launcher;
 	}
 
-	public abstract void ReportStatus(InstanceStatus newStatus);
+	public abstract void ReportStatus(IInstanceStatus newStatus);
 	public abstract void TransitionState(Func<IInstanceState> newState);
 
 	public void TransitionState(IInstanceState newState) {

@@ -30,12 +30,12 @@ sealed class InstanceRunningState : IInstanceState {
 		if (session.HasEnded) {
 			if (sessionObjects.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
-				context.ReportStatus(new InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
+				context.ReportStatus(InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
 				context.LaunchServices.TaskManager.Run(() => context.TransitionState(new InstanceNotRunningState()));
 			}
 		}
 		else {
-			context.ReportStatus(InstanceStatus.IsRunning);
+			context.ReportStatus(InstanceStatus.Running);
 			context.Logger.Information("Session started.");
 		}
 	}
@@ -52,12 +52,12 @@ sealed class InstanceRunningState : IInstanceState {
 
 		if (isStopping) {
 			context.Logger.Information("Session ended.");
-			context.ReportStatus(InstanceStatus.IsNotRunning);
+			context.ReportStatus(InstanceStatus.NotRunning);
 			context.TransitionState(new InstanceNotRunningState());
 		}
 		else {
 			context.Logger.Information("Session ended unexpectedly, restarting...");
-			context.ReportStatus(InstanceStatus.IsRestarting);
+			context.ReportStatus(InstanceStatus.Restarting);
 			context.TransitionState(new InstanceLaunchingState(context));
 		}
 	}

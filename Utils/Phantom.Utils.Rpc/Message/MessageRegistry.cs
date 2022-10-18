@@ -1,14 +1,18 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using Phantom.Utils.Runtime;
 using Serilog;
+using Serilog.Events;
 
 namespace Phantom.Utils.Rpc.Message;
 
 public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase : class, IMessage<TListener> {
+	private const int DefaultBufferSize = 512;
+	
 	private readonly ILogger logger;
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
 	private readonly Dictionary<ushort, Type> codeToTypeMapping = new ();
-	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, CancellationToken, TMessageBase>> codeToDeserializerMapping = new ();
+	private readonly Dictionary<ushort, Func<ReadOnlyMemory<byte>, TMessageBase>> codeToDeserializerMapping = new ();
 
 	public MessageRegistry(ILogger logger) {
 		this.logger = logger;
@@ -32,20 +36,25 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 		}
 	}
 
-	public ReadOnlySpan<byte> Write<TMessage>(TMessage message, CancellationToken cancellationToken = default) where TMessage : TMessageBase {
+	public ReadOnlySpan<byte> Write<TMessage>(TMessage message) where TMessage : TMessageBase {
 		if (!typeToCodeMapping.TryGetValue(typeof(TMessage), out ushort code)) {
 			logger.Error("Unknown message type {Type}.", typeof(TMessage));
 			return default;
 		}
 
-		var stream = new MemoryStream();
+		var buffer = new ArrayBufferWriter<byte>(DefaultBufferSize);
 
 		try {
-			MessageSerializer.WriteCode(stream, code);
-			MessageSerializer.Serialize<TMessage, TListener>(stream, message, cancellationToken);
-			return new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int) stream.Length);
+			MessageSerializer.WriteCode(buffer, code);
+			MessageSerializer.Serialize<TMessage, TListener>(buffer, message);
+
+			if (buffer.WrittenCount > DefaultBufferSize && logger.IsEnabled(LogEventLevel.Verbose)) {
+				logger.Verbose("Serializing {Type} exceeded default buffer size: {WrittenSize} B > {DefaultBufferSize} B", typeof(TMessage).Name, buffer.WrittenCount, DefaultBufferSize);
+			}
+			
+			return buffer.WrittenSpan;
 		} catch (Exception e) {
-			logger.Error(e, "Failed to serialize message {Type}.", typeof(TMessage));
+			logger.Error(e, "Failed to serialize message {Type}.", typeof(TMessage).Name);
 			return default;
 		}
 	}
@@ -68,7 +77,7 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 
 		TMessageBase message;
 		try {
-			message = deserialize(memory, cancellationToken);
+			message = deserialize(memory);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to deserialize message with code {Code}.", code);
 			return;
@@ -78,7 +87,7 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 			try {
 				await message.Accept(listener);
 			} catch (Exception e) {
-				logger.Error(e, "Failed to handle message {Type}.", message.GetType());
+				logger.Error(e, "Failed to handle message {Type}.", message.GetType().Name);
 			}
 		}
 

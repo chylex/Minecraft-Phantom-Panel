@@ -33,7 +33,7 @@ sealed class Instance : IDisposable {
 	private readonly LaunchServices launchServices;
 	private readonly PortManager portManager;
 
-	private InstanceStatus currentStatus;
+	private IInstanceStatus currentStatus;
 	private IInstanceState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
@@ -47,7 +47,7 @@ sealed class Instance : IDisposable {
 		this.launchServices = launchServices;
 		this.portManager = portManager;
 		this.currentState = new InstanceNotRunningState();
-		this.currentStatus = InstanceStatus.IsNotRunning;
+		this.currentStatus = InstanceStatus.NotRunning;
 	}
 
 	private async Task ReportLastStatus() {
@@ -137,7 +137,7 @@ sealed class Instance : IDisposable {
 		public override ILogger Logger => instance.logger;
 		public override string ShortName => instance.shortName;
 
-		public override void ReportStatus(InstanceStatus newStatus) {
+		public override void ReportStatus(IInstanceStatus newStatus) {
 			int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
 			
 			instance.launchServices.TaskManager.Run(async () => {

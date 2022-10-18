@@ -33,7 +33,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 
 			if (lastDownloadProgress != progress) {
 				lastDownloadProgress = progress;
-				context.ReportStatus(new InstanceStatus.Downloading(progress));
+				context.ReportStatus(InstanceStatus.Downloading(progress));
 			}
 		}
 
@@ -52,7 +52,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 			throw new LaunchFailureException(InstanceLaunchFailReason.UnknownError, "Session failed to launch.");
 		}
 
-		context.ReportStatus(InstanceStatus.IsLaunching);
+		context.ReportStatus(InstanceStatus.Launching);
 		return launchSuccess.Session;
 	}
 
@@ -60,7 +60,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		context.TransitionState(() => {
 			if (cancellationTokenSource.IsCancellationRequested) {
 				context.PortManager.Release(context.Configuration);
-				context.ReportStatus(InstanceStatus.IsNotRunning);
+				context.ReportStatus(InstanceStatus.NotRunning);
 				return new InstanceNotRunningState();
 			}
 			else {
@@ -72,10 +72,10 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	private void OnLaunchFailure(Task task) {
 		if (task.Exception is { InnerException: LaunchFailureException e }) {
 			context.Logger.Error(e.LogMessage);
-			context.ReportStatus(new InstanceStatus.Failed(e.Reason));
+			context.ReportStatus(InstanceStatus.Failed(e.Reason));
 		}
 		else {
-			context.ReportStatus(new InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
+			context.ReportStatus(InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
 		}
 
 		context.PortManager.Release(context.Configuration);

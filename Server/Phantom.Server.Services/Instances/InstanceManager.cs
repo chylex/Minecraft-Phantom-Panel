@@ -113,11 +113,11 @@ public sealed class InstanceManager {
 		return instances.ByGuid.TryGetValue(instanceGuid, out var instance) ? instance : null;
 	}
 
-	internal void SetInstanceState(Guid instanceGuid, InstanceStatus instanceStatus) {
+	internal void SetInstanceState(Guid instanceGuid, IInstanceStatus instanceStatus) {
 		instances.ByGuid.TryReplace(instanceGuid, instance => instance with { Status = instanceStatus });
 	}
 
-	internal void SetInstanceStatesForAgent(Guid agentGuid, InstanceStatus instanceStatus) {
+	internal void SetInstanceStatesForAgent(Guid agentGuid, IInstanceStatus instanceStatus) {
 		instances.ByGuid.ReplaceAllIf(instance => instance with { Status = instanceStatus }, instance => instance.Configuration.AgentGuid == agentGuid);
 	}
 

@@ -17,11 +17,11 @@ sealed class InstanceNotRunningState : IInstanceState {
 		};
 
 		if (failReason != null) {
-			context.ReportStatus(new InstanceStatus.Failed(failReason.Value));
+			context.ReportStatus(InstanceStatus.Failed(failReason.Value));
 			return (this, LaunchInstanceResult.LaunchInitiated);
 		}
 		
-		context.ReportStatus(InstanceStatus.IsLaunching);
+		context.ReportStatus(InstanceStatus.Launching);
 		return (new InstanceLaunchingState(context), LaunchInstanceResult.LaunchInitiated);
 	}
 
