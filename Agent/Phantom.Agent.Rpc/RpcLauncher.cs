@@ -5,6 +5,7 @@ using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
+using Serilog;
 using Serilog.Events;
 
 namespace Phantom.Agent.Rpc;
@@ -24,7 +25,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	private readonly RpcConfiguration config;
 	private readonly Guid agentGuid;
 	private readonly Func<ClientSocket, IMessageToAgentListener> messageListenerFactory;
-	
+
 	private readonly SemaphoreSlim disconnectSemaphore;
 	private readonly CancellationToken receiveCancellationToken;
 
@@ -45,36 +46,43 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		logger.Information("ZeroMQ client ready.");
 	}
 
-	protected override async Task Run(ClientSocket socket, TaskManager taskManager) {
+	protected override void Run(ClientSocket socket, TaskManager taskManager) {
 		var logger = config.Logger;
 		var listener = messageListenerFactory(socket);
 
 		ServerMessaging.SetCurrentSocket(socket);
 		var keepAliveLoop = new KeepAliveLoop(socket, taskManager);
-		
-		try {
-			// TODO optimize msg
-			await foreach (var bytes in socket.ReceiveBytesAsyncEnumerable(receiveCancellationToken)) {
-				if (logger.IsEnabled(LogEventLevel.Verbose)) {
-					if (bytes.Length > 0 && MessageRegistries.ToAgent.TryGetType(bytes, out var type)) {
-						logger.Verbose("Received {MessageType} ({Bytes} B) from server.", type.Name, bytes.Length);
-					}
-					else {
-						logger.Verbose("Received {Bytes} B message from server.", bytes.Length);
-					}
-				}
 
-				if (bytes.Length > 0) {
-					MessageRegistries.ToAgent.Handle(bytes, listener, taskManager, receiveCancellationToken);
+		try {
+			while (!receiveCancellationToken.IsCancellationRequested) {
+				var data = socket.Receive(receiveCancellationToken);
+				
+				LogMessageType(logger, data);
+				
+				if (data.Length > 0) {
+					MessageRegistries.ToAgent.Handle(data, listener, taskManager, receiveCancellationToken);
 				}
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} finally {
 			logger.Verbose("ZeroMQ client stopped receiving messages.");
-			
-			await disconnectSemaphore.WaitAsync(CancellationToken.None);
+
+			disconnectSemaphore.Wait(CancellationToken.None);
 			keepAliveLoop.Cancel();
+		}
+	}
+
+	private static void LogMessageType(ILogger logger, ReadOnlyMemory<byte> data) {
+		if (!logger.IsEnabled(LogEventLevel.Verbose)) {
+			return;
+		}
+
+		if (data.Length > 0 && MessageRegistries.ToAgent.TryGetType(data, out var type)) {
+			logger.Verbose("Received {MessageType} ({Bytes} B) from server.", type.Name, data.Length);
+		}
+		else {
+			logger.Verbose("Received {Bytes} B message from server.", data.Length);
 		}
 	}
 

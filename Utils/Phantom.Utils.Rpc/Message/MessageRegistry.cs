@@ -24,11 +24,9 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 		codeToDeserializerMapping.Add(code, MessageSerializer.Deserialize<TMessage, TMessageBase, TListener>());
 	}
 
-	public bool TryGetType(byte[] bytes, [NotNullWhen(true)] out Type? type) {
-		var memory = new ReadOnlyMemory<byte>(bytes);
-
+	public bool TryGetType(ReadOnlyMemory<byte> data, [NotNullWhen(true)] out Type? type) {
 		try {
-			var code = MessageSerializer.ReadCode(ref memory);
+			var code = MessageSerializer.ReadCode(ref data);
 			return codeToTypeMapping.TryGetValue(code, out type);
 		} catch (Exception) {
 			type = null;
@@ -59,12 +57,10 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 		}
 	}
 
-	public void Handle(byte[] bytes, TListener listener, TaskManager taskManager, CancellationToken cancellationToken) {
-		var memory = new ReadOnlyMemory<byte>(bytes);
-
+	public void Handle(ReadOnlyMemory<byte> data, TListener listener, TaskManager taskManager, CancellationToken cancellationToken) {
 		ushort code;
 		try {
-			code = MessageSerializer.ReadCode(ref memory);
+			code = MessageSerializer.ReadCode(ref data);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to deserialize message code.");
 			return;
@@ -77,7 +73,7 @@ public sealed class MessageRegistry<TListener, TMessageBase> where TMessageBase 
 
 		TMessageBase message;
 		try {
-			message = deserialize(memory);
+			message = deserialize(data);
 		} catch (Exception e) {
 			logger.Error(e, "Failed to deserialize message with code {Code}.", code);
 			return;

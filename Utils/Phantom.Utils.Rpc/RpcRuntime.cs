@@ -38,9 +38,13 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 
 	protected async Task Launch() {
 		Connect(socket);
+
+		void RunTask() {
+			Run(socket, taskManager);
+		}
 		
 		try {
-			await Run(socket, taskManager);
+			await Task.Factory.StartNew(RunTask, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 		} catch (OperationCanceledException) {
 			// ignore
 		} finally {
@@ -55,7 +59,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 	}
 	
 	protected abstract void Connect(TSocket socket);
-	protected abstract Task Run(TSocket socket, TaskManager taskManager);
+	protected abstract void Run(TSocket socket, TaskManager taskManager);
 	
 	protected virtual Task Disconnect(TSocket socket) {
 		return Task.CompletedTask;

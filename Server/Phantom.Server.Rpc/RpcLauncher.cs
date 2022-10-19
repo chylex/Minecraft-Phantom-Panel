@@ -1,5 +1,4 @@
-﻿using NetMQ;
-using NetMQ.Sockets;
+﻿using NetMQ.Sockets;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
@@ -39,7 +38,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		logger.Information("ZeroMQ server initialized, listening for agent connections on port {Port}.", config.Port);
 	}
 
-	protected override async Task Run(ServerSocket socket, TaskManager taskManager) {
+	protected override void Run(ServerSocket socket, TaskManager taskManager) {
 		var logger = config.Logger;
 		var clients = new Dictionary<ulong, Client>();
 
@@ -48,15 +47,16 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 			logger.Verbose("Closed connection to {RoutingId}.", e.RoutingId);
 		}
 
-		// TODO optimize msg
-		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
-			if (bytes.Length == 0) {
-				LogMessageType(logger, routingId, bytes);
+		while (!cancellationToken.IsCancellationRequested) {
+			var (routingId, data) = socket.Receive(cancellationToken);
+
+			if (data.Length == 0) {
+				LogMessageType(logger, routingId, data);
 				continue;
 			}
 
 			if (!clients.TryGetValue(routingId, out var client)) {
-				if (!CheckIsAgentRegistrationMessage(bytes, logger, routingId)) {
+				if (!CheckIsAgentRegistrationMessage(data, logger, routingId)) {
 					continue;
 				}
 
@@ -67,8 +67,8 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 				clients[routingId] = client;
 			}
 
-			LogMessageType(logger, routingId, bytes);
-			MessageRegistries.ToServer.Handle(bytes, client.Listener, taskManager, cancellationToken);
+			LogMessageType(logger, routingId, data);
+			MessageRegistries.ToServer.Handle(data, client.Listener, taskManager, cancellationToken);
 
 			if (client.Listener.IsDisposed) {
 				client.Connection.Close();
@@ -80,21 +80,21 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		}
 	}
 
-	private static void LogMessageType(ILogger logger, uint routingId, byte[] bytes) {
+	private static void LogMessageType(ILogger logger, uint routingId, ReadOnlyMemory<byte> data) {
 		if (!logger.IsEnabled(LogEventLevel.Verbose)) {
 			return;
 		}
 
-		if (bytes.Length > 0 && MessageRegistries.ToServer.TryGetType(bytes, out var type)) {
-			logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", type.Name, bytes.Length, routingId);
+		if (data.Length > 0 && MessageRegistries.ToServer.TryGetType(data, out var type)) {
+			logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", type.Name, data.Length, routingId);
 		}
 		else {
-			logger.Verbose("Received {Bytes} B message from {RoutingId}.", bytes.Length, routingId);
+			logger.Verbose("Received {Bytes} B message from {RoutingId}.", data.Length, routingId);
 		}
 	}
 
-	private static bool CheckIsAgentRegistrationMessage(byte[] bytes, ILogger logger, uint routingId) {
-		if (MessageRegistries.ToServer.TryGetType(bytes, out var type) && type == typeof(RegisterAgentMessage)) {
+	private static bool CheckIsAgentRegistrationMessage(ReadOnlyMemory<byte> data, ILogger logger, uint routingId) {
+		if (MessageRegistries.ToServer.TryGetType(data, out var type) && type == typeof(RegisterAgentMessage)) {
 			return true;
 		}
 
