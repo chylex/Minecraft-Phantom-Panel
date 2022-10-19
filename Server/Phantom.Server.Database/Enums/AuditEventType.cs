@@ -19,10 +19,19 @@ public static partial class AuditEventCategoryExtensions {
 		{ AuditEventType.AdministratorUserModified, AuditSubjectType.User },
 		{ AuditEventType.UserLoggedIn,              AuditSubjectType.User },
 		{ AuditEventType.UserLoggedOut,             AuditSubjectType.User },
+		{ AuditEventType.InstanceCreated,           AuditSubjectType.Instance },
 		{ AuditEventType.InstanceLaunched,          AuditSubjectType.Instance },
 		{ AuditEventType.InstanceStopped,           AuditSubjectType.Instance },
 		{ AuditEventType.InstanceCommandExecuted,   AuditSubjectType.Instance }
 	};
+
+	static AuditEventCategoryExtensions() {
+		foreach (var eventType in Enum.GetValues<AuditEventType>()) {
+			if (!SubjectTypes.ContainsKey(eventType)) {
+				throw new Exception("Missing mapping from " + eventType + " to a subject type.");
+			}
+		}
+	}
 
 	internal static AuditSubjectType GetSubjectType(this AuditEventType type) {
 		return SubjectTypes[type];
