@@ -26,5 +26,6 @@ sealed class JvmArgumentBuilder {
 
 		target.Add("-Xms" + basicProperties.InitialHeapMegabytes + "M");
 		target.Add("-Xmx" + basicProperties.MaximumHeapMegabytes + "M");
+		target.Add("-Xrs");
 	}
 }
