@@ -2,16 +2,21 @@
 
 namespace Phantom.Server.Web.Components.Utils;
 
-public abstract class FormCustomValidationAttribute : ValidationAttribute {
+public abstract class FormCustomValidationAttribute<TModel, TValue> : ValidationAttribute {
 	public sealed override bool IsValid(object? value) {
 		return base.IsValid(value);
 	}
 
 	protected sealed override ValidationResult? IsValid(object? value, ValidationContext validationContext) {
-		var result = Validate(validationContext.ObjectInstance, value);
+		if (value is not TValue typedValue) {
+			return new ValidationResult(null, new [] { FieldName });
+		}
+
+		var model = (TModel) validationContext.ObjectInstance;
+		var result = Validate(model, typedValue);
 		return result == ValidationResult.Success ? result : new ValidationResult(result?.ErrorMessage, new [] { FieldName });
 	}
 
 	protected abstract string FieldName { get; }
-	protected abstract ValidationResult? Validate(object model, object? value);
+	protected abstract ValidationResult? Validate(TModel model, TValue value);
 }

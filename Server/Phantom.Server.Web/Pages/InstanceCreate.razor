@@ -203,46 +203,38 @@
     [JvmArgumentsMustBeValid(ErrorMessage = "JVM arguments are not valid.")]
     public string JvmArguments { get; set; } = string.Empty;
 
-    public sealed class AgentHasInstancesAttribute : FormValidationAttribute {
+    public sealed class AgentHasInstancesAttribute : FormValidationAttribute<CreateInstanceFormModel, Guid?> {
       protected override string FieldName => nameof(SelectedAgentGuid);
-      protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.UsedInstances < agent.Agent.MaxInstances;
+      protected override bool IsValid(CreateInstanceFormModel model, Guid? value) => model.TryGetAgent(value, out var agent) && agent.UsedInstances < agent.Agent.MaxInstances;
     }
 
-    public sealed class AgentHasMemoryAttribute : FormValidationAttribute {
+    public sealed class AgentHasMemoryAttribute : FormValidationAttribute<CreateInstanceFormModel, Guid?> {
       protected override string FieldName => nameof(SelectedAgentGuid);
-      protected override bool IsValid(object model, object? value) => M(model).TryGetAgent((Guid?) value, out var agent) && agent.AvailableMemory > RamAllocationUnits.Zero;
+      protected override bool IsValid(CreateInstanceFormModel model, Guid? value) => model.TryGetAgent(value, out var agent) && agent.AvailableMemory > RamAllocationUnits.Zero;
     }
 
-    public sealed class ServerPortMustBeAllowed : FormValidationAttribute {
+    public sealed class ServerPortMustBeAllowedAttribute : FormValidationAttribute<CreateInstanceFormModel, int> {
       protected override string FieldName => nameof(ServerPort);
-      protected override bool IsValid(object model, object? value) => value is not int port || M(model).SelectedAgent is not {} agent || agent.Agent.AllowedServerPorts?.Contains((ushort) port) == true;
+      protected override bool IsValid(CreateInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Agent.AllowedServerPorts?.Contains((ushort) value) == true;
     }
 
-    public sealed class RconPortMustBeAllowed : FormValidationAttribute {
+    public sealed class RconPortMustBeAllowedAttribute : FormValidationAttribute<CreateInstanceFormModel, int> {
       protected override string FieldName => nameof(RconPort);
-      protected override bool IsValid(object model, object? value) => value is not int port || M(model).SelectedAgent is not {} agent || agent.Agent.AllowedRconPorts?.Contains((ushort) port) == true;
+      protected override bool IsValid(CreateInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Agent.AllowedRconPorts?.Contains((ushort) value) == true;
     }
 
-    public sealed class RconPortMustDifferFromServerPort : FormValidationAttribute {
+    public sealed class RconPortMustDifferFromServerPortAttribute : FormValidationAttribute<CreateInstanceFormModel, int?> {
       protected override string FieldName => nameof(RconPort);
-      protected override bool IsValid(object model, object? value) => (int?) value != M(model).ServerPort;
+      protected override bool IsValid(CreateInstanceFormModel model, int? value) => value != model.ServerPort;
     }
 
-    public sealed class JvmArgumentsMustBeValid : FormCustomValidationAttribute {
+    public sealed class JvmArgumentsMustBeValidAttribute : FormCustomValidationAttribute<CreateInstanceFormModel, string> {
       protected override string FieldName => nameof(JvmArguments);
 
-      protected override ValidationResult? Validate(object model, object? value) {
-        if (value is not string arguments) {
-          return new ValidationResult(null);
-        }
-        
-        var error = JvmArgumentsHelper.Validate(arguments);
+      protected override ValidationResult? Validate(CreateInstanceFormModel model, string value) {
+        var error = JvmArgumentsHelper.Validate(value);
         return error == null ? ValidationResult.Success : new ValidationResult(error.ToSentence());
       }
-    }
-
-    private static CreateInstanceFormModel M(object model) {
-      return (CreateInstanceFormModel) model;
     }
   }
 
