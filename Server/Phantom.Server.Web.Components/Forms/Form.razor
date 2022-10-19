@@ -20,9 +20,9 @@
 
   public event EventHandler? BeforeSubmit;
   
-  private void Submit(EditContext obj) {
+  private async Task Submit(EditContext obj) {
     BeforeSubmit?.Invoke(this, EventArgs.Empty);
-    OnSubmit.InvokeAsync(obj);
+    await OnSubmit.InvokeAsync(obj);
   }
 
   public void Dispose() {
