@@ -8,9 +8,12 @@ using Phantom.Server.Database.Enums;
 namespace Phantom.Server.Database.Entities; 
 
 [Table("AuditEvents", Schema = "system")]
+[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
+[SuppressMessage("ReSharper", "ClassWithVirtualMembersNeverInherited.Global")]
 public class AuditEventEntity : IDisposable {
 	[Key]
 	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	public long Id { get; set; }
 
 	public string? UserId { get; set; }

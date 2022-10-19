@@ -7,7 +7,7 @@ public enum MinecraftVersionType : ushort {
 	Release = 1,
 	Snapshot = 2,
 	OldBeta = 3,
-	OldAlpha = 4,
+	OldAlpha = 4
 }
 
 public static class MinecraftVersionTypes {

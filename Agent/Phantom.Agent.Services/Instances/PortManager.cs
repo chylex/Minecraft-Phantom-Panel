@@ -53,6 +53,6 @@ sealed class PortManager {
 		ServerPortNotAllowed,
 		ServerPortAlreadyInUse,
 		RconPortNotAllowed,
-		RconPortAlreadyInUse,
+		RconPortAlreadyInUse
 	}
 }

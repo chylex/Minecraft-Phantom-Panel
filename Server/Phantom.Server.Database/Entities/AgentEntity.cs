@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data;
 
 namespace Phantom.Server.Database.Entities;
 
 [Table("Agents", Schema = "agents")]
+[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public sealed class AgentEntity {
 	[Key]
 	public Guid AgentGuid { get; set; }

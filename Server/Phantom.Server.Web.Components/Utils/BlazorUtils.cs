@@ -1,8 +1,10 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 namespace Phantom.Server.Web.Components.Utils;
 
 static class BlazorUtils {
+	[SuppressMessage("ReSharper", "ConvertIfStatementToReturnStatement")]
 	public static string? CombineClassNames(IReadOnlyDictionary<string, object>? additionalAttributes, string? classNames) {
 		if (additionalAttributes is null || !additionalAttributes.TryGetValue("class", out var @class)) {
 			return classNames;
@@ -21,6 +23,7 @@ static class BlazorUtils {
 		return $"{classAttributeValue} {classNames}";
 	}
 
+	[SuppressMessage("ReSharper", "MergeAndPattern")]
 	public static bool CombineBooleansWithOr(IReadOnlyDictionary<string, object>? additionalAttributes, string attributeName, bool value) {
 		return value || (additionalAttributes is not null && additionalAttributes.TryGetValue(attributeName, out var @bool) && @bool is bool and true);
 	}

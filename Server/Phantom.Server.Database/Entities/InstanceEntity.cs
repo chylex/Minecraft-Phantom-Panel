@@ -7,6 +7,7 @@ using Phantom.Common.Data.Minecraft;
 namespace Phantom.Server.Database.Entities; 
 
 [Table("Instances", Schema = "agents")]
+[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed class InstanceEntity {
 	[Key]
