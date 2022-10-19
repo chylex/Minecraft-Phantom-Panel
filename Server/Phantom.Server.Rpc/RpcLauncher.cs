@@ -1,9 +1,11 @@
 ﻿using NetMQ;
 using NetMQ.Sockets;
 using Phantom.Common.Messages;
+using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 using Serilog.Events;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Rpc;
 
@@ -48,37 +50,56 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 
 		// TODO optimize msg
 		await foreach (var (routingId, bytes) in socket.ReceiveBytesAsyncEnumerable(cancellationToken)) {
-			if (logger.IsEnabled(LogEventLevel.Verbose)) {
-				if (bytes.Length > 0 && MessageRegistries.ToServer.TryGetType(bytes, out var type)) {
-					logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", type.Name, bytes.Length, routingId);
-				}
-				else {
-					logger.Verbose("Received {Bytes} B message from {RoutingId}.", bytes.Length, routingId);
-				}
-			}
-
 			if (bytes.Length == 0) {
+				LogMessageType(logger, routingId, bytes);
 				continue;
 			}
 
 			if (!clients.TryGetValue(routingId, out var client)) {
+				if (!CheckIsAgentRegistrationMessage(bytes, logger, routingId)) {
+					continue;
+				}
+
 				var connection = new RpcClientConnection(socket, routingId);
 				connection.Closed += OnConnectionClosed;
-				
+
 				client = new Client(connection, listenerFactory);
 				clients[routingId] = client;
 			}
 
+			LogMessageType(logger, routingId, bytes);
 			MessageRegistries.ToServer.Handle(bytes, client.Listener, taskManager, cancellationToken);
 
 			if (client.Listener.IsDisposed) {
 				client.Connection.Close();
 			}
 		}
-		
+
 		foreach (var client in clients.Values) {
 			client.Connection.Closed -= OnConnectionClosed;
 		}
+	}
+
+	private static void LogMessageType(ILogger logger, uint routingId, byte[] bytes) {
+		if (!logger.IsEnabled(LogEventLevel.Verbose)) {
+			return;
+		}
+
+		if (bytes.Length > 0 && MessageRegistries.ToServer.TryGetType(bytes, out var type)) {
+			logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", type.Name, bytes.Length, routingId);
+		}
+		else {
+			logger.Verbose("Received {Bytes} B message from {RoutingId}.", bytes.Length, routingId);
+		}
+	}
+
+	private static bool CheckIsAgentRegistrationMessage(byte[] bytes, ILogger logger, uint routingId) {
+		if (MessageRegistries.ToServer.TryGetType(bytes, out var type) && type == typeof(RegisterAgentMessage)) {
+			return true;
+		}
+
+		logger.Warning("Received {MessageType} from a non-registered agent {RoutingId}.", type?.Name ?? "unknown message", routingId);
+		return false;
 	}
 
 	private readonly struct Client {
