@@ -6,16 +6,16 @@ using Phantom.Utils.Collections;
 using Phantom.Utils.Runtime;
 using Serilog;
 
-namespace Phantom.Agent.Services.Instances; 
+namespace Phantom.Agent.Services.Instances;
 
 sealed class InstanceLogSender {
 	private static readonly TimeSpan SendDelay = TimeSpan.FromMilliseconds(200);
-	
+
 	private readonly Guid instanceGuid;
 	private readonly ILogger logger;
 	private readonly CancellationTokenSource cancellationTokenSource;
 	private readonly CancellationToken cancellationToken;
-	
+
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 	private readonly RingBuffer<string> buffer = new (1000);
 
@@ -29,18 +29,19 @@ sealed class InstanceLogSender {
 
 	private async Task Run() {
 		logger.Verbose("Task started.");
-		
-		try {
-			while (!cancellationToken.IsCancellationRequested) {
-				var lines = await DequeueOrThrow();
-				if (!lines.IsEmpty) {
-					await ServerMessaging.SendMessage(new InstanceOutputMessage(instanceGuid, lines));
-				}
 
-				await Task.Delay(SendDelay, cancellationToken);
+		try {
+			try {
+				while (!cancellationToken.IsCancellationRequested) {
+					await SendOutputToServer(await DequeueOrThrow());
+					await Task.Delay(SendDelay, cancellationToken);
+				}
+			} catch (OperationCanceledException) {
+				// Ignore.
 			}
-		} catch (OperationCanceledException) {
-			// Ignore.
+
+			// Flush remaining lines.
+			await SendOutputToServer(DequeueWithoutSemaphore());
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception in task.");
 		} finally {
@@ -49,13 +50,23 @@ sealed class InstanceLogSender {
 		}
 	}
 
+	private async Task SendOutputToServer(ImmutableArray<string> lines) {
+		if (!lines.IsEmpty) {
+			await ServerMessaging.SendMessage(new InstanceOutputMessage(instanceGuid, lines));
+		}
+	}
+
+	private ImmutableArray<string> DequeueWithoutSemaphore() {
+		ImmutableArray<string> lines = buffer.Count > 0 ? buffer.EnumerateLast(uint.MaxValue).ToImmutableArray() : ImmutableArray<string>.Empty;
+		buffer.Clear();
+		return lines;
+	}
+
 	private async Task<ImmutableArray<string>> DequeueOrThrow() {
 		await semaphore.WaitAsync(cancellationToken);
 
 		try {
-			ImmutableArray<string> lines = buffer.Count > 0 ? buffer.EnumerateLast(uint.MaxValue).ToImmutableArray() : ImmutableArray<string>.Empty;
-			buffer.Clear();
-			return lines;
+			return DequeueWithoutSemaphore();
 		} finally {
 			semaphore.Release();
 		}

@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using NetMQ.Sockets;
 using Phantom.Agent;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
@@ -10,16 +11,16 @@ using Phantom.Utils.Runtime;
 
 const int ProtocolVersion = 1;
 
-var cancellationTokenSource = new CancellationTokenSource();
-var taskManager = new TaskManager();
+var shutdownCancellationTokenSource = new CancellationTokenSource();
+var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 
-PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
+PosixSignals.RegisterCancellation(shutdownCancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 });
 
 try {
 	var fullVersion = AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly());
-	
+
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	PhantomLogger.Root.Information("Agent version: {Version}", fullVersion);
 
@@ -29,7 +30,7 @@ try {
 	if (agentKey == null) {
 		Environment.Exit(1);
 	}
-	
+
 	var folders = new AgentFolders("./data", "./temp", javaSearchPath);
 	if (!folders.TryCreate()) {
 		Environment.Exit(1);
@@ -42,24 +43,35 @@ try {
 
 	var (serverCertificate, agentToken) = agentKey.Value;
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
-	var agentServices = new AgentServices(agentInfo, folders, taskManager);
+	var agentServices = new AgentServices(agentInfo, folders);
+
+	MessageListener MessageListenerFactory(ClientSocket socket) {
+		return new MessageListener(socket, agentServices, shutdownCancellationTokenSource);
+	}
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
-	
+
 	await agentServices.Initialize();
+
+	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
+	var rpcTask = RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate), agentToken, agentInfo, MessageListenerFactory, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
-		await RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate, cancellationTokenSource.Token), agentToken, agentInfo, socket => new MessageListener(socket, agentServices, cancellationTokenSource));
+		await rpcTask.WaitAsync(shutdownCancellationToken);
 	} finally {
-		cancellationTokenSource.Cancel();
+		shutdownCancellationTokenSource.Cancel();
 		await agentServices.Shutdown();
+
+		rpcDisconnectSemaphore.Release();
+		await rpcTask;
+		rpcDisconnectSemaphore.Dispose();
 	}
 } catch (OperationCanceledException) {
 	// Ignore.
+} catch (Exception e) {
+	PhantomLogger.Root.Fatal(e, "Caught exception in entry point.");
 } finally {
-	PhantomLogger.Root.Information("Stopping task manager...");
-	await taskManager.Stop();
+	shutdownCancellationTokenSource.Dispose();
 
-	cancellationTokenSource.Dispose();
 	PhantomLogger.Root.Information("Bye!");
 	PhantomLogger.Dispose();
 }

@@ -10,22 +10,24 @@ using ILogger = Serilog.ILogger;
 namespace Phantom.Server.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
-	public static async Task Launch(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) {
+	public static async Task Launch(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) {
 		var socket = new ServerSocket();
 		var options = socket.Options;
 
 		options.CurveServer = true;
 		options.CurveCertificate = config.ServerCertificate;
 
-		await new RpcLauncher(config, socket, listenerFactory).Launch();
+		await new RpcLauncher(config, socket, listenerFactory, cancellationToken).Launch();
 	}
 
 	private readonly RpcConfiguration config;
 	private readonly Func<RpcClientConnection, IMessageToServerListener> listenerFactory;
+	private readonly CancellationToken cancellationToken;
 
-	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) : base(socket, config.Logger) {
+	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) : base(socket, config.Logger) {
 		this.config = config;
 		this.listenerFactory = listenerFactory;
+		this.cancellationToken = cancellationToken;
 	}
 
 	protected override void Connect(ServerSocket socket) {
@@ -39,8 +41,6 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 
 	protected override async Task Run(ServerSocket socket, TaskManager taskManager) {
 		var logger = config.Logger;
-		var cancellationToken = config.CancellationToken;
-
 		var clients = new Dictionary<ulong, Client>();
 
 		void OnConnectionClosed(object? sender, RpcClientConnectionClosedEventArgs e) {

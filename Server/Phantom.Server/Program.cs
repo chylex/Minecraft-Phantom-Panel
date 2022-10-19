@@ -53,7 +53,7 @@ try {
 	
 	var (certificate, agentToken) = certificateData.Value;
 	
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate, cancellationTokenSource.Token);
+	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate);
 	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, webKeysPath, cancellationTokenSource.Token);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
@@ -69,7 +69,7 @@ try {
 	}));
 
 	await Task.WhenAll(
-		RpcLauncher.Launch(rpcConfiguration, webApplication.Services.GetRequiredService<MessageToServerListenerFactory>().CreateListener),
+		RpcLauncher.Launch(rpcConfiguration, webApplication.Services.GetRequiredService<MessageToServerListenerFactory>().CreateListener, cancellationTokenSource.Token),
 		WebLauncher.Launch(webConfiguration, webApplication)
 	);
 } catch (OperationCanceledException) {
