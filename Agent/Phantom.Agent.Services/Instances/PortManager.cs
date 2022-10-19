@@ -14,17 +14,28 @@ sealed class PortManager {
 	}
 
 	public Result Reserve(InstanceConfiguration configuration) {
+		var serverPort = configuration.ServerPort;
+		var rconPort = configuration.RconPort;
+		
+		if (!allowedServerPorts.Contains(serverPort)) {
+			return Result.ServerPortNotAllowed;
+		}
+
+		if (!allowedRconPorts.Contains(rconPort)) {
+			return Result.RconPortNotAllowed;
+		}
+		
 		lock (usedPorts) {
-			if (usedPorts.Contains(configuration.ServerPort)) {
+			if (usedPorts.Contains(serverPort)) {
 				return Result.ServerPortAlreadyInUse;
 			}
 
-			if (usedPorts.Contains(configuration.RconPort)) {
+			if (usedPorts.Contains(rconPort)) {
 				return Result.RconPortAlreadyInUse;
 			}
 
-			usedPorts.Add(configuration.ServerPort);
-			usedPorts.Add(configuration.RconPort);
+			usedPorts.Add(serverPort);
+			usedPorts.Add(rconPort);
 		}
 
 		return Result.Success;
