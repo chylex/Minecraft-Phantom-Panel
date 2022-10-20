@@ -1,0 +1,9 @@
+﻿# Ignore hidden files
+.*
+
+# Include .git for build version information
+!.git
+
+# Not needed for building
+AddMigration.*
+*.DotSettings.user
