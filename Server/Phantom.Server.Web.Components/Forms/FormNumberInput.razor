@@ -10,7 +10,7 @@
                    OnChange="@OnChangeDebounced"
                    OnBlur="@OnBlur"
                    AdditionalAttributes="@GetAttributes(Type.GetBootstrapCssClass())" />
-<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+<FormValidationMessage For="@ValueExpression" />
 
 @code {
 
@@ -18,5 +18,5 @@
   public FormNumberInputType Type { get; set; } = FormNumberInputType.Number;
 
   protected override ICustomFormField FormField { get; set; } = null!;
-  
+
 }

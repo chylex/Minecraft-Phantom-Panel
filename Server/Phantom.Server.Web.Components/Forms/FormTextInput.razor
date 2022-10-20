@@ -9,7 +9,7 @@
                 OnChange="@OnChangeDebounced"
                 OnBlur="@OnBlur"
                 AdditionalAttributes="@GetAttributes("form-control")" />
-<ValidationMessage For="@ValueExpression" class="invalid-feedback" />
+<FormValidationMessage For="@ValueExpression" />
 
 @code {
 
@@ -17,6 +17,5 @@
   public FormTextInputType Type { get; set; } = FormTextInputType.Text;
 
   protected override ICustomFormField FormField { get; set; } = null!;
-  
-}
 
+}
