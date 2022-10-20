@@ -1,4 +1,5 @@
 ﻿@page "/instances/create"
+@using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Minecraft
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Audit
@@ -7,7 +8,6 @@
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
-@using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Instance
@@ -21,6 +21,7 @@
 <h1>New Instance</h1>
 
 <Form Model="form" OnSubmit="Submit">
+  @{ var selectedAgent = form.SelectedAgent; }
   <div class="row">
     <div class="col-xl-7 mb-3">
       <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
@@ -51,15 +52,27 @@
       </FormSelectInput>
     </div>
 
-    <div class="col-sm-6 col-xl-2 mb-3">
+    <div class="col-sm-6 col-xl-3 mb-3">
       <FormSelectInput Id="instance-minecraft-version" Label="Minecraft Version" @bind-Value="form.MinecraftVersion">
-        @foreach (var version in availableMinecraftVersions) {
-          <option value="@version.Id">@version.Id</option>
-        }
+        <ChildContent>
+          @foreach (var version in availableMinecraftVersions) {
+            <option value="@version.Id">@version.Id</option>
+          }
+        </ChildContent>
+        <GroupContent>
+          <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">@minecraftVersionType.ToNiceNamePlural()</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            @foreach (var versionType in MinecraftVersionTypes.WithServerJars) {
+              <li>
+                <button class="dropdown-item" @onclick="() => SetMinecraftVersionType(versionType)">@versionType.ToNiceNamePlural()</button>
+              </li>
+            }
+          </ul>
+        </GroupContent>
       </FormSelectInput>
     </div>
 
-    <div class="col-xl-4 mb-3">
+    <div class="col-xl-3 mb-3">
       <FormSelectInput Id="instance-java-runtime" Label="Java Runtime" @bind-Value="form.JavaRuntimeGuid" disabled="@(form.JavaRuntimesForSelectedAgent.IsEmpty)">
         <option value="" selected>Select Java runtime...</option>
         @foreach (var (guid, runtime) in form.JavaRuntimesForSelectedAgent) {
@@ -69,59 +82,59 @@
     </div>
 
     @{
-      var selectedAgent = form.SelectedAgent;
-
       string? allowedServerPorts = selectedAgent?.Agent.AllowedServerPorts?.ToString();
       string? allowedRconPorts = selectedAgent?.Agent.AllowedRconPorts?.ToString();
-
-      RenderFragment serverPortLabel;
-      RenderFragment rconPortLabel;
-
-      if (string.IsNullOrEmpty(allowedServerPorts)) {
-        serverPortLabel = @<text>Server Port</text>;
-      }
-      else {
-        serverPortLabel = @<text>Server Port <sup title="Allowed: @allowedServerPorts">[?]</sup></text>;
-      }
-
-      if (string.IsNullOrEmpty(allowedRconPorts)) {
-        rconPortLabel = @<text>Rcon Port</text>;
-      }
-      else {
-        rconPortLabel = @<text>Rcon Port <sup title="Allowed: @allowedRconPorts">[?]</sup></text>;
-      }
     }
     <div class="col-sm-6 col-xl-2 mb-3">
-      <FormNumberInput Id="instance-server-port" LabelFragment="@serverPortLabel" @bind-Value="form.ServerPort" min="0" max="65535" />
+      <FormNumberInput Id="instance-server-port" @bind-Value="form.ServerPort" min="0" max="65535">
+        <LabelFragment>
+          @if (string.IsNullOrEmpty(allowedServerPorts)) {
+            <text>Server Port</text>
+          }
+          else {
+            <text>Server Port <sup title="Allowed: @allowedServerPorts">[?]</sup></text>
+          }
+        </LabelFragment>
+      </FormNumberInput>
     </div>
 
     <div class="col-sm-6 col-xl-2 mb-3">
-      <FormNumberInput Id="instance-rcon-port" LabelFragment="@rconPortLabel" @bind-Value="form.RconPort" min="0" max="65535" />
+      <FormNumberInput Id="instance-rcon-port" @bind-Value="form.RconPort" min="0" max="65535">
+        <LabelFragment>
+          @if (string.IsNullOrEmpty(allowedRconPorts)) {
+            <text>Rcon Port</text>
+          }
+          else {
+            <text>Rcon Port <sup title="Allowed: @allowedRconPorts">[?]</sup></text>
+          }
+        </LabelFragment>
+      </FormNumberInput>
     </div>
   </div>
 
   <div class="row">
     <div class="col-xl-12 mb-3">
-      @{
-        ushort maximumMemoryUnits = form.MaximumMemoryUnits;
-        RenderFragment ramLabel;
-        if (maximumMemoryUnits == 0) {
-          ramLabel = @<text>RAM</text>;
-        }
-        else {
-          ramLabel = @<text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.AvailableMemory.InMegabytes) MB</code></text>;
-        }
-      }
-      <FormNumberInput Id="instance-memory" LabelFragment="@ramLabel" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" />
+      @{ ushort maximumMemoryUnits = form.MaximumMemoryUnits; }
+      <FormNumberInput Id="instance-memory" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)">
+        <LabelFragment>
+          @if (maximumMemoryUnits == 0) {
+            <text>RAM</text>
+          }
+          else {
+            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.AvailableMemory.InMegabytes) MB</code></text>
+          }
+        </LabelFragment>
+      </FormNumberInput>
     </div>
   </div>
 
   <div class="row">
     <div class="mb-3">
-      @{
-        RenderFragment jvmArgumentsLabel = @<text>JVM Arguments <span class="text-black-50">(one per line)</span></text>;
-      }
-      <FormTextInput Id="instance-jvm-arguments" LabelFragment="@jvmArgumentsLabel" Type="FormTextInputType.Textarea" @bind-Value="form.JvmArguments" rows="4" />
+      <FormTextInput Id="instance-jvm-arguments" Type="FormTextInputType.Textarea" @bind-Value="form.JvmArguments" rows="4">
+        <LabelFragment>
+          JVM Arguments <span class="text-black-50">(one per line)</span>
+        </LabelFragment>
+      </FormTextInput>
     </div>
   </div>
 
@@ -132,6 +145,8 @@
 @code {
 
   private CreateInstanceFormModel form = null!;
+
+  private MinecraftVersionType minecraftVersionType = MinecraftVersionType.Release;
   private ImmutableArray<MinecraftVersion> availableMinecraftVersions = ImmutableArray<MinecraftVersion>.Empty;
 
   private bool IsSubmittable => form.SelectedAgentGuid != null && !form.EditContext.GetValidationMessages(form.EditContext.Field(nameof(CreateInstanceFormModel.SelectedAgentGuid))).Any();
@@ -248,11 +263,17 @@
   }
 
   protected override async Task OnInitializedAsync() {
+    await SetMinecraftVersionType(minecraftVersionType);
+  }
+
+  private async Task SetMinecraftVersionType(MinecraftVersionType type) {
+    minecraftVersionType = type;
+
     var allMinecraftVersions = await MinecraftVersions.GetVersions(CancellationToken.None);
-    availableMinecraftVersions = allMinecraftVersions.Where(static version => version.Type == MinecraftVersionType.Release).ToImmutableArray();
+    availableMinecraftVersions = allMinecraftVersions.Where(version => version.Type == type).ToImmutableArray();
 
     if (!availableMinecraftVersions.IsEmpty) {
-      form.MinecraftVersion = allMinecraftVersions[0].Id;
+      form.MinecraftVersion = availableMinecraftVersions[0].Id;
     }
   }
 

@@ -3,9 +3,21 @@
 @inherits FormInputBase<TValue>
 
 <FormLabel Id="@Id" Label="@Label" LabelFragment="@LabelFragment" />
-<InputSelect Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-select")">
-  @ChildContent
-</InputSelect>
+
+@if (GroupContent == null) {
+  <InputSelect Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-select")">
+    @ChildContent
+  </InputSelect>
+}
+else {
+  <div class="input-group">
+    <InputSelect Value="@Value" ValueChanged="@ValueChanged" ValueExpression="@ValueExpression" AdditionalAttributes="@GetAttributes("form-select")">
+      @ChildContent
+    </InputSelect>
+    @GroupContent
+  </div>
+}
+
 <FormValidationMessage For="@ValueExpression" />
 
 @code {
@@ -13,5 +25,8 @@
   [Parameter]
   [DisallowNull]
   public RenderFragment? ChildContent { get; set; }
+
+  [Parameter]
+  public RenderFragment? GroupContent { get; set; }
 
 }

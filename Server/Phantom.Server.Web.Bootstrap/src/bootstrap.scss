@@ -31,6 +31,12 @@ $link-color: $success;
 
 $btn-disabled-opacity: 0.7;
 
+$dropdown-link-color:        $gray-700;
+$dropdown-link-hover-color:  $gray-700;
+$dropdown-link-active-color: $gray-700;
+$dropdown-link-hover-bg:     mix($gray-200, $gray-300, 75%);
+$dropdown-link-active-bg:    mix($gray-200, $gray-300, 75%);
+
 @import "./components";
 
 .spinner-border-sm {

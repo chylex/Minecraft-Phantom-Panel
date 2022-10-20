@@ -11,10 +11,9 @@ public enum MinecraftVersionType : ushort {
 }
 
 public static class MinecraftVersionTypes {
-	public static readonly ImmutableHashSet<MinecraftVersionType> All = ImmutableHashSet.Create(
+	public static readonly ImmutableArray<MinecraftVersionType> WithServerJars = ImmutableArray.Create(
 		MinecraftVersionType.Release,
-		MinecraftVersionType.Snapshot,
-		MinecraftVersionType.Other
+		MinecraftVersionType.Snapshot
 	);
 
 	public static MinecraftVersionType FromString(string? type) {
@@ -24,6 +23,16 @@ public static class MinecraftVersionTypes {
 			"old_beta"  => MinecraftVersionType.OldBeta,
 			"old_alpha" => MinecraftVersionType.OldAlpha,
 			_           => MinecraftVersionType.Other
+		};
+	}
+
+	public static string ToNiceNamePlural(this MinecraftVersionType type) {
+		return type switch {
+			MinecraftVersionType.Release  => "Releases",
+			MinecraftVersionType.Snapshot => "Snapshots",
+			MinecraftVersionType.OldBeta  => "Beta",
+			MinecraftVersionType.OldAlpha => "Alpha",
+			_                             => "Unknown"
 		};
 	}
 }
