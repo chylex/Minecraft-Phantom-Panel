@@ -1,9 +1,9 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Database;
 using Phantom.Server.Database.Entities;
 using Phantom.Server.Database.Enums;
+using Phantom.Server.Services.Users;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Server.Services.Audit;
@@ -11,23 +11,21 @@ namespace Phantom.Server.Services.Audit;
 public sealed partial class AuditLog {
 	private readonly CancellationToken cancellationToken;
 	private readonly DatabaseProvider databaseProvider;
+	private readonly IdentityLookup identityLookup;
 	private readonly AuthenticationStateProvider authenticationStateProvider;
 	private readonly TaskManager taskManager;
 
-	public AuditLog(ServiceConfiguration serviceConfiguration, DatabaseProvider databaseProvider, AuthenticationStateProvider authenticationStateProvider, TaskManager taskManager) {
+	public AuditLog(ServiceConfiguration serviceConfiguration, DatabaseProvider databaseProvider, IdentityLookup identityLookup, AuthenticationStateProvider authenticationStateProvider, TaskManager taskManager) {
 		this.cancellationToken = serviceConfiguration.CancellationToken;
 		this.databaseProvider = databaseProvider;
+		this.identityLookup = identityLookup;
 		this.authenticationStateProvider = authenticationStateProvider;
 		this.taskManager = taskManager;
 	}
-
-	private static string? GetUserId(ClaimsPrincipal user) {
-		return user.FindFirstValue(ClaimTypes.NameIdentifier);
-	}
-
-	private async Task<string?> GetCurrentUserId() {
+	
+	private async Task<string?> GetCurrentAuthenticatedUserId() {
 		var authenticationState = await authenticationStateProvider.GetAuthenticationStateAsync();
-		return authenticationState.User.Identity?.IsAuthenticated == true ? GetUserId(authenticationState.User) : null;
+		return identityLookup.GetAuthenticatedUserId(authenticationState.User);
 	}
 
 	private async Task AddEventToDatabase(AuditEventEntity eventEntity) {
@@ -42,7 +40,7 @@ public sealed partial class AuditLog {
 	}
 
 	private async Task AddEvent(AuditEventType eventType, string subjectId, Dictionary<string, object?>? extra = null) {
-		AddEvent(await GetCurrentUserId(), eventType, subjectId, extra);
+		AddEvent(await GetCurrentAuthenticatedUserId(), eventType, subjectId, extra);
 	}
 
 	public async Task<AuditEvent[]> GetEvents(int count, CancellationToken cancellationToken) {

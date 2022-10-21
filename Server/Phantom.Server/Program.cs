@@ -74,6 +74,8 @@ try {
 	);
 } catch (OperationCanceledException) {
 	// Ignore.
+} catch (StopProcedureException) {
+	// Ignore.
 } finally {
 	cancellationTokenSource.Cancel();
 	

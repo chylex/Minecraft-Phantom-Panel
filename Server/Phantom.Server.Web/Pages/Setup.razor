@@ -10,7 +10,6 @@
 @inject ServiceConfiguration ServiceConfiguration
 @inject PhantomLoginManager LoginManager
 @inject UserManager<IdentityUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
 @inject AuditLog AuditLog
 
 <h1>Administrator Setup</h1>
@@ -68,11 +67,6 @@
       return;
     }
     
-    var createRolesResult = await CreateDefaultRoles();
-    if (!createRolesResult.Succeeded) {
-      form.SubmitModel.StopSubmitting(GetErrors(createRolesResult));
-    }
-
     var createUserResult = await CreateOrUpdateAdministrator();
     if (!createUserResult.Succeeded) {
       form.SubmitModel.StopSubmitting(GetErrors(createUserResult));
@@ -96,14 +90,6 @@
     return CryptographicOperations.FixedTimeEquals(formTokenBytes, ServiceConfiguration.AdministratorToken);
   }
 
-  private async Task<IdentityResult> CreateDefaultRoles() {
-    if (!await RoleManager.RoleExistsAsync("Administrator")) {
-      return await RoleManager.CreateAsync(new IdentityRole("Administrator"));
-    }
-    
-    return IdentityResult.Success;
-  }
-
   private async Task<IdentityResult> CreateOrUpdateAdministrator() {
     var existingUser = await UserManager.FindByNameAsync(form.Username);
     return existingUser == null ? await CreateAdministrator() : await UpdateAdministrator(existingUser);
@@ -118,7 +104,7 @@
     
     await AuditLog.AddAdministratorUserCreatedEvent(newUser);
 
-    var addToRoleResult = await UserManager.AddToRoleAsync(newUser, "Administrator");
+    var addToRoleResult = await UserManager.AddToRoleAsync(newUser, Role.Administrator.Name);
     return addToRoleResult;
   }
 

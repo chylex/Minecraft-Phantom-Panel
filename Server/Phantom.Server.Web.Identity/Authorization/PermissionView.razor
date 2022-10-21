@@ -1,0 +1,21 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Phantom.Server.Web.Identity.Data
+@inject PermissionManager PermissionManager
+
+<AuthorizeView>
+  <Authorized>
+    @if (PermissionManager.CheckPermission(context.User, Permission)) {
+      @ChildContent
+    }
+  </Authorized>
+</AuthorizeView>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public Permission Permission { get; set; } = null!;
+
+  [Parameter]
+  public RenderFragment? ChildContent { get; set; }
+
+}

@@ -18,7 +18,7 @@ public sealed partial class AuditLog {
 	}
 
 	public void AddUserLoggedOutEvent(ClaimsPrincipal user) {
-		var userId = GetUserId(user);
+		var userId = identityLookup.GetAuthenticatedUserId(user);
 		AddEvent(userId, AuditEventType.UserLoggedOut, userId ?? string.Empty);
 	}
 

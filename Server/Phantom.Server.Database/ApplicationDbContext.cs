@@ -14,6 +14,10 @@ namespace Phantom.Server.Database;
 
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public class ApplicationDbContext : IdentityDbContext {
+	public DbSet<PermissionEntity> Permissions { get; set; } = null!;
+	public DbSet<UserPermissionEntity> UserPermissions { get; set; } = null!;
+	public DbSet<RolePermissionEntity> RolePermissions { get; set; } = null!;
+	
 	public DbSet<AgentEntity> Agents { get; set; } = null!;
 	public DbSet<InstanceEntity> Instances { get; set; } = null!;
 	public DbSet<AuditEventEntity> AuditEvents { get; set; } = null!;
@@ -39,6 +43,18 @@ public class ApplicationDbContext : IdentityDbContext {
 		builder.Entity<IdentityUserLogin<string>>().ToTable("UserLogins", schema: IdentitySchema);
 		builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens", schema: IdentitySchema);
 		builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims", schema: IdentitySchema);
+		
+		builder.Entity<UserPermissionEntity>(static b => {
+			b.HasKey(static e => new { e.UserId, e.PermissionId });
+			b.HasOne<IdentityUser>().WithMany().HasForeignKey(static e => e.UserId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+			b.HasOne<PermissionEntity>().WithMany().HasForeignKey(static e => e.PermissionId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+		});
+		
+		builder.Entity<RolePermissionEntity>(static b => {
+			b.HasKey(static e => new { e.RoleId, e.PermissionId });
+			b.HasOne<IdentityRole>().WithMany().HasForeignKey(static e => e.RoleId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+			b.HasOne<PermissionEntity>().WithMany().HasForeignKey(static e => e.PermissionId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+		});
 	}
 
 	protected override void ConfigureConventions(ModelConfigurationBuilder builder) {

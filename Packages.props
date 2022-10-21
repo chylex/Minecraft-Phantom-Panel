@@ -1,6 +1,7 @@
 ﻿<Project>
   
   <ItemGroup>
+    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization"     Version="7.0.0-rc.1.22427.2" />
     <PackageReference Update="Microsoft.AspNetCore.Components.Web"               Version="7.0.0-rc.1.22427.2" />
     <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.0-rc.1.22427.2" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"               Version="7.0.0-rc.1.22426.7" />
