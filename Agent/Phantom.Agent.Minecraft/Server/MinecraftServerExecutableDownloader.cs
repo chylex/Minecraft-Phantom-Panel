@@ -3,6 +3,7 @@ using Phantom.Common.Logging;
 using Phantom.Common.Minecraft;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
+using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
@@ -174,11 +175,5 @@ sealed class MinecraftServerExecutableDownloader {
 			sha1.Dispose();
 			streamCopier.Dispose();
 		}
-	}
-
-	private sealed class StopProcedureException : Exception {
-		public static StopProcedureException Instance { get; } = new ();
-
-		private StopProcedureException() {}
 	}
 }

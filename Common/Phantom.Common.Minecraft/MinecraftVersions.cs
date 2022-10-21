@@ -6,6 +6,7 @@ using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
+using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Common.Minecraft;
@@ -196,11 +197,5 @@ public sealed class MinecraftVersions : IDisposable {
 		}
 
 		return valueElement;
-	}
-
-	private sealed class StopProcedureException : Exception {
-		public static StopProcedureException Instance { get; } = new ();
-
-		private StopProcedureException() {}
 	}
 }
