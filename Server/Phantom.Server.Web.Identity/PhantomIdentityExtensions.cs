@@ -32,7 +32,7 @@ public static class PhantomIdentityExtensions {
 	public static void UsePhantomIdentity(this IApplicationBuilder application) {
 		application.UseAuthentication();
 		application.UseAuthorization();
-		application.UseMiddleware<PhantomIdentityMiddleware>();
+		application.UseWhen(PhantomIdentityMiddleware.AcceptsPath, static app => app.UseMiddleware<PhantomIdentityMiddleware>());
 	}
 
 	private static void ConfigureIdentity(IdentityOptions o) {
@@ -60,9 +60,9 @@ public static class PhantomIdentityExtensions {
 		o.ExpireTimeSpan = TimeSpan.FromDays(30);
 		o.SlidingExpiration = true;
 
-		o.LoginPath = "/login";
-		o.LogoutPath = "/logout";
-		o.AccessDeniedPath = "/login";
+		o.LoginPath = PhantomIdentityMiddleware.LoginPath;
+		o.LogoutPath = PhantomIdentityMiddleware.LogoutPath;
+		o.AccessDeniedPath = PhantomIdentityMiddleware.LoginPath;
 	}
 
 	private static void ConfigureAuthorization(AuthorizationOptions o) {
