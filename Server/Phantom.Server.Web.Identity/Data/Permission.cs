@@ -9,4 +9,13 @@ public sealed record Permission(string Id, Permission? Parent) {
 		AllPermissions.Add(permission);
 		return permission;
 	}
+
+	public const string ViewInstancesPolicy = "Instances.View";
+	public static readonly Permission ViewInstances = Register(ViewInstancesPolicy);
+	
+	public const string CreateInstancesPolicy = "Instances.Create";
+	public static readonly Permission CreateInstances = Register(CreateInstancesPolicy, parent: ViewInstances);
+	
+	public const string ViewAuditPolicy = "Audit.View";
+	public static readonly Permission ViewAudit = Register(ViewAuditPolicy);
 }

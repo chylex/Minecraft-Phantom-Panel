@@ -1,4 +1,5 @@
 ﻿@page "/audit"
+@attribute [Authorize(Permission.ViewAuditPolicy)]
 @using Phantom.Server.Database.Enums
 @using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances

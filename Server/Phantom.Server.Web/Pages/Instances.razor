@@ -1,4 +1,5 @@
 ﻿@page "/instances"
+@attribute [Authorize(Permission.ViewInstancesPolicy)]
 @using System.Collections.Immutable
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Instances
@@ -8,7 +9,9 @@
 
 <h1>Instances</h1>
 
-<a href="instances/create" class="btn btn-primary" role="button">New Instance</a>
+<PermissionView Permission="Permission.CreateInstances">
+  <a href="instances/create" class="btn btn-primary" role="button">New Instance</a>
+</PermissionView>
 
 <table class="table align-middle">
   <thead>
@@ -76,7 +79,7 @@
       this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
       InvokeAsync(StateHasChanged);
     });
-    
+
     InstanceManager.InstancesChanged.Subscribe(this, instances => {
       this.instances = instances.Values.OrderBy(instance => agentNames.TryGetValue(instance.Configuration.AgentGuid, out var agentName) ? agentName : string.Empty).ThenBy(static instance => instance.Configuration.InstanceName).ToImmutableArray();
       InvokeAsync(StateHasChanged);

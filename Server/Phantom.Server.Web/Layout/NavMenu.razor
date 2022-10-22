@@ -1,5 +1,6 @@
 ﻿@using Phantom.Server.Services
 @inject ServiceConfiguration Configuration
+@inject PermissionManager PermissionManager
 
 <div class="navbar navbar-dark">
   <div class="container-fluid">
@@ -18,10 +19,19 @@
         <NavMenuItem Label="Login" Icon="account-login" Href="login" />
       </NotAuthorized>
       <Authorized>
-        <NavMenuItem Label="Instances" Icon="folder"         Href="instances" />
-        <NavMenuItem Label="Agents"    Icon="cloud"          Href="agents" />
-        <NavMenuItem Label="Audit Log" Icon="clipboard"      Href="audit" />
-        <NavMenuItem Label="Logout"    Icon="account-logout" Href="logout" />
+        @{ var permissions = PermissionManager.GetPermissions(context.User); }
+        
+        @if (permissions.Check(Permission.ViewInstances)) {
+          <NavMenuItem Label="Instances" Icon="folder" Href="instances" />
+        }
+        
+        <NavMenuItem Label="Agents" Icon="cloud" Href="agents" />
+        
+        @if (permissions.Check(Permission.ViewAudit)) {
+          <NavMenuItem Label="Audit Log" Icon="clipboard" Href="audit" />
+        }
+        
+        <NavMenuItem Label="Logout" Icon="account-logout" Href="logout" />
       </Authorized>
     </AuthorizeView>
   </nav>

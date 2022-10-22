@@ -11,6 +11,7 @@
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Instance
+@attribute [Authorize(Permission.CreateInstancesPolicy)]
 @inject INavigation Nav
 @inject MinecraftVersions MinecraftVersions
 @inject AgentJavaRuntimesManager AgentJavaRuntimesManager

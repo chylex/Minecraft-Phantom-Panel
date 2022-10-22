@@ -1,4 +1,5 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
+@attribute [Authorize(Permission.ViewInstancesPolicy)]
 @using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Replies
 @using Phantom.Server.Services.Audit
