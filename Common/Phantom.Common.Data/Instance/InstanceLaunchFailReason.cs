@@ -8,20 +8,24 @@ public enum InstanceLaunchFailReason {
 	RconPortAlreadyInUse,
 	JavaRuntimeNotFound,
 	InvalidJvmArguments,
-	CouldNotDownloadMinecraftServer
+	CouldNotDownloadMinecraftServer,
+	CouldNotConfigureMinecraftServer,
+	CouldNotStartMinecraftServer
 }
 
 public static class InstanceLaunchFailReasonExtensions {
 	public static string ToSentence(this InstanceLaunchFailReason reason) {
 		return reason switch {
-			InstanceLaunchFailReason.ServerPortNotAllowed            => "Server port not allowed.",
-			InstanceLaunchFailReason.ServerPortAlreadyInUse          => "Server port already in use.",
-			InstanceLaunchFailReason.RconPortNotAllowed              => "Rcon port not allowed.",
-			InstanceLaunchFailReason.RconPortAlreadyInUse            => "Rcon port already in use.",
-			InstanceLaunchFailReason.JavaRuntimeNotFound             => "Java runtime not found.",
-			InstanceLaunchFailReason.InvalidJvmArguments             => "Invalid JVM arguments.",
-			InstanceLaunchFailReason.CouldNotDownloadMinecraftServer => "Could not download Minecraft server.",
-			_                                                        => "Unknown error."
+			InstanceLaunchFailReason.ServerPortNotAllowed             => "Server port not allowed.",
+			InstanceLaunchFailReason.ServerPortAlreadyInUse           => "Server port already in use.",
+			InstanceLaunchFailReason.RconPortNotAllowed               => "Rcon port not allowed.",
+			InstanceLaunchFailReason.RconPortAlreadyInUse             => "Rcon port already in use.",
+			InstanceLaunchFailReason.JavaRuntimeNotFound              => "Java runtime not found.",
+			InstanceLaunchFailReason.InvalidJvmArguments              => "Invalid JVM arguments.",
+			InstanceLaunchFailReason.CouldNotDownloadMinecraftServer  => "Could not download Minecraft server.",
+			InstanceLaunchFailReason.CouldNotConfigureMinecraftServer => "Could not configure Minecraft server.",
+			InstanceLaunchFailReason.CouldNotStartMinecraftServer     => "Could not start Minecraft server.",
+			_                                                         => "Unknown error."
 		};
 	}
 }

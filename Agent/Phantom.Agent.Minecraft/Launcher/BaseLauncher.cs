@@ -5,6 +5,7 @@ using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Minecraft;
+using Serilog;
 
 namespace Phantom.Agent.Minecraft.Launcher;
 
@@ -15,7 +16,7 @@ public abstract class BaseLauncher {
 		this.instanceProperties = instanceProperties;
 	}
 
-	public async Task<LaunchResult> Launch(LaunchServices services, EventHandler<DownloadProgressEventArgs> downloadProgressEventHandler, CancellationToken cancellationToken) {
+	public async Task<LaunchResult> Launch(ILogger logger, LaunchServices services, EventHandler<DownloadProgressEventArgs> downloadProgressEventHandler, CancellationToken cancellationToken) {
 		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
 			return new LaunchResult.InvalidJavaRuntime();
 		}
@@ -52,12 +53,29 @@ public abstract class BaseLauncher {
 		var process = new Process { StartInfo = startInfo };
 		var session = new InstanceSession(process);
 
-		await AcceptEula(instanceProperties);
-		await UpdateServerProperties(instanceProperties);
+		try {
+			await AcceptEula(instanceProperties);
+			await UpdateServerProperties(instanceProperties);
+		} catch (Exception e) {
+			logger.Error(e, "Caught exception while configuring the server.");
+			return new LaunchResult.CouldNotConfigureMinecraftServer();
+		}
 
-		process.Start();
-		process.BeginOutputReadLine();
-		process.BeginErrorReadLine();
+		try {
+			process.Start();
+			process.BeginOutputReadLine();
+			process.BeginErrorReadLine();
+		} catch (Exception launchException) {
+			logger.Error(launchException, "Caught exception launching the server process.");
+			
+			try {
+				process.Kill();
+			} catch (Exception killException) {
+				logger.Error(killException, "Caught exception trying to kill the server process after a failed launch.");
+			}
+
+			return new LaunchResult.CouldNotStartMinecraftServer();
+		}
 
 		return new LaunchResult.Success(session);
 	}
@@ -80,8 +98,8 @@ public abstract class BaseLauncher {
 		await using var fileStream = new FileStream(serverPropertiesFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 		try {
 			serverPropertiesData.Load(fileStream);
-		} catch (ParseException) {
-			// ignore
+		} catch (ParseException e) {
+			throw new Exception("Could not parse server.properties file: " + serverPropertiesFilePath, e);
 		}
 		
 		instanceProperties.ServerProperties.SetTo(serverPropertiesData);

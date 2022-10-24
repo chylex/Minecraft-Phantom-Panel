@@ -12,4 +12,8 @@ public abstract record LaunchResult {
 	public sealed record InvalidJvmArguments : LaunchResult;
 
 	public sealed record CouldNotDownloadMinecraftServer : LaunchResult;
+	
+	public sealed record CouldNotConfigureMinecraftServer : LaunchResult;
+	
+	public sealed record CouldNotStartMinecraftServer : LaunchResult;
 }

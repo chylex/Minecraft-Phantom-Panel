@@ -37,7 +37,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 			}
 		}
 
-		var launchResult = await context.Launcher.Launch(context.LaunchServices, OnDownloadProgress, cancellationToken);
+		var launchResult = await context.Launcher.Launch(context.Logger, context.LaunchServices, OnDownloadProgress, cancellationToken);
 		if (launchResult is LaunchResult.InvalidJavaRuntime) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.JavaRuntimeNotFound, "Session failed to launch, invalid Java runtime.");
 		}
@@ -46,6 +46,12 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		}
 		else if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotDownloadMinecraftServer, "Session failed to launch, could not download Minecraft server.");
+		}
+		else if (launchResult is LaunchResult.CouldNotConfigureMinecraftServer) {
+			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotConfigureMinecraftServer, "Session failed to launch, could not configure Minecraft server.");
+		}
+		else if (launchResult is LaunchResult.CouldNotStartMinecraftServer) {
+			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotStartMinecraftServer, "Session failed to launch, could not start Minecraft server.");
 		}
 
 		if (launchResult is not LaunchResult.Success launchSuccess) {
