@@ -77,16 +77,18 @@ public abstract class BaseLauncher {
 		var serverPropertiesFilePath = Path.Combine(instanceProperties.InstanceFolder, "server.properties");
 		var serverPropertiesData = new JavaProperties();
 
+		await using var fileStream = new FileStream(serverPropertiesFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 		try {
-			await using var readStream = new FileStream(serverPropertiesFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-			serverPropertiesData.Load(readStream);
-		} catch (FileNotFoundException) {
+			serverPropertiesData.Load(fileStream);
+		} catch (ParseException) {
 			// ignore
 		}
 		
 		instanceProperties.ServerProperties.SetTo(serverPropertiesData);
 
-		await using var writeStream = new FileStream(serverPropertiesFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-		serverPropertiesData.Store(writeStream, true);
+		fileStream.Seek(0L, SeekOrigin.Begin);
+		fileStream.SetLength(0L);
+		
+		serverPropertiesData.Store(fileStream, true);
 	}
 }
