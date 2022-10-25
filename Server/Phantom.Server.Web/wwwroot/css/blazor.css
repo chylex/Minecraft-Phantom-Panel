@@ -3,6 +3,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  z-index: 2000 !important;
 }
 
 #components-reconnect-modal h5 {
