@@ -1,4 +1,5 @@
-﻿@if (messageLines.Length > 0) {
+﻿@using Phantom.Server.Web.Components.Utils
+@if (messageLines.Length > 0) {
   <div class="text-danger my-2 w-100">
     @for (int i = 0; i < messageLines.Length; i++) {
       @messageLines[i]
@@ -23,12 +24,10 @@
   private string[] messageLines = Array.Empty<string>();
   
   protected override void OnParametersSet() {
-    var model = Form?.Model.SubmitModel ?? Model;
-    if (model == null) {
-      throw new InvalidOperationException("Either the Form or Model parameter must be set.");
-    }
+    BlazorUtils.RequireEitherParameterIsSet(Form, Model);
     
-    var message = model.SubmitError ?? Message;
+    var model = Form?.Model.SubmitModel ?? Model;
+    var message = model?.SubmitError ?? Message;
     messageLines = message?.Split('\n') ?? Array.Empty<string>();
   }
 

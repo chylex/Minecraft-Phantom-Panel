@@ -41,7 +41,7 @@ else {
     </div>
   </div>
   
-  <InstanceStopForm InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
+  <InstanceStopDialog InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
 }
 
 @code {

@@ -18,9 +18,7 @@ public sealed class FormButtonSubmit : ComponentBase {
 	public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
 	protected override void OnParametersSet() {
-		if (Form == null && Model == null) {
-			throw new InvalidOperationException("Either the Form or Model parameter must be set.");
-		}
+		BlazorUtils.RequireEitherParameterIsSet(Form, Model);
 	}
 
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {

@@ -18,13 +18,13 @@
   <div style="max-width: 400px;">
     <div class="row">
       <div class="mb-3">
-        <FormTextInput Id="account-username" Label="Username" @bind-Value="form.Username" />
+        <FormTextInput Id="account-username" Label="Username" @bind-Value="form.Username" autocomplete="off" />
       </div>
     </div>
 
     <div class="row">
       <div class="mb-3">
-        <FormTextInput Id="account-password" Label="Password" Type="FormTextInputType.Password" @bind-Value="form.Password" />
+        <FormTextInput Id="account-password" Label="Password" Type="FormTextInputType.Password" @bind-Value="form.Password" autocomplete="new-password" />
       </div>
     </div>
 

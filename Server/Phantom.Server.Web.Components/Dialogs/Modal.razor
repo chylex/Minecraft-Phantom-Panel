@@ -1,4 +1,5 @@
-﻿<div id="@Id" class="modal fade" tabindex="-1">
+﻿@using Phantom.Server.Web.Components.Utils
+<div id="@Id" class="modal fade" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -39,9 +40,7 @@
   public RenderFragment? Footer { get; set; }
 
   protected override void OnParametersSet() {
-    if (TitleText != null && Title != null) {
-      throw new InvalidOperationException("Cannot set both TitleText and Title at the same time.");
-    }
+    BlazorUtils.RequireEitherParameterIsSet(TitleText, Title);
   }
 
 }

@@ -1,4 +1,5 @@
-﻿@if (Label != null) {
+﻿@using Phantom.Server.Web.Components.Utils
+@if (Label != null) {
   <label for="@Id" class="form-label">@Label</label>
 }
 else if (LabelFragment != null) {
@@ -16,4 +17,8 @@ else if (LabelFragment != null) {
   [Parameter]
   public RenderFragment? LabelFragment { get; set; }
   
+  protected override void OnParametersSet() {
+    BlazorUtils.RequireEitherParameterIsSet(Label, LabelFragment);
+  }
+
 }

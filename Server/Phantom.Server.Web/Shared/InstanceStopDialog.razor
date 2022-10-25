@@ -7,34 +7,27 @@
 @inject InstanceManager InstanceManager;
 @inject AuditLog AuditLog
 
-<div id="@ModalId" class="modal fade" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <Form Model="form" OnSubmit="StopInstance">
-        <div class="modal-header">
-          <h5 class="modal-title">Stop Instance</h5>
-        </div>
-        <div class="modal-body">
-          <FormSelectInput Id="stop-in-seconds" Label="Stop In..." @bind-Value="form.StopInSeconds">
-            <option value="0">Immediately</option>
-            <option value="10">10 Seconds</option>
-            <option value="30">30 Seconds</option>
-            <option value="60">1 Minute</option>
-            <option value="120">2 Minutes</option>
-            <option value="180">3 Minutes</option>
-            <option value="240">4 Minutes</option>
-            <option value="300">5 Minutes</option>
-          </FormSelectInput>
-        </div>
-        <div class="modal-footer">
-          <FormSubmitError />
-          <FormButtonSubmit Label="Stop Instance" class="btn btn-danger" disabled="@Disabled" /> 
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </Form>
-    </div>
-  </div>
-</div>
+<Form Model="form" OnSubmit="StopInstance">
+  <Modal Id="@ModalId" TitleText="Stop Instance">
+    <Body>
+      <FormSelectInput Id="stop-in-seconds" Label="Stop In..." @bind-Value="form.StopInSeconds">
+        <option value="0">Immediately</option>
+        <option value="10">10 Seconds</option>
+        <option value="30">30 Seconds</option>
+        <option value="60">1 Minute</option>
+        <option value="120">2 Minutes</option>
+        <option value="180">3 Minutes</option>
+        <option value="240">4 Minutes</option>
+        <option value="300">5 Minutes</option>
+      </FormSelectInput>
+    </Body>
+    <Footer>
+      <FormSubmitError />
+      <FormButtonSubmit Label="Stop Instance" class="btn btn-danger" disabled="@Disabled" />
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    </Footer>
+  </Modal>
+</Form>
 
 @code {
 
