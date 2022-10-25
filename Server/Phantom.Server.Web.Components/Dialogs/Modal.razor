@@ -1,0 +1,47 @@
+﻿<div id="@Id" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          @if (TitleText != null) {
+            <text>@TitleText</text>
+          }
+          else {
+            @Title
+          }
+        </h5>
+      </div>
+      <div class="modal-body">
+        @Body
+      </div>
+      <div class="modal-footer">
+        @Footer
+      </div>
+    </div>
+  </div>
+</div>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public string Id { get; set; } = string.Empty;
+
+  [Parameter]
+  public string? TitleText { get; set; }
+
+  [Parameter]
+  public RenderFragment? Title { get; set; }
+
+  [Parameter, EditorRequired]
+  public RenderFragment? Body { get; set; }
+
+  [Parameter, EditorRequired]
+  public RenderFragment? Footer { get; set; }
+
+  protected override void OnParametersSet() {
+    if (TitleText != null && Title != null) {
+      throw new InvalidOperationException("Cannot set both TitleText and Title at the same time.");
+    }
+  }
+
+}

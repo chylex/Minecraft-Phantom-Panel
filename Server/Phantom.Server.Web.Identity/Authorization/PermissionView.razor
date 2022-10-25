@@ -4,8 +4,8 @@
 
 <AuthorizeView>
   <Authorized>
-    @if (PermissionManager.CheckPermission(context.User, Permission)) {
-      @ChildContent
+    @if (ChildContent != null && PermissionManager.CheckPermission(context.User, Permission)) {
+      @ChildContent(context)
     }
   </Authorized>
 </AuthorizeView>
@@ -16,6 +16,6 @@
   public Permission Permission { get; set; } = null!;
 
   [Parameter]
-  public RenderFragment? ChildContent { get; set; }
+  public RenderFragment<AuthenticationState>? ChildContent { get; set; }
 
 }

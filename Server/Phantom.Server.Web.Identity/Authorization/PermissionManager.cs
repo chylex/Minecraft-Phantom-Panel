@@ -6,18 +6,19 @@ using Phantom.Server.Web.Identity.Data;
 namespace Phantom.Server.Web.Identity.Authorization;
 
 public sealed class PermissionManager {
-	private readonly ApplicationDbContext db;
+	private readonly DatabaseProvider databaseProvider;
 	private readonly IdentityLookup identityLookup;
 	private readonly Dictionary<string, IdentityPermissions> userIdsToPermissionIds = new ();
 
-	public PermissionManager(ApplicationDbContext db, IdentityLookup identityLookup) {
-		this.db = db;
+	public PermissionManager(DatabaseProvider databaseProvider, IdentityLookup identityLookup) {
+		this.databaseProvider = databaseProvider;
 		this.identityLookup = identityLookup;
 	}
 
 	private IdentityPermissions FetchPermissions(string userId) {
-		var userPermissions = db.UserPermissions.Where(up => up.UserId == userId).Select(static up => up.PermissionId);
-		var rolePermissions = db.UserRoles.Where(ur => ur.UserId == userId).Join(db.RolePermissions, static ur => ur.RoleId, static rp => rp.RoleId, static (ur, rp) => rp.PermissionId);
+		using var scope = databaseProvider.CreateScope();
+		var userPermissions = scope.Ctx.UserPermissions.Where(up => up.UserId == userId).Select(static up => up.PermissionId);
+		var rolePermissions = scope.Ctx.UserRoles.Where(ur => ur.UserId == userId).Join(scope.Ctx.RolePermissions, static ur => ur.RoleId, static rp => rp.RoleId, static (ur, rp) => rp.PermissionId);
 		return new IdentityPermissions(userPermissions.Union(rolePermissions));
 	}
 

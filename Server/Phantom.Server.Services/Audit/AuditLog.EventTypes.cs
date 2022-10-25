@@ -21,6 +21,16 @@ public sealed partial class AuditLog {
 		var userId = identityLookup.GetAuthenticatedUserId(user);
 		AddEvent(userId, AuditEventType.UserLoggedOut, userId ?? string.Empty);
 	}
+	
+	public Task AddUserCreatedEvent(IdentityUser user) {
+		return AddEvent(AuditEventType.UserCreated, user.Id);
+	}
+	
+	public Task AddUserDeletedEvent(IdentityUser user) {
+		return AddEvent(AuditEventType.UserDeleted, user.Id, new Dictionary<string, object?> {
+			{ "username", user.UserName }
+		});
+	}
 
 	public Task AddInstanceCreatedEvent(Guid instanceGuid) {
 		return AddEvent(AuditEventType.InstanceCreated, instanceGuid.ToString());

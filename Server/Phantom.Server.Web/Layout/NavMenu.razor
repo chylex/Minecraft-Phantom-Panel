@@ -27,6 +27,10 @@
         
         <NavMenuItem Label="Agents" Icon="cloud" Href="agents" />
         
+        @if (permissions.Check(Permission.ViewUsers)) {
+          <NavMenuItem Label="Users" Icon="person" Href="users" />
+        }
+        
         @if (permissions.Check(Permission.ViewAudit)) {
           <NavMenuItem Label="Audit Log" Icon="clipboard" Href="audit" />
         }

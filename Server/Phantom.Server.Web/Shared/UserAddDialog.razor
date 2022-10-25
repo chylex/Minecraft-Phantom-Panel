@@ -1,0 +1,71 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Phantom.Server.Services.Audit
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime Js;
+@inject UserManager<IdentityUser> UserManager
+@inject AuditLog AuditLog
+
+<Form Model="form" OnSubmit="AddUser">
+  <Modal Id="@ModalId" TitleText="Add User">
+    <Body>
+      
+      <div class="row">
+        <div class="mb-3">
+          <FormTextInput Id="account-username" Label="Username" @bind-Value="form.Username" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="mb-3">
+          <FormTextInput Id="account-password" Label="Password" Type="FormTextInputType.Password" autocomplete="new-password" @bind-Value="form.Password" />
+        </div>
+      </div>
+      
+    </Body>
+    <Footer>
+      <FormSubmitError />
+      <FormButtonSubmit Label="Add User" class="btn btn-primary" />
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    </Footer>
+  </Modal>
+</Form>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public string ModalId { get; set; } = string.Empty;
+  
+  [Parameter]
+  public EventCallback<IdentityUser> UserAdded { get; set; }
+
+  private readonly AddUserFormModel form = new();
+
+  private sealed class AddUserFormModel : FormModel {
+    [Required]
+    public string Username { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
+  }
+
+  private async Task AddUser(EditContext context) {
+    if (!context.Validate()) {
+      return;
+    }
+
+    form.SubmitModel.StartSubmitting();
+
+    var user = new IdentityUser(form.Username);
+    var result = await UserManager.CreateAsync(user, form.Password);
+    if (result.Succeeded) {
+      await AuditLog.AddUserCreatedEvent(user);
+      await UserAdded.InvokeAsync(user);
+      await Js.InvokeVoidAsync("closeModal", ModalId);
+      form.SubmitModel.StopSubmitting();
+    }
+    else {
+      form.SubmitModel.StopSubmitting(string.Join("\n", result.Errors.Select(static error => error.Description)));
+    }
+  }
+
+}

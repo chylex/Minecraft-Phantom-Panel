@@ -16,6 +16,12 @@ public sealed record Permission(string Id, Permission? Parent) {
 	public const string CreateInstancesPolicy = "Instances.Create";
 	public static readonly Permission CreateInstances = Register(CreateInstancesPolicy, parent: ViewInstances);
 	
+	public const string ViewUsersPolicy = "Users.View";
+	public static readonly Permission ViewUsers = Register(ViewUsersPolicy);
+	
+	public const string EditUsersPolicy = "Users.Edit";
+	public static readonly Permission EditUsers = Register(EditUsersPolicy, parent: ViewUsers);
+	
 	public const string ViewAuditPolicy = "Audit.View";
 	public static readonly Permission ViewAudit = Register(ViewAuditPolicy);
 }

@@ -15,12 +15,20 @@
   public Form? Form { get; set; }
 
   [Parameter]
+  public FormButtonSubmit.SubmitModel? Model { get; set; }
+
+  [Parameter]
   public string? Message { get; set; }
 
   private string[] messageLines = Array.Empty<string>();
   
   protected override void OnParametersSet() {
-    var message = Form?.Model.SubmitModel.SubmitError ?? Message;
+    var model = Form?.Model.SubmitModel ?? Model;
+    if (model == null) {
+      throw new InvalidOperationException("Either the Form or Model parameter must be set.");
+    }
+    
+    var message = model.SubmitError ?? Message;
     messageLines = message?.Split('\n') ?? Array.Empty<string>();
   }
 

@@ -1,0 +1,58 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Phantom.Server.Services.Audit
+@inject IJSRuntime Js;
+@inject UserManager<IdentityUser> UserManager
+@inject AuditLog AuditLog
+
+<Modal Id="@ModalId" TitleText="Delete User">
+  <Body>
+    You are about to delete the user <strong>@usernameToDelete</strong>.<br>
+    This action cannot be undone.
+  </Body>
+  <Footer>
+    <FormSubmitError Model="submitModel" />
+    <FormButtonSubmit Model="submitModel" Label="Delete User" type="button" class="btn btn-danger" @onclick="DeleteUser" />
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="() => userToDelete = null">Cancel</button>
+  </Footer>
+</Modal>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public string ModalId { get; set; } = string.Empty;
+
+  [Parameter]
+  public EventCallback<IdentityUser> UserDeleted { get; set; }
+
+  private readonly FormButtonSubmit.SubmitModel submitModel = new();
+
+  private IdentityUser? userToDelete = null;
+  private string usernameToDelete = string.Empty; // Not reset when the modal is closed to prevent re-rendering modal body.
+
+  public async Task Show(IdentityUser user) {
+    userToDelete = user;
+    usernameToDelete = user.UserName ?? $"<{user.Id}>";
+    await Js.InvokeVoidAsync("showModal", ModalId);
+  }
+
+  private async Task DeleteUser() {
+    submitModel.StartSubmitting();
+
+    if (userToDelete == null) {
+      submitModel.StopSubmitting("Invalid user.");
+      return;
+    }
+
+    var result = await UserManager.DeleteAsync(userToDelete);
+    if (result.Succeeded) {
+      await AuditLog.AddUserDeletedEvent(userToDelete);
+      await UserDeleted.InvokeAsync(userToDelete);
+      await Js.InvokeVoidAsync("closeModal", ModalId);
+      submitModel.StopSubmitting();
+    }
+    else {
+      submitModel.StopSubmitting(string.Join("\n", result.Errors.Select(static error => error.Description)));
+    }
+  }
+
+}
