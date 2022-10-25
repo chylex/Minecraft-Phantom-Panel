@@ -22,7 +22,9 @@
   
   private async Task Submit(EditContext obj) {
     BeforeSubmit?.Invoke(this, EventArgs.Empty);
-    await OnSubmit.InvokeAsync(obj);
+    if (obj.Validate()) {
+      await OnSubmit.InvokeAsync(obj);
+    }
   }
 
   public void Dispose() {

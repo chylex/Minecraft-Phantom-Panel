@@ -55,13 +55,8 @@
   }
 
   private async Task StopInstance(EditContext context) {
-    if (!context.Validate()) {
-      return;
-    }
-    
-    form.SubmitModel.StartSubmitting();
-    await Task.Yield();
-    
+    await form.SubmitModel.StartSubmitting();
+
     var result = await InstanceManager.StopInstance(InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds));
     if (result == StopInstanceResult.StopInitiated) {
       await AuditLog.AddInstanceStoppedEvent(InstanceGuid, form.StopInSeconds);
@@ -72,4 +67,5 @@
       form.SubmitModel.StopSubmitting(result.ToSentence());
     }
   }
+
 }

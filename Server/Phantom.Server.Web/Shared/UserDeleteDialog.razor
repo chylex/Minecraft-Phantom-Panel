@@ -36,7 +36,7 @@
   }
 
   private async Task DeleteUser() {
-    submitModel.StartSubmitting();
+    await submitModel.StartSubmitting();
 
     if (userToDelete == null) {
       submitModel.StopSubmitting("Invalid user.");

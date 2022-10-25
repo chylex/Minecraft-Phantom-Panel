@@ -49,11 +49,7 @@
   }
 
   private async Task AddUser(EditContext context) {
-    if (!context.Validate()) {
-      return;
-    }
-
-    form.SubmitModel.StartSubmitting();
+    await form.SubmitModel.StartSubmitting();
 
     var user = new IdentityUser(form.Username);
     var result = await UserManager.CreateAsync(user, form.Password);

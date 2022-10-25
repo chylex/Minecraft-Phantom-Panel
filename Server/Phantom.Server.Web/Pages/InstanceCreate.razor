@@ -279,17 +279,12 @@
   }
 
   private async Task Submit(EditContext context) {
-    if (!context.Validate()) {
-      return;
-    }
-
     var selectedAgent = form.SelectedAgent;
     if (selectedAgent == null) {
       return;
     }
 
-    form.SubmitModel.StartSubmitting();
-    await Task.Yield();
+    await form.SubmitModel.StartSubmitting();
 
     var serverPort = (ushort) form.ServerPort;
     var rconPort = (ushort) form.RconPort;

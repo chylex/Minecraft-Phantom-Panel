@@ -47,11 +47,7 @@
   }
 
   private async Task DoLogin(EditContext context) {
-    if (!context.Validate()) {
-      return;
-    }
-    
-    form.SubmitModel.StartSubmitting();
+    await form.SubmitModel.StartSubmitting();
     
     string? returnUrl = Navigation.GetQueryParameter("return", out var url) ? url : null;
     var result = await LoginManager.SignIn(form.Username, form.Password, returnUrl);

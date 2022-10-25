@@ -56,11 +56,7 @@
   }
 
   private async Task DoLogin(EditContext context) {
-    if (!context.Validate()) {
-      return;
-    }
-
-    form.SubmitModel.StartSubmitting();
+    await form.SubmitModel.StartSubmitting();
 
     if (!IsAdministratorTokenValid()) {
       form.SubmitModel.StopSubmitting("Invalid administrator token.");

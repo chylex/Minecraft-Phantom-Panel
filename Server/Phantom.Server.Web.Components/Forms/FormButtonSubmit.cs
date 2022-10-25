@@ -44,9 +44,10 @@ public sealed class FormButtonSubmit : ComponentBase {
 		public bool IsSubmitting { get; private set; }
 		public string? SubmitError { get; private set; }
 
-		public void StartSubmitting() {
+		public async Task StartSubmitting() {
 			IsSubmitting = true;
 			SubmitError = null;
+			await Task.Yield();
 		}
 		
 		public void StopSubmitting(string? error = null) {
