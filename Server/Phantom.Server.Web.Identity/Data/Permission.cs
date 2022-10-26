@@ -10,17 +10,27 @@ public sealed record Permission(string Id, Permission? Parent) {
 		return permission;
 	}
 
+	private Permission RegisterChild(string id) {
+		return Register(id, this);
+	}
+
 	public const string ViewInstancesPolicy = "Instances.View";
 	public static readonly Permission ViewInstances = Register(ViewInstancesPolicy);
 	
+	public const string ViewInstanceLogsPolicy = "Instances.Logs.View";
+	public static readonly Permission ViewInstanceLogs = ViewInstances.RegisterChild(ViewInstanceLogsPolicy);
+	
 	public const string CreateInstancesPolicy = "Instances.Create";
-	public static readonly Permission CreateInstances = Register(CreateInstancesPolicy, parent: ViewInstances);
+	public static readonly Permission CreateInstances = ViewInstances.RegisterChild(CreateInstancesPolicy);
+	
+	public const string ControlInstancesPolicy = "Instances.Control";
+	public static readonly Permission ControlInstances = ViewInstances.RegisterChild(ControlInstancesPolicy);
 	
 	public const string ViewUsersPolicy = "Users.View";
 	public static readonly Permission ViewUsers = Register(ViewUsersPolicy);
 	
 	public const string EditUsersPolicy = "Users.Edit";
-	public static readonly Permission EditUsers = Register(EditUsersPolicy, parent: ViewUsers);
+	public static readonly Permission EditUsers = ViewUsers.RegisterChild(EditUsersPolicy);
 	
 	public const string ViewAuditPolicy = "Audit.View";
 	public static readonly Permission ViewAudit = Register(ViewAuditPolicy);

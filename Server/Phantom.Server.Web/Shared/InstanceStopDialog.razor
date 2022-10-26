@@ -51,7 +51,7 @@
   private async Task StopInstance(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    if (!await CheckPermission(Permission.ViewInstances)) {
+    if (!await CheckPermission(Permission.ControlInstances)) {
       form.SubmitModel.StopSubmitting("You do not have permission to stop instances.");
       return;
     }

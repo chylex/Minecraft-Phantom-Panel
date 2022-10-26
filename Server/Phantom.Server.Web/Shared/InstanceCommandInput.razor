@@ -34,7 +34,7 @@
   private async Task ExecuteCommand(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    if (!await CheckPermission(Permission.ViewInstances)) {
+    if (!await CheckPermission(Permission.ControlInstances)) {
       form.SubmitModel.StopSubmitting("You do not have permission to execute commands.");
       return;
     }

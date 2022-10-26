@@ -1,5 +1,6 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
+@inherits PhantomComponent
 @using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Replies
 @using Phantom.Server.Services.Audit
@@ -15,23 +16,28 @@
 else {
   <h1>Instance: @Instance.Configuration.InstanceName</h1>
   <div class="d-flex flex-row align-items-center gap-2">
-    <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
-    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#stop-instance" disabled="@(!Instance.Status.CanStop())">Stop...</button>
-    <div class="ms-2">
-      <InstanceStatusText Status="Instance.Status" />
-    </div>
+    <PermissionView Permission="Permission.ControlInstances">
+      <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#stop-instance" disabled="@(!Instance.Status.CanStop())">Stop...</button>
+      <span><!-- extra spacing --></span>
+    </PermissionView>
+    <InstanceStatusText Status="Instance.Status" />
   </div>
   @if (lastError != null) {
-    <p class="text-danger">@lastError</p>
+    <p class="text-danger mt-2">@lastError</p>
   }
-  
-  <InstanceLog InstanceGuid="InstanceGuid" />
 
-  <div class="mb-3">
-    <InstanceCommandInput InstanceGuid="InstanceGuid" Disabled="@(!Instance.Status.CanSendCommand())" />
-  </div>
-  
-  <InstanceStopDialog InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
+  <PermissionView Permission="Permission.ViewInstanceLogs">
+    <InstanceLog InstanceGuid="InstanceGuid" />
+  </PermissionView>
+
+  <PermissionView Permission="Permission.ControlInstances">
+    <div class="mb-3">
+      <InstanceCommandInput InstanceGuid="InstanceGuid" Disabled="@(!Instance.Status.CanSendCommand())" />
+    </div>
+
+    <InstanceStopDialog InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
+  </PermissionView>
 }
 
 @code {
@@ -58,15 +64,22 @@ else {
     isLaunchingInstance = true;
     lastError = null;
 
-    var result = await InstanceManager.LaunchInstance(InstanceGuid);
-    if (result == LaunchInstanceResult.LaunchInitiated) {
-      await AuditLog.AddInstanceLaunchedEvent(InstanceGuid);
+    try {
+      if (!await CheckPermission(Permission.ControlInstances)) {
+        lastError = "You do not have permission to launch instances.";
+        return;
+      }
+
+      var result = await InstanceManager.LaunchInstance(InstanceGuid);
+      if (result == LaunchInstanceResult.LaunchInitiated) {
+        await AuditLog.AddInstanceLaunchedEvent(InstanceGuid);
+      }
+      else {
+        lastError = result.ToSentence();
+      }
+    } finally {
+      isLaunchingInstance = false;
     }
-    else {
-      lastError = result.ToSentence();
-    }
-    
-    isLaunchingInstance = false;
   }
 
   public void Dispose() {

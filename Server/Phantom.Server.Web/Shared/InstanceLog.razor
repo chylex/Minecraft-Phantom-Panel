@@ -58,7 +58,7 @@
   private async Task RecheckPermissions() {
     recheckPermissionsStopwatch.Restart();
     
-    if (!await CheckPermission(Permission.ViewInstances)) {
+    if (!await CheckPermission(Permission.ViewInstanceLogs)) {
       await Task.Yield();
       Dispose();
       instanceLogs = new RingBuffer<string>(0);
