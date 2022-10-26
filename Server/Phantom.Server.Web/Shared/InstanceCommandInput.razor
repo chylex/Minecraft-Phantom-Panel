@@ -1,0 +1,49 @@
+﻿@using Phantom.Common.Data.Replies
+@using Phantom.Server.Services.Audit
+@using Phantom.Server.Services.Instances
+@inject InstanceManager InstanceManager
+@inject AuditLog AuditLog
+
+<Form Model="form" OnSubmit="ExecuteCommand">
+  <label for="command-input" class="form-label">Instance Name</label>
+  <div class="input-group flex-nowrap">
+    <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
+    <input id="command-input" class="form-control" type="text" placeholder="command" @bind="form.Command" @bind:event="oninput" disabled="@(Disabled || form.SubmitModel.IsSubmitting)" @ref="commandInputElement" />
+    <FormButtonSubmit Label="Execute" class="btn btn-primary" disabled="@(Disabled || string.IsNullOrWhiteSpace(form.Command))" />
+  </div>
+  <FormSubmitError />
+</Form>
+
+@code {
+  
+  [Parameter]
+  public Guid InstanceGuid { get; set; }
+
+  [Parameter]
+  public bool Disabled { get; set; }
+
+  private readonly SendCommandFormModel form = new ();
+  
+  private sealed class SendCommandFormModel : FormModel {
+    public string Command { get; set; } = string.Empty;
+  }
+  
+  private ElementReference commandInputElement;
+
+  private async Task ExecuteCommand(EditContext context) {
+    await form.SubmitModel.StartSubmitting();
+
+    var result = await InstanceManager.SendCommand(InstanceGuid, form.Command);
+    if (result == SendCommandToInstanceResult.Success) {
+      await AuditLog.AddInstanceCommandExecutedEvent(InstanceGuid, form.Command);
+      form.Command = string.Empty;
+      form.SubmitModel.StopSubmitting();
+    }
+    else {
+      form.SubmitModel.StopSubmitting(result.ToSentence());
+    }
+
+    await commandInputElement.FocusAsync(preventScroll: true);
+  }
+  
+}
