@@ -1,6 +1,7 @@
 ﻿@using Phantom.Common.Data.Replies
 @using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances
+@inherits PhantomComponent
 @inject InstanceManager InstanceManager
 @inject AuditLog AuditLog
 
@@ -32,6 +33,11 @@
 
   private async Task ExecuteCommand(EditContext context) {
     await form.SubmitModel.StartSubmitting();
+
+    if (!await CheckPermission(Permission.ViewInstances)) {
+      form.SubmitModel.StopSubmitting("You do not have permission to execute commands.");
+      return;
+    }
 
     var result = await InstanceManager.SendCommand(InstanceGuid, form.Command);
     if (result == SendCommandToInstanceResult.Success) {

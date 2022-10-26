@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using Phantom.Server.Services.Audit
+@inherits PhantomComponent
 @inject IJSRuntime Js;
 @inject UserManager<IdentityUser> UserManager
 @inject AuditLog AuditLog
@@ -37,6 +38,11 @@
 
   private async Task DeleteUser() {
     await submitModel.StartSubmitting();
+
+    if (!await CheckPermission(Permission.EditUsers)) {
+      submitModel.StopSubmitting("You do not have permission to delete users.");
+      return;
+    }
 
     if (userToDelete == null) {
       submitModel.StopSubmitting("Invalid user.");

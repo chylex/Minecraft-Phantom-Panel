@@ -1,6 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using Phantom.Server.Services.Audit
 @using System.ComponentModel.DataAnnotations
+@inherits PhantomComponent
 @inject IJSRuntime Js;
 @inject UserManager<IdentityUser> UserManager
 @inject AuditLog AuditLog
@@ -50,6 +51,11 @@
 
   private async Task AddUser(EditContext context) {
     await form.SubmitModel.StartSubmitting();
+
+    if (!await CheckPermission(Permission.EditUsers)) {
+      form.SubmitModel.StopSubmitting("You do not have permission to add users.");
+      return;
+    }
 
     var user = new IdentityUser(form.Username);
     var result = await UserManager.CreateAsync(user, form.Password);

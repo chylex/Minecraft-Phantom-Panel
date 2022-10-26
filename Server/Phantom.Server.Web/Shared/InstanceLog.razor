@@ -1,6 +1,8 @@
-﻿@using Phantom.Server.Services.Instances
+﻿@inherits PhantomComponent
+@using Phantom.Server.Services.Instances
 @using Phantom.Utils.Collections
 @using Phantom.Utils.Events
+@using System.Diagnostics
 @implements IDisposable
 @inject IJSRuntime Js;
 @inject InstanceLogManager InstanceLogManager
@@ -11,28 +13,30 @@
   }
 </div>
 
-
 @code {
 
   [Parameter, EditorRequired]
   public Guid InstanceGuid { get; set; }
-  
+
   private IJSObjectReference? PageJs { get; set; }
 
   private EventSubscribers<RingBuffer<string>> instanceLogsSubs = null!;
   private RingBuffer<string> instanceLogs = null!;
 
+  private readonly Stopwatch recheckPermissionsStopwatch = Stopwatch.StartNew();
+
   protected override void OnInitialized() {
     instanceLogsSubs = InstanceLogManager.GetSubs(InstanceGuid);
     instanceLogsSubs.Subscribe(this, buffer => {
       instanceLogs = buffer;
-      InvokeAsync(RefreshLog);
+      InvokeAsyncChecked(RefreshLog);
     });
   }
 
   protected override async Task OnAfterRenderAsync(bool firstRender) {
     if (firstRender) {
       PageJs = await Js.InvokeAsync<IJSObjectReference>("import", "./Shared/InstanceLog.razor.js");
+      await RecheckPermissions();
       StateHasChanged();
 
       await PageJs.InvokeVoidAsync("initLog");
@@ -40,6 +44,10 @@
   }
 
   private async Task RefreshLog() {
+    if (recheckPermissionsStopwatch.Elapsed > TimeSpan.FromSeconds(2)) {
+      await RecheckPermissions();
+    }
+
     StateHasChanged();
 
     if (PageJs != null) {
@@ -47,7 +55,18 @@
     }
   }
 
+  private async Task RecheckPermissions() {
+    recheckPermissionsStopwatch.Restart();
+    
+    if (!await CheckPermission(Permission.ViewInstances)) {
+      await Task.Yield();
+      Dispose();
+      instanceLogs = new RingBuffer<string>(0);
+    }
+  }
+
   public void Dispose() {
     instanceLogsSubs.Unsubscribe(this);
   }
+
 }

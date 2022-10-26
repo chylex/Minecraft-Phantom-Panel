@@ -3,6 +3,7 @@
 @using Phantom.Server.Services.Instances
 @using System.ComponentModel.DataAnnotations
 @using Phantom.Common.Data.Minecraft
+@inherits PhantomComponent
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
 @inject AuditLog AuditLog
@@ -50,6 +51,11 @@
   private async Task StopInstance(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
+    if (!await CheckPermission(Permission.ViewInstances)) {
+      form.SubmitModel.StopSubmitting("You do not have permission to stop instances.");
+      return;
+    }
+    
     var result = await InstanceManager.StopInstance(InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds));
     if (result == StopInstanceResult.StopInitiated) {
       await AuditLog.AddInstanceStoppedEvent(InstanceGuid, form.StopInSeconds);

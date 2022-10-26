@@ -6,6 +6,10 @@ public sealed class RingBuffer<T> {
 	private int writeIndex;
 
 	public RingBuffer(int capacity) {
+		if (capacity < 0) {
+			throw new ArgumentException("Capacity must not be negative.", nameof(capacity));
+		}
+		
 		this.buffer = new T[capacity];
 	}
 	
@@ -19,6 +23,10 @@ public sealed class RingBuffer<T> {
 	}
 	
 	public void Add(T item) {
+		if (Capacity == 0) {
+			throw new InvalidOperationException("Ring buffer has no capacity.");
+		}
+		
 		buffer[writeIndex++] = item;
 		Count = Math.Max(writeIndex, Count);
 		writeIndex %= Capacity;
@@ -30,6 +38,10 @@ public sealed class RingBuffer<T> {
 	}
 
 	public IEnumerable<T> EnumerateLast(uint maximumItems) {
+		if (Capacity == 0) {
+			yield break;
+		}
+		
 		int totalItemsToReturn = (int) Math.Min(maximumItems, Count);
 		
 		// Yield items until we hit the end of the buffer.

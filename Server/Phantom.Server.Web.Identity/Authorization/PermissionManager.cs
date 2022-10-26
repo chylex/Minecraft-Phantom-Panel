@@ -22,12 +22,12 @@ public sealed class PermissionManager {
 		return new IdentityPermissions(userPermissions.Union(rolePermissions));
 	}
 
-	private IdentityPermissions GetPermissionsForUserId(string? userId) {
+	private IdentityPermissions GetPermissionsForUserId(string? userId, bool refreshCache) {
 		if (userId == null) {
 			return IdentityPermissions.None;
 		}
 
-		if (userIdsToPermissionIds.TryGetValue(userId, out var userPermissions)) {
+		if (!refreshCache && userIdsToPermissionIds.TryGetValue(userId, out var userPermissions)) {
 			return userPermissions;
 		}
 		else {
@@ -35,11 +35,11 @@ public sealed class PermissionManager {
 		}
 	}
 
-	public IdentityPermissions GetPermissions(ClaimsPrincipal user) {
-		return GetPermissionsForUserId(identityLookup.GetAuthenticatedUserId(user));
+	public IdentityPermissions GetPermissions(ClaimsPrincipal user, bool refreshCache = false) {
+		return GetPermissionsForUserId(identityLookup.GetAuthenticatedUserId(user), refreshCache);
 	}
 
-	public bool CheckPermission(ClaimsPrincipal user, Permission permission) {
-		return GetPermissions(user).Check(permission);
+	public bool CheckPermission(ClaimsPrincipal user, Permission permission, bool refreshCache = false) {
+		return GetPermissions(user, refreshCache).Check(permission);
 	}
 }
