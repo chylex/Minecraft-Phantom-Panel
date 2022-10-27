@@ -25,6 +25,22 @@ public sealed partial class AuditLog {
 	public Task AddUserCreatedEvent(IdentityUser user) {
 		return AddEvent(AuditEventType.UserCreated, user.Id);
 	}
+
+	public Task AddUserRolesChangedEvent(IdentityUser user, List<string> addedToRoles, List<string> removedFromRoles) {
+		var extra = new Dictionary<string, object?> {
+			{ "username", user.UserName },
+		};
+		
+		if (addedToRoles.Count > 0) {
+			extra["addedToRoles"] = addedToRoles;
+		}
+		
+		if (removedFromRoles.Count > 0) {
+			extra["removedFromRoles"] = removedFromRoles;
+		}
+		
+		return AddEvent(AuditEventType.UserDeleted, user.Id, extra);
+	}
 	
 	public Task AddUserDeletedEvent(IdentityUser user) {
 		return AddEvent(AuditEventType.UserDeleted, user.Id, new Dictionary<string, object?> {

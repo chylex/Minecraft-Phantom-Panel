@@ -1,0 +1,120 @@
+﻿@using Phantom.Utils.Collections
+@using System.Collections.Immutable
+@using Microsoft.AspNetCore.Identity
+@using Phantom.Server.Services.Audit
+@inherits PhantomComponent
+@inject IJSRuntime Js;
+@inject UserManager<IdentityUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject AuditLog AuditLog
+
+<Modal Id="@ModalId" TitleText="Manage User Roles">
+  <Body>
+    Roles for user: <strong>@username</strong><br>
+    @for (var index = 0; index < items.Count; index++) {
+      var item = items[index];
+      <div class="mt-1">
+        <input id="role-@index" type="checkbox" class="form-check-input" @bind="@item.Checked" />
+        <label for="role-@index" class="form-check-label">@item.Name</label>
+      </div>
+    }
+  </Body>
+  <Footer>
+    <FormSubmitError Model="submitModel" />
+    <FormButtonSubmit Model="submitModel" Label="Save Roles" type="button" class="btn btn-success" @onclick="UpdateUser" />
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="() => userToEdit = null">Cancel</button>
+  </Footer>
+</Modal>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public string ModalId { get; set; } = string.Empty;
+
+  [Parameter]
+  public EventCallback<IdentityUser> UserRolesChanged { get; set; }
+
+  private readonly FormButtonSubmit.SubmitModel submitModel = new();
+
+  private IdentityUser? userToEdit = null;
+  private string username = string.Empty;
+  private List<RoleItem> items = new();
+
+  public async Task Show(IdentityUser user) {
+    this.userToEdit = user;
+    this.username = user.UserName ?? $"<{user.Id}>";
+
+    var userRoles = await GetUserRoles(user);
+    this.items = RoleManager.Roles
+                            .Select(static role => role.Name)
+                            .AsEnumerable()
+                            .WhereNotNull()
+                            .Select(role => new RoleItem(role, userRoles.Contains(role)))
+                            .ToList();
+
+    StateHasChanged();
+    await Js.InvokeVoidAsync("showModal", ModalId);
+  }
+
+  private async Task UpdateUser() {
+    await submitModel.StartSubmitting();
+
+    if (!await CheckPermission(Permission.EditUsers)) {
+      submitModel.StopSubmitting("You do not have permission to edit users.");
+      return;
+    }
+
+    if (userToEdit == null) {
+      submitModel.StopSubmitting("Invalid user.");
+      return;
+    }
+
+    var userRoles = await GetUserRoles(userToEdit);
+    var addedToRoles = new List<string>();
+    var removedFromRoles = new List<string>();
+    var errors = new List<string>();
+
+    foreach (var item in items) {
+      var shouldHaveRole = item.Checked;
+      var roleName = item.Name;
+
+      if (shouldHaveRole == userRoles.Contains(roleName)) {
+        continue;
+      }
+
+      var result = shouldHaveRole ? await UserManager.AddToRoleAsync(userToEdit, roleName) : await UserManager.RemoveFromRoleAsync(userToEdit, roleName);
+      if (result.Succeeded) {
+        var modifiedList = shouldHaveRole ? addedToRoles : removedFromRoles;
+        modifiedList.Add(roleName);
+      }
+      else {
+        errors.AddRange(result.Errors.Select(static error => error.Description));
+      }
+    }
+
+    if (errors.Count == 0) {
+      await AuditLog.AddUserRolesChangedEvent(userToEdit, addedToRoles, removedFromRoles);
+      await UserRolesChanged.InvokeAsync(userToEdit);
+      await Js.InvokeVoidAsync("closeModal", ModalId);
+      submitModel.StopSubmitting();
+    }
+    else {
+      submitModel.StopSubmitting(string.Join("\n", errors));
+    }
+  }
+
+  private async Task<ImmutableHashSet<string>> GetUserRoles(IdentityUser user) {
+    return (await UserManager.GetRolesAsync(user)).ToImmutableHashSet();
+  }
+
+  private sealed class RoleItem {
+    public string Name { get; }
+    public bool Checked { get; set; }
+
+    public RoleItem(string name, bool @checked) {
+      this.Name = name;
+      this.Checked = @checked;
+    }
+  }
+
+}

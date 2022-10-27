@@ -19,7 +19,7 @@
       <Column Width="125px; 40%">Username</Column>
       <Column Width="125px; 60%">Roles</Column>
       <PermissionView Permission="Permission.EditUsers">
-        <Column Width="100px">Actions</Column>
+        <Column Width="175px">Actions</Column>
       </PermissionView>
     </tr>
   </thead>
@@ -34,6 +34,7 @@
         <PermissionView Permission="Permission.EditUsers">
           <td>
             @if (IdentityLookup.GetAuthenticatedUserId(context.User) != user.Id) {
+              <button class="btn btn-primary btn-sm" @onclick="() => userRolesDialog.Show(user)">Edit Roles</button>
               <button class="btn btn-danger btn-sm" @onclick="() => userDeleteDialog.Show(user)">Delete...</button>
             }
           </td>
@@ -45,35 +46,43 @@
 
 <PermissionView Permission="Permission.EditUsers">
   <UserAddDialog ModalId="add-user" UserAdded="OnUserAdded" />
+  <UserRolesDialog @ref="userRolesDialog" ModalId="manage-user-roles" UserRolesChanged="OnUserRolesChanged" />
   <UserDeleteDialog @ref="userDeleteDialog" ModalId="delete-user" UserDeleted="OnUserDeleted" />
 </PermissionView>
 
 @code {
 
   private ImmutableArray<IdentityUser> allUsers = ImmutableArray<IdentityUser>.Empty;
-  private ImmutableDictionary<string, string> userRoles = ImmutableDictionary<string, string>.Empty;
+  private readonly Dictionary<string, string> userRoles = new ();
 
+  private UserRolesDialog userRolesDialog = null!;
   private UserDeleteDialog userDeleteDialog = null!;
 
   protected override void OnInitialized() {
-    allUsers = UserManager.Users.ToImmutableArray();
+    allUsers = UserManager.Users.OrderBy(static user => user.UserName).ToImmutableArray();
   }
 
   protected override async Task OnInitializedAsync() {
-    var userRolesBuilder = ImmutableDictionary.CreateBuilder<string, string>();
-
     foreach (var user in allUsers) {
-      var roles = await UserManager.GetRolesAsync(user);
-      if (roles.Count > 0) {
-        userRolesBuilder.Add(user.Id, string.Join(", ", roles));
-      }
+      await RefreshUserRoles(user);
     }
-
-    userRoles = userRolesBuilder.ToImmutable();
   }
 
+  private async Task RefreshUserRoles(IdentityUser user) {
+    var roles = await UserManager.GetRolesAsync(user);
+    if (roles.Count > 0) {
+      userRoles[user.Id] = string.Join(", ", roles);
+    } else {
+      userRoles.Remove(user.Id);
+    }
+  }
+  
   private void OnUserAdded(IdentityUser user) {
     allUsers = allUsers.Add(user);
+  }
+
+  private async Task OnUserRolesChanged(IdentityUser user) {
+    await RefreshUserRoles(user);
   }
 
   private void OnUserDeleted(IdentityUser user) {
