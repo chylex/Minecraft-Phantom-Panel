@@ -1,63 +1,31 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using Phantom.Server.Services.Audit
-@inherits PhantomComponent
-@inject IJSRuntime Js;
+@inherits UserEditDialogBase
 @inject UserManager<IdentityUser> UserManager
 @inject AuditLog AuditLog
 
 <Modal Id="@ModalId" TitleText="Delete User">
   <Body>
-    You are about to delete the user <strong>@usernameToDelete</strong>.<br>
+    You are about to delete the user <strong class="fw-semibold">@EditedUserName</strong>.<br>
     This action cannot be undone.
   </Body>
   <Footer>
-    <FormSubmitError Model="submitModel" />
-    <FormButtonSubmit Model="submitModel" Label="Delete User" type="button" class="btn btn-danger" @onclick="DeleteUser" />
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="() => userToDelete = null">Cancel</button>
+    <FormSubmitError Model="SubmitModel" />
+    <FormButtonSubmit Model="SubmitModel" Label="Delete User" type="button" class="btn btn-danger" @onclick="Submit" />
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="OnClosed">Cancel</button>
   </Footer>
 </Modal>
 
 @code {
 
-  [Parameter, EditorRequired]
-  public string ModalId { get; set; } = string.Empty;
-
-  [Parameter]
-  public EventCallback<IdentityUser> UserDeleted { get; set; }
-
-  private readonly FormButtonSubmit.SubmitModel submitModel = new();
-
-  private IdentityUser? userToDelete = null;
-  private string usernameToDelete = string.Empty; // Not reset when the modal is closed to prevent re-rendering modal body.
-
-  public async Task Show(IdentityUser user) {
-    userToDelete = user;
-    usernameToDelete = user.UserName ?? $"<{user.Id}>";
-    await Js.InvokeVoidAsync("showModal", ModalId);
-  }
-
-  private async Task DeleteUser() {
-    await submitModel.StartSubmitting();
-
-    if (!await CheckPermission(Permission.EditUsers)) {
-      submitModel.StopSubmitting("You do not have permission to delete users.");
-      return;
-    }
-
-    if (userToDelete == null) {
-      submitModel.StopSubmitting("Invalid user.");
-      return;
-    }
-
-    var result = await UserManager.DeleteAsync(userToDelete);
+  protected override async Task DoEdit(IdentityUser user) {
+    var result = await UserManager.DeleteAsync(user);
     if (result.Succeeded) {
-      await AuditLog.AddUserDeletedEvent(userToDelete);
-      await UserDeleted.InvokeAsync(userToDelete);
-      await Js.InvokeVoidAsync("closeModal", ModalId);
-      submitModel.StopSubmitting();
+      await AuditLog.AddUserDeletedEvent(user);
+      await OnEditSuccess();
     }
     else {
-      submitModel.StopSubmitting(string.Join("\n", result.Errors.Select(static error => error.Description)));
+      OnEditFailure(string.Join("\n", result.Errors.Select(static error => error.Description)));
     }
   }
 

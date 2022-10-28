@@ -4,6 +4,7 @@
 @using Phantom.Server.Services.Users
 @attribute [Authorize(Permission.ViewUsersPolicy)]
 @inject UserManager<IdentityUser> UserManager
+@inject PermissionManager PermissionManager
 @inject IdentityLookup IdentityLookup
 
 <h1>Users</h1>
@@ -12,48 +13,59 @@
   <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#add-user">Add User...</button>
 </PermissionView>
 
-<table class="table align-middle">
-  <thead>
-    <tr>
-      <Column Width="315px">Identifier</Column>
-      <Column Width="125px; 40%">Username</Column>
-      <Column Width="125px; 60%">Roles</Column>
-      <PermissionView Permission="Permission.EditUsers">
-        <Column Width="175px">Actions</Column>
-      </PermissionView>
-    </tr>
-  </thead>
-  <tbody>
-    @foreach (var user in allUsers) {
-      <tr>
-        <td>
-          <code class="text-uppercase">@user.Id</code>
-        </td>
-        <td>@user.UserName</td>
-        <td>@(userRoles.TryGetValue(user.Id, out var roles) ? roles : "-")</td>
-        <PermissionView Permission="Permission.EditUsers">
-          <td>
-            @if (IdentityLookup.GetAuthenticatedUserId(context.User) != user.Id) {
-              <button class="btn btn-primary btn-sm" @onclick="() => userRolesDialog.Show(user)">Edit Roles</button>
-              <button class="btn btn-danger btn-sm" @onclick="() => userDeleteDialog.Show(user)">Delete...</button>
+<AuthorizeView>
+  <Authorized>
+    @{ var canEdit = PermissionManager.CheckPermission(context.User, Permission.EditUsers); }
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <Column Width="315px">Identifier</Column>
+          <Column Width="125px; 40%">Username</Column>
+          <Column Width="125px; 60%">Roles</Column>
+          @if (canEdit) {
+            <Column Width="175px">Actions</Column>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var user in allUsers) {
+          var isMe = IdentityLookup.GetAuthenticatedUserId(context.User) == user.Id;
+          <tr>
+            <td>
+              <code class="text-uppercase">@user.Id</code>
+            </td>
+            @if (isMe) {
+              <td class="fw-semibold">@user.UserName</td>
             }
-          </td>
-        </PermissionView>
-      </tr>
-    }
-  </tbody>
-</table>
+            else {
+              <td>@user.UserName</td>
+            }
+            <td>@(userRoles.TryGetValue(user.Id, out var roles) ? roles : "-")</td>
+            @if (canEdit) {
+              <td>
+                @if (!isMe) {
+                  <button class="btn btn-primary btn-sm" @onclick="() => userRolesDialog.Show(user)">Edit Roles</button>
+                  <button class="btn btn-danger btn-sm" @onclick="() => userDeleteDialog.Show(user)">Delete...</button>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </Authorized>
+</AuthorizeView>
 
 <PermissionView Permission="Permission.EditUsers">
   <UserAddDialog ModalId="add-user" UserAdded="OnUserAdded" />
-  <UserRolesDialog @ref="userRolesDialog" ModalId="manage-user-roles" UserRolesChanged="OnUserRolesChanged" />
-  <UserDeleteDialog @ref="userDeleteDialog" ModalId="delete-user" UserDeleted="OnUserDeleted" />
+  <UserRolesDialog @ref="userRolesDialog" ModalId="manage-user-roles" UserModified="OnUserRolesChanged" />
+  <UserDeleteDialog @ref="userDeleteDialog" ModalId="delete-user" UserModified="OnUserDeleted" />
 </PermissionView>
 
 @code {
 
   private ImmutableArray<IdentityUser> allUsers = ImmutableArray<IdentityUser>.Empty;
-  private readonly Dictionary<string, string> userRoles = new ();
+  private readonly Dictionary<string, string> userRoles = new();
 
   private UserRolesDialog userRolesDialog = null!;
   private UserDeleteDialog userDeleteDialog = null!;
@@ -72,11 +84,12 @@
     var roles = await UserManager.GetRolesAsync(user);
     if (roles.Count > 0) {
       userRoles[user.Id] = string.Join(", ", roles);
-    } else {
+    }
+    else {
       userRoles.Remove(user.Id);
     }
   }
-  
+
   private void OnUserAdded(IdentityUser user) {
     allUsers = allUsers.Add(user);
   }
