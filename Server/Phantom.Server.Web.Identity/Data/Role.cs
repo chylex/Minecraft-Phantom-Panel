@@ -13,4 +13,5 @@ public sealed record Role(string Name, ImmutableArray<Permission> Permissions) {
 	}
 
 	public static readonly Role Administrator = Register("Administrator", Permission.All.ToImmutableArray());
+	public static readonly Role InstanceManager = Register("Instance Manager", ImmutableArray.Create(Permission.ViewInstances, Permission.ViewInstanceLogs, Permission.CreateInstances, Permission.ControlInstances));
 }
