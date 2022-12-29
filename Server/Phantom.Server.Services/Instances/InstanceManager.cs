@@ -54,21 +54,21 @@ public sealed class InstanceManager {
 		}
 	}
 
-	public async Task<AddInstanceResult> AddInstance(InstanceConfiguration configuration) {
+	public async Task<InstanceActionResult<AddInstanceResult>> AddInstance(InstanceConfiguration configuration) {
 		var agent = agentManager.GetAgent(configuration.AgentGuid);
 		if (agent == null) {
-			return AddInstanceResult.AgentNotFound;
+			return InstanceActionResult.Concrete(AddInstanceResult.AgentNotFound);
 		}
 
 		var instance = new Instance(configuration);
 		if (!instances.ByGuid.TryAdd(instance.Configuration.InstanceGuid, instance)) {
-			return AddInstanceResult.InstanceAlreadyExists;
+			return InstanceActionResult.Concrete(AddInstanceResult.InstanceAlreadyExists);
 		}
 
 		var agentName = agent.Name;
 
-		var reply = (ConfigureInstanceResult?) await agentManager.SendMessageWithReply(configuration.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, configuration), TimeSpan.FromSeconds(10));
-		if (reply == ConfigureInstanceResult.Success) {
+		var reply = (await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, configuration), TimeSpan.FromSeconds(10))).DidNotReplyIfNull();
+		if (reply.Is(ConfigureInstanceResult.Success)) {
 			using (var scope = databaseProvider.CreateScope()) {
 				InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
 
@@ -87,20 +87,18 @@ public sealed class InstanceManager {
 			}
 
 			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", configuration.InstanceName, configuration.InstanceGuid, agentName);
-			return AddInstanceResult.Success;
+			return InstanceActionResult.Concrete(AddInstanceResult.Success);
 		}
 		else {
 			instances.ByGuid.Remove(configuration.InstanceGuid);
 
-			var result = reply switch {
-				null                                          => AddInstanceResult.AgentCommunicationError,
-				ConfigureInstanceResult.AgentShuttingDown     => AddInstanceResult.AgentShuttingDown,
+			var result = reply.Map(static result => result switch {
 				ConfigureInstanceResult.InstanceLimitExceeded => AddInstanceResult.AgentInstanceLimitExceeded,
 				ConfigureInstanceResult.MemoryLimitExceeded   => AddInstanceResult.AgentMemoryLimitExceeded,
 				_                                             => AddInstanceResult.UnknownError
-			};
-
-			Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", configuration.InstanceName, configuration.InstanceGuid, agentName, result.ToSentence());
+			});
+			
+			Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", configuration.InstanceName, configuration.InstanceGuid, agentName, result.ToSentence(AddInstanceResultExtensions.ToSentence));
 			return result;
 		}
 	}
@@ -121,28 +119,28 @@ public sealed class InstanceManager {
 		instances.ByGuid.ReplaceAllIf(instance => instance with { Status = instanceStatus }, instance => instance.Configuration.AgentGuid == agentGuid);
 	}
 
-	public async Task<LaunchInstanceResult> LaunchInstance(Guid instanceGuid) {
+	public async Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(Guid instanceGuid) {
 		var instance = GetInstance(instanceGuid);
 		if (instance == null) {
-			return LaunchInstanceResult.InstanceDoesNotExist;
+			return InstanceActionResult.General<LaunchInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
 		}
 
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, true);
 
-		var reply = (LaunchInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
-		return reply ?? LaunchInstanceResult.CommunicationError;
+		var reply = await agentManager.SendMessage<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(instance.Configuration.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
+		return reply.DidNotReplyIfNull();
 	}
 
-	public async Task<StopInstanceResult> StopInstance(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
+	public async Task<InstanceActionResult<StopInstanceResult>> StopInstance(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
 		var instance = GetInstance(instanceGuid);
 		if (instance == null) {
-			return StopInstanceResult.InstanceDoesNotExist;
+			return InstanceActionResult.General<StopInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
 		}
 
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, false);
 
-		var reply = (StopInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid, stopStrategy), TimeSpan.FromSeconds(10));
-		return reply ?? StopInstanceResult.CommunicationError;
+		var reply = await agentManager.SendMessage<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid, stopStrategy), TimeSpan.FromSeconds(10));
+		return reply.DidNotReplyIfNull();
 	}
 
 	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
@@ -158,14 +156,14 @@ public sealed class InstanceManager {
 		}
 	}
 
-	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
+	public async Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommand(Guid instanceGuid, string command) {
 		var instance = GetInstance(instanceGuid);
-		if (instance != null) {
-			var reply = (SendCommandToInstanceResult?) await agentManager.SendMessageWithReply(instance.Configuration.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
-			return reply ?? SendCommandToInstanceResult.AgentCommunicationError;
+		if (instance == null) {
+			return InstanceActionResult.General<SendCommandToInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
 		}
 
-		return SendCommandToInstanceResult.InstanceDoesNotExist;
+		var reply = await agentManager.SendMessage<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(instance.Configuration.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
+		return reply.DidNotReplyIfNull();
 	}
 
 	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {

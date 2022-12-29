@@ -1,5 +1,4 @@
-﻿using NetMQ.Sockets;
-using Phantom.Common.Logging;
+﻿using Phantom.Common.Logging;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Runtime;
 using Serilog;
@@ -11,11 +10,11 @@ sealed class KeepAliveLoop {
 
 	private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(10);
 
-	private readonly ClientSocket socket;
+	private readonly RpcServerConnection connection;
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
 
-	public KeepAliveLoop(ClientSocket socket, TaskManager taskManager) {
-		this.socket = socket;
+	public KeepAliveLoop(RpcServerConnection connection, TaskManager taskManager) {
+		this.connection = connection;
 		taskManager.Run(Run);
 	}
 
@@ -26,7 +25,7 @@ sealed class KeepAliveLoop {
 		try {
 			while (true) {
 				await Task.Delay(KeepAliveInterval, cancellationToken);
-				await socket.SendMessage(new AgentIsAliveMessage());
+				await connection.Send(new AgentIsAliveMessage());
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.

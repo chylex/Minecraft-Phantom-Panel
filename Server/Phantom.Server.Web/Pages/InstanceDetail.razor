@@ -71,11 +71,11 @@ else {
       }
 
       var result = await InstanceManager.LaunchInstance(InstanceGuid);
-      if (result == LaunchInstanceResult.LaunchInitiated) {
+      if (result.Is(LaunchInstanceResult.LaunchInitiated)) {
         await AuditLog.AddInstanceLaunchedEvent(InstanceGuid);
       }
       else {
-        lastError = result.ToSentence();
+        lastError = result.ToSentence(LaunchInstanceResultExtensions.ToSentence);
       }
     } finally {
       isLaunchingInstance = false;

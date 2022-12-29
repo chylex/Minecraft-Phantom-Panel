@@ -1,8 +1,8 @@
-﻿@using Phantom.Common.Data.Replies
+﻿@using Phantom.Server.Services.Instances
 @using Phantom.Server.Services.Audit
-@using Phantom.Server.Services.Instances
 @using System.ComponentModel.DataAnnotations
 @using Phantom.Common.Data.Minecraft
+@using Phantom.Common.Data.Replies
 @inherits PhantomComponent
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
@@ -57,13 +57,13 @@
     }
     
     var result = await InstanceManager.StopInstance(InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds));
-    if (result == StopInstanceResult.StopInitiated) {
+    if (result.Is(StopInstanceResult.StopInitiated)) {
       await AuditLog.AddInstanceStoppedEvent(InstanceGuid, form.StopInSeconds);
       await Js.InvokeVoidAsync("closeModal", ModalId);
       form.SubmitModel.StopSubmitting();
     }
     else {
-      form.SubmitModel.StopSubmitting(result.ToSentence());
+      form.SubmitModel.StopSubmitting(result.ToSentence(StopInstanceResultExtensions.ToSentence));
     }
   }
 

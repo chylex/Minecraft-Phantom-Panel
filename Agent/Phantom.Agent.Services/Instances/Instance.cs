@@ -51,7 +51,7 @@ sealed class Instance : IDisposable {
 	}
 
 	private async Task ReportLastStatus() {
-		await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
+		await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
 	}
 	
 	private void TransitionState(IInstanceState newState) {
@@ -143,7 +143,7 @@ sealed class Instance : IDisposable {
 			instance.launchServices.TaskManager.Run(async () => {
 				if (myStatusUpdateCounter == statusUpdateCounter) {
 					instance.currentStatus = newStatus;
-					await ServerMessaging.SendMessage(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
+					await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
 				}
 			});
 		}

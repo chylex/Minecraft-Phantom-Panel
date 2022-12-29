@@ -2,4 +2,8 @@
 
 namespace Phantom.Common.Messages; 
 
-public interface IMessageToServer : IMessage<IMessageToServerListener> {}
+public interface IMessageToServer<TReply> : IMessage<IMessageToServerListener, TReply> {}
+
+public interface IMessageToServer : IMessageToServer<NoReply> {
+	uint IMessage<IMessageToServerListener, NoReply>.SequenceId => 0;
+}

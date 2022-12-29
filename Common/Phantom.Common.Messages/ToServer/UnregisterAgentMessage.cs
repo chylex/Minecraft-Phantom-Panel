@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToServer;
 
@@ -6,7 +7,7 @@ namespace Phantom.Common.Messages.ToServer;
 public sealed partial record UnregisterAgentMessage(
 	[property: MemoryPackOrder(0)] Guid AgentGuid
 ) : IMessageToServer {
-	public Task Accept(IMessageToServerListener listener) {
+	public Task<NoReply> Accept(IMessageToServerListener listener) {
 		return listener.HandleUnregisterAgent(this);
 	}
 }

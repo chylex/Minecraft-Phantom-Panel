@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Minecraft;
+using Phantom.Common.Data.Replies;
 
 namespace Phantom.Common.Messages.ToAgent; 
 
@@ -8,8 +9,8 @@ public sealed partial record StopInstanceMessage(
 	[property: MemoryPackOrder(0)] uint SequenceId,
 	[property: MemoryPackOrder(1)] Guid InstanceGuid,
 	[property: MemoryPackOrder(2)] MinecraftStopStrategy StopStrategy
-) : IMessageToAgent, IMessageWithReply {
-	public Task Accept(IMessageToAgentListener listener) {
+) : IMessageToAgent<InstanceActionResult<StopInstanceResult>> {
+	public Task<InstanceActionResult<StopInstanceResult>> Accept(IMessageToAgentListener listener) {
 		return listener.HandleStopInstance(this);
 	}
 }

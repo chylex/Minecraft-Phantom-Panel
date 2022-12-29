@@ -7,7 +7,6 @@ using Phantom.Common.Messages.ToAgent;
 using Phantom.Server.Database;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Instances;
-using Phantom.Server.Services.Rpc;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Runtime;
@@ -114,28 +113,14 @@ public sealed class AgentManager {
 		}
 	}
 
-	private async Task<bool> SendMessage<TMessage>(Guid guid, TMessage message) where TMessage : IMessageToAgent {
+	internal async Task<TReply?> SendMessage<TMessage, TReply>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent<TReply> where TReply : class {
 		var connection = agents.ByGuid.TryGetValue(guid, out var agent) ? agent.Connection : null;
-		if (connection != null) {
-			await connection.SendMessage(message);
-			return true;
-		}
-		else {
+		if (connection == null) {
 			// TODO handle missing agent?
-			return false;
-		}
-	}
-
-	internal async Task<int?> SendMessageWithReply<TMessage>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent, IMessageWithReply {
-		var sequenceId = MessageReplyTracker.Instance.RegisterReply();
-		var message = messageFactory(sequenceId);
-
-		if (!await SendMessage(guid, message)) {
-			MessageReplyTracker.Instance.ForgetReply(sequenceId);
 			return null;
 		}
 
-		return await MessageReplyTracker.Instance.WaitForReply(sequenceId, waitForReplyTime, cancellationToken);
+		return await connection.Send<TMessage, TReply>(messageFactory, waitForReplyTime, cancellationToken);
 	}
 
 	private sealed class ObservableAgents : ObservableState<ImmutableArray<Agent>> {

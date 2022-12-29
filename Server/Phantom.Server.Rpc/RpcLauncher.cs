@@ -2,6 +2,7 @@
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Runtime;
 using Serilog.Events;
 using ILogger = Serilog.ILogger;
@@ -38,7 +39,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		logger.Information("ZeroMQ server initialized, listening for agent connections on port {Port}.", config.Port);
 	}
 
-	protected override void Run(ServerSocket socket, TaskManager taskManager) {
+	protected override void Run(ServerSocket socket, MessageReplyTracker replyTracker, TaskManager taskManager) {
 		var logger = config.Logger;
 		var clients = new Dictionary<ulong, Client>();
 
@@ -60,19 +61,17 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 					continue;
 				}
 
-				var connection = new RpcClientConnection(socket, routingId);
+				var connection = new RpcClientConnection(socket, routingId, replyTracker);
 				connection.Closed += OnConnectionClosed;
 
-				client = new Client(connection, listenerFactory);
+				client = new Client(connection, listenerFactory, logger, taskManager, cancellationToken);
 				clients[routingId] = client;
 			}
 
 			LogMessageType(logger, routingId, data);
-			MessageRegistries.ToServer.Handle(data, client.Listener, taskManager, cancellationToken);
-
-			if (client.Listener.IsDisposed) {
-				client.Connection.Close();
-			}
+			MessageRegistries.ToServer.Handle(data, client);
+			
+			client.CloseIfDisposed();
 		}
 
 		foreach (var client in clients.Values) {
@@ -102,13 +101,21 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 		return false;
 	}
 
-	private readonly struct Client {
+	private sealed class Client : MessageHandler<IMessageToServerListener> {
 		public RpcClientConnection Connection { get; }
-		public IMessageToServerListener Listener { get; }
 
-		public Client(RpcClientConnection connection, Func<RpcClientConnection, IMessageToServerListener> listenerFactory) {
+		public Client(RpcClientConnection connection, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) : base(listenerFactory(connection), logger, taskManager, cancellationToken) {
 			Connection = connection;
-			Listener = listenerFactory(connection);
+		}
+
+		protected override Task SendReply(uint sequenceId, byte[] serializedReply) {
+			return Connection.Send(new ReplyMessage(sequenceId, serializedReply));
+		}
+
+		public void CloseIfDisposed() {
+			if (Listener.IsDisposed) {
+				Connection.Close();
+			}
 		}
 	}
 }

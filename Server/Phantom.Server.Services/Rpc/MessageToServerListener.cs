@@ -6,6 +6,7 @@ using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Rpc;
 using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Instances;
+using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Server.Services.Rpc;
 
@@ -31,7 +32,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		this.instanceLogManager = instanceLogManager;
 	}
 
-	public async Task HandleRegisterAgent(RegisterAgentMessage message) {
+	public async Task<NoReply> HandleRegisterAgent(RegisterAgentMessage message) {
 		if (agentGuid != null && agentGuid != message.AgentInfo.Guid) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.ConnectionAlreadyHasAnAgent));
 		}
@@ -40,42 +41,46 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 			agentGuid = guid;
 			agentGuidWaiter.SetResult(guid);
 		}
+		
+		return NoReply.Instance;
 	}
 
 	private async Task<Guid> WaitForAgentGuid() {
 		return await agentGuidWaiter.Task.WaitAsync(cancellationToken);
 	}
 	
-	public Task HandleUnregisterAgent(UnregisterAgentMessage message) {
+	public Task<NoReply> HandleUnregisterAgent(UnregisterAgentMessage message) {
 		IsDisposed = true;
 		
 		if (agentManager.UnregisterAgent(message.AgentGuid, connection)) {
 			instanceManager.SetInstanceStatesForAgent(message.AgentGuid, InstanceStatus.Offline);
 		}
 
-		return Task.CompletedTask;
+		return Task.FromResult(NoReply.Instance);
 	}
 
-	public async Task HandleAgentIsAlive(AgentIsAliveMessage message) {
+	public async Task<NoReply> HandleAgentIsAlive(AgentIsAliveMessage message) {
 		agentManager.NotifyAgentIsAlive(await WaitForAgentGuid());
+		return NoReply.Instance;
 	}
 
-	public async Task HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message) {
+	public async Task<NoReply> HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message) {
 		agentJavaRuntimesManager.Update(await WaitForAgentGuid(), message.Runtimes);
+		return NoReply.Instance;
 	}
 
-	public Task HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
+	public Task<NoReply> HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
 		instanceManager.SetInstanceState(message.InstanceGuid, message.InstanceStatus);
-		return Task.CompletedTask;
+		return Task.FromResult(NoReply.Instance);
 	}
 
-	public Task HandleInstanceOutput(InstanceOutputMessage message) {
+	public Task<NoReply> HandleInstanceOutput(InstanceOutputMessage message) {
 		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
-		return Task.CompletedTask;
+		return Task.FromResult(NoReply.Instance);
 	}
 
-	public Task HandleSimpleReply(SimpleReplyMessage message) {
-		MessageReplyTracker.Instance.ReceiveReply(message);
-		return Task.CompletedTask;
+	public Task<NoReply> HandleReply(ReplyMessage message) {
+		connection.Receive(message);
+		return Task.FromResult(NoReply.Instance);
 	}
 }

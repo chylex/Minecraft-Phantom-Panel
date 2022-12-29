@@ -1,5 +1,4 @@
-﻿using NetMQ.Sockets;
-using Phantom.Common.Logging;
+﻿using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Serilog;
 
@@ -8,23 +7,28 @@ namespace Phantom.Agent.Rpc;
 public static class ServerMessaging {
 	private static readonly ILogger Logger = PhantomLogger.Create(typeof(ServerMessaging));
 	
-	private static ClientSocket? CurrentSocket { get; set; }
-	private static readonly object SetCurrentSocketLock = new ();
+	private static RpcServerConnection? CurrentConnection { get; set; }
+	private static RpcServerConnection CurrentConnectionOrThrow => CurrentConnection ?? throw new InvalidOperationException("Server connection not ready.");
+	
+	private static readonly object SetCurrentConnectionLock = new ();
 
-	internal static void SetCurrentSocket(ClientSocket socket) {
-		lock (SetCurrentSocketLock) {
-			if (CurrentSocket != null) {
-				throw new InvalidOperationException("Server socket can only be set once.");
+	internal static void SetCurrentConnection(RpcServerConnection connection) {
+		lock (SetCurrentConnectionLock) {
+			if (CurrentConnection != null) {
+				throw new InvalidOperationException("Server connection can only be set once.");
 			}
 			
-			CurrentSocket = socket;
+			CurrentConnection = connection;
 		}
 		
-		Logger.Information("Server socket ready.");
+		Logger.Information("Server connection ready.");
 	}
 
-	public static async Task SendMessage<TMessage>(TMessage message) where TMessage : IMessageToServer {
-		var currentSocket = CurrentSocket ?? throw new InvalidOperationException("Server socket not ready.");
-		await currentSocket.SendMessage(message);
+	public static Task Send<TMessage>(TMessage message) where TMessage : IMessageToServer {
+		return CurrentConnectionOrThrow.Send(message);
+	}
+
+	public static Task<TReply?> Send<TMessage, TReply>(Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
+		return CurrentConnectionOrThrow.Send<TMessage, TReply>(messageFactory, waitForReplyTime, cancellationToken);
 	}
 }

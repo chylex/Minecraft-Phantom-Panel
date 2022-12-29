@@ -1,4 +1,5 @@
-﻿using Phantom.Agent.Minecraft.Instance;
+﻿using System.Diagnostics.CodeAnalysis;
+using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Launcher.Types;
@@ -40,11 +41,31 @@ sealed class InstanceSessionManager : IDisposable {
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	public async Task<ConfigureInstanceResult> Configure(InstanceConfiguration configuration) {
+	[SuppressMessage("ReSharper", "ConvertIfStatementToReturnStatement")]
+	private async Task<InstanceActionResult<T>> AcquireSemaphoreAndRunWithInstance<T>(Guid instanceGuid, Func<Instance, Task<T>> func) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
 		} catch (OperationCanceledException) {
-			return ConfigureInstanceResult.AgentShuttingDown;
+			return InstanceActionResult.General<T>(InstanceActionGeneralResult.AgentShuttingDown);
+		}
+
+		try {
+			if (!instances.TryGetValue(instanceGuid, out var instance)) {
+				return InstanceActionResult.General<T>(InstanceActionGeneralResult.InstanceDoesNotExist);
+			}
+			else {
+				return InstanceActionResult.Concrete(await func(instance));
+			}
+		} finally {
+			semaphore.Release();
+		}
+	}
+	
+	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration) {
+		try {
+			await semaphore.WaitAsync(shutdownCancellationToken);
+		} catch (OperationCanceledException) {
+			return InstanceActionResult.General<ConfigureInstanceResult>(InstanceActionGeneralResult.AgentShuttingDown);
 		}
 
 		var instanceGuid = configuration.InstanceGuid;
@@ -52,12 +73,12 @@ sealed class InstanceSessionManager : IDisposable {
 		try {
 			var otherInstances = instances.Values.Where(inst => inst.Configuration.InstanceGuid != instanceGuid).ToArray();
 			if (otherInstances.Length + 1 > agentInfo.MaxInstances) {
-				return ConfigureInstanceResult.InstanceLimitExceeded;
+				return InstanceActionResult.Concrete(ConfigureInstanceResult.InstanceLimitExceeded);
 			}
 
 			var availableMemory = agentInfo.MaxMemory - otherInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Configuration.MemoryAllocation);
 			if (availableMemory < configuration.MemoryAllocation) {
-				return ConfigureInstanceResult.MemoryLimitExceeded;
+				return InstanceActionResult.Concrete(ConfigureInstanceResult.MemoryLimitExceeded);
 			}
 
 			var heapMegabytes = configuration.MemoryAllocation.InMegabytes;
@@ -93,70 +114,22 @@ sealed class InstanceSessionManager : IDisposable {
 				await instance.Launch(shutdownCancellationToken);
 			}
 
-			return ConfigureInstanceResult.Success;
+			return InstanceActionResult.Concrete(ConfigureInstanceResult.Success);
 		} finally {
 			semaphore.Release();
 		}
 	}
 
-	public async Task<LaunchInstanceResult> Launch(Guid instanceGuid) {
-		try {
-			await semaphore.WaitAsync(shutdownCancellationToken);
-		} catch (OperationCanceledException) {
-			return LaunchInstanceResult.AgentShuttingDown;
-		}
-
-		try {
-			if (!instances.TryGetValue(instanceGuid, out var instance)) {
-				return LaunchInstanceResult.InstanceDoesNotExist;
-			}
-			else {
-				return await instance.Launch(shutdownCancellationToken);
-			}
-		} finally {
-			semaphore.Release();
-		}
+	public Task<InstanceActionResult<LaunchInstanceResult>> Launch(Guid instanceGuid) {
+		return AcquireSemaphoreAndRunWithInstance(instanceGuid, instance => instance.Launch(shutdownCancellationToken));
 	}
 
-	public async Task<StopInstanceResult> Stop(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
-		try {
-			await semaphore.WaitAsync(shutdownCancellationToken);
-		} catch (OperationCanceledException) {
-			return StopInstanceResult.AgentShuttingDown;
-		}
-
-		try {
-			if (!instances.TryGetValue(instanceGuid, out var instance)) {
-				return StopInstanceResult.InstanceDoesNotExist;
-			}
-			else {
-				return await instance.Stop(stopStrategy);
-			}
-		} finally {
-			semaphore.Release();
-		}
+	public Task<InstanceActionResult<StopInstanceResult>> Stop(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
+		return AcquireSemaphoreAndRunWithInstance(instanceGuid, instance => instance.Stop(stopStrategy));
 	}
 
-	public async Task<SendCommandToInstanceResult> SendCommand(Guid instanceGuid, string command) {
-		try {
-			await semaphore.WaitAsync(shutdownCancellationToken);
-		} catch (OperationCanceledException) {
-			return SendCommandToInstanceResult.AgentShuttingDown;
-		}
-
-		try {
-			if (!instances.TryGetValue(instanceGuid, out var instance)) {
-				return SendCommandToInstanceResult.InstanceDoesNotExist;
-			}
-
-			if (!await instance.SendCommand(command, shutdownCancellationToken)) {
-				return SendCommandToInstanceResult.UnknownError;
-			}
-
-			return SendCommandToInstanceResult.Success;
-		} finally {
-			semaphore.Release();
-		}
+	public Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommand(Guid instanceGuid, string command) {
+		return AcquireSemaphoreAndRunWithInstance(instanceGuid, async instance => await instance.SendCommand(command, shutdownCancellationToken) ? SendCommandToInstanceResult.Success : SendCommandToInstanceResult.UnknownError);
 	}
 
 	public async Task StopAll() {

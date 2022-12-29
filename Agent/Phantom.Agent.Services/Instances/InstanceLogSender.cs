@@ -52,7 +52,7 @@ sealed class InstanceLogSender {
 
 	private async Task SendOutputToServer(ImmutableArray<string> lines) {
 		if (!lines.IsEmpty) {
-			await ServerMessaging.SendMessage(new InstanceOutputMessage(instanceGuid, lines));
+			await ServerMessaging.Send(new InstanceOutputMessage(instanceGuid, lines));
 		}
 	}
 

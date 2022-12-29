@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using NetMQ.Sockets;
 using Phantom.Agent;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
@@ -45,8 +44,8 @@ try {
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
 	var agentServices = new AgentServices(agentInfo, folders);
 
-	MessageListener MessageListenerFactory(ClientSocket socket) {
-		return new MessageListener(socket, agentServices, shutdownCancellationTokenSource);
+	MessageListener MessageListenerFactory(RpcServerConnection connection) {
+		return new MessageListener(connection, agentServices, shutdownCancellationTokenSource);
 	}
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");

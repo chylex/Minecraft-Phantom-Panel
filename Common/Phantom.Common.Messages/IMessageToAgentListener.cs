@@ -1,12 +1,16 @@
-﻿using Phantom.Common.Messages.ToAgent;
+﻿using Phantom.Common.Data.Replies;
+using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.ToServer;
+using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages;
 
 public interface IMessageToAgentListener {
-	Task HandleRegisterAgentSuccessResult(RegisterAgentSuccessMessage message);
-	Task HandleRegisterAgentFailureResult(RegisterAgentFailureMessage message);
-	Task HandleConfigureInstance(ConfigureInstanceMessage message);
-	Task HandleLaunchInstance(LaunchInstanceMessage message);
-	Task HandleStopInstance(StopInstanceMessage message);
-	Task HandleSendCommandToInstance(SendCommandToInstanceMessage message);
+	Task<NoReply> HandleRegisterAgentSuccess(RegisterAgentSuccessMessage message);
+	Task<NoReply> HandleRegisterAgentFailure(RegisterAgentFailureMessage message);
+	Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message);
+	Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message);
+	Task<InstanceActionResult<StopInstanceResult>> HandleStopInstance(StopInstanceMessage message);
+	Task<InstanceActionResult<SendCommandToInstanceResult>> HandleSendCommandToInstance(SendCommandToInstanceMessage message);
+	Task<NoReply> HandleReply(ReplyMessage message);
 }

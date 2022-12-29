@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Replies;
+using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToAgent;
 
@@ -7,7 +8,7 @@ namespace Phantom.Common.Messages.ToAgent;
 public sealed partial record RegisterAgentFailureMessage(
 	[property: MemoryPackOrder(0)] RegisterAgentFailure FailureKind
 ) : IMessageToAgent {
-	public Task Accept(IMessageToAgentListener listener) {
-		return listener.HandleRegisterAgentFailureResult(this);
+	public Task<NoReply> Accept(IMessageToAgentListener listener) {
+		return listener.HandleRegisterAgentFailure(this);
 	}
 }

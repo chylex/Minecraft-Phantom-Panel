@@ -2,7 +2,6 @@
 
 public enum ConfigureInstanceResult {
 	Success,
-	AgentShuttingDown,
 	InstanceLimitExceeded,
 	MemoryLimitExceeded
 }

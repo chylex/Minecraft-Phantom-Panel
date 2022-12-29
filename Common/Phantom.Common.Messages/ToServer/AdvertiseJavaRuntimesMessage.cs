@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
 using Phantom.Common.Data.Java;
+using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToServer; 
 
@@ -8,7 +9,7 @@ namespace Phantom.Common.Messages.ToServer;
 public sealed partial record AdvertiseJavaRuntimesMessage(
 	[property: MemoryPackOrder(0)] ImmutableArray<TaggedJavaRuntime> Runtimes
 ) : IMessageToServer {
-	public Task Accept(IMessageToServerListener listener) {
+	public Task<NoReply> Accept(IMessageToServerListener listener) {
 		return listener.HandleAdvertiseJavaRuntimes(this);
 	}
 }

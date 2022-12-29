@@ -4,6 +4,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Runtime;
 using Serilog;
 using Serilog.Events;
@@ -11,7 +12,7 @@ using Serilog.Events;
 namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
-	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo, Func<ClientSocket, IMessageToAgentListener> listenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) {
+	public static async Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo, Func<RpcServerConnection, IMessageToAgentListener> listenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 
@@ -24,12 +25,12 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 
 	private readonly RpcConfiguration config;
 	private readonly Guid agentGuid;
-	private readonly Func<ClientSocket, IMessageToAgentListener> messageListenerFactory;
+	private readonly Func<RpcServerConnection, IMessageToAgentListener> messageListenerFactory;
 
 	private readonly SemaphoreSlim disconnectSemaphore;
 	private readonly CancellationToken receiveCancellationToken;
 
-	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Guid agentGuid, Func<ClientSocket, IMessageToAgentListener> messageListenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket, config.Logger) {
+	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Guid agentGuid, Func<RpcServerConnection, IMessageToAgentListener> messageListenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket, config.Logger) {
 		this.config = config;
 		this.agentGuid = agentGuid;
 		this.messageListenerFactory = messageListenerFactory;
@@ -46,12 +47,13 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		logger.Information("ZeroMQ client ready.");
 	}
 
-	protected override void Run(ClientSocket socket, TaskManager taskManager) {
+	protected override void Run(ClientSocket socket, MessageReplyTracker replyTracker, TaskManager taskManager) {
+		var connection = new RpcServerConnection(socket, replyTracker);
+		ServerMessaging.SetCurrentConnection(connection);
+		
 		var logger = config.Logger;
-		var listener = messageListenerFactory(socket);
-
-		ServerMessaging.SetCurrentSocket(socket);
-		var keepAliveLoop = new KeepAliveLoop(socket, taskManager);
+		var handler = new MessageToAgentHandler(messageListenerFactory(connection), logger, taskManager, receiveCancellationToken);
+		var keepAliveLoop = new KeepAliveLoop(connection, taskManager);
 
 		try {
 			while (!receiveCancellationToken.IsCancellationRequested) {
@@ -60,7 +62,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 				LogMessageType(logger, data);
 				
 				if (data.Length > 0) {
-					MessageRegistries.ToAgent.Handle(data, listener, taskManager, receiveCancellationToken);
+					MessageRegistries.ToAgent.Handle(data, handler);
 				}
 			}
 		} catch (OperationCanceledException) {
@@ -86,11 +88,19 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		}
 	}
 
-	protected override async Task Disconnect(ClientSocket socket) {
+	protected override async Task Disconnect() {
 		var unregisterTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None);
-		var finishedTask = await Task.WhenAny(socket.SendMessage(new UnregisterAgentMessage(agentGuid)), unregisterTimeoutTask);
+		var finishedTask = await Task.WhenAny(ServerMessaging.Send(new UnregisterAgentMessage(agentGuid)), unregisterTimeoutTask);
 		if (finishedTask == unregisterTimeoutTask) {
 			config.Logger.Error("Timed out communicating agent shutdown with the server.");
+		}
+	}
+
+	private sealed class MessageToAgentHandler : MessageHandler<IMessageToAgentListener> {
+		public MessageToAgentHandler(IMessageToAgentListener listener, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) : base(listener, logger, taskManager, cancellationToken) {}
+		
+		protected override Task SendReply(uint sequenceId, byte[] serializedReply) {
+			return ServerMessaging.Send(new ReplyMessage(sequenceId, serializedReply));
 		}
 	}
 }

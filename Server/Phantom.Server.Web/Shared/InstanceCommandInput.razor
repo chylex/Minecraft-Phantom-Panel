@@ -1,6 +1,6 @@
-﻿@using Phantom.Common.Data.Replies
+﻿@using Phantom.Server.Services.Instances
 @using Phantom.Server.Services.Audit
-@using Phantom.Server.Services.Instances
+@using Phantom.Common.Data.Replies
 @inherits PhantomComponent
 @inject InstanceManager InstanceManager
 @inject AuditLog AuditLog
@@ -40,13 +40,13 @@
     }
 
     var result = await InstanceManager.SendCommand(InstanceGuid, form.Command);
-    if (result == SendCommandToInstanceResult.Success) {
+    if (result.Is(SendCommandToInstanceResult.Success)) {
       await AuditLog.AddInstanceCommandExecutedEvent(InstanceGuid, form.Command);
       form.Command = string.Empty;
       form.SubmitModel.StopSubmitting();
     }
     else {
-      form.SubmitModel.StopSubmitting(result.ToSentence());
+      form.SubmitModel.StopSubmitting(result.ToSentence(SendCommandToInstanceResultExtensions.ToSentence));
     }
 
     await commandInputElement.FocusAsync(preventScroll: true);

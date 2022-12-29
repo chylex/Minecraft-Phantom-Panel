@@ -1,4 +1,5 @@
 ﻿using NetMQ;
+using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Runtime;
 using Serilog;
 
@@ -25,6 +26,7 @@ static class RpcRuntime {
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new() {
 	private readonly TSocket socket;
+	private readonly MessageReplyTracker replyTracker;
 	private readonly TaskManager taskManager;
 	private readonly ILogger logger;
 
@@ -33,6 +35,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 		RpcRuntime.SetDefaultSocketOptions(socket.Options);
 		this.socket = socket;
 		this.logger = logger;
+		this.replyTracker = new MessageReplyTracker(logger);
 		this.taskManager = new TaskManager();
 	}
 
@@ -40,7 +43,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 		Connect(socket);
 
 		void RunTask() {
-			Run(socket, taskManager);
+			Run(socket, replyTracker, taskManager);
 		}
 		
 		try {
@@ -50,7 +53,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 		} finally {
 			logger.Information("Stopping task manager...");
 			await taskManager.Stop();
-			await Disconnect(socket);
+			await Disconnect();
 			
 			socket.Dispose();
 			NetMQConfig.Cleanup();
@@ -59,9 +62,9 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 	}
 	
 	protected abstract void Connect(TSocket socket);
-	protected abstract void Run(TSocket socket, TaskManager taskManager);
+	protected abstract void Run(TSocket socket, MessageReplyTracker replyTracker, TaskManager taskManager);
 	
-	protected virtual Task Disconnect(TSocket socket) {
+	protected virtual Task Disconnect() {
 		return Task.CompletedTask;
 	}
 }
