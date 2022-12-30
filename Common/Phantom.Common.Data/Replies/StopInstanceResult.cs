@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Common.Data.Replies;
 
-public enum StopInstanceResult {
+public enum StopInstanceResult : byte {
 	StopInitiated,
 	InstanceAlreadyStopping,
 	InstanceAlreadyStopped,

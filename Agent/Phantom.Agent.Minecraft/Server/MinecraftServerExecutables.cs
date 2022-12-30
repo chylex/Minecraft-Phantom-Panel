@@ -6,10 +6,11 @@ using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
 
-public sealed class MinecraftServerExecutables : IDisposable {
+public sealed partial class MinecraftServerExecutables : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutables>();
 
-	private static readonly Regex VersionFolderSanitizeRegex = new (@"[^a-zA-Z0-9_\-\.]", RegexOptions.Compiled);
+	[GeneratedRegex(@"[^a-zA-Z0-9_\-\.]", RegexOptions.Compiled)]
+	private static partial Regex VersionFolderSanitizeRegex();
 
 	private readonly string basePath;
 	private readonly MinecraftVersions minecraftVersions = new ();
@@ -20,7 +21,7 @@ public sealed class MinecraftServerExecutables : IDisposable {
 	}
 
 	internal async Task<string?> DownloadAndGetPath(string version, EventHandler<DownloadProgressEventArgs> progressEventHandler, CancellationToken cancellationToken) {
-		string serverExecutableFolderPath = Path.Combine(basePath, VersionFolderSanitizeRegex.Replace(version, "_"));
+		string serverExecutableFolderPath = Path.Combine(basePath, VersionFolderSanitizeRegex().Replace(version, "_"));
 		string serverExecutableFilePath = Path.Combine(serverExecutableFolderPath, "server.jar");
 
 		if (File.Exists(serverExecutableFilePath)) {
@@ -49,7 +50,7 @@ public sealed class MinecraftServerExecutables : IDisposable {
 						runningDownloadersByVersion.Remove(version);
 					}
 				};
-				
+
 				runningDownloadersByVersion[version] = downloader;
 			}
 		}

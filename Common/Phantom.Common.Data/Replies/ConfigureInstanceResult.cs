@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Common.Data.Replies; 
 
-public enum ConfigureInstanceResult {
+public enum ConfigureInstanceResult : byte {
 	Success,
 	InstanceLimitExceeded,
 	MemoryLimitExceeded

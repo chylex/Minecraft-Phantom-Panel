@@ -13,13 +13,13 @@ using Phantom.Server.Web.Identity.Data;
 namespace Phantom.Server.Web.Identity;
 
 public static class PhantomIdentityExtensions {
-	public static void AddPhantomIdentity<TUser, TRole>(this IServiceCollection services) where TUser : class where TRole : class {
+	public static void AddPhantomIdentity<TUser, TRole>(this IServiceCollection services, CancellationToken cancellationToken) where TUser : class where TRole : class {
 		services.AddIdentity<TUser, TRole>(ConfigureIdentity).AddEntityFrameworkStores<ApplicationDbContext>();
 		services.ConfigureApplicationCookie(ConfigureIdentityCookie);
 		services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
 		services.AddAuthorization(ConfigureAuthorization);
 
-		services.AddSingleton<PhantomLoginStore>();
+		services.AddSingleton(PhantomLoginStore.Create(cancellationToken));
 		services.AddScoped<PhantomLoginManager>();
 		
 		services.AddScoped<PhantomIdentityConfigurator>();

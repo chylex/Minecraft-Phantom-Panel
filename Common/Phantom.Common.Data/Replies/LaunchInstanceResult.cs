@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Common.Data.Replies;
 
-public enum LaunchInstanceResult {
+public enum LaunchInstanceResult : byte {
 	LaunchInitiated,
 	InstanceAlreadyLaunching,
 	InstanceAlreadyRunning,

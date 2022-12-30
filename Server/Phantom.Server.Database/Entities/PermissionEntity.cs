@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Phantom.Server.Database.Entities; 
 
 [Table("Permissions", Schema = "identity")]
-public class PermissionEntity {
+public sealed class PermissionEntity {
 	[Key]
 	public string Id { get; set; }
 

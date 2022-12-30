@@ -2,21 +2,24 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
-using Phantom.Server.Services;
 using Phantom.Utils.Runtime;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Web.Identity.Authentication; 
 
 public sealed class PhantomLoginStore {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginStore>();
 	private static readonly TimeSpan ExpirationTime = TimeSpan.FromMinutes(1);
-	
+
+	internal static Func<IServiceProvider, PhantomLoginStore> Create(CancellationToken cancellationToken) {
+		return provider => new PhantomLoginStore(provider.GetRequiredService<TaskManager>(), cancellationToken);
+	}
+
 	private readonly ConcurrentDictionary<string, LoginEntry> loginEntries = new ();
 	private readonly CancellationToken cancellationToken;
 
-	public PhantomLoginStore(ServiceConfiguration configuration, TaskManager taskManager) {
-		this.cancellationToken = configuration.CancellationToken;
+	private PhantomLoginStore(TaskManager taskManager, CancellationToken cancellationToken) {
+		this.cancellationToken = cancellationToken;
 		taskManager.Run(RunExpirationLoop);
 	}
 	

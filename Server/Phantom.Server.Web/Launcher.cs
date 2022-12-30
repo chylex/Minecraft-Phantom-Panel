@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Database;
+using Phantom.Server.Web.Base;
 using Phantom.Server.Web.Components.Utils;
 using Phantom.Server.Web.Identity;
+using Phantom.Server.Web.Identity.Interfaces;
 using Serilog;
 
 namespace Phantom.Server.Web;
@@ -35,7 +37,8 @@ public static class Launcher {
 		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
 		builder.Services.AddSingleton<DatabaseProvider>();
 
-		builder.Services.AddPhantomIdentity<IdentityUser, IdentityRole>();
+		builder.Services.AddPhantomIdentity<IdentityUser, IdentityRole>(config.CancellationToken);
+		builder.Services.AddScoped<ILoginEvents, LoginEvents>();
 
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();

@@ -3,7 +3,7 @@ using Phantom.Common.Data;
 using Phantom.Common.Logging;
 using Phantom.Server.Services.Instances;
 using Phantom.Utils.Events;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Services.Agents; 
 

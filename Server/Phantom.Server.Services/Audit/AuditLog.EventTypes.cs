@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Phantom.Server.Database.Enums;
 
 namespace Phantom.Server.Services.Audit;
@@ -17,9 +16,8 @@ public sealed partial class AuditLog {
 		AddEvent(userId, AuditEventType.UserLoggedIn, userId);
 	}
 
-	public void AddUserLoggedOutEvent(ClaimsPrincipal user) {
-		var userId = identityLookup.GetAuthenticatedUserId(user);
-		AddEvent(userId, AuditEventType.UserLoggedOut, userId ?? string.Empty);
+	public void AddUserLoggedOutEvent(string userId) {
+		AddEvent(userId, AuditEventType.UserLoggedOut, userId);
 	}
 	
 	public Task AddUserCreatedEvent(IdentityUser user) {

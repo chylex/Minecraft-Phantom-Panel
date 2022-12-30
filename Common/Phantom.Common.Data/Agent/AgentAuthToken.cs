@@ -13,7 +13,7 @@ public sealed partial class AgentAuthToken {
 	[MemoryPackInclude]
 	private readonly byte[] bytes;
 
-	public AgentAuthToken(byte[]? bytes) {
+	internal AgentAuthToken(byte[]? bytes) {
 		if (bytes == null) {
 			throw new ArgumentNullException(nameof(bytes));
 		}

@@ -28,8 +28,9 @@
         </tr>
       </thead>
       <tbody>
+        @{ var myUserId = IdentityLookup.GetAuthenticatedUserId(context.User); }
         @foreach (var user in allUsers) {
-          var isMe = IdentityLookup.GetAuthenticatedUserId(context.User) == user.Id;
+          var isMe = myUserId == user.Id;
           <tr>
             <td>
               <code class="text-uppercase">@user.Id</code>

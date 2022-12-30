@@ -1,11 +1,12 @@
 ﻿using NetMQ.Sockets;
 using Phantom.Common.Messages;
+using Phantom.Common.Messages.BiDirectional;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Runtime;
+using Serilog;
 using Serilog.Events;
-using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Rpc;
 

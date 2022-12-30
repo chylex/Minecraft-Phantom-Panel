@@ -3,7 +3,7 @@
 namespace Phantom.Server.Database.Entities;
 
 [Table("UserPermissions", Schema = "identity")]
-public class UserPermissionEntity {
+public sealed class UserPermissionEntity {
 	public string UserId { get; set; }
 	public string PermissionId { get; set; }
 

@@ -1,27 +1,35 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
-using Phantom.Server.Services.Audit;
+using Phantom.Server.Web.Identity.Interfaces;
 using Phantom.Utils.Cryptography;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Web.Identity.Authentication;
 
 public sealed class PhantomLoginManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginManager>();
 
+	public static bool IsAuthenticated(ClaimsPrincipal user) {
+		return user.Identity is { IsAuthenticated: true };
+	}
+	
+	internal static string? GetAuthenticatedUserId(ClaimsPrincipal user, UserManager<IdentityUser> userManager) {
+		return IsAuthenticated(user) ? userManager.GetUserId(user) : null;
+	}
+	
 	private readonly INavigation navigation;
 	private readonly PhantomLoginStore loginStore;
 	private readonly UserManager<IdentityUser> userManager;
 	private readonly SignInManager<IdentityUser> signInManager;
-	private readonly AuditLog auditLog;
+	private readonly ILoginEvents loginEvents;
 
-	public PhantomLoginManager(INavigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, AuditLog auditLog) {
+	public PhantomLoginManager(INavigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, ILoginEvents loginEvents) {
 		this.navigation = navigation;
 		this.loginStore = loginStore;
 		this.userManager = userManager;
 		this.signInManager = signInManager;
-		this.auditLog = auditLog;
+		this.loginEvents = loginEvents;
 	}
 
 	public async Task<SignInResult> SignIn(string username, string password, string? returnUrl = null) {
@@ -43,7 +51,10 @@ public sealed class PhantomLoginManager {
 	}
 
 	internal async Task SignOut() {
-		auditLog.AddUserLoggedOutEvent(signInManager.Context.User);
+		if (GetAuthenticatedUserId(signInManager.Context.User, userManager) is {} userId) {
+			loginEvents.UserLoggedOut(userId);
+		}
+
 		await signInManager.SignOutAsync();
 	}
 
@@ -57,7 +68,7 @@ public sealed class PhantomLoginManager {
 		var result = await signInManager.PasswordSignInAsync(user, entry.Password, lockoutOnFailure: false, isPersistent: true);
 		if (result == SignInResult.Success) {
 			Logger.Information("Successful login for {Username}.", user.UserName);
-			auditLog.AddUserLoggedInEvent(user.Id);
+			loginEvents.UserLoggedIn(user.Id);
 			return entry.ReturnUrl;
 		}
 		else {

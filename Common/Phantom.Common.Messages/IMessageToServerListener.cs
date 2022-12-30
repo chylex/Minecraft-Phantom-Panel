@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Messages.ToServer;
+﻿using Phantom.Common.Messages.BiDirectional;
+using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages; 

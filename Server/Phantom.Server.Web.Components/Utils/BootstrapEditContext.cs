@@ -2,7 +2,7 @@
 
 namespace Phantom.Server.Web.Components.Utils;
 
-public static class BootstrapEditContext {
+static class BootstrapEditContext {
 	public static EditContext Create(object model) {
 		EditContext context = new EditContext(model);
 		context.SetFieldCssClassProvider(ClassProvider);

@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace Phantom.Server.Web.Identity;
+namespace Phantom.Server.Web.Identity.Interfaces;
 
 public interface INavigation {
 	string BasePath { get; }

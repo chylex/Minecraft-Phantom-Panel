@@ -1,12 +1,11 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Logging;
 using Phantom.Server.Database;
 using Phantom.Server.Database.Entities;
 using Phantom.Server.Web.Identity.Data;
 using Phantom.Utils.Runtime;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Web.Identity;
 

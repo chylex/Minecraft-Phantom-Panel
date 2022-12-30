@@ -1,4 +1,6 @@
-﻿@inject INavigation Nav
+﻿@using Phantom.Server.Web.Identity.Interfaces
+@using Phantom.Server.Web.Identity.Authentication
+@inject INavigation Nav
 @inject NavigationManager NavigationManager
 
 <CascadingAuthenticationState>
@@ -6,7 +8,7 @@
     <Found Context="routeData">
       <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
         <NotAuthorized>
-          @if (context.User.Identity is not { IsAuthenticated: true }) {
+          @if (!PhantomLoginManager.IsAuthenticated(context.User)) {
             var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimEnd('/');
             Nav.NavigateTo("login" + QueryString.Create("return", returnUrl), forceLoad: true);
           }

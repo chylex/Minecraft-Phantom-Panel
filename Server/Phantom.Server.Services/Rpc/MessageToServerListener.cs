@@ -1,6 +1,7 @@
 ﻿using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages;
+using Phantom.Common.Messages.BiDirectional;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Server.Rpc;

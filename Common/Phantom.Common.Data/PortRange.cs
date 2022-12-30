@@ -4,7 +4,7 @@ using MemoryPack;
 namespace Phantom.Common.Data;
 
 [MemoryPackable]
-public readonly partial record struct PortRange(
+readonly partial record struct PortRange(
 	[property: MemoryPackOrder(0)] ushort FirstPort,
 	[property: MemoryPackOrder(1)] ushort LastPort
 ) {

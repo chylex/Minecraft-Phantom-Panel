@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Common.Data.Replies;
 
-public enum SendCommandToInstanceResult {
+public enum SendCommandToInstanceResult : byte {
 	Success,
 	UnknownError
 }

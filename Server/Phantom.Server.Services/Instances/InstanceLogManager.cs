@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 using Phantom.Common.Logging;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Services.Instances; 
 

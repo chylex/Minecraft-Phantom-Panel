@@ -10,7 +10,7 @@ using Phantom.Server.Services.Instances;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Runtime;
-using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Server.Services.Agents;
 
