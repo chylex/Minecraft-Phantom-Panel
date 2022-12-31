@@ -54,7 +54,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		
 		var logger = config.Logger;
 		var handler = new MessageToAgentHandler(messageListenerFactory(connection), logger, taskManager, receiveCancellationToken);
-		var keepAliveLoop = new KeepAliveLoop(connection, taskManager);
+		var keepAliveLoop = new KeepAliveLoop(connection);
 
 		try {
 			while (!receiveCancellationToken.IsCancellationRequested) {
