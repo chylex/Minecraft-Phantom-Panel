@@ -17,22 +17,22 @@ public abstract class MessageHandler<TListener> {
 		this.cancellationToken = cancellationToken;
 	}
 	
-	internal void Enqueue<TMessage, TReply>(TMessage message) where TMessage : IMessage<TListener, TReply> {
+	internal void Enqueue<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
 		cancellationToken.ThrowIfCancellationRequested();
 		taskManager.Run(async () => {
 			try {
-				await Handle<TMessage, TReply>(message);
+				await Handle<TMessage, TReply>(sequenceId, message);
 			} catch (Exception e) {
 				logger.Error(e, "Failed to handle message {Type}.", message.GetType().Name);
 			}
 		});
 	}
 
-	private async Task Handle<TMessage, TReply>(TMessage message) where TMessage : IMessage<TListener, TReply> {
+	private async Task Handle<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
 		TReply reply = await message.Accept(Listener);
 		
 		if (reply is not NoReply) {
-			await SendReply(message.SequenceId, MessageSerializer.Serialize(reply));
+			await SendReply(sequenceId, MessageSerializer.Serialize(reply));
 		}
 	}
 	

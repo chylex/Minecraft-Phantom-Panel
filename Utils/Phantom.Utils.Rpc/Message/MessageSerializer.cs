@@ -30,4 +30,16 @@ static class MessageSerializer {
 		memory = memory[2..];
 		return value;
 	}
+
+	public static void WriteSequenceId(IBufferWriter<byte> destination, uint sequenceId) {
+		Span<byte> buffer = stackalloc byte[4];
+		BinaryPrimitives.WriteUInt32LittleEndian(buffer, sequenceId);
+		destination.Write(buffer);
+	}
+	
+	public static uint ReadSequenceId(ref ReadOnlyMemory<byte> memory) {
+		uint value = BinaryPrimitives.ReadUInt32LittleEndian(memory.Span);
+		memory = memory[4..];
+		return value;
+	}
 }

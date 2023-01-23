@@ -3,6 +3,7 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
+using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Minecraft;
 using Phantom.Server.Database;
@@ -67,7 +68,7 @@ public sealed class InstanceManager {
 
 		var agentName = agent.Name;
 
-		var reply = (await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, sequenceId => new ConfigureInstanceMessage(sequenceId, configuration), TimeSpan.FromSeconds(10))).DidNotReplyIfNull();
+		var reply = (await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, new ConfigureInstanceMessage(configuration), TimeSpan.FromSeconds(10))).DidNotReplyIfNull();
 		if (reply.Is(ConfigureInstanceResult.Success)) {
 			using (var scope = databaseProvider.CreateScope()) {
 				InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
@@ -119,6 +120,11 @@ public sealed class InstanceManager {
 		instances.ByGuid.ReplaceAllIf(instance => instance with { Status = instanceStatus }, instance => instance.Configuration.AgentGuid == agentGuid);
 	}
 
+	private async Task<InstanceActionResult<TReply>> SendInstanceActionMessage<TMessage, TReply>(Instance instance, TMessage message) where TMessage : IMessageToAgent<InstanceActionResult<TReply>> {
+		var reply = await agentManager.SendMessage<TMessage, InstanceActionResult<TReply>>(instance.Configuration.AgentGuid, message, TimeSpan.FromSeconds(10));
+		return reply.DidNotReplyIfNull();
+	}
+
 	public async Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(Guid instanceGuid) {
 		var instance = GetInstance(instanceGuid);
 		if (instance == null) {
@@ -127,8 +133,7 @@ public sealed class InstanceManager {
 
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, true);
 
-		var reply = await agentManager.SendMessage<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(instance.Configuration.AgentGuid, sequenceId => new LaunchInstanceMessage(sequenceId, instanceGuid), TimeSpan.FromSeconds(10));
-		return reply.DidNotReplyIfNull();
+		return await SendInstanceActionMessage<LaunchInstanceMessage, LaunchInstanceResult>(instance, new LaunchInstanceMessage(instanceGuid));
 	}
 
 	public async Task<InstanceActionResult<StopInstanceResult>> StopInstance(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
@@ -139,8 +144,7 @@ public sealed class InstanceManager {
 
 		await SetInstanceShouldLaunchAutomatically(instanceGuid, false);
 
-		var reply = await agentManager.SendMessage<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(instance.Configuration.AgentGuid, sequenceId => new StopInstanceMessage(sequenceId, instanceGuid, stopStrategy), TimeSpan.FromSeconds(10));
-		return reply.DidNotReplyIfNull();
+		return await SendInstanceActionMessage<StopInstanceMessage, StopInstanceResult>(instance, new StopInstanceMessage(instanceGuid, stopStrategy));
 	}
 
 	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
@@ -162,8 +166,7 @@ public sealed class InstanceManager {
 			return InstanceActionResult.General<SendCommandToInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
 		}
 
-		var reply = await agentManager.SendMessage<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(instance.Configuration.AgentGuid, sequenceId => new SendCommandToInstanceMessage(sequenceId, instanceGuid, command), TimeSpan.FromSeconds(10));
-		return reply.DidNotReplyIfNull();
+		return await SendInstanceActionMessage<SendCommandToInstanceMessage, SendCommandToInstanceResult>(instance, new SendCommandToInstanceMessage(instanceGuid, command));
 	}
 
 	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {

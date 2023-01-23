@@ -113,14 +113,14 @@ public sealed class AgentManager {
 		}
 	}
 
-	internal async Task<TReply?> SendMessage<TMessage, TReply>(Guid guid, Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent<TReply> where TReply : class {
+	internal async Task<TReply?> SendMessage<TMessage, TReply>(Guid guid, TMessage message, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent<TReply> where TReply : class {
 		var connection = agents.ByGuid.TryGetValue(guid, out var agent) ? agent.Connection : null;
 		if (connection == null) {
 			// TODO handle missing agent?
 			return null;
 		}
 
-		return await connection.Send<TMessage, TReply>(messageFactory, waitForReplyTime, cancellationToken);
+		return await connection.Send<TMessage, TReply>(message, waitForReplyTime, cancellationToken);
 	}
 
 	private sealed class ObservableAgents : ObservableState<ImmutableArray<Agent>> {

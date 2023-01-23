@@ -4,6 +4,4 @@ namespace Phantom.Common.Messages;
 
 public interface IMessageToAgent<TReply> : IMessage<IMessageToAgentListener, TReply> {}
 
-public interface IMessageToAgent : IMessageToAgent<NoReply> {
-	uint IMessage<IMessageToAgentListener, NoReply>.SequenceId => 0;
-}
+public interface IMessageToAgent : IMessageToAgent<NoReply> {}

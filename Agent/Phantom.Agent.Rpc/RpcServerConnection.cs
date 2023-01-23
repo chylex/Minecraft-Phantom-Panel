@@ -15,29 +15,24 @@ public sealed class RpcServerConnection {
 		this.replyTracker = replyTracker;
 	}
 
-	private byte[] WriteBytes<TMessage, TReply>(TMessage message) where TMessage : IMessageToServer<TReply> {
-		return MessageRegistries.ToServer.Write<TMessage, TReply>(message).ToArray();
-	}
-
 	internal async Task Send<TMessage>(TMessage message) where TMessage : IMessageToServer {
-		var bytes = WriteBytes<TMessage, NoReply>(message);
+		var bytes = MessageRegistries.ToServer.Write(message).ToArray();
 		if (bytes.Length > 0) {
 			await socket.SendAsync(bytes);
 		}
 	}
 
-	internal async Task<TReply?> Send<TMessage, TReply>(Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
+	internal async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
 		var sequenceId = replyTracker.RegisterReply();
-		var message = messageFactory(sequenceId);
 		
-		var bytes = WriteBytes<TMessage, TReply>(message);
+		var bytes = MessageRegistries.ToServer.Write<TMessage, TReply>(sequenceId, message).ToArray();
 		if (bytes.Length == 0) {
 			replyTracker.ForgetReply(sequenceId);
 			return null;
 		}
 
 		await socket.SendAsync(bytes);
-		return await replyTracker.WaitForReply<TReply>(message.SequenceId, waitForReplyTime, cancellationToken);
+		return await replyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
 	public void Receive(ReplyMessage message) {

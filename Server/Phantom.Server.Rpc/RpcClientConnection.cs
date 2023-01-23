@@ -34,29 +34,32 @@ public sealed class RpcClientConnection {
 		}
 	}
 
-	private byte[] WriteBytes<TMessage, TReply>(TMessage message) where TMessage : IMessageToAgent<TReply> {
-		return isClosed ? Array.Empty<byte>() : MessageRegistries.ToAgent.Write<TMessage, TReply>(message).ToArray();
-	}
-
 	public async Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
-		var bytes = WriteBytes<TMessage, NoReply>(message);
+		if (isClosed) {
+			return;
+		}
+		
+		var bytes = MessageRegistries.ToAgent.Write(message).ToArray();
 		if (bytes.Length > 0) {
 			await socket.SendAsync(routingId, bytes);
 		}
 	}
 
-	public async Task<TReply?> Send<TMessage, TReply>(Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
-		var sequenceId = messageReplyTracker.RegisterReply();
-		var message = messageFactory(sequenceId);
+	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
+		if (isClosed) {
+			return null;
+		}
 		
-		var bytes = WriteBytes<TMessage, TReply>(message);
+		var sequenceId = messageReplyTracker.RegisterReply();
+		
+		var bytes = MessageRegistries.ToAgent.Write<TMessage, TReply>(sequenceId, message).ToArray();
 		if (bytes.Length == 0) {
 			messageReplyTracker.ForgetReply(sequenceId);
 			return null;
 		}
 
 		await socket.SendAsync(routingId, bytes);
-		return await messageReplyTracker.WaitForReply<TReply>(message.SequenceId, waitForReplyTime, cancellationToken);
+		return await messageReplyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, cancellationToken);
 	}
 
 	public void Receive(ReplyMessage message) {

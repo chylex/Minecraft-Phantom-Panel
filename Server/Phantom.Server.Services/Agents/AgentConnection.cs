@@ -22,7 +22,7 @@ sealed class AgentConnection {
 		return connection.Send(message);
 	}
 
-	public Task<TReply?> Send<TMessage, TReply>(Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
-		return connection.Send<TMessage, TReply>(messageFactory, waitForReplyTime, cancellationToken);
+	public Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
+		return connection.Send<TMessage, TReply>(message, waitForReplyTime, cancellationToken);
 	}
 }

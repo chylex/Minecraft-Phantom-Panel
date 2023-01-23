@@ -28,7 +28,7 @@ public static class ServerMessaging {
 		return CurrentConnectionOrThrow.Send(message);
 	}
 
-	public static Task<TReply?> Send<TMessage, TReply>(Func<uint, TMessage> messageFactory, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
-		return CurrentConnectionOrThrow.Send<TMessage, TReply>(messageFactory, waitForReplyTime, cancellationToken);
+	public static Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
+		return CurrentConnectionOrThrow.Send<TMessage, TReply>(message, waitForReplyTime, cancellationToken);
 	}
 }
