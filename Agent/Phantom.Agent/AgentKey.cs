@@ -8,7 +8,7 @@ using Serilog;
 namespace Phantom.Agent;
 
 static class AgentKey {
-	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(AgentKey));
+	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(AgentKey));
 
 	public static Task<(NetMQCertificate, AgentAuthToken)?> Load(string? agentKeyToken, string? agentKeyFilePath) {
 		if (agentKeyFilePath != null) {

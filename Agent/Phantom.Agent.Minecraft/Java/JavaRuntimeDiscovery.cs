@@ -7,7 +7,7 @@ using Serilog;
 namespace Phantom.Agent.Minecraft.Java;
 
 public sealed class JavaRuntimeDiscovery {
-	private static readonly ILogger Logger = PhantomLogger.Create(typeof(JavaRuntimeDiscovery));
+	private static readonly ILogger Logger = PhantomLogger.Create(nameof(JavaRuntimeDiscovery));
 
 	public static string? GetSystemSearchPath() {
 		const string LinuxJavaPath = "/usr/lib/jvm";

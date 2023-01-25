@@ -8,7 +8,7 @@ using Serilog;
 namespace Phantom.Server;
 
 static class CertificateFiles {
-	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(CertificateFiles));
+	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(CertificateFiles));
 
 	private const string SecretKeyFileName = "secret.key";
 	private const string AgentKeyFileName = "agent.key";

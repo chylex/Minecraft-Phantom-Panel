@@ -5,7 +5,7 @@ using Serilog;
 namespace Phantom.Agent.Rpc;
 
 public static class ServerMessaging {
-	private static readonly ILogger Logger = PhantomLogger.Create(typeof(ServerMessaging));
+	private static readonly ILogger Logger = PhantomLogger.Create(nameof(ServerMessaging));
 	
 	private static RpcServerConnection? CurrentConnection { get; set; }
 	private static RpcServerConnection CurrentConnectionOrThrow => CurrentConnection ?? throw new InvalidOperationException("Server connection not ready.");

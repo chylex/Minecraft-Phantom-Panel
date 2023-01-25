@@ -6,7 +6,7 @@ using Serilog;
 namespace Phantom.Agent; 
 
 static class GuidFile {
-	private static ILogger Logger { get; } = PhantomLogger.Create(typeof(GuidFile));
+	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(GuidFile));
 
 	private const string GuidFileName = "agent.guid";
 	

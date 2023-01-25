@@ -33,8 +33,8 @@ public static class PhantomLogger {
 		return Base.ForContext("Category", name);
 	}
 
-	public static ILogger Create(Type type) {
-		return Create(type.Name);
+	public static ILogger Create(string name1, string name2) {
+		return Create(name1 + ":" + name2);
 	}
 
 	public static ILogger Create<T>() {
@@ -42,11 +42,11 @@ public static class PhantomLogger {
 	}
 
 	public static ILogger Create<T>(string name) {
-		return Create(typeof(T).Name + ":" + name);
+		return Create(typeof(T).Name, name);
 	}
 
 	public static ILogger Create<T1, T2>() {
-		return Create(typeof(T1).Name + ":" + typeof(T2).Name);
+		return Create(typeof(T1).Name, typeof(T2).Name);
 	}
 
 	public static void Dispose() {
