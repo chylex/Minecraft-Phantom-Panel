@@ -1,4 +1,5 @@
-﻿using Phantom.Agent.Minecraft.Command;
+﻿using System.Diagnostics;
+using Phantom.Agent.Minecraft.Command;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
@@ -32,16 +33,17 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 			await DoWaitForSessionToEnd();
 		} finally {
 			context.Logger.Information("Session stopped.");
-			context.ReportStatus(InstanceStatus.NotRunning);
-			context.TransitionState(new InstanceNotRunningState());
+			context.TransitionState(new InstanceNotRunningState(), InstanceStatus.NotRunning);
 		}
 	}
 
 	private async Task DoSendStopCommand() {
-		using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		try {
-			await session.SendCommand(MinecraftCommand.Stop, cts.Token);
+			await session.SendCommand(MinecraftCommand.Stop, timeout.Token);
 		} catch (OperationCanceledException) {
+			// ignore
+		} catch (ObjectDisposedException e) when (e.ObjectName == typeof(Process).FullName && session.HasEnded) {
 			// ignore
 		} catch (Exception e) {
 			context.Logger.Warning(e, "Caught exception while sending stop command.");
@@ -49,9 +51,9 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	}
 
 	private async Task DoWaitForSessionToEnd() {
-		using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(55));
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(55));
 		try {
-			await session.WaitForExit(cts.Token);
+			await session.WaitForExit(timeout.Token);
 		} catch (OperationCanceledException) {
 			try {
 				context.Logger.Warning("Waiting timed out, killing session...");

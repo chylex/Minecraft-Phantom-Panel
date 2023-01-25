@@ -20,9 +20,9 @@ abstract class InstanceContext {
 	}
 
 	public abstract void ReportStatus(IInstanceStatus newStatus);
-	public abstract void TransitionState(Func<IInstanceState> newState);
+	public abstract void TransitionState(Func<(IInstanceState, IInstanceStatus?)> newStateAndStatus);
 
-	public void TransitionState(IInstanceState newState) {
-		TransitionState(() => newState);
+	public void TransitionState(IInstanceState newState, IInstanceStatus? newStatus = null) {
+		TransitionState(() => (newState, newStatus));
 	}
 }

@@ -85,10 +85,10 @@ sealed class Instance : IDisposable {
 		}
 	}
 
-	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
-		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
+	public async Task<LaunchInstanceResult> Launch(CancellationToken shutdownCancellationToken) {
+		await stateTransitioningActionSemaphore.WaitAsync(shutdownCancellationToken);
 		try {
-			return TransitionStateAndReturn(currentState.Launch(new InstanceContextImpl(this)));
+			return TransitionStateAndReturn(currentState.Launch(new InstanceContextImpl(this, shutdownCancellationToken)));
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception while launching instance.");
 			return LaunchInstanceResult.UnknownError;
@@ -126,10 +126,13 @@ sealed class Instance : IDisposable {
 
 	private sealed class InstanceContextImpl : InstanceContext {
 		private readonly Instance instance;
+		private readonly CancellationToken shutdownCancellationToken;
+		
 		private int statusUpdateCounter;
 
-		public InstanceContextImpl(Instance instance) : base(instance.Configuration, instance.Launcher) {
+		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Configuration, instance.Launcher) {
 			this.instance = instance;
+			this.shutdownCancellationToken = shutdownCancellationToken;
 		}
 
 		public override LaunchServices LaunchServices => instance.launchServices;
@@ -148,10 +151,20 @@ sealed class Instance : IDisposable {
 			});
 		}
 
-		public override void TransitionState(Func<IInstanceState> newState) {
-			instance.stateTransitioningActionSemaphore.Wait();
+		public override void TransitionState(Func<(IInstanceState, IInstanceStatus?)> newStateAndStatus) {
+			instance.stateTransitioningActionSemaphore.Wait(CancellationToken.None);
 			try {
-				instance.TransitionState(newState());
+				var (state, status) = newStateAndStatus();
+				if (state is not InstanceNotRunningState && shutdownCancellationToken.IsCancellationRequested) {
+					instance.logger.Verbose("Cancelled state transition to {State} due to Agent shutdown.", state.GetType().Name);
+					return;
+				}
+
+				if (status != null) {
+					ReportStatus(status);
+				}
+
+				instance.TransitionState(state);
 			} catch (Exception e) {
 				instance.logger.Error(e, "Caught exception during state transition.");
 			} finally {

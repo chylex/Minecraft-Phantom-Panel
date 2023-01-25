@@ -41,36 +41,36 @@ sealed class InstanceSessionManager : IDisposable {
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 	}
 
-	[SuppressMessage("ReSharper", "ConvertIfStatementToReturnStatement")]
-	private async Task<InstanceActionResult<T>> AcquireSemaphoreAndRunWithInstance<T>(Guid instanceGuid, Func<Instance, Task<T>> func) {
+	private async Task<InstanceActionResult<T>> AcquireSemaphoreAndRun<T>(Func<Task<InstanceActionResult<T>>> func) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
+
+			try {
+				return await func();
+			} finally {
+				semaphore.Release();
+			}
 		} catch (OperationCanceledException) {
 			return InstanceActionResult.General<T>(InstanceActionGeneralResult.AgentShuttingDown);
 		}
+	}
 
-		try {
-			if (!instances.TryGetValue(instanceGuid, out var instance)) {
-				return InstanceActionResult.General<T>(InstanceActionGeneralResult.InstanceDoesNotExist);
-			}
-			else {
+	[SuppressMessage("ReSharper", "ConvertIfStatementToReturnStatement")]
+	private Task<InstanceActionResult<T>> AcquireSemaphoreAndRunWithInstance<T>(Guid instanceGuid, Func<Instance, Task<T>> func) {
+		return AcquireSemaphoreAndRun(async () => {
+			if (instances.TryGetValue(instanceGuid, out var instance)) {
 				return InstanceActionResult.Concrete(await func(instance));
 			}
-		} finally {
-			semaphore.Release();
-		}
+			else {
+				return InstanceActionResult.General<T>(InstanceActionGeneralResult.InstanceDoesNotExist);
+			}
+		});
 	}
-	
+
 	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration) {
-		try {
-			await semaphore.WaitAsync(shutdownCancellationToken);
-		} catch (OperationCanceledException) {
-			return InstanceActionResult.General<ConfigureInstanceResult>(InstanceActionGeneralResult.AgentShuttingDown);
-		}
-
-		var instanceGuid = configuration.InstanceGuid;
-
-		try {
+		return await AcquireSemaphoreAndRun(async () => {
+			var instanceGuid = configuration.InstanceGuid;
+			
 			var otherInstances = instances.Values.Where(inst => inst.Configuration.InstanceGuid != instanceGuid).ToArray();
 			if (otherInstances.Length + 1 > agentInfo.MaxInstances) {
 				return InstanceActionResult.Concrete(ConfigureInstanceResult.InstanceLimitExceeded);
@@ -115,9 +115,7 @@ sealed class InstanceSessionManager : IDisposable {
 			}
 
 			return InstanceActionResult.Concrete(ConfigureInstanceResult.Success);
-		} finally {
-			semaphore.Release();
-		}
+		});
 	}
 
 	public Task<InstanceActionResult<LaunchInstanceResult>> Launch(Guid instanceGuid) {

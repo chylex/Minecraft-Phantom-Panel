@@ -66,11 +66,10 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		context.TransitionState(() => {
 			if (cancellationTokenSource.IsCancellationRequested) {
 				context.PortManager.Release(context.Configuration);
-				context.ReportStatus(InstanceStatus.NotRunning);
-				return new InstanceNotRunningState();
+				return (new InstanceNotRunningState(), InstanceStatus.NotRunning);
 			}
 			else {
-				return new InstanceRunningState(context, task.Result);
+				return (new InstanceRunningState(context, task.Result), null);
 			}
 		});
 	}
