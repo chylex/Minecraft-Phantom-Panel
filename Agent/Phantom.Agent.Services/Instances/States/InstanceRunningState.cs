@@ -30,7 +30,7 @@ sealed class InstanceRunningState : IInstanceState {
 		if (session.HasEnded) {
 			if (sessionObjects.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
-				context.LaunchServices.TaskManager.Run(() => context.TransitionState(new InstanceNotRunningState(), InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
+				context.LaunchServices.TaskManager.Run("Transition state of instance " + context.ShortName + " to not running", () => context.TransitionState(new InstanceNotRunningState(), InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
 			}
 		}
 		else {
@@ -75,7 +75,7 @@ sealed class InstanceRunningState : IInstanceState {
 		}
 		
 		isStopping = true;
-		context.LaunchServices.TaskManager.Run(() => StopLater(stopStrategy.Seconds));
+		context.LaunchServices.TaskManager.Run("Delayed stop timer for instance " + context.ShortName, () => StopLater(stopStrategy.Seconds));
 		return (this, StopInstanceResult.StopInitiated);
 	}
 

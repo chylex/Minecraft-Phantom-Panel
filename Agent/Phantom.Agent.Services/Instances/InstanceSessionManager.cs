@@ -132,6 +132,8 @@ sealed class InstanceSessionManager : IDisposable {
 
 	public async Task StopAll() {
 		shutdownCancellationTokenSource.Cancel();
+		
+		Logger.Information("Stopping all instances...");
 
 		await semaphore.WaitAsync(CancellationToken.None);
 		try {

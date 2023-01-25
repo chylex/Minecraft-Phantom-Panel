@@ -31,7 +31,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	private readonly SemaphoreSlim disconnectSemaphore;
 	private readonly CancellationToken receiveCancellationToken;
 
-	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Guid agentGuid, Func<RpcServerConnection, IMessageToAgentListener> messageListenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket, config.Logger) {
+	private RpcLauncher(RpcConfiguration config, ClientSocket socket, Guid agentGuid, Func<RpcServerConnection, IMessageToAgentListener> messageListenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(config, socket) {
 		this.config = config;
 		this.agentGuid = agentGuid;
 		this.messageListenerFactory = messageListenerFactory;
@@ -40,7 +40,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 	}
 
 	protected override void Connect(ClientSocket socket) {
-		var logger = config.Logger;
+		var logger = config.RuntimeLogger;
 		var url = config.TcpUrl;
 
 		logger.Information("Starting ZeroMQ client and connecting to {Url}...", url);
@@ -52,7 +52,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var connection = new RpcServerConnection(socket, replyTracker);
 		ServerMessaging.SetCurrentConnection(connection);
 		
-		var logger = config.Logger;
+		var logger = config.RuntimeLogger;
 		var handler = new MessageToAgentHandler(messageListenerFactory(connection), logger, taskManager, receiveCancellationToken);
 		var keepAliveLoop = new KeepAliveLoop(connection);
 
@@ -93,7 +93,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var unregisterTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None);
 		var finishedTask = await Task.WhenAny(ServerMessaging.Send(new UnregisterAgentMessage(agentGuid)), unregisterTimeoutTask);
 		if (finishedTask == unregisterTimeoutTask) {
-			config.Logger.Error("Timed out communicating agent shutdown with the server.");
+			config.RuntimeLogger.Error("Timed out communicating agent shutdown with the server.");
 		}
 	}
 

@@ -24,7 +24,7 @@ sealed class InstanceLogSender {
 		this.logger = PhantomLogger.Create<InstanceLogSender>(name);
 		this.cancellationTokenSource = new CancellationTokenSource();
 		this.cancellationToken = cancellationTokenSource.Token;
-		taskManager.Run(Run);
+		taskManager.Run("Instance log sender for " + name, Run);
 	}
 
 	private async Task Run() {

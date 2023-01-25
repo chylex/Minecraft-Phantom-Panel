@@ -25,14 +25,14 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	private readonly Func<RpcClientConnection, IMessageToServerListener> listenerFactory;
 	private readonly CancellationToken cancellationToken;
 
-	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) : base(socket, config.Logger) {
+	private RpcLauncher(RpcConfiguration config, ServerSocket socket, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) : base(config, socket) {
 		this.config = config;
 		this.listenerFactory = listenerFactory;
 		this.cancellationToken = cancellationToken;
 	}
 
 	protected override void Connect(ServerSocket socket) {
-		var logger = config.Logger;
+		var logger = config.RuntimeLogger;
 		var url = config.TcpUrl;
 
 		logger.Information("Starting ZeroMQ server on {Url}...", url);
@@ -41,7 +41,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	}
 
 	protected override void Run(ServerSocket socket, MessageReplyTracker replyTracker, TaskManager taskManager) {
-		var logger = config.Logger;
+		var logger = config.RuntimeLogger;
 		var clients = new Dictionary<ulong, Client>();
 
 		void OnConnectionClosed(object? sender, RpcClientConnectionClosedEventArgs e) {

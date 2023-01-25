@@ -18,7 +18,7 @@ public sealed class AgentServices {
 
 	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders) {
 		this.AgentFolders = agentFolders;
-		this.TaskManager = new TaskManager();
+		this.TaskManager = new TaskManager(PhantomLogger.Create<TaskManager, AgentServices>());
 		this.JavaRuntimeRepository = new JavaRuntimeRepository();
 		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository, TaskManager);
 	}
@@ -30,10 +30,9 @@ public sealed class AgentServices {
 	}
 
 	public async Task Shutdown() {
-		Logger.Information("Stopping instances...");
-		await InstanceSessionManager.StopAll();
+		Logger.Information("Stopping services...");
 		
-		Logger.Information("Stopping task manager...");
+		await InstanceSessionManager.StopAll();
 		await TaskManager.Stop();
 		
 		Logger.Information("Services stopped.");

@@ -53,7 +53,8 @@ try {
 	await agentServices.Initialize();
 
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcTask = RpcLauncher.Launch(new RpcConfiguration(PhantomLogger.Create("Rpc"), serverHost, serverPort, serverCertificate), agentToken, agentInfo, MessageListenerFactory, rpcDisconnectSemaphore, shutdownCancellationToken);
+	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), serverHost, serverPort, serverCertificate);
+	var rpcTask = RpcLauncher.Launch(rpcConfiguration, agentToken, agentInfo, MessageListenerFactory, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
 		await rpcTask.WaitAsync(shutdownCancellationToken);
 	} finally {

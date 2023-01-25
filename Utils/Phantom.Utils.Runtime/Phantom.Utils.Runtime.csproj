@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />

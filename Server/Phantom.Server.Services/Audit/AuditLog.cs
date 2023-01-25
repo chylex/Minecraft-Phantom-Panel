@@ -36,7 +36,7 @@ public sealed partial class AuditLog {
 
 	private void AddEvent(string? userId, AuditEventType eventType, string subjectId, Dictionary<string, object?>? extra = null) {
 		var eventEntity = new AuditEventEntity(userId, eventType, subjectId, extra);
-		taskManager.Run(() => AddEventToDatabase(eventEntity));
+		taskManager.Run("Store audit log event", () => AddEventToDatabase(eventEntity));
 	}
 
 	private async Task AddEvent(AuditEventType eventType, string subjectId, Dictionary<string, object?>? extra = null) {

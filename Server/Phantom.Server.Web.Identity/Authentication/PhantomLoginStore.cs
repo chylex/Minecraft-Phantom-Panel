@@ -20,7 +20,7 @@ public sealed class PhantomLoginStore {
 
 	private PhantomLoginStore(TaskManager taskManager, CancellationToken cancellationToken) {
 		this.cancellationToken = cancellationToken;
-		taskManager.Run(RunExpirationLoop);
+		taskManager.Run("Web login entry expiration loop", RunExpirationLoop);
 	}
 	
 	private async Task RunExpirationLoop() {

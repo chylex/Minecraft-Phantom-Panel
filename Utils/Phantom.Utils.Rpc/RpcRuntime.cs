@@ -26,17 +26,17 @@ static class RpcRuntime {
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new() {
 	private readonly TSocket socket;
+	private readonly ILogger runtimeLogger;
 	private readonly MessageReplyTracker replyTracker;
 	private readonly TaskManager taskManager;
-	private readonly ILogger logger;
 
-	protected RpcRuntime(TSocket socket, ILogger logger) {
+	protected RpcRuntime(RpcConfiguration configuration, TSocket socket) {
 		RpcRuntime.MarkRuntimeCreated();
 		RpcRuntime.SetDefaultSocketOptions(socket.Options);
 		this.socket = socket;
-		this.logger = logger;
-		this.replyTracker = new MessageReplyTracker(logger);
-		this.taskManager = new TaskManager();
+		this.runtimeLogger = configuration.RuntimeLogger;
+		this.replyTracker = new MessageReplyTracker(runtimeLogger);
+		this.taskManager = new TaskManager(configuration.TaskManagerLogger);
 	}
 
 	protected async Task Launch() {
@@ -51,13 +51,12 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 		} catch (OperationCanceledException) {
 			// ignore
 		} finally {
-			logger.Information("Stopping task manager...");
 			await taskManager.Stop();
 			await Disconnect();
 			
 			socket.Dispose();
 			NetMQConfig.Cleanup();
-			logger.Information("ZeroMQ client stopped.");
+			runtimeLogger.Information("ZeroMQ client stopped.");
 		}
 	}
 	

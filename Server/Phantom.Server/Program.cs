@@ -15,7 +15,7 @@ using WebConfiguration = Phantom.Server.Web.Configuration;
 using WebLauncher = Phantom.Server.Web.Launcher;
 
 var cancellationTokenSource = new CancellationTokenSource();
-var taskManager = new TaskManager();
+var taskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Server"));
 
 PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel server...");
@@ -53,7 +53,7 @@ try {
 	
 	var (certificate, agentToken) = certificateData.Value;
 	
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), rpcServerHost, rpcServerPort, certificate);
+	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), rpcServerHost, rpcServerPort, certificate);
 	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, webKeysPath, cancellationTokenSource.Token);
 
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
@@ -79,7 +79,6 @@ try {
 } finally {
 	cancellationTokenSource.Cancel();
 	
-	PhantomLogger.Root.Information("Stopping task manager...");
 	await taskManager.Stop();
 	
 	cancellationTokenSource.Dispose();

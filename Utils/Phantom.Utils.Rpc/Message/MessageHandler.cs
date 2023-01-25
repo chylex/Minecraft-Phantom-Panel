@@ -19,7 +19,7 @@ public abstract class MessageHandler<TListener> {
 	
 	internal void Enqueue<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
 		cancellationToken.ThrowIfCancellationRequested();
-		taskManager.Run(async () => {
+		taskManager.Run("Handle message {Type}" + message.GetType().Name, async () => {
 			try {
 				await Handle<TMessage, TReply>(sequenceId, message);
 			} catch (Exception e) {

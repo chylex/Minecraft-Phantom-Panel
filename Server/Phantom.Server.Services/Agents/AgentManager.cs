@@ -32,7 +32,7 @@ public sealed class AgentManager {
 		this.cancellationToken = configuration.CancellationToken;
 		this.authToken = authToken;
 		this.databaseProvider = databaseProvider;
-		taskManager.Run(RefreshAgentStatus);
+		taskManager.Run("Refresh agent status loop", RefreshAgentStatus);
 	}
 
 	public async Task Initialize() {

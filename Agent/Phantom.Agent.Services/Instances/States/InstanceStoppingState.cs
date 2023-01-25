@@ -21,7 +21,7 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	public void Initialize() {
 		context.Logger.Information("Session stopping.");
 		context.ReportStatus(InstanceStatus.Stopping);
-		context.LaunchServices.TaskManager.Run(DoStop);
+		context.LaunchServices.TaskManager.Run("Stop procedure for instance " + context.ShortName, DoStop);
 	}
 
 	private async Task DoStop() {
