@@ -33,10 +33,13 @@ FROM ubuntu:focal AS java-legacy
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update &&       \
-    apt-get install -y      \
-    openjdk-8-jre-headless  \
-    openjdk-16-jre-headless \
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked     \
+    rm -f /etc/apt/apt.conf.d/docker-clean                   && \
+    apt-get update                                           && \
+    apt-get install -y                                          \
+    openjdk-8-jre-headless                                      \
+    openjdk-16-jre-headless                                     \
     openjdk-17-jre-headless
 
 
@@ -49,17 +52,19 @@ COPY --from=java-legacy /usr/lib/jvm/java-8-openjdk-amd64 /usr/lib/jvm/java-8-op
 COPY --from=java-legacy /usr/lib/jvm/java-16-openjdk-amd64 /usr/lib/jvm/java-16-openjdk-amd64
 COPY --from=java-legacy /usr/lib/jvm/java-17-openjdk-amd64 /usr/lib/jvm/java-17-openjdk-amd64
 
-COPY --from=phantom-agent-builder --chmod=755 /app/out /app
-
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update &&  \
-    apt-get install -y \
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked     \
+    rm -f /etc/apt/apt.conf.d/docker-clean                   && \
+    apt-get update                                           && \
+    apt-get install -y                                          \
     openjdk-18-jre-headless
 
-RUN mkdir /data
-RUN chmod 777 /data
+RUN mkdir /data && chmod 777 /data
 WORKDIR /data
+
+COPY --from=phantom-agent-builder --chmod=755 /app/out /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]
 
@@ -69,10 +74,9 @@ ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]
 # +-------------------------------+
 FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS phantom-server
 
-COPY --from=phantom-server-builder --chmod=755 /app/out /app
-
-RUN mkdir /data
-RUN chmod 777 /data
+RUN mkdir /data && chmod 777 /data
 WORKDIR /data
+
+COPY --from=phantom-server-builder --chmod=755 /app/out /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Server.dll"]
