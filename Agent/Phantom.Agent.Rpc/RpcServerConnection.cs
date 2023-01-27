@@ -22,7 +22,7 @@ public sealed class RpcServerConnection {
 		}
 	}
 
-	internal async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
+	internal async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
 		var sequenceId = replyTracker.RegisterReply();
 		
 		var bytes = MessageRegistries.ToServer.Write<TMessage, TReply>(sequenceId, message).ToArray();
@@ -32,7 +32,7 @@ public sealed class RpcServerConnection {
 		}
 
 		await socket.SendAsync(bytes);
-		return await replyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, cancellationToken);
+		return await replyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, waitForReplyCancellationToken);
 	}
 
 	public void Receive(ReplyMessage message) {

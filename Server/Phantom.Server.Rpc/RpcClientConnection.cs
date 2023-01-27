@@ -45,7 +45,7 @@ public sealed class RpcClientConnection {
 		}
 	}
 
-	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
+	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
 		if (isClosed) {
 			return null;
 		}
@@ -59,7 +59,7 @@ public sealed class RpcClientConnection {
 		}
 
 		await socket.SendAsync(routingId, bytes);
-		return await messageReplyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, cancellationToken);
+		return await messageReplyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, waitForReplyCancellationToken);
 	}
 
 	public void Receive(ReplyMessage message) {
