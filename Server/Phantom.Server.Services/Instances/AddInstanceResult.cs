@@ -6,9 +6,7 @@ public enum AddInstanceResult : byte {
 	InstanceAlreadyExists,
 	InstanceNameMustNotBeEmpty,
 	InstanceMemoryMustNotBeZero,
-	AgentNotFound,
-	AgentInstanceLimitExceeded,
-	AgentMemoryLimitExceeded
+	AgentNotFound
 }
 
 public static class AddInstanceResultExtensions {
@@ -18,8 +16,6 @@ public static class AddInstanceResultExtensions {
 			AddInstanceResult.InstanceNameMustNotBeEmpty  => "Instance name must not be empty.",
 			AddInstanceResult.InstanceMemoryMustNotBeZero => "Memory must not be 0 MB.",
 			AddInstanceResult.AgentNotFound               => "Agent not found.",
-			AddInstanceResult.AgentInstanceLimitExceeded  => "Agent instance limit exceeded.",
-			AddInstanceResult.AgentMemoryLimitExceeded    => "Agent memory limit exceeded.",
 			_                                             => "Unknown error."
 		};
 	}

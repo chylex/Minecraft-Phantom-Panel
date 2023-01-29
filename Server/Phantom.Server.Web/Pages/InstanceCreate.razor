@@ -4,10 +4,10 @@
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances
-@using Phantom.Server.Web.Components.Utils
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
+@using Phantom.Server.Web.Components.Utils
 @using Phantom.Server.Web.Identity.Interfaces
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
@@ -15,8 +15,8 @@
 @attribute [Authorize(Permission.CreateInstancesPolicy)]
 @inject INavigation Nav
 @inject MinecraftVersions MinecraftVersions
+@inject AgentManager AgentManager
 @inject AgentJavaRuntimesManager AgentJavaRuntimesManager
-@inject AgentStatsManager AgentStatsManager
 @inject InstanceManager InstanceManager
 @inject AuditLog AuditLog
 
@@ -28,13 +28,13 @@
     <div class="col-xl-7 mb-3">
       <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
         <option value="" selected>Select which agent will run the instance...</option>
-        @foreach (var (agent, usedInstances, usedMemory) in form.AgentsByGuid.Values.OrderBy(static item => item.Agent.Name)) {
+        @foreach (var agent in form.AgentsByGuid.Values.OrderBy(static agent => agent.Name)) {
           <option value="@agent.Guid">
             @agent.Name
             &bullet;
-            @(usedInstances)/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
+            @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
             &bullet;
-            @(usedMemory.InMegabytes)/@(agent.MaxMemory.InMegabytes) MB RAM
+            @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(agent.MaxMemory.InMegabytes) MB RAM
           </option>
         }
       </FormSelectInput>
@@ -84,8 +84,8 @@
     </div>
 
     @{
-      string? allowedServerPorts = selectedAgent?.Agent.AllowedServerPorts?.ToString();
-      string? allowedRconPorts = selectedAgent?.Agent.AllowedRconPorts?.ToString();
+      string? allowedServerPorts = selectedAgent?.AllowedServerPorts?.ToString();
+      string? allowedRconPorts = selectedAgent?.AllowedRconPorts?.ToString();
     }
     <div class="col-sm-6 col-xl-2 mb-3">
       <FormNumberInput Id="instance-server-port" @bind-Value="form.ServerPort" min="0" max="65535">
@@ -116,14 +116,20 @@
 
   <div class="row">
     <div class="col-xl-12 mb-3">
-      @{ ushort maximumMemoryUnits = form.MaximumMemoryUnits; }
-      <FormNumberInput Id="instance-memory" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="2" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)">
+      @{
+        const ushort MinimumMemoryUnits = 2;
+        ushort maximumMemoryUnits = form.MaximumMemoryUnits;
+        double availableMemoryRatio = maximumMemoryUnits <= MinimumMemoryUnits ? 100.0 : 100.0 * (form.AvailableMemoryUnits - MinimumMemoryUnits) / (maximumMemoryUnits - MinimumMemoryUnits);
+        // TODO not precise because the track is not centered on the track bar
+        string memoryInputSplitVar = FormattableString.Invariant($"--range-split: {Math.Round(availableMemoryRatio, 2)}%");
+      }
+      <FormNumberInput Id="instance-memory" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="@MinimumMemoryUnits" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" class="form-range split-danger" style="@memoryInputSplitVar">
         <LabelFragment>
           @if (maximumMemoryUnits == 0) {
             <text>RAM</text>
           }
           else {
-            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.AvailableMemory.InMegabytes) MB</code></text>
+            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.MaxMemory.InMegabytes) MB</code></text>
           }
         </LabelFragment>
       </FormNumberInput>
@@ -154,13 +160,13 @@
   private bool IsSubmittable => form.SelectedAgentGuid != null && !form.EditContext.GetValidationMessages(form.EditContext.Field(nameof(CreateInstanceFormModel.SelectedAgentGuid))).Any();
 
   private readonly Guid instanceGuid = Guid.NewGuid();
-
+  
   private sealed class CreateInstanceFormModel : FormModel {
-    public ImmutableDictionary<Guid, AgentStats> AgentsByGuid { get; }
+    public ImmutableDictionary<Guid, Agent> AgentsByGuid { get; }
     private readonly ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> javaRuntimesByAgentGuid;
 
-    public CreateInstanceFormModel(AgentJavaRuntimesManager agentJavaRuntimesManager, AgentStatsManager agentStatsManager) {
-      AgentsByGuid = agentStatsManager.GetOnlineAgentStats();
+    public CreateInstanceFormModel(AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager) {
+      AgentsByGuid = agentManager.GetAgents().Where(static agent => agent.Value.IsOnline).ToImmutableDictionary();
       javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
     }
 
@@ -174,18 +180,19 @@
       }
     }
 
-    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentStats? stats) {
-      return TryGet(AgentsByGuid, agentGuid, out stats);
+    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out Agent? agent) {
+      return TryGet(AgentsByGuid, agentGuid, out agent);
     }
 
-    public AgentStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agentStats) ? agentStats : null;
+    public Agent? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agent) ? agent : null;
+    
     public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(javaRuntimesByAgentGuid, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
-    public ushort MaximumMemoryUnits => SelectedAgent?.AvailableMemory.RawValue ?? 0;
+    
+    public ushort MaximumMemoryUnits => SelectedAgent?.MaxMemory.RawValue ?? 0;
+    public ushort AvailableMemoryUnits => SelectedAgent?.AvailableMemory?.RawValue ?? 0;
     private ushort selectedMemoryUnits = 4;
 
     [Required(ErrorMessage = "You must select an agent.")]
-    [AgentHasInstances(ErrorMessage = "This agent has no remaining instances.")]
-    [AgentHasMemory(ErrorMessage = "This agent has no remaining RAM.")]
     public Guid? SelectedAgentGuid { get; set; } = null;
 
     [Required(ErrorMessage = "Instance name is required.")]
@@ -220,24 +227,14 @@
     [JvmArgumentsMustBeValid(ErrorMessage = "JVM arguments are not valid.")]
     public string JvmArguments { get; set; } = string.Empty;
 
-    public sealed class AgentHasInstancesAttribute : FormValidationAttribute<CreateInstanceFormModel, Guid?> {
-      protected override string FieldName => nameof(SelectedAgentGuid);
-      protected override bool IsValid(CreateInstanceFormModel model, Guid? value) => model.TryGetAgent(value, out var agent) && agent.UsedInstances < agent.Agent.MaxInstances;
-    }
-
-    public sealed class AgentHasMemoryAttribute : FormValidationAttribute<CreateInstanceFormModel, Guid?> {
-      protected override string FieldName => nameof(SelectedAgentGuid);
-      protected override bool IsValid(CreateInstanceFormModel model, Guid? value) => model.TryGetAgent(value, out var agent) && agent.AvailableMemory > RamAllocationUnits.Zero;
-    }
-
     public sealed class ServerPortMustBeAllowedAttribute : FormValidationAttribute<CreateInstanceFormModel, int> {
       protected override string FieldName => nameof(ServerPort);
-      protected override bool IsValid(CreateInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Agent.AllowedServerPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(CreateInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.AllowedServerPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustBeAllowedAttribute : FormValidationAttribute<CreateInstanceFormModel, int> {
       protected override string FieldName => nameof(RconPort);
-      protected override bool IsValid(CreateInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Agent.AllowedRconPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(CreateInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.AllowedRconPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustDifferFromServerPortAttribute : FormValidationAttribute<CreateInstanceFormModel, int?> {
@@ -256,7 +253,7 @@
   }
 
   protected override void OnInitialized() {
-    form = new CreateInstanceFormModel(AgentJavaRuntimesManager, AgentStatsManager);
+    form = new CreateInstanceFormModel(AgentManager, AgentJavaRuntimesManager);
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.MemoryUnits));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.JavaRuntimeGuid));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(CreateInstanceFormModel.SelectedAgentGuid), revalidated: nameof(CreateInstanceFormModel.ServerPort));
@@ -293,7 +290,7 @@
     var javaRuntimeGuid = form.JavaRuntimeGuid.GetValueOrDefault();
     var jvmArguments = JvmArgumentsHelper.Split(form.JvmArguments);
 
-    var instance = new InstanceConfiguration(selectedAgent.Agent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, jvmArguments, LaunchAutomatically: false);
+    var instance = new InstanceConfiguration(selectedAgent.Guid, instanceGuid, form.InstanceName, serverPort, rconPort, form.MinecraftVersion, form.MinecraftServerKind, memoryAllocation, javaRuntimeGuid, jvmArguments, LaunchAutomatically: false);
     var result = await InstanceManager.AddInstance(instance);
     if (result.Is(AddInstanceResult.Success)) {
       await AuditLog.AddInstanceCreatedEvent(instance.InstanceGuid);

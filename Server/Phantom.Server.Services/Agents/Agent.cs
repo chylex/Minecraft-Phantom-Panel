@@ -12,6 +12,7 @@ public sealed record Agent(
 	RamAllocationUnits MaxMemory,
 	AllowedPorts? AllowedServerPorts = null,
 	AllowedPorts? AllowedRconPorts = null,
+	AgentStats? Stats = null,
 	DateTimeOffset? LastPing = null
 ) {
 	internal AgentConnection? Connection { get; init; }
@@ -19,6 +20,8 @@ public sealed record Agent(
 	public bool IsOnline { get; internal init; }
 	public bool IsOffline => !IsOnline;
 
+	public RamAllocationUnits? AvailableMemory => MaxMemory - Stats?.RunningInstanceMemory;
+	
 	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.ProtocolVersion, info.BuildVersion, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
 
 	internal Agent AsDisconnected() => this with {
@@ -27,6 +30,7 @@ public sealed record Agent(
 	
 	internal Agent AsOffline() => this with {
 		Connection = null,
+		Stats = null,
 		IsOnline = false
 	};
 }

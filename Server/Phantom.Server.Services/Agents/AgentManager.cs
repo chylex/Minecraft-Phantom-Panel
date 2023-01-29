@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
@@ -47,6 +48,10 @@ public sealed class AgentManager {
 		}
 	}
 
+	public ImmutableDictionary<Guid, Agent> GetAgents() {
+		return agents.ByGuid.ToImmutable();
+	}
+
 	internal async Task<bool> RegisterAgent(AgentAuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcClientConnection connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
@@ -90,13 +95,17 @@ public sealed class AgentManager {
 			return false;
 		}
 	}
-
+	
 	internal Agent? GetAgent(Guid guid) {
 		return agents.ByGuid.TryGetValue(guid, out var agent) ? agent : null;
 	}
 
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
 		agents.ByGuid.TryReplace(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
+	}
+
+	internal void SetAgentStats(Guid agentGuid, int runningInstanceCount, RamAllocationUnits runningInstanceMemory) {
+		agents.ByGuid.TryReplace(agentGuid, agent => agent with { Stats = new AgentStats(runningInstanceCount, runningInstanceMemory) });
 	}
 
 	private async Task RefreshAgentStatus() {

@@ -68,8 +68,13 @@ public sealed class InstanceManager {
 
 		var agentName = agent.Name;
 
-		var reply = (await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, new ConfigureInstanceMessage(configuration), TimeSpan.FromSeconds(10))).DidNotReplyIfNull();
-		if (reply.Is(ConfigureInstanceResult.Success)) {
+		var reply = await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, new ConfigureInstanceMessage(configuration), TimeSpan.FromSeconds(10));
+		var result = reply.DidNotReplyIfNull().Map(static result => result switch {
+			ConfigureInstanceResult.Success => AddInstanceResult.Success,
+			_                               => AddInstanceResult.UnknownError
+		});
+		
+		if (result.Is(AddInstanceResult.Success)) {
 			using (var scope = databaseProvider.CreateScope()) {
 				InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
 
@@ -88,20 +93,13 @@ public sealed class InstanceManager {
 			}
 
 			Logger.Information("Added instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\".", configuration.InstanceName, configuration.InstanceGuid, agentName);
-			return InstanceActionResult.Concrete(AddInstanceResult.Success);
 		}
 		else {
 			instances.ByGuid.Remove(configuration.InstanceGuid);
-
-			var result = reply.Map(static result => result switch {
-				ConfigureInstanceResult.InstanceLimitExceeded => AddInstanceResult.AgentInstanceLimitExceeded,
-				ConfigureInstanceResult.MemoryLimitExceeded   => AddInstanceResult.AgentMemoryLimitExceeded,
-				_                                             => AddInstanceResult.UnknownError
-			});
-			
 			Logger.Information("Failed adding instance \"{InstanceName}\" (GUID {InstanceGuid}) to agent \"{AgentName}\". {ErrorMessage}", configuration.InstanceName, configuration.InstanceGuid, agentName, result.ToSentence(AddInstanceResultExtensions.ToSentence));
-			return result;
 		}
+		
+		return result;
 	}
 
 	public ImmutableDictionary<Guid, string> GetInstanceNames() {

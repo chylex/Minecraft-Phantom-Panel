@@ -84,6 +84,10 @@ public sealed class RwLockedObservableDictionary<TKey, TValue> where TKey : notn
 		return FireCollectionChangedIf(dict.RemoveIf(key, removeCondition));
 	}
 
+	public bool RemoveAll(Predicate<KeyValuePair<TKey, TValue>> removeCondition) {
+		return FireCollectionChangedIf(dict.RemoveAll(removeCondition));
+	}
+
 	public ImmutableDictionary<TKey, TValue> ToImmutable() {
 		return dict.ToImmutable();
 	}

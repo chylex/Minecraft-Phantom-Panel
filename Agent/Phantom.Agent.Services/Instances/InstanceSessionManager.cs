@@ -1,16 +1,19 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Launcher.Types;
 using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Agent.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
+using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.IO;
 using Phantom.Utils.Runtime;
 using Serilog;
@@ -44,7 +47,6 @@ sealed class InstanceSessionManager : IDisposable {
 	private async Task<InstanceActionResult<T>> AcquireSemaphoreAndRun<T>(Func<Task<InstanceActionResult<T>>> func) {
 		try {
 			await semaphore.WaitAsync(shutdownCancellationToken);
-
 			try {
 				return await func();
 			} finally {
@@ -70,25 +72,14 @@ sealed class InstanceSessionManager : IDisposable {
 	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration) {
 		return await AcquireSemaphoreAndRun(async () => {
 			var instanceGuid = configuration.InstanceGuid;
+			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
+			Directories.Create(instanceFolder, Chmod.URWX_GRX);
 			
-			var otherInstances = instances.Values.Where(inst => inst.Configuration.InstanceGuid != instanceGuid).ToArray();
-			if (otherInstances.Length + 1 > agentInfo.MaxInstances) {
-				return InstanceActionResult.Concrete(ConfigureInstanceResult.InstanceLimitExceeded);
-			}
-
-			var availableMemory = agentInfo.MaxMemory - otherInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Configuration.MemoryAllocation);
-			if (availableMemory < configuration.MemoryAllocation) {
-				return InstanceActionResult.Concrete(ConfigureInstanceResult.MemoryLimitExceeded);
-			}
-
 			var heapMegabytes = configuration.MemoryAllocation.InMegabytes;
 			var jvmProperties = new JvmProperties(
 				InitialHeapMegabytes: heapMegabytes / 2,
 				MaximumHeapMegabytes: heapMegabytes
 			);
-
-			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
-			Directories.Create(instanceFolder, Chmod.URWX_GRX);
 
 			var properties = new InstanceProperties(
 				configuration.JavaRuntimeGuid,
@@ -107,19 +98,58 @@ sealed class InstanceSessionManager : IDisposable {
 			}
 			else {
 				instances[instanceGuid] = instance = await Instance.Create(configuration, launcher, launchServices, portManager);
+				instance.IsRunningChanged += OnInstanceIsRunningChanged;
 				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 			}
 
 			if (configuration.LaunchAutomatically) {
-				await instance.Launch(shutdownCancellationToken);
+				await LaunchInternal(instance);
 			}
 
 			return InstanceActionResult.Concrete(ConfigureInstanceResult.Success);
 		});
 	}
 
+	private ImmutableArray<Instance> GetRunningInstancesInternal() {
+		return instances.Values.Where(static instance => instance.IsRunning).ToImmutableArray();
+	}
+
+	private void OnInstanceIsRunningChanged(object? sender, EventArgs e) {
+		launchServices.TaskManager.Run("Handle instance running state changed event", RefreshAgentStatus);
+	}
+
+	public async Task RefreshAgentStatus() {
+		try {
+			await semaphore.WaitAsync(shutdownCancellationToken);
+			try {
+				var runningInstances = GetRunningInstancesInternal();
+				var runningInstanceCount = runningInstances.Length;
+				var runningInstanceMemory = runningInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Configuration.MemoryAllocation);
+				await ServerMessaging.Send(new ReportAgentStatusMessage(runningInstanceCount, runningInstanceMemory));
+			} finally {
+				semaphore.Release();
+			}
+		} catch (OperationCanceledException) {
+			// ignore
+		}
+	}
+
 	public Task<InstanceActionResult<LaunchInstanceResult>> Launch(Guid instanceGuid) {
-		return AcquireSemaphoreAndRunWithInstance(instanceGuid, instance => instance.Launch(shutdownCancellationToken));
+		return AcquireSemaphoreAndRunWithInstance(instanceGuid, LaunchInternal);
+	}
+
+	private async Task<LaunchInstanceResult> LaunchInternal(Instance instance) {
+		var runningInstances = GetRunningInstancesInternal();
+		if (runningInstances.Length + 1 > agentInfo.MaxInstances) {
+			return LaunchInstanceResult.InstanceLimitExceeded;
+		}
+
+		var availableMemory = agentInfo.MaxMemory - runningInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Configuration.MemoryAllocation);
+		if (availableMemory < instance.Configuration.MemoryAllocation) {
+			return LaunchInstanceResult.MemoryLimitExceeded;
+		}
+
+		return await instance.Launch(shutdownCancellationToken);
 	}
 
 	public Task<InstanceActionResult<StopInstanceResult>> Stop(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {

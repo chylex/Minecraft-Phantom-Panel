@@ -70,6 +70,11 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 		return NoReply.Instance;
 	}
 
+	public async Task<NoReply> HandleReportAgentStatus(ReportAgentStatusMessage message) {
+		agentManager.SetAgentStats(await WaitForAgentGuid(), message.RunningInstanceCount, message.RunningInstanceMemory);
+		return NoReply.Instance;
+	}
+
 	public Task<NoReply> HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
 		instanceManager.SetInstanceState(message.InstanceGuid, message.InstanceStatus);
 		return Task.FromResult(NoReply.Instance);

@@ -29,7 +29,6 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton(agentToken);
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<AgentJavaRuntimesManager>();
-		services.AddSingleton<AgentStatsManager>();
 		services.AddSingleton<InstanceManager>();
 		services.AddSingleton<InstanceLogManager>();
 		services.AddSingleton<MinecraftVersions>();

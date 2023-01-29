@@ -1,10 +1,8 @@
 ﻿@page "/agents"
-@using System.Collections.Immutable
 @using Phantom.Server.Services.Agents
 @using Phantom.Utils.Collections
 @implements IDisposable
 @inject AgentManager AgentManager
-@inject AgentStatsManager AgentStatsManager
 
 <h1>Agents</h1>
 
@@ -23,9 +21,8 @@
   @if (!agentTable.IsEmpty) {
     <tbody>
       @foreach (var agent in agentTable) {
-        var stats = agentStats.TryGetValue(agent.Guid, out var s) ? s : null;
-        var usedInstances = stats?.UsedInstances;
-        var usedMemory = stats?.UsedMemory.InMegabytes;
+        var usedInstances = agent.Stats?.RunningInstanceCount;
+        var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
         
         <tr>
           <td>@agent.Name</td>
@@ -78,7 +75,6 @@
 @code {
 
   private readonly Table<Agent, Guid> agentTable = new();
-  private ImmutableDictionary<Guid, AgentStats> agentStats = ImmutableDictionary<Guid, AgentStats>.Empty;
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
@@ -86,16 +82,10 @@
       agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => agent, static (agent, _) => agent);
       InvokeAsync(StateHasChanged);
     });
-
-    AgentStatsManager.AgentStatsChanged.Subscribe(this, agentStats => {
-      this.agentStats = agentStats.ToImmutableDictionary(static stats => stats.Agent.Guid);
-      InvokeAsync(StateHasChanged);
-    });
   }
 
   void IDisposable.Dispose() {
     AgentManager.AgentsChanged.Unsubscribe(this);
-    AgentStatsManager.AgentStatsChanged.Unsubscribe(this);
   }
 
 }

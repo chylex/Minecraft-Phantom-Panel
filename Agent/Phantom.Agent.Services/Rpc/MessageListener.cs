@@ -37,6 +37,8 @@ public sealed class MessageListener : IMessageToAgentListener {
 		}
 
 		await ServerMessaging.Send(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
+		await agent.InstanceSessionManager.RefreshAgentStatus();
+		
 		return NoReply.Instance;
 	}
 

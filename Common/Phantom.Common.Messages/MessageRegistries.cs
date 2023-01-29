@@ -26,6 +26,7 @@ public static class MessageRegistries {
 		ToServer.Add<AdvertiseJavaRuntimesMessage>(3);
 		ToServer.Add<ReportInstanceStatusMessage>(4);
 		ToServer.Add<InstanceOutputMessage>(5);
+		ToServer.Add<ReportAgentStatusMessage>(6);
 		ToServer.Add<ReplyMessage>(127);
 	}
 }

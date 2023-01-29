@@ -37,6 +37,10 @@ sealed class Instance : IDisposable {
 	private IInstanceState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
+	public bool IsRunning => currentState is not InstanceNotRunningState;
+	
+	public event EventHandler? IsRunningChanged; 
+
 	private Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
 		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
@@ -65,8 +69,13 @@ sealed class Instance : IDisposable {
 
 		logger.Verbose("Transitioning instance state to: {NewState}", newState.GetType().Name);
 		
+		var wasRunning = IsRunning;
 		currentState = newState;
 		currentState.Initialize();
+
+		if (IsRunning != wasRunning) {
+			IsRunningChanged?.Invoke(this, EventArgs.Empty);
+		}
 	}
 
 	private T TransitionStateAndReturn<T>((IInstanceState State, T Result) newStateAndResult) {
@@ -155,6 +164,13 @@ sealed class Instance : IDisposable {
 			instance.stateTransitioningActionSemaphore.Wait(CancellationToken.None);
 			try {
 				var (state, status) = newStateAndStatus();
+				
+				if (!instance.IsRunning) {
+					// Only InstanceSessionManager is allowed to transition an instance out of a non-running state.
+					instance.logger.Verbose("Cancelled state transition to {State} because instance is not running.", state.GetType().Name);
+					return;
+				}
+				
 				if (state is not InstanceNotRunningState && shutdownCancellationToken.IsCancellationRequested) {
 					instance.logger.Verbose("Cancelled state transition to {State} due to Agent shutdown.", state.GetType().Name);
 					return;

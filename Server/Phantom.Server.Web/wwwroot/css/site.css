@@ -2,6 +2,10 @@
 @import url('../lib/openiconic/css/open-iconic-bootstrap.min.css');
 @import url('./blazor.css');
 
+:root {
+  --range-split: 100%;
+}
+
 .body {
   position: relative;
   display: flex;
@@ -55,6 +59,11 @@ code {
 
 .form-range {
   height: 2.5rem;
+}
+
+.form-range.split-danger::-moz-range-track,
+.form-range.split-danger::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, #dfd7ca 0%, #dfd7ca var(--range-split), #bf8282 var(--range-split), #bf8282 100%);
 }
 
 .form-submit-errors {

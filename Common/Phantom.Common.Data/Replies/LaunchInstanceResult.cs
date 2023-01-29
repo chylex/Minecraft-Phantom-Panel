@@ -5,7 +5,9 @@ public enum LaunchInstanceResult : byte {
 	LaunchInitiated,
 	InstanceAlreadyLaunching,
 	InstanceAlreadyRunning,
-	InstanceIsStopping
+	InstanceIsStopping,
+	InstanceLimitExceeded,
+	MemoryLimitExceeded
 }
 
 public static class LaunchInstanceResultExtensions {
@@ -15,6 +17,8 @@ public static class LaunchInstanceResultExtensions {
 			LaunchInstanceResult.InstanceAlreadyLaunching => "Instance is already launching.",
 			LaunchInstanceResult.InstanceAlreadyRunning   => "Instance is already running.",
 			LaunchInstanceResult.InstanceIsStopping       => "Instance is stopping.",
+			LaunchInstanceResult.InstanceLimitExceeded    => "Agent does not have any more available instances.",
+			LaunchInstanceResult.MemoryLimitExceeded      => "Agent does not have enough available memory.",
 			_                                             => "Unknown error."
 		};
 	}

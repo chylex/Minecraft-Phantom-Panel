@@ -199,6 +199,29 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
+	public bool RemoveAll(Predicate<KeyValuePair<TKey, TValue>> removeCondition) {
+		rwLock.EnterUpgradeableReadLock();
+		try {
+			var keysToRemove = dict.Where(kvp => removeCondition(kvp)).Select(static kvp => kvp.Key).ToImmutableHashSet();
+			if (keysToRemove.IsEmpty) {
+				return false;
+			}
+
+			rwLock.EnterWriteLock();
+			try {
+				foreach (var key in keysToRemove) {
+					dict.Remove(key);
+				}
+				
+				return true;
+			} finally {
+				rwLock.ExitWriteLock();
+			}
+		} finally {
+			rwLock.ExitUpgradeableReadLock();
+		}
+	}
+
 	public ImmutableDictionary<TKey, TValue> ToImmutable() {
 		rwLock.EnterReadLock();
 		try {
