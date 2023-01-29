@@ -138,15 +138,24 @@ sealed class InstanceSessionManager : IDisposable {
 		await semaphore.WaitAsync(CancellationToken.None);
 		try {
 			await Task.WhenAll(instances.Values.Select(static instance => instance.StopAndWait(TimeSpan.FromSeconds(30))));
-			instances.Clear();
+			DisposeAllInstances();
 		} finally {
 			semaphore.Release();
 		}
 	}
 
 	public void Dispose() {
+		DisposeAllInstances();
 		minecraftServerExecutables.Dispose();
 		shutdownCancellationTokenSource.Dispose();
 		semaphore.Dispose();
+	}
+
+	private void DisposeAllInstances() {
+		foreach (var (_, instance) in instances) {
+			instance.Dispose();
+		}
+
+		instances.Clear();
 	}
 }

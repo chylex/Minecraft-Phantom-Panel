@@ -33,6 +33,8 @@ public sealed class AgentServices {
 		Logger.Information("Stopping services...");
 		
 		await InstanceSessionManager.StopAll();
+		InstanceSessionManager.Dispose();
+		
 		await TaskManager.Stop();
 		
 		Logger.Information("Services stopped.");

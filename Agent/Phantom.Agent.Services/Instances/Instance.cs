@@ -174,10 +174,10 @@ sealed class Instance : IDisposable {
 	}
 
 	public void Dispose() {
+		stateTransitioningActionSemaphore.Dispose();
+		
 		if (currentState is IDisposable disposable) {
 			disposable.Dispose();
 		}
-
-		stateTransitioningActionSemaphore.Dispose();
 	}
 }
