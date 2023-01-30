@@ -1,11 +1,11 @@
 ﻿namespace Phantom.Common.Data.Replies;
 
 public enum LaunchInstanceResult : byte {
+	UnknownError,
 	LaunchInitiated,
 	InstanceAlreadyLaunching,
 	InstanceAlreadyRunning,
-	InstanceIsStopping,
-	UnknownError
+	InstanceIsStopping
 }
 
 public static class LaunchInstanceResultExtensions {

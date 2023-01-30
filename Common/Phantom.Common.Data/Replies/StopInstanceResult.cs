@@ -1,10 +1,10 @@
 ﻿namespace Phantom.Common.Data.Replies;
 
 public enum StopInstanceResult : byte {
+	UnknownError,
 	StopInitiated,
 	InstanceAlreadyStopping,
-	InstanceAlreadyStopped,
-	UnknownError
+	InstanceAlreadyStopped
 }
 
 public static class StopInstanceResultExtensions {

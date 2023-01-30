@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Common.Data.Instance;
 
-public enum InstanceLaunchFailReason {
+public enum InstanceLaunchFailReason : byte {
 	UnknownError,
 	ServerPortNotAllowed,
 	ServerPortAlreadyInUse,

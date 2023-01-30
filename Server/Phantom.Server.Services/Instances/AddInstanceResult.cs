@@ -1,14 +1,14 @@
 ﻿namespace Phantom.Server.Services.Instances;
 
-public enum AddInstanceResult {
+public enum AddInstanceResult : byte {
+	UnknownError,
 	Success,
 	InstanceAlreadyExists,
 	InstanceNameMustNotBeEmpty,
 	InstanceMemoryMustNotBeZero,
 	AgentNotFound,
 	AgentInstanceLimitExceeded,
-	AgentMemoryLimitExceeded,
-	UnknownError
+	AgentMemoryLimitExceeded
 }
 
 public static class AddInstanceResultExtensions {
