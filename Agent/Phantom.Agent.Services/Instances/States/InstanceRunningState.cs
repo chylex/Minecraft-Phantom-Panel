@@ -1,5 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Command;
 using Phantom.Agent.Minecraft.Instance;
+using Phantom.Agent.Services.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -10,6 +11,7 @@ sealed class InstanceRunningState : IInstanceState {
 	private readonly InstanceContext context;
 	private readonly InstanceSession session;
 	private readonly InstanceLogSender logSender;
+	private readonly BackupScheduler backupScheduler;
 	private readonly SessionObjects sessionObjects;
 	
 	private readonly CancellationTokenSource delayedStopCancellationTokenSource = new ();
@@ -19,7 +21,8 @@ sealed class InstanceRunningState : IInstanceState {
 	public InstanceRunningState(InstanceContext context, InstanceSession session) {
 		this.context = context;
 		this.session = session;
-		this.logSender = new InstanceLogSender(context.LaunchServices.TaskManager, context.Configuration.InstanceGuid, context.ShortName);
+		this.logSender = new InstanceLogSender(context.Services.TaskManager, context.Configuration.InstanceGuid, context.ShortName);
+		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, session, context.Configuration.ServerPort, context.ShortName);
 		this.sessionObjects = new SessionObjects(this);
 	}
 
@@ -30,7 +33,7 @@ sealed class InstanceRunningState : IInstanceState {
 		if (session.HasEnded) {
 			if (sessionObjects.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
-				context.LaunchServices.TaskManager.Run("Transition state of instance " + context.ShortName + " to not running", () => context.TransitionState(new InstanceNotRunningState(), InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
+				context.Services.TaskManager.Run("Transition state of instance " + context.ShortName + " to not running", () => context.TransitionState(new InstanceNotRunningState(), InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
 			}
 		}
 		else {
@@ -39,9 +42,9 @@ sealed class InstanceRunningState : IInstanceState {
 		}
 	}
 
-	private void SessionOutput(object? sender, string e) {
-		context.Logger.Verbose("[Server] {Line}", e);
-		logSender.Enqueue(e);
+	private void SessionOutput(object? sender, string line) {
+		context.Logger.Verbose("[Server] {Line}", line);
+		logSender.Enqueue(line);
 	}
 
 	private void SessionEnded(object? sender, EventArgs e) {
@@ -75,12 +78,13 @@ sealed class InstanceRunningState : IInstanceState {
 		}
 		
 		isStopping = true;
-		context.LaunchServices.TaskManager.Run("Delayed stop timer for instance " + context.ShortName, () => StopLater(stopStrategy.Seconds));
+		context.Services.TaskManager.Run("Delayed stop timer for instance " + context.ShortName, () => StopLater(stopStrategy.Seconds));
 		return (this, StopInstanceResult.StopInitiated);
 	}
 
 	private IInstanceState PrepareStoppedState() {
 		session.SessionEnded -= SessionEnded;
+		backupScheduler.Stop();
 		return new InstanceStoppingState(context, session, sessionObjects);
 	}
 
@@ -159,9 +163,9 @@ sealed class InstanceRunningState : IInstanceState {
 				state.CancelDelayedStop();
 			}
 			
-			state.logSender.Cancel();
+			state.logSender.Stop();
 			state.session.Dispose();
-			state.context.PortManager.Release(state.context.Configuration);
+			state.context.Services.PortManager.Release(state.context.Configuration);
 			return true;
 		}
 	}

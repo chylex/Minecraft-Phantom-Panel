@@ -15,7 +15,21 @@ sealed partial class BackupManager {
 	}
 
 	public async Task<BackupCreationResult> CreateBackup(string loggerName, InstanceSession session, CancellationToken cancellationToken) {
-		return await new BackupCreator(basePath, loggerName, session, cancellationToken).CreateBackup();
+		try {
+			if (!await session.BackupSemaphore.Wait(TimeSpan.FromSeconds(1), cancellationToken)) {
+				return new BackupCreationResult(BackupCreationResultKind.BackupAlreadyRunning);
+			}
+		} catch (ObjectDisposedException) {
+			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
+		} catch (OperationCanceledException) {
+			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
+		}
+
+		try {
+			return await new BackupCreator(basePath, loggerName, session, cancellationToken).CreateBackup();
+		} finally {
+			session.BackupSemaphore.Release();
+		}
 	}
 
 	private sealed class BackupCreator {
@@ -36,17 +50,34 @@ sealed partial class BackupManager {
 		}
 
 		public async Task<BackupCreationResult> CreateBackup() {
+			logger.Information("Backup started.");
 			session.AddOutputListener(listener.OnOutput, 0);
 			try {
 				var resultBuilder = new BackupCreationResult.Builder();
-				await RunBackupProcess(resultBuilder);
-				return resultBuilder.Build();
+				
+				await RunBackupProcedure(resultBuilder);
+				
+				var result = resultBuilder.Build();
+				if (result.Kind == BackupCreationResultKind.Success) {
+					var warningCount = result.Warnings.Count();
+					if (warningCount == 0) {
+						logger.Information("Backup finished successfully.");
+					}
+					else {
+						logger.Warning("Backup finished with {Warnings} warning(s).", warningCount);
+					}
+				}
+				else {
+					logger.Warning("Backup failed: {Reason}", result.Kind.ToSentence());
+				}
+				
+				return result;
 			} finally {
 				session.RemoveOutputListener(listener.OnOutput);
 			}
 		}
 		
-		private async Task RunBackupProcess(BackupCreationResult.Builder resultBuilder) {
+		private async Task RunBackupProcedure(BackupCreationResult.Builder resultBuilder) {
 			try {
 				await DisableAutomaticSaving();
 				await SaveAllChunks();

@@ -7,16 +7,16 @@ namespace Phantom.Agent.Services.Instances;
 
 abstract class InstanceContext {
 	public InstanceConfiguration Configuration { get; }
+	public InstanceServices Services { get; }
 	public BaseLauncher Launcher { get; }
-
-	public abstract LaunchServices LaunchServices { get; }
-	public abstract PortManager PortManager { get; }
+	
 	public abstract ILogger Logger { get; }
 	public abstract string ShortName { get; }
 
-	protected InstanceContext(InstanceConfiguration configuration, BaseLauncher launcher) {
+	protected InstanceContext(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
 		Configuration = configuration;
 		Launcher = launcher;
+		Services = services;
 	}
 
 	public abstract void ReportStatus(IInstanceStatus newStatus);

@@ -19,7 +19,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	public void Initialize() {
 		context.Logger.Information("Session starting...");
 
-		var launchTask = context.LaunchServices.TaskManager.Run("Launch procedure for instance " + context.ShortName, DoLaunch);
+		var launchTask = context.Services.TaskManager.Run("Launch procedure for instance " + context.ShortName, DoLaunch);
 		launchTask.ContinueWith(OnLaunchSuccess, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
 		launchTask.ContinueWith(OnLaunchFailure, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
 	}
@@ -37,7 +37,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 			}
 		}
 
-		var launchResult = await context.Launcher.Launch(context.Logger, context.LaunchServices, OnDownloadProgress, cancellationToken);
+		var launchResult = await context.Launcher.Launch(context.Logger, context.Services.LaunchServices, OnDownloadProgress, cancellationToken);
 		if (launchResult is LaunchResult.InvalidJavaRuntime) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.JavaRuntimeNotFound, "Session failed to launch, invalid Java runtime.");
 		}
@@ -65,7 +65,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 	private void OnLaunchSuccess(Task<InstanceSession> task) {
 		context.TransitionState(() => {
 			if (cancellationTokenSource.IsCancellationRequested) {
-				context.PortManager.Release(context.Configuration);
+				context.Services.PortManager.Release(context.Configuration);
 				return (new InstanceNotRunningState(), InstanceStatus.NotRunning);
 			}
 			else {
@@ -83,7 +83,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 			context.ReportStatus(InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError));
 		}
 
-		context.PortManager.Release(context.Configuration);
+		context.Services.PortManager.Release(context.Configuration);
 		context.TransitionState(new InstanceNotRunningState());
 	}
 

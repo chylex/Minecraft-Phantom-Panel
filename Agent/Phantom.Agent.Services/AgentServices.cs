@@ -23,7 +23,7 @@ public sealed class AgentServices {
 		this.TaskManager = new TaskManager(PhantomLogger.Create<TaskManager, AgentServices>());
 		this.BackupManager = new BackupManager(agentFolders);
 		this.JavaRuntimeRepository = new JavaRuntimeRepository();
-		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository, TaskManager);
+		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository, TaskManager, BackupManager);
 	}
 
 	public async Task Initialize() {

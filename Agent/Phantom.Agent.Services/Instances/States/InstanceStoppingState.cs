@@ -21,11 +21,17 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	public void Initialize() {
 		context.Logger.Information("Session stopping.");
 		context.ReportStatus(InstanceStatus.Stopping);
-		context.LaunchServices.TaskManager.Run("Stop procedure for instance " + context.ShortName, DoStop);
+		context.Services.TaskManager.Run("Stop procedure for instance " + context.ShortName, DoStop);
 	}
 
 	private async Task DoStop() {
 		try {
+			// Do not release the semaphore after this point.
+			if (!await session.BackupSemaphore.CancelAndWait(TimeSpan.FromSeconds(1))) {
+				context.Logger.Information("Waiting for backup to finish...");
+				await session.BackupSemaphore.CancelAndWait(Timeout.InfiniteTimeSpan);
+			}
+			
 			context.Logger.Information("Sending stop command...");
 			await DoSendStopCommand();
 

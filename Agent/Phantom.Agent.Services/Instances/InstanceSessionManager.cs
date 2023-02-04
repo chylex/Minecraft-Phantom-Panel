@@ -7,6 +7,7 @@ using Phantom.Agent.Minecraft.Launcher.Types;
 using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Rpc;
+using Phantom.Agent.Services.Backups;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
@@ -27,21 +28,22 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly string basePath;
 
 	private readonly MinecraftServerExecutables minecraftServerExecutables;
-	private readonly LaunchServices launchServices;
-	private readonly PortManager portManager;
+	private readonly InstanceServices instanceServices;
 	private readonly Dictionary<Guid, Instance> instances = new ();
 
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
-	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager) {
+	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager, BackupManager backupManager) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
 		this.minecraftServerExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
-		this.launchServices = new LaunchServices(taskManager, minecraftServerExecutables, javaRuntimeRepository);
-		this.portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
+		
+		var launchServices = new LaunchServices(minecraftServerExecutables, javaRuntimeRepository);
+		var portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
+		this.instanceServices = new InstanceServices(taskManager, portManager, backupManager, launchServices);
 	}
 
 	private async Task<InstanceActionResult<T>> AcquireSemaphoreAndRun<T>(Func<Task<InstanceActionResult<T>>> func) {
@@ -98,7 +100,7 @@ sealed class InstanceSessionManager : IDisposable {
 				Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 			}
 			else {
-				instances[instanceGuid] = instance = await Instance.Create(configuration, launcher, launchServices, portManager);
+				instances[instanceGuid] = instance = await Instance.Create(configuration, instanceServices, launcher);
 				instance.IsRunningChanged += OnInstanceIsRunningChanged;
 				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 			}
@@ -116,7 +118,7 @@ sealed class InstanceSessionManager : IDisposable {
 	}
 
 	private void OnInstanceIsRunningChanged(object? sender, EventArgs e) {
-		launchServices.TaskManager.Run("Handle instance running state changed event", RefreshAgentStatus);
+		instanceServices.TaskManager.Run("Handle instance running state changed event", RefreshAgentStatus);
 	}
 
 	public async Task RefreshAgentStatus() {

@@ -1,10 +1,12 @@
 ﻿using System.Diagnostics;
 using Phantom.Utils.Collections;
+using Phantom.Utils.Runtime;
 
 namespace Phantom.Agent.Minecraft.Instance; 
 
 public sealed class InstanceSession : IDisposable {
 	public InstanceProperties InstanceProperties { get; }
+	public CancellableSemaphore BackupSemaphore { get; } = new (1, 1);
 	
 	private readonly RingBuffer<string> outputBuffer = new (10000);
 	private event EventHandler<string>? OutputEvent;
@@ -64,6 +66,7 @@ public sealed class InstanceSession : IDisposable {
 
 	public void Dispose() {
 		process.Dispose();
+		BackupSemaphore.Dispose();
 		OutputEvent = null;
 		SessionEnded = null;
 	}

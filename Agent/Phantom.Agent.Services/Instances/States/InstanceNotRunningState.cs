@@ -8,7 +8,7 @@ sealed class InstanceNotRunningState : IInstanceState {
 	public void Initialize() {}
 
 	public (IInstanceState, LaunchInstanceResult) Launch(InstanceContext context) {
-		InstanceLaunchFailReason? failReason = context.PortManager.Reserve(context.Configuration) switch {
+		InstanceLaunchFailReason? failReason = context.Services.PortManager.Reserve(context.Configuration) switch {
 			PortManager.Result.ServerPortNotAllowed   => InstanceLaunchFailReason.ServerPortNotAllowed,
 			PortManager.Result.ServerPortAlreadyInUse => InstanceLaunchFailReason.ServerPortAlreadyInUse,
 			PortManager.Result.RconPortNotAllowed     => InstanceLaunchFailReason.RconPortNotAllowed,

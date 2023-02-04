@@ -45,7 +45,7 @@ sealed class BackupArchiver {
 		string backupFilePath = Path.Combine(backupFolderPath, DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".tar");
 		
 		if (File.Exists(backupFilePath)) {
-			resultBuilder.Kind = BackupCreationResultKind.BackupAlreadyExists;
+			resultBuilder.Kind = BackupCreationResultKind.BackupFileAlreadyExists;
 			logger.Warning("Skipping backup, file already exists: {File}", backupFilePath);
 			return;
 		}

@@ -18,20 +18,18 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 
-	public static async Task<Instance> Create(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
-		var instance = new Instance(configuration, launcher, launchServices, portManager);
+	public static async Task<Instance> Create(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
+		var instance = new Instance(configuration, services, launcher);
 		await instance.ReportLastStatus();
 		return instance;
 	}
 
 	public InstanceConfiguration Configuration { get; private set; }
+	private InstanceServices Services { get; }
 	private BaseLauncher Launcher { get; set; }
 
 	private readonly string shortName;
 	private readonly ILogger logger;
-
-	private readonly LaunchServices launchServices;
-	private readonly PortManager portManager;
 
 	private IInstanceStatus currentStatus;
 	private IInstanceState currentState;
@@ -41,15 +39,14 @@ sealed class Instance : IDisposable {
 	
 	public event EventHandler? IsRunningChanged; 
 
-	private Instance(InstanceConfiguration configuration, BaseLauncher launcher, LaunchServices launchServices, PortManager portManager) {
+	private Instance(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
 		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Configuration = configuration;
+		this.Services = services;
 		this.Launcher = launcher;
-
-		this.launchServices = launchServices;
-		this.portManager = portManager;
+		
 		this.currentState = new InstanceNotRunningState();
 		this.currentStatus = InstanceStatus.NotRunning;
 	}
@@ -139,20 +136,18 @@ sealed class Instance : IDisposable {
 		
 		private int statusUpdateCounter;
 
-		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Configuration, instance.Launcher) {
+		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Configuration, instance.Services, instance.Launcher) {
 			this.instance = instance;
 			this.shutdownCancellationToken = shutdownCancellationToken;
 		}
 
-		public override LaunchServices LaunchServices => instance.launchServices;
-		public override PortManager PortManager => instance.portManager;
 		public override ILogger Logger => instance.logger;
 		public override string ShortName => instance.shortName;
 
 		public override void ReportStatus(IInstanceStatus newStatus) {
 			int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
 			
-			instance.launchServices.TaskManager.Run("Report status of instance " + instance.shortName + " as " + newStatus.GetType().Name, async () => {
+			instance.Services.TaskManager.Run("Report status of instance " + instance.shortName + " as " + newStatus.GetType().Name, async () => {
 				if (myStatusUpdateCounter == statusUpdateCounter) {
 					instance.currentStatus = newStatus;
 					await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
