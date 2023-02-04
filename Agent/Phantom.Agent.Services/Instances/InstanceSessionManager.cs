@@ -82,6 +82,7 @@ sealed class InstanceSessionManager : IDisposable {
 			);
 
 			var properties = new InstanceProperties(
+				instanceGuid,
 				configuration.JavaRuntimeGuid,
 				jvmProperties,
 				configuration.JvmArguments,

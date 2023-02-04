@@ -5,6 +5,7 @@ using Phantom.Agent.Minecraft.Properties;
 namespace Phantom.Agent.Minecraft.Instance;
 
 public sealed record InstanceProperties(
+	Guid InstanceGuid,
 	Guid JavaRuntimeGuid,
 	JvmProperties JvmProperties,
 	ImmutableArray<string> JvmArguments,

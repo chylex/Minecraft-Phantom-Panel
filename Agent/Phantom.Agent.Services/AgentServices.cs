@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent.Minecraft.Java;
+using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Instances;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Logging;
@@ -12,6 +13,7 @@ public sealed class AgentServices {
 	
 	private AgentFolders AgentFolders { get; }
 	private TaskManager TaskManager { get; }
+	private BackupManager BackupManager { get; }
 
 	internal JavaRuntimeRepository JavaRuntimeRepository { get; }
 	internal InstanceSessionManager InstanceSessionManager { get; }
@@ -19,6 +21,7 @@ public sealed class AgentServices {
 	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders) {
 		this.AgentFolders = agentFolders;
 		this.TaskManager = new TaskManager(PhantomLogger.Create<TaskManager, AgentServices>());
+		this.BackupManager = new BackupManager(agentFolders);
 		this.JavaRuntimeRepository = new JavaRuntimeRepository();
 		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository, TaskManager);
 	}

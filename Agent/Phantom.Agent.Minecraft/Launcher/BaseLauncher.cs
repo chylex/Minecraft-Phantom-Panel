@@ -51,7 +51,7 @@ public abstract class BaseLauncher {
 		processArguments.Add("nogui");
 
 		var process = new Process { StartInfo = startInfo };
-		var session = new InstanceSession(process);
+		var session = new InstanceSession(instanceProperties, process);
 
 		try {
 			await AcceptEula(instanceProperties);

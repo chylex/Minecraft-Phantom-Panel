@@ -4,6 +4,8 @@ using Phantom.Utils.Collections;
 namespace Phantom.Agent.Minecraft.Instance; 
 
 public sealed class InstanceSession : IDisposable {
+	public InstanceProperties InstanceProperties { get; }
+	
 	private readonly RingBuffer<string> outputBuffer = new (10000);
 	private event EventHandler<string>? OutputEvent;
 
@@ -12,7 +14,8 @@ public sealed class InstanceSession : IDisposable {
 
 	private readonly Process process;
 
-	internal InstanceSession(Process process) {
+	internal InstanceSession(InstanceProperties instanceProperties, Process process) {
+		this.InstanceProperties = instanceProperties;
 		this.process = process;
 		this.process.EnableRaisingEvents = true;
 		this.process.Exited += ProcessOnExited;

@@ -9,6 +9,7 @@ public sealed class AgentFolders {
 
 	public string DataFolderPath { get; }
 	public string InstancesFolderPath { get; }
+	public string BackupsFolderPath { get; }
 
 	public string TemporaryFolderPath { get; }
 	public string ServerExecutableFolderPath { get; }
@@ -18,6 +19,7 @@ public sealed class AgentFolders {
 	public AgentFolders(string dataFolderPath, string temporaryFolderPath, string javaSearchFolderPath) {
 		this.DataFolderPath = Path.GetFullPath(dataFolderPath);
 		this.InstancesFolderPath = Path.Combine(DataFolderPath, "instances");
+		this.BackupsFolderPath = Path.Combine(DataFolderPath, "backups");
 		
 		this.TemporaryFolderPath = Path.GetFullPath(temporaryFolderPath);
 		this.ServerExecutableFolderPath = Path.Combine(TemporaryFolderPath, "servers");
@@ -28,6 +30,7 @@ public sealed class AgentFolders {
 	public bool TryCreate() {
 		return TryCreateFolder(DataFolderPath) &&
 		       TryCreateFolder(InstancesFolderPath) &&
+		       TryCreateFolder(BackupsFolderPath) &&
 		       TryCreateFolder(TemporaryFolderPath) &&
 		       TryCreateFolder(ServerExecutableFolderPath);
 	}
