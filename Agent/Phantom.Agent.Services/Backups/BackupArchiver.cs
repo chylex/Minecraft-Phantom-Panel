@@ -109,7 +109,18 @@ sealed class BackupArchiver {
 			return true;
 		} catch (Exception e) {
 			logger.Error(e, "Could not create archive.");
+			DeleteBrokenArchiveFile(backupFilePath);
 			return false;
+		}
+	}
+
+	private void DeleteBrokenArchiveFile(string filePath) {
+		if (File.Exists(filePath)) {
+			try {
+				File.Delete(filePath);
+			} catch (Exception e) {
+				logger.Error(e, "Could not delete broken archive: {File}", filePath);
+			}
 		}
 	}
 
