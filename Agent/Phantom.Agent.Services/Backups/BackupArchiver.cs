@@ -10,11 +10,15 @@ using Serilog;
 namespace Phantom.Agent.Services.Backups; 
 
 sealed class BackupArchiver {
+	private readonly string destinationBasePath;
+	private readonly string temporaryBasePath;
 	private readonly ILogger logger;
 	private readonly InstanceProperties instanceProperties;
 	private readonly CancellationToken cancellationToken;
 	
-	public BackupArchiver(string loggerName, InstanceProperties instanceProperties, CancellationToken cancellationToken) {
+	public BackupArchiver(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceProperties instanceProperties, CancellationToken cancellationToken) {
+		this.destinationBasePath = destinationBasePath;
+		this.temporaryBasePath = temporaryBasePath;
 		this.logger = PhantomLogger.Create<BackupArchiver>(loggerName);
 		this.instanceProperties = instanceProperties;
 		this.cancellationToken = cancellationToken;
@@ -40,9 +44,11 @@ sealed class BackupArchiver {
 		return false;
 	}
 
-	public async Task ArchiveWorld(string destinationPath, BackupCreationResult.Builder resultBuilder) {
-		string backupFolderPath = Path.Combine(destinationPath, instanceProperties.InstanceGuid.ToString());
-		string backupFilePath = Path.Combine(backupFolderPath, DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".tar");
+	public async Task ArchiveWorld(BackupCreationResult.Builder resultBuilder) {
+		string guid = instanceProperties.InstanceGuid.ToString();
+		string currentDateTime = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+		string backupFolderPath = Path.Combine(destinationBasePath, guid);
+		string backupFilePath = Path.Combine(backupFolderPath, currentDateTime + ".tar");
 		
 		if (File.Exists(backupFilePath)) {
 			resultBuilder.Kind = BackupCreationResultKind.BackupFileAlreadyExists;
@@ -58,7 +64,8 @@ sealed class BackupArchiver {
 			return;
 		}
 
-		if (!await CopyWorldAndCreateTarArchive(backupFolderPath, backupFilePath, resultBuilder)) {
+		string temporaryFolderPath = Path.Combine(temporaryBasePath, guid + "_" + currentDateTime);
+		if (!await CopyWorldAndCreateTarArchive(temporaryFolderPath, backupFilePath, resultBuilder)) {
 			return;
 		}
 		
@@ -68,9 +75,7 @@ sealed class BackupArchiver {
 		}
 	}
 
-	private async Task<bool> CopyWorldAndCreateTarArchive(string backupFolderPath, string backupFilePath, BackupCreationResult.Builder resultBuilder) {
-		string temporaryFolderPath = Path.Combine(backupFolderPath, "temp");
-		
+	private async Task<bool> CopyWorldAndCreateTarArchive(string temporaryFolderPath, string backupFilePath, BackupCreationResult.Builder resultBuilder) {
 		try {
 			if (!await CopyWorldToTemporaryFolder(temporaryFolderPath)) {
 				resultBuilder.Kind = BackupCreationResultKind.CouldNotCopyWorldToTemporaryFolder;

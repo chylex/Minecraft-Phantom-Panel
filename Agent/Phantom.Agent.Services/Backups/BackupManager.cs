@@ -8,10 +8,12 @@ using Serilog;
 namespace Phantom.Agent.Services.Backups;
 
 sealed partial class BackupManager {
-	private readonly string basePath;
+	private readonly string destinationBasePath;
+	private readonly string temporaryBasePath;
 
 	public BackupManager(AgentFolders agentFolders) {
-		this.basePath = agentFolders.BackupsFolderPath;
+		this.destinationBasePath = agentFolders.BackupsFolderPath;
+		this.temporaryBasePath = Path.Combine(agentFolders.TemporaryFolderPath, "backups");
 	}
 
 	public async Task<BackupCreationResult> CreateBackup(string loggerName, InstanceSession session, CancellationToken cancellationToken) {
@@ -26,22 +28,24 @@ sealed partial class BackupManager {
 		}
 
 		try {
-			return await new BackupCreator(basePath, loggerName, session, cancellationToken).CreateBackup();
+			return await new BackupCreator(destinationBasePath, temporaryBasePath, loggerName, session, cancellationToken).CreateBackup();
 		} finally {
 			session.BackupSemaphore.Release();
 		}
 	}
 
 	private sealed class BackupCreator {
-		private readonly string basePath;
+		private readonly string destinationBasePath;
+		private readonly string temporaryBasePath;
 		private readonly string loggerName;
 		private readonly ILogger logger;
 		private readonly InstanceSession session;
 		private readonly BackupCommandListener listener;
 		private readonly CancellationToken cancellationToken;
 
-		public BackupCreator(string basePath, string loggerName, InstanceSession session, CancellationToken cancellationToken) {
-			this.basePath = basePath;
+		public BackupCreator(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceSession session, CancellationToken cancellationToken) {
+			this.destinationBasePath = destinationBasePath;
+			this.temporaryBasePath = temporaryBasePath;
 			this.loggerName = loggerName;
 			this.logger = PhantomLogger.Create<BackupManager>(loggerName);
 			this.session = session;
@@ -81,7 +85,7 @@ sealed partial class BackupManager {
 			try {
 				await DisableAutomaticSaving();
 				await SaveAllChunks();
-				await new BackupArchiver(loggerName, session.InstanceProperties, cancellationToken).ArchiveWorld(basePath, resultBuilder);
+				await new BackupArchiver(destinationBasePath, temporaryBasePath, loggerName, session.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
 			} catch (OperationCanceledException) {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
