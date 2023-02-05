@@ -59,7 +59,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean                   && \
     apt-get update                                           && \
     apt-get install -y                                          \
-    openjdk-18-jre-headless
+    openjdk-18-jre-headless                                     \
+    zstd
 
 RUN mkdir /data && chmod 777 /data
 WORKDIR /data
