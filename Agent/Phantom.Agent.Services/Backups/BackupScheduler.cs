@@ -38,7 +38,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 				await Task.Delay(BackupFailureRetryDelay, CancellationToken);
 			}
 			else {
-				Logger.Warning("Scheduling next backup in {Minutes} minutes.", BackupInterval.TotalMinutes);
+				Logger.Information("Scheduling next backup in {Minutes} minutes.", BackupInterval.TotalMinutes);
 				await Task.Delay(BackupInterval, CancellationToken);
 				await WaitForOnlinePlayers();
 			}
