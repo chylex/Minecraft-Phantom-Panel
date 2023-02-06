@@ -55,7 +55,7 @@ sealed partial class BackupManager {
 
 		public async Task<BackupCreationResult> CreateBackup() {
 			logger.Information("Backup started.");
-			session.AddOutputListener(listener.OnOutput, 0);
+			session.AddOutputListener(listener.OnOutput, maxLinesToReadFromHistory: 0);
 			try {
 				var resultBuilder = new BackupCreationResult.Builder();
 				
