@@ -97,6 +97,18 @@ Use volumes to persist either the whole `/data` folder, or just `/data/data` if 
   - `ALLOWED_SERVER_PORTS` is a comma-separated list of ports and port ranges that can be used as Minecraft Server ports. Example: `25565,25900,26000-27000`
   - `ALLOWED_RCON_PORTS` is a comma-separated list of ports and port ranges that can be used as Minecraft RCON ports. Example: `25575,25901,36000-37000`
 
+## Logging
+
+Both the Server and Agent support a `LOG_LEVEL` environment variable to set the minimum log level. Possible values:
+
+* `VERBOSE`
+* `DEBUG`
+* `INFORMATION`
+* `WARNING`
+* `ERROR`
+
+If the environment variable is omitted, the log level is set to `VERBOSE` for Debug builds and `INFORMATION` for Release builds.
+
 # Development
 
 The repository includes a [Rider](https://www.jetbrains.com/rider/) projects with several run configurations. The `.workdir` folder in the root of the repository is used for storage. Here's how to get started:

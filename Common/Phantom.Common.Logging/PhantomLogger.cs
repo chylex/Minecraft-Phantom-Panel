@@ -7,27 +7,20 @@ using Serilog.Sinks.SystemConsole.Themes;
 namespace Phantom.Common.Logging;
 
 public static class PhantomLogger {
-	public static Logger Root { get; } = CreateBaseLogger("[{Timestamp:HH:mm:ss} {Level:u}] {Message:lj}{NewLine}{Exception}");
-	private static Logger Base { get; } = CreateBaseLogger("[{Timestamp:HH:mm:ss} {Level:u}] [{Category}] {Message:lj}{NewLine}{Exception}");
-
-	private static LogEventLevel GetDefaultLevel() {
-		#if DEBUG
-		return LogEventLevel.Verbose;
-		#else
-		return LogEventLevel.Information;
-		#endif
+	public static Logger Root { get; } = CreateLogger("[{Timestamp:HH:mm:ss} {Level:u}] {Message:lj}{NewLine}{Exception}");
+	private static Logger Base { get; } = CreateLogger("[{Timestamp:HH:mm:ss} {Level:u}] [{Category}] {Message:lj}{NewLine}{Exception}");
+	
+	private static Logger CreateLogger(string template) {
+		return new LoggerConfiguration()
+		       .MinimumLevel.Is(DefaultLogLevel.Value)
+		       .MinimumLevel.Override("Microsoft", DefaultLogLevel.Coerce(LogEventLevel.Information))
+		       .MinimumLevel.Override("Microsoft.AspNetCore", DefaultLogLevel.Coerce(LogEventLevel.Warning))
+		       .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", DefaultLogLevel.Coerce(LogEventLevel.Warning))
+		       .Filter.ByExcluding(static e => e.Exception is OperationCanceledException)
+		       .Enrich.FromLogContext()
+		       .WriteTo.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
+		       .CreateLogger();
 	}
-
-	private static Logger CreateBaseLogger(string template) =>
-		new LoggerConfiguration()
-			.MinimumLevel.Is(GetDefaultLevel())
-			.MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-			.MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-			.MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
-			.Filter.ByExcluding(static e => e.Exception is OperationCanceledException)
-			.Enrich.FromLogContext()
-			.WriteTo.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
-			.CreateLogger();
 
 	public static ILogger Create(string name) {
 		return Base.ForContext("Category", name);
