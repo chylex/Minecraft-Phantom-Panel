@@ -24,6 +24,11 @@ public sealed record Agent(
 	
 	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.ProtocolVersion, info.BuildVersion, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
 
+	internal Agent AsOnline(DateTimeOffset lastPing) => this with {
+		LastPing = lastPing,
+		IsOnline = Connection != null
+	};
+	
 	internal Agent AsDisconnected() => this with {
 		IsOnline = false
 	};

@@ -101,7 +101,7 @@ public sealed class AgentManager {
 	}
 
 	internal void NotifyAgentIsAlive(Guid agentGuid) {
-		agents.ByGuid.TryReplace(agentGuid, static agent => agent with { LastPing = DateTimeOffset.Now });
+		agents.ByGuid.TryReplace(agentGuid, static agent => agent.AsOnline(DateTimeOffset.Now));
 	}
 
 	internal void SetAgentStats(Guid agentGuid, int runningInstanceCount, RamAllocationUnits runningInstanceMemory) {
