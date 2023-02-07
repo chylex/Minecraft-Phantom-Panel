@@ -63,6 +63,7 @@ code {
 
 .form-range.split-danger::-moz-range-track,
 .form-range.split-danger::-webkit-slider-runnable-track {
+  width: calc(100% - 1rem);
   background: linear-gradient(to right, #dfd7ca 0%, #dfd7ca var(--range-split), #bf8282 var(--range-split), #bf8282 100%);
 }
 

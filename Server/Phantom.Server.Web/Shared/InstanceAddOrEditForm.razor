@@ -116,7 +116,6 @@
         const ushort MinimumMemoryUnits = 2;
         ushort maximumMemoryUnits = form.MaximumMemoryUnits;
         double availableMemoryRatio = maximumMemoryUnits <= MinimumMemoryUnits ? 100.0 : 100.0 * (form.AvailableMemoryUnits - MinimumMemoryUnits) / (maximumMemoryUnits - MinimumMemoryUnits);
-        // TODO not precise because the track is not centered on the track bar
         string memoryInputSplitVar = FormattableString.Invariant($"--range-split: {Math.Round(availableMemoryRatio, 2)}%");
       }
       <FormNumberInput Id="instance-memory" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="@MinimumMemoryUnits" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" class="form-range split-danger" style="@memoryInputSplitVar">
