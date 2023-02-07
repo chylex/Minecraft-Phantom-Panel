@@ -300,7 +300,7 @@
     await form.SubmitModel.StartSubmitting();
 
     var instance = new InstanceConfiguration(
-      selectedAgent.Guid,
+      EditedInstanceConfiguration?.AgentGuid ?? selectedAgent.Guid,
       EditedInstanceConfiguration?.InstanceGuid ?? Guid.NewGuid(),
       form.InstanceName,
       (ushort) form.ServerPort,
