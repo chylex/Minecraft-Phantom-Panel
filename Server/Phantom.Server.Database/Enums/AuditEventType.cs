@@ -11,6 +11,7 @@ public enum AuditEventType {
 	UserRolesChanged,
 	UserDeleted,
 	InstanceCreated,
+	InstanceEdited,
 	InstanceLaunched,
 	InstanceStopped,
 	InstanceCommandExecuted
@@ -26,6 +27,7 @@ public static partial class AuditEventCategoryExtensions {
 		{ AuditEventType.UserRolesChanged,          AuditSubjectType.User },
 		{ AuditEventType.UserDeleted,               AuditSubjectType.User },
 		{ AuditEventType.InstanceCreated,           AuditSubjectType.Instance },
+		{ AuditEventType.InstanceEdited,            AuditSubjectType.Instance },
 		{ AuditEventType.InstanceLaunched,          AuditSubjectType.Instance },
 		{ AuditEventType.InstanceStopped,           AuditSubjectType.Instance },
 		{ AuditEventType.InstanceCommandExecuted,   AuditSubjectType.Instance }

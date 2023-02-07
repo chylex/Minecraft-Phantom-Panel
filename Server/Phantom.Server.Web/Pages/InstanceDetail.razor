@@ -22,6 +22,9 @@ else {
       <span><!-- extra spacing --></span>
     </PermissionView>
     <InstanceStatusText Status="Instance.Status" />
+    <PermissionView Permission="Permission.CreateInstances">
+      <a href="instances/@InstanceGuid/edit" class="btn btn-warning ms-auto">Edit Configuration</a>
+    </PermissionView>
   </div>
   @if (lastError != null) {
     <p class="text-danger mt-2">@lastError</p>

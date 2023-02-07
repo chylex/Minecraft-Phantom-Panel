@@ -50,6 +50,10 @@ public sealed partial class AuditLog {
 		return AddEvent(AuditEventType.InstanceCreated, instanceGuid.ToString());
 	}
 
+	public Task AddInstanceEditedEvent(Guid instanceGuid) {
+		return AddEvent(AuditEventType.InstanceEdited, instanceGuid.ToString());
+	}
+	
 	public Task AddInstanceLaunchedEvent(Guid instanceGuid) {
 		return AddEvent(AuditEventType.InstanceLaunched, instanceGuid.ToString());
 	}

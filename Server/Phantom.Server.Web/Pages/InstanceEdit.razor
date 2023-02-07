@@ -1,0 +1,28 @@
+﻿@page "/instances/{InstanceGuid:guid}/edit"
+@attribute [Authorize(Permission.CreateInstancesPolicy)]
+@using Phantom.Server.Services.Instances
+@using Phantom.Common.Data.Instance
+@inherits PhantomComponent
+@inject InstanceManager InstanceManager
+
+@if (InstanceConfiguration == null) {
+  <h1>Instance Not Found</h1>
+  <p>Return to <a href="instances">all instances</a>.</p>
+}
+else {
+  <h1>Edit Instance: @InstanceConfiguration.InstanceName</h1>
+  <InstanceAddOrEditForm EditedInstanceConfiguration="InstanceConfiguration" />
+}
+
+@code {
+
+  [Parameter]
+  public Guid InstanceGuid { get; set; }
+
+  private InstanceConfiguration? InstanceConfiguration { get; set; }
+
+  protected override void OnInitialized() {
+    InstanceConfiguration = InstanceManager.GetInstanceConfiguration(InstanceGuid);
+  }
+
+}
