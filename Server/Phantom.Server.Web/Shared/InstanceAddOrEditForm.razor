@@ -22,18 +22,32 @@
   @{ var selectedAgent = form.SelectedAgent; }
   <div class="row">
     <div class="col-xl-7 mb-3">
-      <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid" disabled="@(EditedInstanceConfiguration != null)">
-        <option value="" selected>Select which agent will run the instance...</option>
-        @foreach (var agent in form.AgentsByGuid.Values.OrderBy(static agent => agent.Name)) {
-          <option value="@agent.Guid">
-            @agent.Name
-            &bullet;
-            @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
-            &bullet;
-            @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(agent.MaxMemory.InMegabytes) MB RAM
-          </option>
+      @{
+        static RenderFragment GetAgentOption(Agent agent) {
+          return @<option value="@agent.Guid">
+                   @agent.Name
+                   &bullet;
+                   @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
+                   &bullet;
+                   @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(agent.MaxMemory.InMegabytes) MB RAM
+                 </option>;
         }
-      </FormSelectInput>
+      }
+      @if (EditedInstanceConfiguration == null) {
+        <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
+          <option value="" selected>Select which agent will run the instance...</option>
+          @foreach (var agent in form.AgentsByGuid.Values.Where(static agent => agent.IsOnline).OrderBy(static agent => agent.Name)) {
+            @GetAgentOption(agent)
+          }
+        </FormSelectInput>
+      }
+      else {
+        <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid" disabled="true">
+          @if (form.SelectedAgentGuid is {} guid && form.AgentsByGuid.TryGetValue(guid, out var agent)) {
+            @GetAgentOption(agent)
+          }
+        </FormSelectInput>
+      }
     </div>
 
     <div class="col-xl-5 mb-3">
@@ -163,7 +177,7 @@
     private readonly RamAllocationUnits? editedInstanceRamAllocation;
 
     public ConfigureInstanceFormModel(AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, RamAllocationUnits? editedInstanceRamAllocation) {
-      this.AgentsByGuid = agentManager.GetAgents().Where(static agent => agent.Value.IsOnline).ToImmutableDictionary();
+      this.AgentsByGuid = agentManager.GetAgents().ToImmutableDictionary();
       this.javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
       this.editedInstanceRamAllocation = editedInstanceRamAllocation;
     }
@@ -187,7 +201,7 @@
     public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(javaRuntimesByAgentGuid, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
     
     public ushort MaximumMemoryUnits => SelectedAgent?.MaxMemory.RawValue ?? 0;
-    public ushort AvailableMemoryUnits => Math.Min((SelectedAgent?.AvailableMemory + editedInstanceRamAllocation)?.RawValue ?? 0, MaximumMemoryUnits);
+    public ushort AvailableMemoryUnits => Math.Min((SelectedAgent?.AvailableMemory + editedInstanceRamAllocation)?.RawValue ?? MaximumMemoryUnits, MaximumMemoryUnits);
     private ushort selectedMemoryUnits = 4;
 
     [Required(ErrorMessage = "You must select an agent.")]
