@@ -18,9 +18,9 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 
-	public static async Task<Instance> Create(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
+	public static Instance Create(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
 		var instance = new Instance(configuration, services, launcher);
-		await instance.ReportLastStatus();
+		instance.SetStatus(instance.currentStatus);
 		return instance;
 	}
 
@@ -32,6 +32,8 @@ sealed class Instance : IDisposable {
 	private readonly ILogger logger;
 
 	private IInstanceStatus currentStatus;
+	private int statusUpdateCounter;
+	
 	private IInstanceState currentState;
 	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
 
@@ -51,8 +53,20 @@ sealed class Instance : IDisposable {
 		this.currentStatus = InstanceStatus.NotRunning;
 	}
 
-	private async Task ReportLastStatus() {
-		await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
+	private void SetStatus(IInstanceStatus status) {
+		int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
+		
+		Services.TaskManager.Run("Report status of instance " + shortName + " as " + status.GetType().Name, async () => {
+			if (myStatusUpdateCounter == statusUpdateCounter) {
+				currentStatus = status;
+				await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
+			}
+		});
+	}
+
+	private void ReportEvent(IInstanceEvent instanceEvent) {
+		var message = new ReportInstanceEventMessage(Guid.NewGuid(), DateTime.UtcNow, Configuration.InstanceGuid, instanceEvent);
+		Services.TaskManager.Run("Report event for instance " + shortName, async () => await ServerMessaging.Send(message));
 	}
 	
 	private void TransitionState(IInstanceState newState) {
@@ -85,7 +99,6 @@ sealed class Instance : IDisposable {
 		try {
 			Configuration = configuration;
 			Launcher = launcher;
-			await ReportLastStatus();
 		} finally {
 			stateTransitioningActionSemaphore.Release();
 		}
@@ -134,9 +147,7 @@ sealed class Instance : IDisposable {
 		private readonly Instance instance;
 		private readonly CancellationToken shutdownCancellationToken;
 		
-		private int statusUpdateCounter;
-
-		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Configuration, instance.Services, instance.Launcher) {
+		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Configuration, instance.Launcher, instance.Services) {
 			this.instance = instance;
 			this.shutdownCancellationToken = shutdownCancellationToken;
 		}
@@ -144,15 +155,12 @@ sealed class Instance : IDisposable {
 		public override ILogger Logger => instance.logger;
 		public override string ShortName => instance.shortName;
 
-		public override void ReportStatus(IInstanceStatus newStatus) {
-			int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
-			
-			instance.Services.TaskManager.Run("Report status of instance " + instance.shortName + " as " + newStatus.GetType().Name, async () => {
-				if (myStatusUpdateCounter == statusUpdateCounter) {
-					instance.currentStatus = newStatus;
-					await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, newStatus));
-				}
-			});
+		public override void SetStatus(IInstanceStatus newStatus) {
+			instance.SetStatus(newStatus);
+		}
+
+		public override void ReportEvent(IInstanceEvent instanceEvent) {
+			instance.ReportEvent(instanceEvent);
 		}
 
 		public override void TransitionState(Func<(IInstanceState, IInstanceStatus?)> newStateAndStatus) {
@@ -172,7 +180,7 @@ sealed class Instance : IDisposable {
 				}
 
 				if (status != null) {
-					ReportStatus(status);
+					SetStatus(status);
 				}
 
 				instance.TransitionState(state);

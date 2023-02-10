@@ -100,7 +100,7 @@ sealed class InstanceSessionManager : IDisposable {
 				Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 			}
 			else {
-				instances[instanceGuid] = instance = await Instance.Create(configuration, instanceServices, launcher);
+				instances[instanceGuid] = instance = Instance.Create(configuration, instanceServices, launcher);
 				instance.IsRunningChanged += OnInstanceIsRunningChanged;
 				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 			}

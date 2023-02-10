@@ -27,6 +27,7 @@ public static class MessageRegistries {
 		ToServer.Add<ReportInstanceStatusMessage>(4);
 		ToServer.Add<InstanceOutputMessage>(5);
 		ToServer.Add<ReportAgentStatusMessage>(6);
+		ToServer.Add<ReportInstanceEventMessage>(7);
 		ToServer.Add<ReplyMessage>(127);
 	}
 }

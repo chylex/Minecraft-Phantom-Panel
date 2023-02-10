@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Command;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Services.Backups;
+using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -23,6 +24,7 @@ sealed class InstanceRunningState : IInstanceState {
 		this.session = session;
 		this.logSender = new InstanceLogSender(context.Services.TaskManager, context.Configuration.InstanceGuid, context.ShortName);
 		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, session, context.Configuration.ServerPort, context.ShortName);
+		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
 		this.sessionObjects = new SessionObjects(this);
 	}
 
@@ -33,11 +35,12 @@ sealed class InstanceRunningState : IInstanceState {
 		if (session.HasEnded) {
 			if (sessionObjects.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
+				context.ReportEvent(InstanceEvent.Stopped);
 				context.Services.TaskManager.Run("Transition state of instance " + context.ShortName + " to not running", () => context.TransitionState(new InstanceNotRunningState(), InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
 			}
 		}
 		else {
-			context.ReportStatus(InstanceStatus.Running);
+			context.SetStatus(InstanceStatus.Running);
 			context.Logger.Information("Session started.");
 		}
 	}
@@ -54,10 +57,12 @@ sealed class InstanceRunningState : IInstanceState {
 
 		if (isStopping) {
 			context.Logger.Information("Session ended.");
+			context.ReportEvent(InstanceEvent.Stopped);
 			context.TransitionState(new InstanceNotRunningState(), InstanceStatus.NotRunning);
 		}
 		else {
 			context.Logger.Information("Session ended unexpectedly, restarting...");
+			context.ReportEvent(InstanceEvent.Crashed);
 			context.TransitionState(new InstanceLaunchingState(context), InstanceStatus.Restarting);
 		}
 	}
@@ -137,6 +142,10 @@ sealed class InstanceRunningState : IInstanceState {
 			context.Logger.Warning(e, "Caught exception while sending command.");
 			return false;
 		}
+	}
+
+	private void OnScheduledBackupCompleted(object? sender, BackupCreationResult e) {
+		context.ReportEvent(new InstanceBackupCompletedEvent(e.Kind, e.Warnings));
 	}
 
 	public sealed class SessionObjects {

@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-
-namespace Phantom.Server.Database.Enums;
+﻿namespace Phantom.Server.Database.Enums;
 
 public enum AuditLogEventType {
 	AdministratorUserCreated,
@@ -17,7 +15,7 @@ public enum AuditLogEventType {
 	InstanceCommandExecuted
 }
 
-public static partial class AuditLogEventTypeExtensions {
+public static class AuditLogEventTypeExtensions {
 	private static readonly Dictionary<AuditLogEventType, AuditLogSubjectType> SubjectTypes = new () {
 		{ AuditLogEventType.AdministratorUserCreated,  AuditLogSubjectType.User },
 		{ AuditLogEventType.AdministratorUserModified, AuditLogSubjectType.User },
@@ -43,12 +41,5 @@ public static partial class AuditLogEventTypeExtensions {
 
 	internal static AuditLogSubjectType GetSubjectType(this AuditLogEventType type) {
 		return SubjectTypes[type];
-	}
-	
-	[GeneratedRegex(@"\B([A-Z])", RegexOptions.NonBacktracking)]
-	private static partial Regex FindCapitalLettersRegex();
-
-	public static string ToNiceString(this AuditLogEventType type) {
-		return FindCapitalLettersRegex().Replace(type.ToString(), static match => " " + match.Groups[1].Value.ToLowerInvariant());
 	}
 }

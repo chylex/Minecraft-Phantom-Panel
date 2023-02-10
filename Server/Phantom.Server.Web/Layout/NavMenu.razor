@@ -35,6 +35,10 @@
           <NavMenuItem Label="Audit Log" Icon="clipboard" Href="audit" />
         }
         
+        @if (permissions.Check(Permission.ViewEvents)) {
+          <NavMenuItem Label="Event Log" Icon="project" Href="events" />
+        }
+        
         <NavMenuItem Label="Logout" Icon="account-logout" Href="logout" />
       </Authorized>
     </AuthorizeView>

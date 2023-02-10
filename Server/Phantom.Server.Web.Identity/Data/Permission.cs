@@ -34,4 +34,7 @@ public sealed record Permission(string Id, Permission? Parent) {
 	
 	public const string ViewAuditPolicy = "Audit.View";
 	public static readonly Permission ViewAudit = Register(ViewAuditPolicy);
+	
+	public const string ViewEventsPolicy = "Events.View";
+	public static readonly Permission ViewEvents = Register(ViewEventsPolicy);
 }

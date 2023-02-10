@@ -21,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext {
 	public DbSet<AgentEntity> Agents { get; set; } = null!;
 	public DbSet<InstanceEntity> Instances { get; set; } = null!;
 	public DbSet<AuditLogEntity> AuditLog { get; set; } = null!;
+	public DbSet<EventLogEntity> EventLog { get; set; } = null!;
 
 	public AgentEntityUpsert AgentUpsert { get; }
 	public InstanceEntityUpsert InstanceUpsert { get; }
@@ -62,6 +63,8 @@ public class ApplicationDbContext : IdentityDbContext {
 
 		builder.Properties<AuditLogEventType>().HaveConversion<EnumToStringConverter<AuditLogEventType>>();
 		builder.Properties<AuditLogSubjectType>().HaveConversion<EnumToStringConverter<AuditLogSubjectType>>();
+		builder.Properties<EventLogEventType>().HaveConversion<EnumToStringConverter<EventLogEventType>>();
+		builder.Properties<EventLogSubjectType>().HaveConversion<EnumToStringConverter<EventLogSubjectType>>();
 		builder.Properties<MinecraftServerKind>().HaveConversion<EnumToStringConverter<MinecraftServerKind>>();
 		builder.Properties<RamAllocationUnits>().HaveConversion<RamAllocationUnitsConverter>();
 	}

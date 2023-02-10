@@ -1,0 +1,97 @@
+﻿@page "/events"
+@attribute [Authorize(Permission.ViewEventsPolicy)]
+@using System.Collections.Immutable
+@using Phantom.Server.Services.Agents
+@using Phantom.Server.Services.Events
+@using Phantom.Server.Services.Instances
+@using Microsoft.AspNetCore.Identity
+@using Phantom.Server.Database.Enums
+@implements IDisposable
+@inject AgentManager AgentManager
+@inject EventLog EventLog
+@inject InstanceManager InstanceManager
+@inject UserManager<IdentityUser> UserManager
+
+<h1>Audit Log</h1>
+
+<table class="table">
+  <thead>
+    <tr>
+      <Column Width="165px" Class="text-end">Time</Column>
+      <Column Width="320px; 20%">Agent</Column>
+      <Column Width="160px">Event Type</Column>
+      <Column Width="320px; 20%">Subject</Column>
+      <Column Width="100px; 60%">Data</Column>
+    </tr>
+  </thead>
+  <tbody>
+    @foreach (var logItem in logItems) {
+      DateTimeOffset time = logItem.UtcTime.ToLocalTime();
+      <tr>
+        <td class="text-end">
+          <time datetime="@time.ToString("o")">@time.ToString()</time>
+        </td>
+        <td>
+          @if (logItem.AgentGuid is {} agentGuid) {
+            @(GetAgentName(agentGuid))
+            <br>
+            <code class="text-uppercase">@agentGuid</code>
+          }
+          else {
+            <text>-</text>
+          }
+        </td>
+        <td>@logItem.EventType.ToNiceString()</td>
+        <td>
+          @if (GetSubjectName(logItem.SubjectType, logItem.SubjectId) is {} subjectName) {
+            @subjectName
+            <br>
+          }
+          <code class="text-uppercase">@logItem.SubjectId</code>
+        </td>
+        <td>
+          <code>@logItem.Data?.RootElement.ToString()</code>
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>
+
+@code {
+
+  private CancellationTokenSource? initializationCancellationTokenSource;
+  private EventLogItem[] logItems = Array.Empty<EventLogItem>();
+  private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
+  private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
+
+  protected override async Task OnInitializedAsync() {
+    initializationCancellationTokenSource = new CancellationTokenSource();
+    var cancellationToken = initializationCancellationTokenSource.Token;
+
+    try {
+      logItems = await EventLog.GetItems(50, cancellationToken);
+      agentNamesByGuid = AgentManager.GetAgents().ToImmutableDictionary(static kvp => kvp.Key, static kvp => kvp.Value.Name);
+      instanceNamesByGuid = InstanceManager.GetInstanceNames();
+    } finally {
+      initializationCancellationTokenSource.Dispose();
+    }
+  }
+
+  private string GetAgentName(Guid agentGuid) {
+    return agentNamesByGuid.TryGetValue(agentGuid, out var name) ? name : "?";
+  }
+  
+  private string? GetSubjectName(EventLogSubjectType type, string id) {
+    return type switch {
+           EventLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
+           _                            => null
+    };
+  }
+
+  public void Dispose() {
+    try {
+      initializationCancellationTokenSource?.Cancel();
+    } catch (ObjectDisposedException) {}
+  }
+
+}

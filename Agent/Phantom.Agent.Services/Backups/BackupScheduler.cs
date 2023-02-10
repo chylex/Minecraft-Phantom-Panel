@@ -18,6 +18,8 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private readonly int serverPort;
 	private readonly ServerStatusProtocol serverStatusProtocol;
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
+	
+	public event EventHandler<BackupCreationResult>? BackupCompleted; 
 
 	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceSession session, int serverPort, string loggerName) : base(PhantomLogger.Create<BackupScheduler>(loggerName), taskManager, "Backup scheduler for " + loggerName) {
 		this.loggerName = loggerName;
@@ -33,6 +35,8 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 			
 		while (!CancellationToken.IsCancellationRequested) {
 			var result = await CreateBackup();
+			BackupCompleted?.Invoke(this, result);
+			
 			if (result.Kind.ShouldRetry()) {
 				Logger.Warning("Scheduled backup failed, retrying in {Minutes} minutes.", BackupFailureRetryDelay.TotalMinutes);
 				await Task.Delay(BackupFailureRetryDelay, CancellationToken);

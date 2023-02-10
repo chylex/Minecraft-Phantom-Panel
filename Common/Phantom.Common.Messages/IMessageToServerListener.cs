@@ -12,6 +12,7 @@ public interface IMessageToServerListener {
 	Task<NoReply> HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message);
 	Task<NoReply> HandleReportAgentStatus(ReportAgentStatusMessage message);
 	Task<NoReply> HandleReportInstanceStatus(ReportInstanceStatusMessage message);
+	Task<NoReply> HandleReportInstanceEvent(ReportInstanceEventMessage message);
 	Task<NoReply> HandleInstanceOutput(InstanceOutputMessage message);
 	Task<NoReply> HandleReply(ReplyMessage message);
 }

@@ -4,6 +4,7 @@ using Phantom.Common.Minecraft;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Audit;
+using Phantom.Server.Services.Events;
 using Phantom.Server.Services.Instances;
 using Phantom.Server.Services.Rpc;
 using Phantom.Server.Services.Users;
@@ -29,6 +30,7 @@ sealed class WebConfigurator : WebLauncher.IConfigurator {
 		services.AddSingleton(agentToken);
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<AgentJavaRuntimesManager>();
+		services.AddSingleton<EventLog>();
 		services.AddSingleton<InstanceManager>();
 		services.AddSingleton<InstanceLogManager>();
 		services.AddSingleton<MinecraftVersions>();

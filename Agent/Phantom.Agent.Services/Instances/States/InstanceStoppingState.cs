@@ -20,7 +20,7 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 
 	public void Initialize() {
 		context.Logger.Information("Session stopping.");
-		context.ReportStatus(InstanceStatus.Stopping);
+		context.SetStatus(InstanceStatus.Stopping);
 		context.Services.TaskManager.Run("Stop procedure for instance " + context.ShortName, DoStop);
 	}
 
@@ -39,6 +39,7 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 			await DoWaitForSessionToEnd();
 		} finally {
 			context.Logger.Information("Session stopped.");
+			context.ReportEvent(InstanceEvent.Stopped);
 			context.TransitionState(new InstanceNotRunningState(), InstanceStatus.NotRunning);
 		}
 	}

@@ -16,12 +16,12 @@ sealed class InstanceNotRunningState : IInstanceState {
 			_                                         => null
 		};
 
-		if (failReason != null) {
-			context.ReportStatus(InstanceStatus.Failed(failReason.Value));
+		if (failReason is {} reason) {
+			context.SetLaunchFailedStatusAndReportEvent(reason);
 			return (this, LaunchInstanceResult.LaunchInitiated);
 		}
 		
-		context.ReportStatus(InstanceStatus.Launching);
+		context.SetStatus(InstanceStatus.Launching);
 		return (new InstanceLaunchingState(context), LaunchInstanceResult.LaunchInitiated);
 	}
 
