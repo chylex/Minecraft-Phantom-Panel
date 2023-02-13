@@ -7,10 +7,10 @@ using Phantom.Server.Database.Enums;
 
 namespace Phantom.Server.Database.Entities; 
 
-[Table("AuditEvents", Schema = "system")]
+[Table("AuditLog", Schema = "system")]
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 [SuppressMessage("ReSharper", "ClassWithVirtualMembersNeverInherited.Global")]
-public class AuditEventEntity : IDisposable {
+public class AuditLogEntity : IDisposable {
 	[Key]
 	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
@@ -18,19 +18,19 @@ public class AuditEventEntity : IDisposable {
 
 	public string? UserId { get; set; }
 	public DateTime UtcTime { get; set; } // Note: Converting to UTC is not best practice, but for historical records it's good enough.
-	public AuditEventType EventType { get; set; }
-	public AuditSubjectType SubjectType { get; set; }
+	public AuditLogEventType EventType { get; set; }
+	public AuditLogSubjectType SubjectType { get; set; }
 	public string SubjectId { get; set; }
 	public JsonDocument? Data { get; set; }
 
 	public virtual IdentityUser? User { get; set; }
 	
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
-	internal AuditEventEntity() {
+	internal AuditLogEntity() {
 		SubjectId = string.Empty;
 	}
 
-	public AuditEventEntity(string? userId, AuditEventType eventType, string subjectId, Dictionary<string, object?>? data) {
+	public AuditLogEntity(string? userId, AuditLogEventType eventType, string subjectId, Dictionary<string, object?>? data) {
 		UserId = userId;
 		UtcTime = DateTime.UtcNow;
 		EventType = eventType;

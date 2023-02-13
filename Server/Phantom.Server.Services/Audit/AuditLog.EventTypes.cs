@@ -5,23 +5,23 @@ namespace Phantom.Server.Services.Audit;
 
 public sealed partial class AuditLog {
 	public Task AddAdministratorUserCreatedEvent(IdentityUser administratorUser) {
-		return AddEvent(AuditEventType.AdministratorUserCreated, administratorUser.Id);
+		return AddItem(AuditLogEventType.AdministratorUserCreated, administratorUser.Id);
 	}
 
 	public Task AddAdministratorUserModifiedEvent(IdentityUser administratorUser) {
-		return AddEvent(AuditEventType.AdministratorUserModified, administratorUser.Id);
+		return AddItem(AuditLogEventType.AdministratorUserModified, administratorUser.Id);
 	}
 
 	public void AddUserLoggedInEvent(string userId) {
-		AddEvent(userId, AuditEventType.UserLoggedIn, userId);
+		AddItem(userId, AuditLogEventType.UserLoggedIn, userId);
 	}
 
 	public void AddUserLoggedOutEvent(string userId) {
-		AddEvent(userId, AuditEventType.UserLoggedOut, userId);
+		AddItem(userId, AuditLogEventType.UserLoggedOut, userId);
 	}
 	
 	public Task AddUserCreatedEvent(IdentityUser user) {
-		return AddEvent(AuditEventType.UserCreated, user.Id);
+		return AddItem(AuditLogEventType.UserCreated, user.Id);
 	}
 
 	public Task AddUserRolesChangedEvent(IdentityUser user, List<string> addedToRoles, List<string> removedFromRoles) {
@@ -37,35 +37,35 @@ public sealed partial class AuditLog {
 			extra["removedFromRoles"] = removedFromRoles;
 		}
 		
-		return AddEvent(AuditEventType.UserDeleted, user.Id, extra);
+		return AddItem(AuditLogEventType.UserDeleted, user.Id, extra);
 	}
 	
 	public Task AddUserDeletedEvent(IdentityUser user) {
-		return AddEvent(AuditEventType.UserDeleted, user.Id, new Dictionary<string, object?> {
+		return AddItem(AuditLogEventType.UserDeleted, user.Id, new Dictionary<string, object?> {
 			{ "username", user.UserName }
 		});
 	}
 
 	public Task AddInstanceCreatedEvent(Guid instanceGuid) {
-		return AddEvent(AuditEventType.InstanceCreated, instanceGuid.ToString());
+		return AddItem(AuditLogEventType.InstanceCreated, instanceGuid.ToString());
 	}
 
 	public Task AddInstanceEditedEvent(Guid instanceGuid) {
-		return AddEvent(AuditEventType.InstanceEdited, instanceGuid.ToString());
+		return AddItem(AuditLogEventType.InstanceEdited, instanceGuid.ToString());
 	}
 	
 	public Task AddInstanceLaunchedEvent(Guid instanceGuid) {
-		return AddEvent(AuditEventType.InstanceLaunched, instanceGuid.ToString());
+		return AddItem(AuditLogEventType.InstanceLaunched, instanceGuid.ToString());
 	}
 
 	public Task AddInstanceCommandExecutedEvent(Guid instanceGuid, string command) {
-		return AddEvent(AuditEventType.InstanceCommandExecuted, instanceGuid.ToString(), new Dictionary<string, object?> {
+		return AddItem(AuditLogEventType.InstanceCommandExecuted, instanceGuid.ToString(), new Dictionary<string, object?> {
 			{ "command", command }
 		});
 	}
 
 	public Task AddInstanceStoppedEvent(Guid instanceGuid, int stopInSeconds) {
-		return AddEvent(AuditEventType.InstanceStopped, instanceGuid.ToString(), new Dictionary<string, object?> {
+		return AddItem(AuditLogEventType.InstanceStopped, instanceGuid.ToString(), new Dictionary<string, object?> {
 			{ "stop_in_seconds", stopInSeconds.ToString() }
 		});
 	}

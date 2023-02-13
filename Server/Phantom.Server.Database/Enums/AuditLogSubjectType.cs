@@ -1,6 +1,6 @@
 ﻿namespace Phantom.Server.Database.Enums; 
 
-public enum AuditSubjectType {
+public enum AuditLogSubjectType {
 	User,
 	Instance
 }
