@@ -14,17 +14,17 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 
 	private readonly string loggerName;
 	private readonly BackupManager backupManager;
-	private readonly InstanceSession session;
+	private readonly InstanceProcess process;
 	private readonly int serverPort;
 	private readonly ServerStatusProtocol serverStatusProtocol;
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted; 
 
-	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceSession session, int serverPort, string loggerName) : base(PhantomLogger.Create<BackupScheduler>(loggerName), taskManager, "Backup scheduler for " + loggerName) {
+	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceProcess process, int serverPort, string loggerName) : base(PhantomLogger.Create<BackupScheduler>(loggerName), taskManager, "Backup scheduler for " + loggerName) {
 		this.loggerName = loggerName;
 		this.backupManager = backupManager;
-		this.session = session;
+		this.process = process;
 		this.serverPort = serverPort;
 		this.serverStatusProtocol = new ServerStatusProtocol(loggerName);
 	}
@@ -50,13 +50,13 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	}
 
 	private async Task<BackupCreationResult> CreateBackup() {
-		return await backupManager.CreateBackup(loggerName, session, CancellationToken.None);
+		return await backupManager.CreateBackup(loggerName, process, CancellationToken.None);
 	}
 
 	private async Task WaitForOnlinePlayers() {
 		bool needsToLogOfflinePlayersMessage = true;
 		
-		session.AddOutputListener(ServerOutputListener, maxLinesToReadFromHistory: 0);
+		process.AddOutputListener(ServerOutputListener, maxLinesToReadFromHistory: 0);
 		try {
 			while (!CancellationToken.IsCancellationRequested) {
 				serverOutputWhileWaitingForOnlinePlayers.Reset();
@@ -83,7 +83,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 				await serverOutputWhileWaitingForOnlinePlayers.WaitHandle.WaitOneAsync(CancellationToken);
 			}
 		} finally {
-			session.RemoveOutputListener(ServerOutputListener);
+			process.RemoveOutputListener(ServerOutputListener);
 		}
 	}
 

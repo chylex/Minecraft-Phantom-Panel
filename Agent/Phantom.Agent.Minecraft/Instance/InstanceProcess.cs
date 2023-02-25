@@ -4,19 +4,19 @@ using Phantom.Utils.Runtime;
 
 namespace Phantom.Agent.Minecraft.Instance; 
 
-public sealed class InstanceSession : IDisposable {
+public sealed class InstanceProcess : IDisposable {
 	public InstanceProperties InstanceProperties { get; }
 	public CancellableSemaphore BackupSemaphore { get; } = new (1, 1);
 	
 	private readonly RingBuffer<string> outputBuffer = new (10000);
 	private event EventHandler<string>? OutputEvent;
 
-	public event EventHandler? SessionEnded;
+	public event EventHandler? Ended;
 	public bool HasEnded { get; private set; }
 
 	private readonly Process process;
 
-	internal InstanceSession(InstanceProperties instanceProperties, Process process) {
+	internal InstanceProcess(InstanceProperties instanceProperties, Process process) {
 		this.InstanceProperties = instanceProperties;
 		this.process = process;
 		this.process.EnableRaisingEvents = true;
@@ -51,7 +51,7 @@ public sealed class InstanceSession : IDisposable {
 	private void ProcessOnExited(object? sender, EventArgs e) {
 		OutputEvent = null;
 		HasEnded = true;
-		SessionEnded?.Invoke(this, EventArgs.Empty);
+		Ended?.Invoke(this, EventArgs.Empty);
 	}
 
 	public void Kill() {
@@ -68,6 +68,6 @@ public sealed class InstanceSession : IDisposable {
 		process.Dispose();
 		BackupSemaphore.Dispose();
 		OutputEvent = null;
-		SessionEnded = null;
+		Ended = null;
 	}
 }

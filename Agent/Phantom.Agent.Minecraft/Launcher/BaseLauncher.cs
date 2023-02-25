@@ -51,7 +51,7 @@ public abstract class BaseLauncher {
 		processArguments.Add("nogui");
 
 		var process = new Process { StartInfo = startInfo };
-		var session = new InstanceSession(instanceProperties, process);
+		var instanceProcess = new InstanceProcess(instanceProperties, process);
 
 		try {
 			await AcceptEula(instanceProperties);
@@ -77,7 +77,7 @@ public abstract class BaseLauncher {
 			return new LaunchResult.CouldNotStartMinecraftServer();
 		}
 
-		return new LaunchResult.Success(session);
+		return new LaunchResult.Success(instanceProcess);
 	}
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}

@@ -16,9 +16,9 @@ sealed partial class BackupManager {
 		this.temporaryBasePath = Path.Combine(agentFolders.TemporaryFolderPath, "backups");
 	}
 
-	public async Task<BackupCreationResult> CreateBackup(string loggerName, InstanceSession session, CancellationToken cancellationToken) {
+	public async Task<BackupCreationResult> CreateBackup(string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
 		try {
-			if (!await session.BackupSemaphore.Wait(TimeSpan.FromSeconds(1), cancellationToken)) {
+			if (!await process.BackupSemaphore.Wait(TimeSpan.FromSeconds(1), cancellationToken)) {
 				return new BackupCreationResult(BackupCreationResultKind.BackupAlreadyRunning);
 			}
 		} catch (ObjectDisposedException) {
@@ -28,9 +28,9 @@ sealed partial class BackupManager {
 		}
 
 		try {
-			return await new BackupCreator(destinationBasePath, temporaryBasePath, loggerName, session, cancellationToken).CreateBackup();
+			return await new BackupCreator(destinationBasePath, temporaryBasePath, loggerName, process, cancellationToken).CreateBackup();
 		} finally {
-			session.BackupSemaphore.Release();
+			process.BackupSemaphore.Release();
 		}
 	}
 
@@ -39,23 +39,23 @@ sealed partial class BackupManager {
 		private readonly string temporaryBasePath;
 		private readonly string loggerName;
 		private readonly ILogger logger;
-		private readonly InstanceSession session;
+		private readonly InstanceProcess process;
 		private readonly BackupCommandListener listener;
 		private readonly CancellationToken cancellationToken;
 
-		public BackupCreator(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceSession session, CancellationToken cancellationToken) {
+		public BackupCreator(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
 			this.destinationBasePath = destinationBasePath;
 			this.temporaryBasePath = temporaryBasePath;
 			this.loggerName = loggerName;
 			this.logger = PhantomLogger.Create<BackupManager>(loggerName);
-			this.session = session;
+			this.process = process;
 			this.listener = new BackupCommandListener(logger);
 			this.cancellationToken = cancellationToken;
 		}
 
 		public async Task<BackupCreationResult> CreateBackup() {
 			logger.Information("Backup started.");
-			session.AddOutputListener(listener.OnOutput, maxLinesToReadFromHistory: 0);
+			process.AddOutputListener(listener.OnOutput, maxLinesToReadFromHistory: 0);
 			try {
 				var resultBuilder = new BackupCreationResult.Builder();
 				
@@ -77,7 +77,7 @@ sealed partial class BackupManager {
 				
 				return result;
 			} finally {
-				session.RemoveOutputListener(listener.OnOutput);
+				process.RemoveOutputListener(listener.OnOutput);
 			}
 		}
 		
@@ -85,7 +85,7 @@ sealed partial class BackupManager {
 			try {
 				await DisableAutomaticSaving();
 				await SaveAllChunks();
-				await new BackupArchiver(destinationBasePath, temporaryBasePath, loggerName, session.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
+				await new BackupArchiver(destinationBasePath, temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
 			} catch (OperationCanceledException) {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
@@ -105,18 +105,18 @@ sealed partial class BackupManager {
 		}
 
 		private async Task DisableAutomaticSaving() {
-			await session.SendCommand(MinecraftCommand.SaveOff, cancellationToken);
+			await process.SendCommand(MinecraftCommand.SaveOff, cancellationToken);
 			await listener.AutomaticSavingDisabled.Task.WaitAsync(cancellationToken);
 		}
 
 		private async Task SaveAllChunks() {
 			// TODO Try if not flushing and waiting a few seconds before flushing reduces lag.
-			await session.SendCommand(MinecraftCommand.SaveAll(flush: true), cancellationToken);
+			await process.SendCommand(MinecraftCommand.SaveAll(flush: true), cancellationToken);
 			await listener.SavedTheGame.Task.WaitAsync(cancellationToken);
 		}
 
 		private async Task EnableAutomaticSaving() {
-			await session.SendCommand(MinecraftCommand.SaveOn, cancellationToken);
+			await process.SendCommand(MinecraftCommand.SaveOn, cancellationToken);
 			await listener.AutomaticSavingEnabled.Task.WaitAsync(cancellationToken);
 		}
 	}

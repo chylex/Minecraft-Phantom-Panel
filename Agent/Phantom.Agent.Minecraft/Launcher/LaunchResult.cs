@@ -5,7 +5,7 @@ namespace Phantom.Agent.Minecraft.Launcher;
 public abstract record LaunchResult {
 	private LaunchResult() {}
 
-	public sealed record Success(InstanceSession Session) : LaunchResult;
+	public sealed record Success(InstanceProcess Process) : LaunchResult;
 
 	public sealed record InvalidJavaRuntime : LaunchResult;
 	

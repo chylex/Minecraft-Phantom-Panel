@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Agent.Services.Instances.Sessions;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -24,7 +25,7 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		launchTask.ContinueWith(OnLaunchFailure, CancellationToken.None, TaskContinuationOptions.NotOnRanToCompletion, TaskScheduler.Default);
 	}
 
-	private async Task<InstanceSession> DoLaunch() {
+	private async Task<InstanceProcess> DoLaunch() {
 		var cancellationToken = cancellationTokenSource.Token;
 		cancellationToken.ThrowIfCancellationRequested();
 
@@ -59,29 +60,35 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		}
 
 		context.SetStatus(InstanceStatus.Launching);
-		return launchSuccess.Session;
+		return launchSuccess.Process;
 	}
 
-	private void OnLaunchSuccess(Task<InstanceSession> task) {
+	private void OnLaunchSuccess(Task<InstanceProcess> task) {
 		context.TransitionState(() => {
+			context.ReportEvent(InstanceEvent.LaunchSucceded);
+			
+			var process = task.Result;
+			var session = new InstanceSession(process, context);
+			
 			if (cancellationTokenSource.IsCancellationRequested) {
-				context.Services.PortManager.Release(context.Configuration);
-				return (new InstanceNotRunningState(), InstanceStatus.NotRunning);
+				return (new InstanceStoppingState(context, process, session), InstanceStatus.Stopping);
 			}
 			else {
-				context.ReportEvent(InstanceEvent.LaunchSucceded);
-				return (new InstanceRunningState(context, task.Result), null);
+				return (new InstanceRunningState(context, process, session), null);
 			}
 		});
 	}
 
 	private void OnLaunchFailure(Task task) {
-		if (task.Exception is { InnerException: LaunchFailureException e }) {
-			context.Logger.Error(e.LogMessage);
-			context.SetLaunchFailedStatusAndReportEvent(e.Reason);
-		}
-		else {
-			context.SetLaunchFailedStatusAndReportEvent(InstanceLaunchFailReason.UnknownError);
+		if (task.IsFaulted) {
+			if (task.Exception is { InnerException: LaunchFailureException e }) {
+				context.Logger.Error(e.LogMessage);
+				context.SetLaunchFailedStatusAndReportEvent(e.Reason);
+			}
+			else {
+				context.Logger.Error(task.Exception, "Caught exception while launching instance.");
+				context.SetLaunchFailedStatusAndReportEvent(InstanceLaunchFailReason.UnknownError);
+			}
 		}
 
 		context.Services.PortManager.Release(context.Configuration);

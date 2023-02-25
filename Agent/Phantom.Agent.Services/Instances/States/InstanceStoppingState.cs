@@ -9,13 +9,13 @@ namespace Phantom.Agent.Services.Instances.States;
 
 sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	private readonly InstanceContext context;
-	private readonly InstanceSession session;
-	private readonly InstanceRunningState.SessionObjects sessionObjects;
+	private readonly InstanceProcess process;
+	private readonly IDisposable sessionDisposer;
 
-	public InstanceStoppingState(InstanceContext context, InstanceSession session, InstanceRunningState.SessionObjects sessionObjects) {
-		this.sessionObjects = sessionObjects;
-		this.session = session;
+	public InstanceStoppingState(InstanceContext context, InstanceProcess process, IDisposable sessionDisposer) {
 		this.context = context;
+		this.process = process;
+		this.sessionDisposer = sessionDisposer;
 	}
 
 	public void Initialize() {
@@ -27,9 +27,9 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	private async Task DoStop() {
 		try {
 			// Do not release the semaphore after this point.
-			if (!await session.BackupSemaphore.CancelAndWait(TimeSpan.FromSeconds(1))) {
+			if (!await process.BackupSemaphore.CancelAndWait(TimeSpan.FromSeconds(1))) {
 				context.Logger.Information("Waiting for backup to finish...");
-				await session.BackupSemaphore.CancelAndWait(Timeout.InfiniteTimeSpan);
+				await process.BackupSemaphore.CancelAndWait(Timeout.InfiniteTimeSpan);
 			}
 			
 			context.Logger.Information("Sending stop command...");
@@ -47,10 +47,10 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	private async Task DoSendStopCommand() {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		try {
-			await session.SendCommand(MinecraftCommand.Stop, timeout.Token);
+			await process.SendCommand(MinecraftCommand.Stop, timeout.Token);
 		} catch (OperationCanceledException) {
 			// ignore
-		} catch (ObjectDisposedException e) when (e.ObjectName == typeof(Process).FullName && session.HasEnded) {
+		} catch (ObjectDisposedException e) when (e.ObjectName == typeof(Process).FullName && process.HasEnded) {
 			// ignore
 		} catch (Exception e) {
 			context.Logger.Warning(e, "Caught exception while sending stop command.");
@@ -60,11 +60,11 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	private async Task DoWaitForSessionToEnd() {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(55));
 		try {
-			await session.WaitForExit(timeout.Token);
+			await process.WaitForExit(timeout.Token);
 		} catch (OperationCanceledException) {
 			try {
 				context.Logger.Warning("Waiting timed out, killing session...");
-				session.Kill();
+				process.Kill();
 			} catch (Exception e) {
 				context.Logger.Error(e, "Caught exception while killing session.");
 			}
@@ -84,6 +84,6 @@ sealed class InstanceStoppingState : IInstanceState, IDisposable {
 	}
 
 	public void Dispose() {
-		sessionObjects.Dispose();
+		sessionDisposer.Dispose();
 	}
 }

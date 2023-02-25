@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Command;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Services.Backups;
+using Phantom.Agent.Services.Instances.Sessions;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
@@ -10,30 +11,27 @@ namespace Phantom.Agent.Services.Instances.States;
 
 sealed class InstanceRunningState : IInstanceState {
 	private readonly InstanceContext context;
-	private readonly InstanceSession session;
-	private readonly InstanceLogSender logSender;
+	private readonly InstanceProcess process;
 	private readonly BackupScheduler backupScheduler;
-	private readonly SessionObjects sessionObjects;
+	private readonly RunningSessionDisposer runningSessionDisposer;
 	
 	private readonly CancellationTokenSource delayedStopCancellationTokenSource = new ();
 	private bool stateOwnsDelayedStopCancellationTokenSource = true;
 	private bool isStopping;
 
-	public InstanceRunningState(InstanceContext context, InstanceSession session) {
+	public InstanceRunningState(InstanceContext context, InstanceProcess process, InstanceSession session) {
 		this.context = context;
-		this.session = session;
-		this.logSender = new InstanceLogSender(context.Services.TaskManager, context.Configuration.InstanceGuid, context.ShortName);
-		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, session, context.Configuration.ServerPort, context.ShortName);
+		this.process = process;
+		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, process, context.Configuration.ServerPort, context.ShortName);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
-		this.sessionObjects = new SessionObjects(this);
+		this.runningSessionDisposer = new RunningSessionDisposer(this, session);
 	}
 
 	public void Initialize() {
-		session.AddOutputListener(SessionOutput);
-		session.SessionEnded += SessionEnded;
+		process.Ended += ProcessEnded;
 		
-		if (session.HasEnded) {
-			if (sessionObjects.Dispose()) {
+		if (process.HasEnded) {
+			if (runningSessionDisposer.Dispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
 				context.ReportEvent(InstanceEvent.Stopped);
 				context.Services.TaskManager.Run("Transition state of instance " + context.ShortName + " to not running", () => context.TransitionState(new InstanceNotRunningState(), InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
@@ -45,13 +43,8 @@ sealed class InstanceRunningState : IInstanceState {
 		}
 	}
 
-	private void SessionOutput(object? sender, string line) {
-		context.Logger.Verbose("[Server] {Line}", line);
-		logSender.Enqueue(line);
-	}
-
-	private void SessionEnded(object? sender, EventArgs e) {
-		if (!sessionObjects.Dispose()) {
+	private void ProcessEnded(object? sender, EventArgs e) {
+		if (!runningSessionDisposer.Dispose()) {
 			return;
 		}
 
@@ -88,9 +81,9 @@ sealed class InstanceRunningState : IInstanceState {
 	}
 
 	private IInstanceState PrepareStoppedState() {
-		session.SessionEnded -= SessionEnded;
+		process.Ended -= ProcessEnded;
 		backupScheduler.Stop();
-		return new InstanceStoppingState(context, session, sessionObjects);
+		return new InstanceStoppingState(context, process, runningSessionDisposer);
 	}
 
 	private void CancelDelayedStop() {
@@ -134,7 +127,7 @@ sealed class InstanceRunningState : IInstanceState {
 	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
 		try {
 			context.Logger.Information("Sending command: {Command}", command);
-			await session.SendCommand(command, cancellationToken);
+			await process.SendCommand(command, cancellationToken);
 			return true;
 		} catch (OperationCanceledException) {
 			return false;
@@ -148,12 +141,14 @@ sealed class InstanceRunningState : IInstanceState {
 		context.ReportEvent(new InstanceBackupCompletedEvent(e.Kind, e.Warnings));
 	}
 
-	public sealed class SessionObjects {
+	private sealed class RunningSessionDisposer : IDisposable {
 		private readonly InstanceRunningState state;
+		private readonly InstanceSession session;
 		private bool isDisposed;
 
-		public SessionObjects(InstanceRunningState state) {
+		public RunningSessionDisposer(InstanceRunningState state, InstanceSession session) {
 			this.state = state;
+			this.session = session;
 		}
 
 		public bool Dispose() {
@@ -172,10 +167,12 @@ sealed class InstanceRunningState : IInstanceState {
 				state.CancelDelayedStop();
 			}
 			
-			state.logSender.Stop();
-			state.session.Dispose();
-			state.context.Services.PortManager.Release(state.context.Configuration);
+			session.Dispose();
 			return true;
+		}
+
+		void IDisposable.Dispose() {
+			Dispose();
 		}
 	}
 }
