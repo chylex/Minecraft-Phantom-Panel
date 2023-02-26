@@ -4,15 +4,13 @@
 @using Phantom.Server.Services.Agents
 @using Phantom.Server.Services.Events
 @using Phantom.Server.Services.Instances
-@using Microsoft.AspNetCore.Identity
 @using Phantom.Server.Database.Enums
 @implements IDisposable
 @inject AgentManager AgentManager
 @inject EventLog EventLog
 @inject InstanceManager InstanceManager
-@inject UserManager<IdentityUser> UserManager
 
-<h1>Audit Log</h1>
+<h1>Event Log</h1>
 
 <table class="table">
   <thead>
