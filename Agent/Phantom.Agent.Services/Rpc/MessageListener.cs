@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent.Rpc;
+using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
@@ -26,12 +27,15 @@ public sealed class MessageListener : IMessageToAgentListener {
 	public async Task<NoReply> HandleRegisterAgentSuccess(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
 
-		foreach (var instanceInfo in message.InitialInstances) {
-			var result = await agent.InstanceSessionManager.Configure(instanceInfo);
+		void ShutdownAfterConfigurationFailed(InstanceConfiguration configuration) {
+			Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", configuration.InstanceName, configuration.InstanceGuid);
+			shutdownTokenSource.Cancel();
+		}
+		
+		foreach (var configureInstanceMessage in message.InitialInstanceConfigurations) {
+			var result = await HandleConfigureInstance(configureInstanceMessage);
 			if (!result.Is(ConfigureInstanceResult.Success)) {
-				Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", instanceInfo.InstanceName, instanceInfo.InstanceGuid);
-
-				shutdownTokenSource.Cancel();
+				ShutdownAfterConfigurationFailed(configureInstanceMessage.Configuration);
 				return NoReply.Instance;
 			}
 		}
@@ -56,7 +60,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 	}
 	
 	public async Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message) {
-		return await agent.InstanceSessionManager.Configure(message.Configuration);
+		return await agent.InstanceSessionManager.Configure(message.Configuration, message.LaunchProperties);
 	}
 
 	public async Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {

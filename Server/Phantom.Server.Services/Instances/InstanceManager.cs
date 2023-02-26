@@ -10,6 +10,7 @@ using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Minecraft;
 using Phantom.Server.Database;
 using Phantom.Server.Database.Entities;
+using Phantom.Server.Minecraft;
 using Phantom.Server.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
@@ -26,12 +27,14 @@ public sealed class InstanceManager {
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AgentManager agentManager;
+	private readonly MinecraftVersions minecraftVersions;
 	private readonly DatabaseProvider databaseProvider;
 	private readonly SemaphoreSlim modifyInstancesSemaphore = new (1, 1);
 
-	public InstanceManager(ServiceConfiguration configuration, AgentManager agentManager, DatabaseProvider databaseProvider) {
+	public InstanceManager(ServiceConfiguration configuration, AgentManager agentManager, MinecraftVersions minecraftVersions, DatabaseProvider databaseProvider) {
 		this.cancellationToken = configuration.CancellationToken;
 		this.agentManager = agentManager;
+		this.minecraftVersions = minecraftVersions;
 		this.databaseProvider = databaseProvider;
 	}
 
@@ -73,6 +76,11 @@ public sealed class InstanceManager {
 			return InstanceActionResult.Concrete(AddOrEditInstanceResult.InstanceMemoryMustNotBeZero);
 		}
 		
+		var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(configuration.MinecraftVersion, cancellationToken);
+		if (serverExecutableInfo == null) {
+			return InstanceActionResult.Concrete(AddOrEditInstanceResult.MinecraftVersionDownloadInfoNotFound);
+		}
+
 		InstanceActionResult<AddOrEditInstanceResult> result;
 		bool isNewInstance;
 
@@ -80,8 +88,9 @@ public sealed class InstanceManager {
 		try {
 			var instance = new Instance(configuration);
 			instances.ByGuid.AddOrReplace(instance.Configuration.InstanceGuid, instance, out var oldInstance);
-			
-			var reply = await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, new ConfigureInstanceMessage(configuration), TimeSpan.FromSeconds(10));
+
+			var message = new ConfigureInstanceMessage(configuration, new InstanceLaunchProperties(serverExecutableInfo));
+			var reply = await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, message, TimeSpan.FromSeconds(10));
 			
 			result = reply.DidNotReplyIfNull().Map(static result => result switch {
 				ConfigureInstanceResult.Success => AddOrEditInstanceResult.Success,
@@ -199,8 +208,15 @@ public sealed class InstanceManager {
 		return await SendInstanceActionMessage<SendCommandToInstanceMessage, SendCommandToInstanceResult>(instanceGuid, new SendCommandToInstanceMessage(instanceGuid, command));
 	}
 
-	internal ImmutableArray<InstanceConfiguration> GetInstanceConfigurationsForAgent(Guid agentGuid) {
-		return instances.ByGuid.ValuesCopy.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid).ToImmutableArray();
+	internal async Task<ImmutableArray<ConfigureInstanceMessage>> GetInstanceConfigurationsForAgent(Guid agentGuid) {
+		var configurationMessages = ImmutableArray.CreateBuilder<ConfigureInstanceMessage>();
+		
+		foreach (var configuration in instances.ByGuid.ValuesCopy.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid)) {
+			var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(configuration.MinecraftVersion, cancellationToken);
+			configurationMessages.Add(new ConfigureInstanceMessage(configuration, new InstanceLaunchProperties(serverExecutableInfo)));
+		}
+
+		return configurationMessages.ToImmutable();
 	}
 
 	private sealed class ObservableInstances : ObservableState<ImmutableDictionary<Guid, Instance>> {

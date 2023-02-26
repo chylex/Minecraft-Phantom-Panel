@@ -9,7 +9,7 @@ using Phantom.Utils.IO;
 using Phantom.Utils.Runtime;
 using Serilog;
 
-namespace Phantom.Common.Minecraft;
+namespace Phantom.Server.Minecraft;
 
 public sealed class MinecraftVersions : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftVersions>();
@@ -35,12 +35,7 @@ public sealed class MinecraftVersions : IDisposable {
 			return earlyResult;
 		}
 
-		try {
-			await cachedVersionsSemaphore.WaitAsync(cancellationToken);
-		} catch (OperationCanceledException) {
-			return ImmutableArray<MinecraftVersion>.Empty;
-		}
-
+		await cachedVersionsSemaphore.WaitAsync(cancellationToken);
 		try {
 			if (CachedVersionsUnlessExpired is {} racedResult) {
 				return racedResult;
@@ -64,7 +59,7 @@ public sealed class MinecraftVersions : IDisposable {
 		});
 	}
 
-	public async Task<MinecraftServerExecutableInfo?> GetServerExecutableInfo(string version, CancellationToken cancellationToken) {
+	public async Task<FileDownloadInfo?> GetServerExecutableInfo(string version, CancellationToken cancellationToken) {
 		return await FetchOrFailSilently(async () => {
 			var versions = await GetVersions(cancellationToken);
 			var versionObject = versions.FirstOrDefault(v => v.Id == version);
@@ -81,8 +76,6 @@ public sealed class MinecraftVersions : IDisposable {
 	private static async Task<T?> FetchOrFailSilently<T>(Func<Task<T?>> task) {
 		try {
 			return await task();
-		} catch (OperationCanceledException) {
-			return default;
 		} catch (StopProcedureException) {
 			return default;
 		} catch (Exception e) {
@@ -96,9 +89,7 @@ public sealed class MinecraftVersions : IDisposable {
 
 		try {
 			return await http.GetFromJsonAsync<JsonElement>(url, cancellationToken);
-		} catch (OperationCanceledException) {
-			throw StopProcedureException.Instance;
-		}  catch (HttpRequestException e) {
+		} catch (HttpRequestException e) {
 			Logger.Error(e, "Unable to download {Description}.", description);
 			throw StopProcedureException.Instance;
 		} catch (Exception e) {
@@ -117,7 +108,7 @@ public sealed class MinecraftVersions : IDisposable {
 			} catch (StopProcedureException) {}
 		}
 
-		return foundVersions.ToImmutable();
+		return foundVersions.MoveToImmutable();
 	}
 
 	private static MinecraftVersion GetVersionFromManifestEntry(JsonElement versionElement) {
@@ -148,7 +139,7 @@ public sealed class MinecraftVersions : IDisposable {
 		return new MinecraftVersion(id, type, url);
 	}
 
-	private static MinecraftServerExecutableInfo GetServerExecutableInfoFromMetadata(JsonElement versionMetadata) {
+	private static FileDownloadInfo GetServerExecutableInfoFromMetadata(JsonElement versionMetadata) {
 		JsonElement downloadsElement = GetJsonPropertyOrThrow(versionMetadata, "downloads", JsonValueKind.Object, "version metadata");
 		JsonElement serverElement = GetJsonPropertyOrThrow(downloadsElement, "server", JsonValueKind.Object, "downloads object in version metadata");
 		JsonElement urlElement = GetJsonPropertyOrThrow(serverElement, "url", JsonValueKind.String, "downloads.server object in version metadata");
@@ -182,7 +173,7 @@ public sealed class MinecraftVersions : IDisposable {
 			throw StopProcedureException.Instance;
 		}
 
-		return new MinecraftServerExecutableInfo(url, hash, new FileSize(size));
+		return new FileDownloadInfo(url, hash, new FileSize(size));
 	}
 
 	private static JsonElement GetJsonPropertyOrThrow(JsonElement parentElement, string propertyKey, JsonValueKind expectedKind, string location) {

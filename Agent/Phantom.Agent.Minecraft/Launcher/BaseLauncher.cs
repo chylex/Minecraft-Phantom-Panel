@@ -25,7 +25,7 @@ public abstract class BaseLauncher {
 			return new LaunchResult.InvalidJvmArguments();
 		}
 
-		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
+		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.LaunchProperties.ServerDownloadInfo, instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
 		if (vanillaServerJarPath == null) {
 			return new LaunchResult.CouldNotDownloadMinecraftServer();
 		}

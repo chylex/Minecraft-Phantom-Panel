@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Logging;
-using Phantom.Common.Minecraft;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Phantom.Utils.Runtime;
@@ -11,8 +11,6 @@ namespace Phantom.Agent.Minecraft.Server;
 sealed class MinecraftServerExecutableDownloader {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutableDownloader>();
 
-	private readonly MinecraftVersions minecraftVersions;
-	
 	public Task<string?> Task { get; }
 	public event EventHandler<DownloadProgressEventArgs>? DownloadProgress;
 	public event EventHandler? Completed;
@@ -20,11 +18,9 @@ sealed class MinecraftServerExecutableDownloader {
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
 	private int listeners = 0;
 
-	public MinecraftServerExecutableDownloader(MinecraftVersions minecraftVersions, string version, string filePath, MinecraftServerExecutableDownloadListener listener) {
-		this.minecraftVersions = minecraftVersions;
-		
+	public MinecraftServerExecutableDownloader(FileDownloadInfo fileDownloadInfo, string minecraftVersion, string filePath, MinecraftServerExecutableDownloadListener listener) {
 		Register(listener);
-		Task = DownloadAndGetPath(version, filePath);
+		Task = DownloadAndGetPath(fileDownloadInfo, minecraftVersion, filePath);
 		Task.ContinueWith(OnCompleted, TaskScheduler.Default);
 	}
 
@@ -72,33 +68,26 @@ sealed class MinecraftServerExecutableDownloader {
 		}
 	}
 
-	private async Task<string?> DownloadAndGetPath(string version, string filePath) {
-		Logger.Information("Downloading server version {Version}...", version);
-
+	private async Task<string?> DownloadAndGetPath(FileDownloadInfo fileDownloadInfo, string minecraftVersion, string filePath) {
 		string tmpFilePath = filePath + ".tmp";
 
 		var cancellationToken = cancellationTokenSource.Token;
 		try {
-			var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(version, cancellationToken);
-			if (serverExecutableInfo == null) {
-				return null;
-			}
-
-			Logger.Information("Downloading server executable from: {Url} ({Size})", serverExecutableInfo.DownloadUrl, serverExecutableInfo.Size.ToHumanReadable(decimalPlaces: 1));
+			Logger.Information("Downloading server version {Version} from: {Url} ({Size})", minecraftVersion, fileDownloadInfo.DownloadUrl, fileDownloadInfo.Size.ToHumanReadable(decimalPlaces: 1));
 			try {
 				using var http = new HttpClient();
-				await FetchServerExecutableFile(http, new DownloadProgressCallback(this), serverExecutableInfo, tmpFilePath, cancellationToken);
+				await FetchServerExecutableFile(http, new DownloadProgressCallback(this), fileDownloadInfo, tmpFilePath, cancellationToken);
 			} catch (Exception) {
 				TryDeleteExecutableAfterFailure(tmpFilePath);
 				throw;
 			}
 
 			File.Move(tmpFilePath, filePath, true);
-			Logger.Information("Server version {Version} downloaded.", version);
+			Logger.Information("Server version {Version} downloaded.", minecraftVersion);
 
 			return filePath;
 		} catch (OperationCanceledException) {
-			Logger.Information("Download for server version {Version} was cancelled.", version);
+			Logger.Information("Download for server version {Version} was cancelled.", minecraftVersion);
 			throw;
 		} catch (StopProcedureException) {
 			return null;
@@ -110,17 +99,17 @@ sealed class MinecraftServerExecutableDownloader {
 		}
 	}
 
-	private static async Task FetchServerExecutableFile(HttpClient http, DownloadProgressCallback progressCallback, MinecraftServerExecutableInfo info, string filePath, CancellationToken cancellationToken) {
+	private static async Task FetchServerExecutableFile(HttpClient http, DownloadProgressCallback progressCallback, FileDownloadInfo fileDownloadInfo, string filePath, CancellationToken cancellationToken) {
 		Sha1String downloadedFileHash;
 
 		try {
-			var response = await http.GetAsync(info.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+			var response = await http.GetAsync(fileDownloadInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 			response.EnsureSuccessStatusCode();
 
 			await using var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
 			await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
-			using var streamCopier = new MinecraftServerDownloadStreamCopier(progressCallback, info.Size.Bytes);
+			using var streamCopier = new MinecraftServerDownloadStreamCopier(progressCallback, fileDownloadInfo.Size.Bytes);
 			downloadedFileHash = await streamCopier.Copy(responseStream, fileStream, cancellationToken);
 		} catch (OperationCanceledException) {
 			throw;
@@ -129,8 +118,8 @@ sealed class MinecraftServerExecutableDownloader {
 			throw StopProcedureException.Instance;
 		}
 
-		if (!downloadedFileHash.Equals(info.Hash)) {
-			Logger.Error("Downloaded server executable has mismatched SHA1 hash. Expected {Expected}, got {Actual}.", info.Hash, downloadedFileHash);
+		if (!downloadedFileHash.Equals(fileDownloadInfo.Hash)) {
+			Logger.Error("Downloaded server executable has mismatched SHA1 hash. Expected {Expected}, got {Actual}.", fileDownloadInfo.Hash, downloadedFileHash);
 			throw StopProcedureException.Instance;
 		}
 	}

@@ -1,31 +1,35 @@
 ﻿using System.Text.RegularExpressions;
+using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Logging;
-using Phantom.Common.Minecraft;
 using Phantom.Utils.IO;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
 
-public sealed partial class MinecraftServerExecutables : IDisposable {
+public sealed partial class MinecraftServerExecutables {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutables>();
 
 	[GeneratedRegex(@"[^a-zA-Z0-9_\-\.]", RegexOptions.Compiled)]
 	private static partial Regex VersionFolderSanitizeRegex();
 
 	private readonly string basePath;
-	private readonly MinecraftVersions minecraftVersions = new ();
 	private readonly Dictionary<string, MinecraftServerExecutableDownloader> runningDownloadersByVersion = new ();
 
 	public MinecraftServerExecutables(string basePath) {
 		this.basePath = basePath;
 	}
 
-	internal async Task<string?> DownloadAndGetPath(string version, EventHandler<DownloadProgressEventArgs> progressEventHandler, CancellationToken cancellationToken) {
-		string serverExecutableFolderPath = Path.Combine(basePath, VersionFolderSanitizeRegex().Replace(version, "_"));
+	internal async Task<string?> DownloadAndGetPath(FileDownloadInfo? fileDownloadInfo, string minecraftVersion, EventHandler<DownloadProgressEventArgs> progressEventHandler, CancellationToken cancellationToken) {
+		string serverExecutableFolderPath = Path.Combine(basePath, VersionFolderSanitizeRegex().Replace(minecraftVersion, "_"));
 		string serverExecutableFilePath = Path.Combine(serverExecutableFolderPath, "server.jar");
 
 		if (File.Exists(serverExecutableFilePath)) {
 			return serverExecutableFilePath;
+		}
+
+		if (fileDownloadInfo == null) {
+			Logger.Error("Unable to download server executable for version {Version} because no download info was provided.", minecraftVersion);
+			return null;
 		}
 
 		try {
@@ -39,26 +43,22 @@ public sealed partial class MinecraftServerExecutables : IDisposable {
 		MinecraftServerExecutableDownloadListener listener = new (progressEventHandler, cancellationToken);
 
 		lock (this) {
-			if (runningDownloadersByVersion.TryGetValue(version, out downloader)) {
-				Logger.Information("A download for server version {Version} is already running, waiting for it to finish...", version);
+			if (runningDownloadersByVersion.TryGetValue(minecraftVersion, out downloader)) {
+				Logger.Information("A download for server version {Version} is already running, waiting for it to finish...", minecraftVersion);
 				downloader.Register(listener);
 			}
 			else {
-				downloader = new MinecraftServerExecutableDownloader(minecraftVersions, version, serverExecutableFilePath, listener);
+				downloader = new MinecraftServerExecutableDownloader(fileDownloadInfo, minecraftVersion, serverExecutableFilePath, listener);
 				downloader.Completed += (_, _) => {
 					lock (this) {
-						runningDownloadersByVersion.Remove(version);
+						runningDownloadersByVersion.Remove(minecraftVersion);
 					}
 				};
 
-				runningDownloadersByVersion[version] = downloader;
+				runningDownloadersByVersion[minecraftVersion] = downloader;
 			}
 		}
 
 		return await downloader.Task.WaitAsync(cancellationToken);
-	}
-
-	public void Dispose() {
-		minecraftVersions.Dispose();
 	}
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Data.Agent;
-using Phantom.Common.Minecraft;
+using Phantom.Server.Minecraft;
 using Phantom.Server.Services;
 using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Audit;

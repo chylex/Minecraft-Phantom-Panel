@@ -71,7 +71,7 @@ sealed class InstanceSessionManager : IDisposable {
 		});
 	}
 
-	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration) {
+	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration, InstanceLaunchProperties launchProperties) {
 		return await AcquireSemaphoreAndRun(async () => {
 			var instanceGuid = configuration.InstanceGuid;
 			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
@@ -90,7 +90,8 @@ sealed class InstanceSessionManager : IDisposable {
 				configuration.JvmArguments,
 				instanceFolder,
 				configuration.MinecraftVersion,
-				new ServerProperties(configuration.ServerPort, configuration.RconPort)
+				new ServerProperties(configuration.ServerPort, configuration.RconPort),
+				launchProperties
 			);
 
 			BaseLauncher launcher = new VanillaLauncher(properties);
@@ -179,7 +180,6 @@ sealed class InstanceSessionManager : IDisposable {
 
 	public void Dispose() {
 		DisposeAllInstances();
-		minecraftServerExecutables.Dispose();
 		shutdownCancellationTokenSource.Dispose();
 		semaphore.Dispose();
 	}

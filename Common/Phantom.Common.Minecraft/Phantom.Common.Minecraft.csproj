@@ -6,11 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
-  <ItemGroup>
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
-    <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
-    <ProjectReference Include="..\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
-  </ItemGroup>
-  
 </Project>
