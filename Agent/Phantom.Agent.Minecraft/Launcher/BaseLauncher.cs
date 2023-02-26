@@ -11,6 +11,8 @@ namespace Phantom.Agent.Minecraft.Launcher;
 
 public abstract class BaseLauncher {
 	private readonly InstanceProperties instanceProperties;
+	
+	protected string MinecraftVersion => instanceProperties.ServerVersion;
 
 	private protected BaseLauncher(InstanceProperties instanceProperties) {
 		this.instanceProperties = instanceProperties;
@@ -25,11 +27,34 @@ public abstract class BaseLauncher {
 			return new LaunchResult.InvalidJvmArguments();
 		}
 
-		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.LaunchProperties.ServerDownloadInfo, instanceProperties.ServerVersion, downloadProgressEventHandler, cancellationToken);
+		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.LaunchProperties.ServerDownloadInfo, MinecraftVersion, downloadProgressEventHandler, cancellationToken);
 		if (vanillaServerJarPath == null) {
 			return new LaunchResult.CouldNotDownloadMinecraftServer();
 		}
 
+		ServerJarInfo? serverJar;
+		try {
+			serverJar = await PrepareServerJar(logger, vanillaServerJarPath, instanceProperties.InstanceFolder, cancellationToken);
+		} catch (OperationCanceledException) {
+			throw;
+		} catch (Exception e) {
+			logger.Error(e, "Caught exception while preparing the server jar.");
+			return new LaunchResult.CouldNotPrepareMinecraftServerLauncher();
+		}
+
+		if (!File.Exists(serverJar.FilePath)) {
+			logger.Error("Missing prepared server or launcher jar: {FilePath}", serverJar.FilePath);
+			return new LaunchResult.CouldNotPrepareMinecraftServerLauncher();
+		}
+
+		try {
+			await AcceptEula(instanceProperties);
+			await UpdateServerProperties(instanceProperties);
+		} catch (Exception e) {
+			logger.Error(e, "Caught exception while configuring the server.");
+			return new LaunchResult.CouldNotConfigureMinecraftServer();
+		}
+		
 		var startInfo = new ProcessStartInfo {
 			FileName = javaRuntimeExecutable.ExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
@@ -43,23 +68,19 @@ public abstract class BaseLauncher {
 		var jvmArguments = new JvmArgumentBuilder(instanceProperties.JvmProperties, instanceProperties.JvmArguments);
 		CustomizeJvmArguments(jvmArguments);
 
-		var serverJarPath = await PrepareServerJar(vanillaServerJarPath, instanceProperties.InstanceFolder, cancellationToken);
 		var processArguments = startInfo.ArgumentList;
 		jvmArguments.Build(processArguments);
+		
+		foreach (var extraArgument in serverJar.ExtraArgs) {
+			processArguments.Add(extraArgument);
+		}
+		
 		processArguments.Add("-jar");
-		processArguments.Add(serverJarPath);
+		processArguments.Add(serverJar.FilePath);
 		processArguments.Add("nogui");
 
 		var process = new Process { StartInfo = startInfo };
 		var instanceProcess = new InstanceProcess(instanceProperties, process);
-
-		try {
-			await AcceptEula(instanceProperties);
-			await UpdateServerProperties(instanceProperties);
-		} catch (Exception e) {
-			logger.Error(e, "Caught exception while configuring the server.");
-			return new LaunchResult.CouldNotConfigureMinecraftServer();
-		}
 
 		try {
 			process.Start();
@@ -82,8 +103,8 @@ public abstract class BaseLauncher {
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}
 
-	private protected virtual Task<string> PrepareServerJar(string serverJarPath, string instanceFolderPath, CancellationToken cancellationToken) {
-		return Task.FromResult(serverJarPath);
+	private protected virtual Task<ServerJarInfo> PrepareServerJar(ILogger logger, string serverJarPath, string instanceFolderPath, CancellationToken cancellationToken) {
+		return Task.FromResult(new ServerJarInfo(serverJarPath));
 	}
 
 	private static async Task AcceptEula(InstanceProperties instanceProperties) {

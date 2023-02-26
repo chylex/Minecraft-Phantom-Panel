@@ -48,6 +48,9 @@ sealed class InstanceLaunchingState : IInstanceState, IDisposable {
 		else if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotDownloadMinecraftServer, "Session failed to launch, could not download Minecraft server.");
 		}
+		else if (launchResult is LaunchResult.CouldNotPrepareMinecraftServerLauncher) {
+			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotPrepareMinecraftServerLauncher, "Session failed to launch, could not prepare Minecraft server launcher.");
+		}
 		else if (launchResult is LaunchResult.CouldNotConfigureMinecraftServer) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotConfigureMinecraftServer, "Session failed to launch, could not configure Minecraft server.");
 		}
