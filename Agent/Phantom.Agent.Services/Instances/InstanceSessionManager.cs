@@ -71,7 +71,7 @@ sealed class InstanceSessionManager : IDisposable {
 		});
 	}
 
-	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration, InstanceLaunchProperties launchProperties) {
+	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration, InstanceLaunchProperties launchProperties, bool launchNow) {
 		return await AcquireSemaphoreAndRun(async () => {
 			var instanceGuid = configuration.InstanceGuid;
 			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
@@ -106,7 +106,7 @@ sealed class InstanceSessionManager : IDisposable {
 				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 			}
 
-			if (configuration.LaunchAutomatically) {
+			if (launchNow) {
 				await LaunchInternal(instance);
 			}
 

@@ -52,11 +52,10 @@ public sealed class InstanceManager {
 				entity.MinecraftServerKind,
 				entity.MemoryAllocation,
 				entity.JavaRuntimeGuid,
-				JvmArgumentsHelper.Split(entity.JvmArguments),
-				entity.LaunchAutomatically
+				JvmArgumentsHelper.Split(entity.JvmArguments)
 			);
 
-			var instance = new Instance(configuration);
+			var instance = new Instance(configuration, entity.LaunchAutomatically);
 			instances.ByGuid[instance.Configuration.InstanceGuid] = instance;
 		}
 	}
@@ -86,8 +85,10 @@ public sealed class InstanceManager {
 
 		await modifyInstancesSemaphore.WaitAsync(cancellationToken);
 		try {
-			var instance = new Instance(configuration);
-			instances.ByGuid.AddOrReplace(instance.Configuration.InstanceGuid, instance, out var oldInstance);
+			isNewInstance = !instances.ByGuid.TryReplace(configuration.InstanceGuid, instance => instance with { Configuration = configuration });
+			if (isNewInstance) {
+				instances.ByGuid.TryAdd(configuration.InstanceGuid, new Instance(configuration));
+			}
 
 			var message = new ConfigureInstanceMessage(configuration, new InstanceLaunchProperties(serverExecutableInfo));
 			var reply = await agentManager.SendMessage<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(configuration.AgentGuid, message, TimeSpan.FromSeconds(10));
@@ -96,8 +97,6 @@ public sealed class InstanceManager {
 				ConfigureInstanceResult.Success => AddOrEditInstanceResult.Success,
 				_                               => AddOrEditInstanceResult.UnknownError
 			});
-
-			isNewInstance = oldInstance == null;
 			
 			if (result.Is(AddOrEditInstanceResult.Success)) {
 				using var scope = databaseProvider.CreateScope();
@@ -112,7 +111,6 @@ public sealed class InstanceManager {
 				entity.MemoryAllocation = configuration.MemoryAllocation;
 				entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
 				entity.JvmArguments = JvmArgumentsHelper.Join(configuration.JvmArguments);
-				entity.LaunchAutomatically = configuration.LaunchAutomatically;
 
 				await scope.Ctx.SaveChangesAsync(cancellationToken);
 			}
@@ -189,9 +187,7 @@ public sealed class InstanceManager {
 	private async Task SetInstanceShouldLaunchAutomatically(Guid instanceGuid, bool shouldLaunchAutomatically) {
 		await modifyInstancesSemaphore.WaitAsync(cancellationToken);
 		try {
-			instances.ByGuid.TryReplace(instanceGuid, instance => instance with {
-				Configuration = instance.Configuration with { LaunchAutomatically = shouldLaunchAutomatically }
-			});
+			instances.ByGuid.TryReplace(instanceGuid, instance => instance with { LaunchAutomatically = shouldLaunchAutomatically });
 
 			using var scope = databaseProvider.CreateScope();
 			var entity = await scope.Ctx.Instances.FindAsync(instanceGuid, cancellationToken);
@@ -211,9 +207,9 @@ public sealed class InstanceManager {
 	internal async Task<ImmutableArray<ConfigureInstanceMessage>> GetInstanceConfigurationsForAgent(Guid agentGuid) {
 		var configurationMessages = ImmutableArray.CreateBuilder<ConfigureInstanceMessage>();
 		
-		foreach (var configuration in instances.ByGuid.ValuesCopy.Select(static instance => instance.Configuration).Where(configuration => configuration.AgentGuid == agentGuid)) {
+		foreach (var (configuration, _, launchAutomatically) in instances.ByGuid.ValuesCopy.Where(instance => instance.Configuration.AgentGuid == agentGuid)) {
 			var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(configuration.MinecraftVersion, cancellationToken);
-			configurationMessages.Add(new ConfigureInstanceMessage(configuration, new InstanceLaunchProperties(serverExecutableInfo)));
+			configurationMessages.Add(new ConfigureInstanceMessage(configuration, new InstanceLaunchProperties(serverExecutableInfo), launchAutomatically));
 		}
 
 		return configurationMessages.ToImmutable();

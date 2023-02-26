@@ -15,6 +15,5 @@ public sealed partial record InstanceConfiguration(
 	[property: MemoryPackOrder(6)] MinecraftServerKind MinecraftServerKind,
 	[property: MemoryPackOrder(7)] RamAllocationUnits MemoryAllocation,
 	[property: MemoryPackOrder(8)] Guid JavaRuntimeGuid,
-	[property: MemoryPackOrder(9)] ImmutableArray<string> JvmArguments,
-	[property: MemoryPackOrder(10)] bool LaunchAutomatically
+	[property: MemoryPackOrder(9)] ImmutableArray<string> JvmArguments
 );

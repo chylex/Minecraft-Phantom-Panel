@@ -29,7 +29,7 @@
   </thead>
   @if (!instances.IsEmpty) {
     <tbody>
-      @foreach (var (configuration, status) in instances) {
+      @foreach (var (configuration, status, _) in instances) {
         var agentName = agentNames.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
         var instanceGuid = configuration.InstanceGuid.ToString();
         <tr>

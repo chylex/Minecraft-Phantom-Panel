@@ -325,8 +325,7 @@
       form.MinecraftServerKind,
       form.MemoryAllocation ?? RamAllocationUnits.Zero,
       form.JavaRuntimeGuid.GetValueOrDefault(),
-      JvmArgumentsHelper.Split(form.JvmArguments),
-      EditedInstanceConfiguration?.LaunchAutomatically ?? false
+      JvmArgumentsHelper.Split(form.JvmArguments)
     );
 
     var result = await InstanceManager.AddOrEditInstance(instance);

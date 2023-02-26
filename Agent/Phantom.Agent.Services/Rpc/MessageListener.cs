@@ -60,7 +60,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 	}
 	
 	public async Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message) {
-		return await agent.InstanceSessionManager.Configure(message.Configuration, message.LaunchProperties);
+		return await agent.InstanceSessionManager.Configure(message.Configuration, message.LaunchProperties, message.LaunchNow);
 	}
 
 	public async Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {
