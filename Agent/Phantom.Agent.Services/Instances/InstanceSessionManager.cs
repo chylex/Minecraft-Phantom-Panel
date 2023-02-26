@@ -27,7 +27,6 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 
-	private readonly MinecraftServerExecutables minecraftServerExecutables;
 	private readonly InstanceServices instanceServices;
 	private readonly Dictionary<Guid, Instance> instances = new ();
 
@@ -38,11 +37,12 @@ sealed class InstanceSessionManager : IDisposable {
 	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager, BackupManager backupManager) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
-		this.minecraftServerExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 		
+		var minecraftServerExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
 		var launchServices = new LaunchServices(minecraftServerExecutables, javaRuntimeRepository);
 		var portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
+		
 		this.instanceServices = new InstanceServices(taskManager, portManager, backupManager, launchServices);
 	}
 
@@ -94,7 +94,11 @@ sealed class InstanceSessionManager : IDisposable {
 				launchProperties
 			);
 
-			BaseLauncher launcher = new VanillaLauncher(properties);
+			IServerLauncher launcher = configuration.MinecraftServerKind switch {
+				MinecraftServerKind.Vanilla => new VanillaLauncher(properties),
+				MinecraftServerKind.Fabric  => new FabricLauncher(properties),
+				_                           => InvalidLauncher.Instance
+			};
 
 			if (instances.TryGetValue(instanceGuid, out var instance)) {
 				await instance.Reconfigure(configuration, launcher, shutdownCancellationToken);
@@ -105,7 +109,7 @@ sealed class InstanceSessionManager : IDisposable {
 				}
 			}
 			else {
-				instances[instanceGuid] = instance = new Instance(configuration, instanceServices, launcher);
+				instances[instanceGuid] = instance = new Instance(instanceServices, configuration, launcher);
 				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
 				
 				instance.ReportLastStatus();

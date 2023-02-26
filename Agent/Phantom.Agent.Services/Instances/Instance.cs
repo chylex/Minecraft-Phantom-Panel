@@ -18,9 +18,10 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 
-	public InstanceConfiguration Configuration { get; private set; }
 	private InstanceServices Services { get; }
-	private BaseLauncher Launcher { get; set; }
+	
+	public InstanceConfiguration Configuration { get; private set; }
+	private IServerLauncher Launcher { get; set; }
 
 	private readonly string shortName;
 	private readonly ILogger logger;
@@ -35,12 +36,12 @@ sealed class Instance : IDisposable {
 	
 	public event EventHandler? IsRunningChanged; 
 
-	public Instance(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
+	public Instance(InstanceServices services, InstanceConfiguration configuration, IServerLauncher launcher) {
 		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
-		this.Configuration = configuration;
 		this.Services = services;
+		this.Configuration = configuration;
 		this.Launcher = launcher;
 		
 		this.currentState = new InstanceNotRunningState();
@@ -100,7 +101,7 @@ sealed class Instance : IDisposable {
 		return newStateAndResult.Result;
 	}
 
-	public async Task Reconfigure(InstanceConfiguration configuration, BaseLauncher launcher, CancellationToken cancellationToken) {
+	public async Task Reconfigure(InstanceConfiguration configuration, IServerLauncher launcher, CancellationToken cancellationToken) {
 		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
 		try {
 			Configuration = configuration;
@@ -153,7 +154,7 @@ sealed class Instance : IDisposable {
 		private readonly Instance instance;
 		private readonly CancellationToken shutdownCancellationToken;
 		
-		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Configuration, instance.Launcher, instance.Services) {
+		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Services, instance.Configuration, instance.Launcher) {
 			this.instance = instance;
 			this.shutdownCancellationToken = shutdownCancellationToken;
 		}

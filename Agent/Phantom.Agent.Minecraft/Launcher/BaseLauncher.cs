@@ -9,9 +9,9 @@ using Serilog;
 
 namespace Phantom.Agent.Minecraft.Launcher;
 
-public abstract class BaseLauncher {
+public abstract class BaseLauncher : IServerLauncher {
 	private readonly InstanceProperties instanceProperties;
-	
+
 	protected string MinecraftVersion => instanceProperties.ServerVersion;
 
 	private protected BaseLauncher(InstanceProperties instanceProperties) {
@@ -34,7 +34,7 @@ public abstract class BaseLauncher {
 
 		ServerJarInfo? serverJar;
 		try {
-			serverJar = await PrepareServerJar(logger, vanillaServerJarPath, instanceProperties.InstanceFolder, cancellationToken);
+			serverJar = await PrepareServerJar(logger, vanillaServerJarPath, cancellationToken);
 		} catch (OperationCanceledException) {
 			throw;
 		} catch (Exception e) {
@@ -103,7 +103,7 @@ public abstract class BaseLauncher {
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}
 
-	private protected virtual Task<ServerJarInfo> PrepareServerJar(ILogger logger, string serverJarPath, string instanceFolderPath, CancellationToken cancellationToken) {
+	private protected virtual Task<ServerJarInfo> PrepareServerJar(ILogger logger, string serverJarPath, CancellationToken cancellationToken) {
 		return Task.FromResult(new ServerJarInfo(serverJarPath));
 	}
 

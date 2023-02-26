@@ -6,17 +6,17 @@ using Serilog;
 namespace Phantom.Agent.Services.Instances;
 
 abstract class InstanceContext {
-	public InstanceConfiguration Configuration { get; }
-	public BaseLauncher Launcher { get; }
 	public InstanceServices Services { get; }
+	public InstanceConfiguration Configuration { get; }
+	public IServerLauncher Launcher { get; }
 	
 	public abstract ILogger Logger { get; }
 	public abstract string ShortName { get; }
 
-	protected InstanceContext(InstanceConfiguration configuration, BaseLauncher launcher, InstanceServices services) {
+	protected InstanceContext(InstanceServices services, InstanceConfiguration configuration, IServerLauncher launcher) {
+		Services = services;
 		Configuration = configuration;
 		Launcher = launcher;
-		Services = services;
 	}
 
 	public abstract void SetStatus(IInstanceStatus newStatus);
