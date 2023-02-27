@@ -50,7 +50,7 @@ public sealed class OneShotProcess {
 			return false;
 		}
 
-		logger.Verbose("Process finished successfully.");
+		logger.Debug("Process finished successfully.");
 		return true;
 	}
 

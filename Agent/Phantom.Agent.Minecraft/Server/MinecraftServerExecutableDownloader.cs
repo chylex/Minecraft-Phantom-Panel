@@ -26,7 +26,7 @@ sealed class MinecraftServerExecutableDownloader {
 
 	public void Register(MinecraftServerExecutableDownloadListener listener) {
 		++listeners;
-		Logger.Verbose("Registered download listener, current listener count: {Listeners}", listeners);
+		Logger.Debug("Registered download listener, current listener count: {Listeners}", listeners);
 		
 		DownloadProgress += listener.DownloadProgressEventHandler;
 		listener.CancellationToken.Register(Unregister, listener);
@@ -37,11 +37,11 @@ sealed class MinecraftServerExecutableDownloader {
 		DownloadProgress -= listener.DownloadProgressEventHandler;
 
 		if (--listeners <= 0) {
-			Logger.Verbose("Unregistered last download listener, cancelling download.");
+			Logger.Debug("Unregistered last download listener, cancelling download.");
 			cancellationTokenSource.Cancel();
 		}
 		else {
-			Logger.Verbose("Unregistered download listener, current listener count: {Listeners}", listeners);
+			Logger.Debug("Unregistered download listener, current listener count: {Listeners}", listeners);
 		}
 	}
 
@@ -50,7 +50,7 @@ sealed class MinecraftServerExecutableDownloader {
 	}
 
 	private void OnCompleted(Task task) {
-		Logger.Verbose("Download task completed.");
+		Logger.Debug("Download task completed.");
 		Completed?.Invoke(this, EventArgs.Empty);
 		Completed = null;
 		DownloadProgress = null;

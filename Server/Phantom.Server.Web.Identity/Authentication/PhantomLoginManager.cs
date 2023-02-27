@@ -40,7 +40,7 @@ public sealed class PhantomLoginManager {
 		
 		var result = await signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
 		if (result == SignInResult.Success) {
-			Logger.Verbose("Created login token for {Username}.", username);
+			Logger.Debug("Created login token for {Username}.", username);
 			
 			string token = TokenGenerator.Create(60);
 			loginStore.Add(token, user, password, returnUrl ?? string.Empty);

@@ -84,7 +84,7 @@ public sealed class ServerStatusProtocol {
 				return null;
 			}
 			
-			logger.Verbose("Detected {OnlinePlayerCount} online player(s).", onlinePlayerCount);
+			logger.Debug("Detected {OnlinePlayerCount} online player(s).", onlinePlayerCount);
 			return onlinePlayerCount;
 		} finally {
 			ArrayPool<byte>.Shared.Return(messageBuffer);

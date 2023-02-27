@@ -69,7 +69,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} finally {
-			logger.Verbose("ZeroMQ client stopped receiving messages.");
+			logger.Debug("ZeroMQ client stopped receiving messages.");
 
 			disconnectSemaphore.Wait(CancellationToken.None);
 			keepAliveLoop.Cancel();

@@ -16,7 +16,7 @@ sealed class InstanceSession : IDisposable {
 	}
 	
 	private void SessionOutput(object? sender, string line) {
-		context.Logger.Verbose("[Server] {Line}", line);
+		context.Logger.Debug("[Server] {Line}", line);
 		logSender.Enqueue(line);
 	}
 	

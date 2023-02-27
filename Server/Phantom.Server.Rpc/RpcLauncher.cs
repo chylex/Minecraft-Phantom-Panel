@@ -46,7 +46,7 @@ public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 
 		void OnConnectionClosed(object? sender, RpcClientConnectionClosedEventArgs e) {
 			clients.Remove(e.RoutingId);
-			logger.Verbose("Closed connection to {RoutingId}.", e.RoutingId);
+			logger.Debug("Closed connection to {RoutingId}.", e.RoutingId);
 		}
 
 		while (!cancellationToken.IsCancellationRequested) {

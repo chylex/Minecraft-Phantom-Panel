@@ -15,7 +15,7 @@ public abstract class CancellableBackgroundTask {
 	}
 
 	private async Task Run() {
-		Logger.Verbose("Task started.");
+		Logger.Debug("Task started.");
 
 		try {
 			await RunTask();
@@ -25,7 +25,7 @@ public abstract class CancellableBackgroundTask {
 			Logger.Fatal(e, "Caught exception in task.");
 		} finally {
 			cancellationTokenSource.Dispose();
-			Logger.Verbose("Task stopped.");
+			Logger.Debug("Task stopped.");
 		}
 	}
 	

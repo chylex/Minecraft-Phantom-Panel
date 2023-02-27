@@ -59,19 +59,19 @@ sealed partial class BackupServerCommandDispatcher : IDisposable {
 
 		if (!automaticSavingDisabled.Task.IsCompleted) {
 			if (info == "Automatic saving is now disabled") {
-				logger.Verbose("Detected that automatic saving is disabled.");
+				logger.Debug("Detected that automatic saving is disabled.");
 				automaticSavingDisabled.SetResult();
 			}
 		}
 		else if (!savedTheGame.Task.IsCompleted) {
 			if (info == "Saved the game") {
-				logger.Verbose("Detected that the game is saved.");
+				logger.Debug("Detected that the game is saved.");
 				savedTheGame.SetResult();
 			}
 		}
 		else if (!automaticSavingEnabled.Task.IsCompleted) {
 			if (info == "Automatic saving is now enabled") {
-				logger.Verbose("Detected that automatic saving is enabled.");
+				logger.Debug("Detected that automatic saving is enabled.");
 				automaticSavingEnabled.SetResult();
 			}
 		}

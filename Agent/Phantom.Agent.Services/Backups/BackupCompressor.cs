@@ -59,7 +59,7 @@ static class BackupCompressor {
 
 		static void OnZstdOutput(object? sender, DataReceivedEventArgs e) {
 			if (!string.IsNullOrWhiteSpace(e.Data)) {
-				ZstdLogger.Verbose("[Output] {Line}", e.Data);
+				ZstdLogger.Debug("[Output] {Line}", e.Data);
 			}
 		}
 

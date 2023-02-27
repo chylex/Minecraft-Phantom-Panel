@@ -30,7 +30,7 @@ public sealed class PhantomLoginStore {
 
 				foreach (var (token, entry) in loginEntries) {
 					if (entry.IsExpired) {
-						Logger.Verbose("Expired login entry for {Username}.", entry.User.UserName);
+						Logger.Debug("Expired login entry for {Username}.", entry.User.UserName);
 						loginEntries.TryRemove(token, out _);
 					}
 				}
@@ -50,7 +50,7 @@ public sealed class PhantomLoginStore {
 		}
 
 		if (entry.IsExpired) {
-			Logger.Verbose("Expired login entry for {Username}.", entry.User.UserName);
+			Logger.Debug("Expired login entry for {Username}.", entry.User.UserName);
 			return null;
 		}
 		

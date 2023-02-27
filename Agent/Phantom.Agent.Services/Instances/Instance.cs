@@ -78,7 +78,7 @@ sealed class Instance : IDisposable {
 			disposable.Dispose();
 		}
 
-		logger.Verbose("Transitioning instance state to: {NewState}", newState.GetType().Name);
+		logger.Debug("Transitioning instance state to: {NewState}", newState.GetType().Name);
 		
 		var wasRunning = IsRunning;
 		currentState = newState;
@@ -170,12 +170,12 @@ sealed class Instance : IDisposable {
 				
 				if (!instance.IsRunning) {
 					// Only InstanceSessionManager is allowed to transition an instance out of a non-running state.
-					instance.logger.Verbose("Cancelled state transition to {State} because instance is not running.", state.GetType().Name);
+					instance.logger.Debug("Cancelled state transition to {State} because instance is not running.", state.GetType().Name);
 					return;
 				}
 				
 				if (state is not InstanceNotRunningState && shutdownCancellationToken.IsCancellationRequested) {
-					instance.logger.Verbose("Cancelled state transition to {State} due to Agent shutdown.", state.GetType().Name);
+					instance.logger.Debug("Cancelled state transition to {State} due to Agent shutdown.", state.GetType().Name);
 					return;
 				}
 

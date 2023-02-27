@@ -120,7 +120,7 @@ public sealed class MinecraftVersions : IDisposable {
 
 		var type = MinecraftVersionTypes.FromString(typeString);
 		if (type == MinecraftVersionType.Other) {
-			Logger.Verbose("Unknown version type: {Type} ({Version})", typeString, id);
+			Logger.Warning("Unknown version type: {Type} ({Version})", typeString, id);
 		}
 
 		JsonElement urlElement = GetJsonPropertyOrThrow(versionElement, "url", JsonValueKind.String, "version entry in version manifest");

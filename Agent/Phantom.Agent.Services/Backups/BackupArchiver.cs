@@ -69,7 +69,7 @@ sealed class BackupArchiver {
 			return null;
 		}
 		
-		logger.Verbose("Created world backup: {FilePath}", backupFilePath);
+		logger.Debug("Created world backup: {FilePath}", backupFilePath);
 		return backupFilePath;
 	}
 
@@ -135,7 +135,7 @@ sealed class BackupArchiver {
 		foreach (FileInfo file in sourceFolder.EnumerateFiles()) {
 			var filePath = relativePath.Add(file.Name);
 			if (IsFileSkipped(filePath)) {
-				logger.Verbose("Skipping file: {File}", string.Join('/', filePath));
+				logger.Debug("Skipping file: {File}", string.Join('/', filePath));
 				continue;
 			}
 
@@ -150,7 +150,7 @@ sealed class BackupArchiver {
 		foreach (DirectoryInfo directory in sourceFolder.EnumerateDirectories()) {
 			var folderPath = relativePath.Add(directory.Name);
 			if (IsFolderSkipped(folderPath)) {
-				logger.Verbose("Skipping folder: {Folder}", string.Join('/', folderPath));
+				logger.Debug("Skipping folder: {Folder}", string.Join('/', folderPath));
 				continue;
 			}
 			

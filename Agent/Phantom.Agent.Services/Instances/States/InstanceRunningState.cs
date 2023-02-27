@@ -110,7 +110,7 @@ sealed class InstanceRunningState : IInstanceState {
 				}
 			}
 		} catch (OperationCanceledException) {
-			context.Logger.Verbose("Cancelled delayed stop.");
+			context.Logger.Debug("Cancelled delayed stop.");
 			return;
 		} catch (ObjectDisposedException) {
 			return;

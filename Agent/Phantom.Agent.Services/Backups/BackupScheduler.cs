@@ -79,7 +79,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 
 				await Task.Delay(TimeSpan.FromSeconds(10), CancellationToken);
 				
-				Logger.Verbose("Waiting for server output before checking for online players again...");
+				Logger.Debug("Waiting for server output before checking for online players again...");
 				await serverOutputWhileWaitingForOnlinePlayers.WaitHandle.WaitOneAsync(CancellationToken);
 			}
 		} finally {
@@ -90,7 +90,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private void ServerOutputListener(object? sender, string line) {
 		if (!serverOutputWhileWaitingForOnlinePlayers.IsSet) {
 			serverOutputWhileWaitingForOnlinePlayers.Set();
-			Logger.Verbose("Detected server output, signalling to check for online players again.");
+			Logger.Debug("Detected server output, signalling to check for online players again.");
 		}
 	}
 }
