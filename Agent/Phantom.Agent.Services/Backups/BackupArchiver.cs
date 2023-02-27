@@ -44,7 +44,7 @@ sealed class BackupArchiver {
 		return false;
 	}
 
-	public async Task ArchiveWorld(BackupCreationResult.Builder resultBuilder) {
+	public async Task<string?> ArchiveWorld(BackupCreationResult.Builder resultBuilder) {
 		string guid = instanceProperties.InstanceGuid.ToString();
 		string currentDateTime = DateTime.Now.ToString("yyyyMMdd-HHmmss");
 		string backupFolderPath = Path.Combine(destinationBasePath, guid);
@@ -53,7 +53,7 @@ sealed class BackupArchiver {
 		if (File.Exists(backupFilePath)) {
 			resultBuilder.Kind = BackupCreationResultKind.BackupFileAlreadyExists;
 			logger.Warning("Skipping backup, file already exists: {File}", backupFilePath);
-			return;
+			return null;
 		}
 		
 		try {
@@ -61,18 +61,16 @@ sealed class BackupArchiver {
 		} catch (Exception e) {
 			resultBuilder.Kind = BackupCreationResultKind.CouldNotCreateBackupFolder;
 			logger.Error(e, "Could not create backup folder: {Folder}", backupFolderPath);
-			return;
+			return null;
 		}
 
 		string temporaryFolderPath = Path.Combine(temporaryBasePath, guid + "_" + currentDateTime);
 		if (!await CopyWorldAndCreateTarArchive(temporaryFolderPath, backupFilePath, resultBuilder)) {
-			return;
+			return null;
 		}
 		
-		var compressedFilePath = await BackupCompressor.Compress(backupFilePath, cancellationToken);
-		if (compressedFilePath == null) {
-			resultBuilder.Warnings |= BackupCreationWarnings.CouldNotCompressWorldArchive;
-		}
+		logger.Verbose("Created world backup: {FilePath}", backupFilePath);
+		return backupFilePath;
 	}
 
 	private async Task<bool> CopyWorldAndCreateTarArchive(string temporaryFolderPath, string backupFilePath, BackupCreationResult.Builder resultBuilder) {

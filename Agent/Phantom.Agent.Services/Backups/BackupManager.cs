@@ -1,13 +1,11 @@
-﻿using System.Text.RegularExpressions;
-using Phantom.Agent.Minecraft.Command;
-using Phantom.Agent.Minecraft.Instance;
+﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
 
-sealed partial class BackupManager {
+sealed class BackupManager {
 	private readonly string destinationBasePath;
 	private readonly string temporaryBasePath;
 
@@ -40,7 +38,6 @@ sealed partial class BackupManager {
 		private readonly string loggerName;
 		private readonly ILogger logger;
 		private readonly InstanceProcess process;
-		private readonly BackupCommandListener listener;
 		private readonly CancellationToken cancellationToken;
 
 		public BackupCreator(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
@@ -49,52 +46,44 @@ sealed partial class BackupManager {
 			this.loggerName = loggerName;
 			this.logger = PhantomLogger.Create<BackupManager>(loggerName);
 			this.process = process;
-			this.listener = new BackupCommandListener(logger);
 			this.cancellationToken = cancellationToken;
 		}
 
 		public async Task<BackupCreationResult> CreateBackup() {
 			logger.Information("Backup started.");
-			process.AddOutputListener(listener.OnOutput, maxLinesToReadFromHistory: 0);
-			try {
-				var resultBuilder = new BackupCreationResult.Builder();
-				
-				await RunBackupProcedure(resultBuilder);
-				
-				var result = resultBuilder.Build();
-				if (result.Kind == BackupCreationResultKind.Success) {
-					var warningCount = result.Warnings.Count();
-					if (warningCount == 0) {
-						logger.Information("Backup finished successfully.");
-					}
-					else {
-						logger.Warning("Backup finished with {Warnings} warning(s).", warningCount);
-					}
-				}
-				else {
-					logger.Warning("Backup failed: {Reason}", result.Kind.ToSentence());
-				}
-				
-				return result;
-			} finally {
-				process.RemoveOutputListener(listener.OnOutput);
+			
+			var resultBuilder = new BackupCreationResult.Builder();
+			string? backupFilePath;
+			
+			using (var dispatcher = new BackupServerCommandDispatcher(logger, process, cancellationToken)) {
+				backupFilePath = await CreateWorldArchive(dispatcher, resultBuilder);
 			}
+			
+			if (backupFilePath != null) {
+				await CompressWorldArchive(backupFilePath, resultBuilder);
+			}
+			
+			var result = resultBuilder.Build();
+			LogBackupResult(result);
+			return result;
 		}
-		
-		private async Task RunBackupProcedure(BackupCreationResult.Builder resultBuilder) {
+
+		private async Task<string?> CreateWorldArchive(BackupServerCommandDispatcher dispatcher, BackupCreationResult.Builder resultBuilder) {
 			try {
-				await DisableAutomaticSaving();
-				await SaveAllChunks();
-				await new BackupArchiver(destinationBasePath, temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
+				await dispatcher.DisableAutomaticSaving();
+				await dispatcher.SaveAllChunks();
+				return await new BackupArchiver(destinationBasePath, temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
 			} catch (OperationCanceledException) {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
+				return null;
 			} catch (Exception e) {
 				resultBuilder.Kind = BackupCreationResultKind.UnknownError;
 				logger.Error(e, "Caught exception while creating an instance backup.");
+				return null;
 			} finally {
 				try {
-					await EnableAutomaticSaving();
+					await dispatcher.EnableAutomaticSaving();
 				} catch (OperationCanceledException) {
 					// ignore
 				} catch (Exception e) {
@@ -104,66 +93,25 @@ sealed partial class BackupManager {
 			}
 		}
 
-		private async Task DisableAutomaticSaving() {
-			await process.SendCommand(MinecraftCommand.SaveOff, cancellationToken);
-			await listener.AutomaticSavingDisabled.Task.WaitAsync(cancellationToken);
+		private async Task CompressWorldArchive(string filePath, BackupCreationResult.Builder resultBuilder) {
+			var compressedFilePath = await BackupCompressor.Compress(filePath, cancellationToken);
+			if (compressedFilePath == null) {
+				resultBuilder.Warnings |= BackupCreationWarnings.CouldNotCompressWorldArchive;
+			}
 		}
 
-		private async Task SaveAllChunks() {
-			// TODO Try if not flushing and waiting a few seconds before flushing reduces lag.
-			await process.SendCommand(MinecraftCommand.SaveAll(flush: true), cancellationToken);
-			await listener.SavedTheGame.Task.WaitAsync(cancellationToken);
-		}
-
-		private async Task EnableAutomaticSaving() {
-			await process.SendCommand(MinecraftCommand.SaveOn, cancellationToken);
-			await listener.AutomaticSavingEnabled.Task.WaitAsync(cancellationToken);
-		}
-	}
-	
-	private sealed partial class BackupCommandListener {
-		[GeneratedRegex(@"^\[(?:.*?)\] \[Server thread/INFO\]: (.*?)$", RegexOptions.NonBacktracking)]
-		private static partial Regex ServerThreadInfoRegex();
-
-		private readonly ILogger logger;
-
-		public BackupCommandListener(ILogger logger) {
-			this.logger = logger;
-		}
-
-		public TaskCompletionSource AutomaticSavingDisabled { get; } = new ();
-		public TaskCompletionSource SavedTheGame { get; } = new ();
-		public TaskCompletionSource AutomaticSavingEnabled { get; } = new ();
-
-		public void OnOutput(object? sender, string? line) {
-			if (line == null) {
+		private void LogBackupResult(BackupCreationResult result) {
+			if (result.Kind != BackupCreationResultKind.Success) {
+				logger.Warning("Backup failed: {Reason}", result.Kind.ToSentence());
 				return;
 			}
-
-			var match = ServerThreadInfoRegex().Match(line);
-			if (!match.Success) {
-				return;
+			
+			var warningCount = result.Warnings.Count();
+			if (warningCount > 0) {
+				logger.Warning("Backup finished with {Warnings} warning(s).", warningCount);
 			}
-
-			string info = match.Groups[1].Value;
-
-			if (!AutomaticSavingDisabled.Task.IsCompleted) {
-				if (info == "Automatic saving is now disabled") {
-					logger.Verbose("Detected that automatic saving is disabled.");
-					AutomaticSavingDisabled.SetResult();
-				}
-			}
-			else if (!SavedTheGame.Task.IsCompleted) {
-				if (info == "Saved the game") {
-					logger.Verbose("Detected that the game is saved.");
-					SavedTheGame.SetResult();
-				}
-			}
-			else if (!AutomaticSavingEnabled.Task.IsCompleted) {
-				if (info == "Automatic saving is now enabled") {
-					logger.Verbose("Detected that automatic saving is enabled.");
-					AutomaticSavingEnabled.SetResult();
-				}
+			else {
+				logger.Information("Backup finished successfully.");
 			}
 		}
 	}
