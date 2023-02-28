@@ -18,12 +18,6 @@ sealed class Instance : IDisposable {
 		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
 	}
 
-	public static Instance Create(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
-		var instance = new Instance(configuration, services, launcher);
-		instance.SetStatus(instance.currentStatus);
-		return instance;
-	}
-
 	public InstanceConfiguration Configuration { get; private set; }
 	private InstanceServices Services { get; }
 	private BaseLauncher Launcher { get; set; }
@@ -41,7 +35,7 @@ sealed class Instance : IDisposable {
 	
 	public event EventHandler? IsRunningChanged; 
 
-	private Instance(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
+	public Instance(InstanceConfiguration configuration, InstanceServices services, BaseLauncher launcher) {
 		this.shortName = GetLoggerName(configuration.InstanceGuid);
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
@@ -53,14 +47,26 @@ sealed class Instance : IDisposable {
 		this.currentStatus = InstanceStatus.NotRunning;
 	}
 
-	private void SetStatus(IInstanceStatus status) {
+	private void TryUpdateStatus(string taskName, Func<Task> getUpdateTask) {
 		int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
 		
-		Services.TaskManager.Run("Report status of instance " + shortName + " as " + status.GetType().Name, async () => {
+		Services.TaskManager.Run(taskName, async () => {
 			if (myStatusUpdateCounter == statusUpdateCounter) {
-				currentStatus = status;
-				await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
+				await getUpdateTask();
 			}
+		});
+	}
+
+	public void ReportLastStatus() {
+		TryUpdateStatus("Report last status of instance " + shortName, async () => {
+			await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
+		});
+	}
+
+	private void ReportAndSetStatus(IInstanceStatus status) {
+		TryUpdateStatus("Report status of instance " + shortName + " as " + status.GetType().Name, async () => {
+			currentStatus = status;
+			await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
 		});
 	}
 
@@ -156,7 +162,7 @@ sealed class Instance : IDisposable {
 		public override string ShortName => instance.shortName;
 
 		public override void SetStatus(IInstanceStatus newStatus) {
-			instance.SetStatus(newStatus);
+			instance.ReportAndSetStatus(newStatus);
 		}
 
 		public override void ReportEvent(IInstanceEvent instanceEvent) {

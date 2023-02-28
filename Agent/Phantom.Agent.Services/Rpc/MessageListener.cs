@@ -33,7 +33,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 		}
 		
 		foreach (var configureInstanceMessage in message.InitialInstanceConfigurations) {
-			var result = await HandleConfigureInstance(configureInstanceMessage);
+			var result = await HandleConfigureInstance(configureInstanceMessage, alwaysReportStatus: true);
 			if (!result.Is(ConfigureInstanceResult.Success)) {
 				ShutdownAfterConfigurationFailed(configureInstanceMessage.Configuration);
 				return NoReply.Instance;
@@ -59,8 +59,12 @@ public sealed class MessageListener : IMessageToAgentListener {
 		return Task.FromResult(NoReply.Instance);
 	}
 	
+	private Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message, bool alwaysReportStatus) {
+		return agent.InstanceSessionManager.Configure(message.Configuration, message.LaunchProperties, message.LaunchNow, alwaysReportStatus);
+	}
+	
 	public async Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message) {
-		return await agent.InstanceSessionManager.Configure(message.Configuration, message.LaunchProperties, message.LaunchNow);
+		return await HandleConfigureInstance(message, alwaysReportStatus: false);
 	}
 
 	public async Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {
