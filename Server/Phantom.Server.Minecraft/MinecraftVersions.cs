@@ -1,12 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Logging;
-using Phantom.Utils.Cryptography;
-using Phantom.Utils.IO;
-using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Server.Minecraft;
@@ -15,178 +10,66 @@ public sealed class MinecraftVersions : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftVersions>();
 	private static readonly TimeSpan CacheRetentionTime = TimeSpan.FromMinutes(10);
 
-	private const string VersionManifestUrl = "https://launchermeta.mojang.com/mc/game/version_manifest.json";
-
-	private readonly HttpClient http = new ();
-
+	private readonly MinecraftVersionApi api = new ();
 	private readonly Stopwatch cacheTimer = new ();
-	private readonly SemaphoreSlim cachedVersionsSemaphore = new (1, 1);
+	private readonly SemaphoreSlim cacheSemaphore = new (1, 1);
 
+	private bool IsCacheNotExpired => cacheTimer.IsRunning && cacheTimer.Elapsed < CacheRetentionTime;
+	
 	private ImmutableArray<MinecraftVersion>? cachedVersions;
-	private ImmutableArray<MinecraftVersion>? CachedVersionsUnlessExpired => cacheTimer.IsRunning && cacheTimer.Elapsed < CacheRetentionTime ? cachedVersions : null;
+	private readonly Dictionary<string, FileDownloadInfo?> cachedServerExecutables = new ();
 
 	public void Dispose() {
-		http.Dispose();
-		cachedVersionsSemaphore.Dispose();
+		api.Dispose();
+		cacheSemaphore.Dispose();
 	}
 
 	public async Task<ImmutableArray<MinecraftVersion>> GetVersions(CancellationToken cancellationToken) {
-		if (CachedVersionsUnlessExpired is {} earlyResult) {
-			return earlyResult;
-		}
-
-		await cachedVersionsSemaphore.WaitAsync(cancellationToken);
-		try {
-			if (CachedVersionsUnlessExpired is {} racedResult) {
-				return racedResult;
-			}
-
-			ImmutableArray<MinecraftVersion> versions = await FetchVersions(cancellationToken) ?? ImmutableArray<MinecraftVersion>.Empty;
-			Logger.Information("Refreshed Minecraft version cache, {Versions} version(s) found.", versions.Length);
-			
-			cachedVersions = versions;
-			cacheTimer.Restart();
-			return versions;
-		} finally {
-			cachedVersionsSemaphore.Release();
-		}
+		return await GetCachedObject(() => cachedVersions != null, () => cachedVersions.GetValueOrDefault(), v => cachedVersions = v, LoadVersions, cancellationToken);
 	}
 
-	private async Task<ImmutableArray<MinecraftVersion>?> FetchVersions(CancellationToken cancellationToken) {
-		return await FetchOrFailSilently(async () => {
-			var versionManifest = await FetchJson(http, VersionManifestUrl, "version manifest", cancellationToken);
-			return GetVersionsFromManifest(versionManifest);
-		});
+	private async Task<ImmutableArray<MinecraftVersion>> LoadVersions(CancellationToken cancellationToken) {
+		ImmutableArray<MinecraftVersion> versions = await api.GetVersions(cancellationToken);
+		Logger.Information("Refreshed Minecraft version cache, {Versions} version(s) found.", versions.Length);
+		return versions;
 	}
 
 	public async Task<FileDownloadInfo?> GetServerExecutableInfo(string version, CancellationToken cancellationToken) {
-		return await FetchOrFailSilently(async () => {
-			var versions = await GetVersions(cancellationToken);
-			var versionObject = versions.FirstOrDefault(v => v.Id == version);
-			if (versionObject == null) {
-				Logger.Error("Version {Version} was not found in version manifest.", version);
-				return null;
+		var versions = await GetVersions(cancellationToken);
+		return await GetCachedObject(() => cachedServerExecutables.ContainsKey(version), () => cachedServerExecutables[version], v => cachedServerExecutables[version] = v, ct => LoadServerExecutableInfo(versions, version, ct), cancellationToken);
+	}
+
+	private async Task<FileDownloadInfo?> LoadServerExecutableInfo(ImmutableArray<MinecraftVersion> versions, string version, CancellationToken cancellationToken) {
+		var info = await api.GetServerExecutableInfo(versions, version, cancellationToken);
+			
+		if (info == null) {
+			Logger.Information("Refreshed Minecraft {Version} server executable cache, no file found.", version);
+		}
+		else {
+			Logger.Information("Refreshed Minecraft {Version} server executable cache, found file: {Url}.", version, info.DownloadUrl);
+		}
+
+		return info;
+	}
+
+	private async Task<T> GetCachedObject<T>(Func<bool> isLoaded, Func<T> fieldGetter, Action<T> fieldSetter, Func<CancellationToken, Task<T>> fieldLoader, CancellationToken cancellationToken) {
+		if (IsCacheNotExpired && isLoaded()) {
+			return fieldGetter();
+		}
+
+		await cacheSemaphore.WaitAsync(cancellationToken);
+		try {
+			if (IsCacheNotExpired && isLoaded()) {
+				return fieldGetter();
 			}
 
-			var versionMetadata = await FetchJson(http, versionObject.MetadataUrl, "version metadata", cancellationToken);
-			return GetServerExecutableInfoFromMetadata(versionMetadata);
-		});
-	}
-
-	private static async Task<T?> FetchOrFailSilently<T>(Func<Task<T?>> task) {
-		try {
-			return await task();
-		} catch (StopProcedureException) {
-			return default;
-		} catch (Exception e) {
-			Logger.Error(e, "An unexpected error occurred.");
-			return default;
+			T result = await fieldLoader(cancellationToken);
+			fieldSetter(result);
+			
+			cacheTimer.Restart();
+			return result;
+		} finally {
+			cacheSemaphore.Release();
 		}
-	}
-
-	private static async Task<JsonElement> FetchJson(HttpClient http, string url, string description, CancellationToken cancellationToken) {
-		Logger.Information("Fetching {Description} JSON from: {Url}", description, url);
-
-		try {
-			return await http.GetFromJsonAsync<JsonElement>(url, cancellationToken);
-		} catch (HttpRequestException e) {
-			Logger.Error(e, "Unable to download {Description}.", description);
-			throw StopProcedureException.Instance;
-		} catch (Exception e) {
-			Logger.Error(e, "Unable to parse {Description} as JSON.", description);
-			throw StopProcedureException.Instance;
-		}
-	}
-
-	private static ImmutableArray<MinecraftVersion> GetVersionsFromManifest(JsonElement versionManifest) {
-		JsonElement versionsElement = GetJsonPropertyOrThrow(versionManifest, "versions", JsonValueKind.Array, "version manifest");
-		var foundVersions = ImmutableArray.CreateBuilder<MinecraftVersion>(versionsElement.GetArrayLength());
-
-		foreach (var versionElement in versionsElement.EnumerateArray()) {
-			try {
-				foundVersions.Add(GetVersionFromManifestEntry(versionElement));
-			} catch (StopProcedureException) {}
-		}
-
-		return foundVersions.MoveToImmutable();
-	}
-
-	private static MinecraftVersion GetVersionFromManifestEntry(JsonElement versionElement) {
-		JsonElement idElement = GetJsonPropertyOrThrow(versionElement, "id", JsonValueKind.String, "version entry in version manifest");
-		string id = idElement.GetString() ?? throw new InvalidOperationException();
-
-		JsonElement typeElement = GetJsonPropertyOrThrow(versionElement, "type", JsonValueKind.String, "version entry in version manifest");
-		string? typeString = typeElement.GetString();
-
-		var type = MinecraftVersionTypes.FromString(typeString);
-		if (type == MinecraftVersionType.Other) {
-			Logger.Warning("Unknown version type: {Type} ({Version})", typeString, id);
-		}
-
-		JsonElement urlElement = GetJsonPropertyOrThrow(versionElement, "url", JsonValueKind.String, "version entry in version manifest");
-		string? url = urlElement.GetString();
-
-		if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) {
-			Logger.Error("The \"url\" key in version entry in version manifest does not contain a valid URL: {Url}", url);
-			throw StopProcedureException.Instance;
-		}
-
-		if (uri.Scheme != "https" || !uri.AbsolutePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) {
-			Logger.Error("The \"url\" key in version entry in version manifest does not contain an accepted URL: {Url}", url);
-			throw StopProcedureException.Instance;
-		}
-
-		return new MinecraftVersion(id, type, url);
-	}
-
-	private static FileDownloadInfo GetServerExecutableInfoFromMetadata(JsonElement versionMetadata) {
-		JsonElement downloadsElement = GetJsonPropertyOrThrow(versionMetadata, "downloads", JsonValueKind.Object, "version metadata");
-		JsonElement serverElement = GetJsonPropertyOrThrow(downloadsElement, "server", JsonValueKind.Object, "downloads object in version metadata");
-		JsonElement urlElement = GetJsonPropertyOrThrow(serverElement, "url", JsonValueKind.String, "downloads.server object in version metadata");
-		string? url = urlElement.GetString();
-
-		if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) {
-			Logger.Error("The \"url\" key in downloads.server object in version metadata does not contain a valid URL: {Url}", url);
-			throw StopProcedureException.Instance;
-		}
-
-		if (uri.Scheme != "https" || !uri.AbsolutePath.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)) {
-			Logger.Error("The \"url\" key in downloads.server object in version metadata does not contain a accepted URL: {Url}", url);
-			throw StopProcedureException.Instance;
-		}
-
-		JsonElement sizeElement = GetJsonPropertyOrThrow(serverElement, "size", JsonValueKind.Number, "downloads.server object in version metadata");
-		ulong size;
-		try {
-			size = sizeElement.GetUInt64();
-		} catch (FormatException) {
-			Logger.Error("The \"size\" key in downloads.server object in version metadata contains an invalid file size: {Size}", sizeElement);
-			throw StopProcedureException.Instance;
-		}
-
-		JsonElement sha1Element = GetJsonPropertyOrThrow(serverElement, "sha1", JsonValueKind.String, "downloads.server object in version metadata");
-		Sha1String hash;
-		try {
-			hash = Sha1String.FromString(sha1Element.GetString());
-		} catch (Exception) {
-			Logger.Error("The \"sha1\" key in downloads.server object in version metadata does not contain a valid SHA-1 hash: {Sha1}", sha1Element.GetString());
-			throw StopProcedureException.Instance;
-		}
-
-		return new FileDownloadInfo(url, hash, new FileSize(size));
-	}
-
-	private static JsonElement GetJsonPropertyOrThrow(JsonElement parentElement, string propertyKey, JsonValueKind expectedKind, string location) {
-		if (!parentElement.TryGetProperty(propertyKey, out var valueElement)) {
-			Logger.Error("Missing \"{Property}\" key in " + location + ".", propertyKey);
-			throw StopProcedureException.Instance;
-		}
-
-		if (valueElement.ValueKind != expectedKind) {
-			Logger.Error("The \"{Property}\" key in " + location + " does not contain a JSON {ExpectedType}. Actual type: {ActualType}", propertyKey, expectedKind, valueElement.ValueKind);
-			throw StopProcedureException.Instance;
-		}
-
-		return valueElement;
 	}
 }
