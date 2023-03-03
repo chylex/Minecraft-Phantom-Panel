@@ -43,7 +43,11 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new(
 		Connect(socket);
 
 		void RunTask() {
-			Run(socket, replyTracker, taskManager);
+			try {
+				Run(socket, replyTracker, taskManager);
+			} catch (Exception e) {
+				runtimeLogger.Error(e, "Caught exception in RPC thread.");
+			}
 		}
 		
 		try {
