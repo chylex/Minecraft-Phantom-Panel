@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using Kajabity.Tools.Java;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Common.Minecraft;
+using Phantom.Utils.Runtime;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Launcher;
@@ -55,20 +55,17 @@ public abstract class BaseLauncher : IServerLauncher {
 			return new LaunchResult.CouldNotConfigureMinecraftServer();
 		}
 		
-		var startInfo = new ProcessStartInfo {
+		var processConfigurator = new ProcessConfigurator {
 			FileName = javaRuntimeExecutable.ExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
-			RedirectStandardInput = true,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = false
+			RedirectInput = true,
+			UseShellExecute = false
 		};
 		
 		var jvmArguments = new JvmArgumentBuilder(instanceProperties.JvmProperties, instanceProperties.JvmArguments);
 		CustomizeJvmArguments(jvmArguments);
 
-		var processArguments = startInfo.ArgumentList;
+		var processArguments = processConfigurator.ArgumentList;
 		jvmArguments.Build(processArguments);
 		
 		foreach (var extraArgument in serverJar.ExtraArgs) {
@@ -79,13 +76,11 @@ public abstract class BaseLauncher : IServerLauncher {
 		processArguments.Add(serverJar.FilePath);
 		processArguments.Add("nogui");
 
-		var process = new Process { StartInfo = startInfo };
+		var process = processConfigurator.CreateProcess();
 		var instanceProcess = new InstanceProcess(instanceProperties, process);
 
 		try {
 			process.Start();
-			process.BeginOutputReadLine();
-			process.BeginErrorReadLine();
 		} catch (Exception launchException) {
 			logger.Error(launchException, "Caught exception launching the server process.");
 			

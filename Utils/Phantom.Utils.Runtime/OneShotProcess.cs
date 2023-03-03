@@ -1,30 +1,24 @@
-﻿using System.Diagnostics;
-using Serilog;
+﻿using Serilog;
 
 namespace Phantom.Utils.Runtime;
 
 public sealed class OneShotProcess {
 	private readonly ILogger logger;
-	private readonly ProcessStartInfo startInfo;
+	private readonly ProcessConfigurator configurator;
 	
-	public event DataReceivedEventHandler? Output;
+	public event EventHandler<Process.Output>? OutputReceived;
 	
-	public OneShotProcess(ILogger logger, ProcessStartInfo startInfo) {
+	public OneShotProcess(ILogger logger, ProcessConfigurator configurator) {
 		this.logger = logger;
-		this.startInfo = startInfo;
-		this.startInfo.RedirectStandardOutput = true;
-		this.startInfo.RedirectStandardError = true;
+		this.configurator = configurator;
 	}
 
 	public async Task<bool> Run(CancellationToken cancellationToken) {
-		using var process = new Process { StartInfo = startInfo };
-		process.OutputDataReceived += Output;
-		process.ErrorDataReceived += Output;
+		using var process = configurator.CreateProcess();
+		process.OutputReceived += OutputReceived;
 
 		try {
 			process.Start();
-			process.BeginOutputReadLine();
-			process.BeginErrorReadLine();
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception launching process.");
 			return false;

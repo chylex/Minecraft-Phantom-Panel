@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Phantom.Utils.Collections;
+﻿using Phantom.Utils.Collections;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Agent.Minecraft.Instance; 
@@ -19,10 +18,8 @@ public sealed class InstanceProcess : IDisposable {
 	internal InstanceProcess(InstanceProperties instanceProperties, Process process) {
 		this.InstanceProperties = instanceProperties;
 		this.process = process;
-		this.process.EnableRaisingEvents = true;
 		this.process.Exited += ProcessOnExited;
-		this.process.OutputDataReceived += HandleOutputLine;
-		this.process.ErrorDataReceived += HandleOutputLine;
+		this.process.OutputReceived += ProcessOutputReceived;
 	}
 
 	public async Task SendCommand(string command, CancellationToken cancellationToken) {
@@ -41,11 +38,9 @@ public sealed class InstanceProcess : IDisposable {
 		OutputEvent -= listener;
 	}
 
-	private void HandleOutputLine(object sender, DataReceivedEventArgs args) {
-		if (args.Data is {} line) {
-			outputBuffer.Add(line);
-			OutputEvent?.Invoke(this, line);
-		}
+	private void ProcessOutputReceived(object? sender, Process.Output output) {
+		outputBuffer.Add(output.Line);
+		OutputEvent?.Invoke(this, output.Line);
 	}
 
 	private void ProcessOnExited(object? sender, EventArgs e) {

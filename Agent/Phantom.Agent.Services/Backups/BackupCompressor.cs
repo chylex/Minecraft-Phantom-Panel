@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Phantom.Common.Logging;
+﻿using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
 using Serilog;
 
@@ -41,7 +40,7 @@ static class BackupCompressor {
 			return false;
 		}
 
-		var startInfo = new ProcessStartInfo {
+		var launcher = new ProcessConfigurator {
 			FileName = "zstd",
 			WorkingDirectory = workingDirectory,
 			ArgumentList = {
@@ -57,14 +56,14 @@ static class BackupCompressor {
 			}
 		};
 
-		static void OnZstdOutput(object? sender, DataReceivedEventArgs e) {
-			if (!string.IsNullOrWhiteSpace(e.Data)) {
-				ZstdLogger.Debug("[Output] {Line}", e.Data);
+		static void OnZstdOutput(object? sender, Process.Output output) {
+			if (!string.IsNullOrWhiteSpace(output.Line)) {
+				ZstdLogger.Debug("[Output] {Line}", output.Line);
 			}
 		}
 
-		var process = new OneShotProcess(ZstdLogger, startInfo);
-		process.Output += OnZstdOutput;
+		var process = new OneShotProcess(ZstdLogger, launcher);
+		process.OutputReceived += OnZstdOutput;
 		return await process.Run(cancellationToken);
 	}
 }
