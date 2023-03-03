@@ -18,7 +18,7 @@ public static class PhantomLogger {
 		       .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", DefaultLogLevel.Coerce(LogEventLevel.Warning))
 		       .Filter.ByExcluding(static e => e.Exception is OperationCanceledException)
 		       .Enrich.FromLogContext()
-		       .WriteTo.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate)
+		       .WriteTo.Async(c => c.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate))
 		       .CreateLogger();
 	}
 
