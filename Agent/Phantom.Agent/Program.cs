@@ -23,7 +23,7 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	PhantomLogger.Root.Information("Agent version: {Version}", fullVersion);
 
-	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts) = Variables.LoadOrExit();
+	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrExit();
 
 	var agentKey = await AgentKey.Load(agentKeyToken, agentKeyFilePath);
 	if (agentKey == null) {
@@ -42,7 +42,7 @@ try {
 
 	var (serverCertificate, agentToken) = agentKey.Value;
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
-	var agentServices = new AgentServices(agentInfo, folders);
+	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks));
 
 	MessageListener MessageListenerFactory(RpcServerConnection connection) {
 		return new MessageListener(connection, agentServices, shutdownCancellationTokenSource);

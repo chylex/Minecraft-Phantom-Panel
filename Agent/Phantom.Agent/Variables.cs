@@ -15,7 +15,8 @@ sealed record Variables(
 	ushort MaxInstances,
 	RamAllocationUnits MaxMemory,
 	AllowedPorts AllowedServerPorts,
-	AllowedPorts AllowedRconPorts
+	AllowedPorts AllowedRconPorts,
+	ushort MaxConcurrentBackupCompressionTasks
 ) {
 	private static Variables LoadOrThrow() {
 		var (agentKeyToken, agentKeyFilePath) = EnvironmentVariables.GetEitherString("AGENT_KEY", "AGENT_KEY_FILE").Require;
@@ -31,7 +32,8 @@ sealed record Variables(
 			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES", min: 1, max: 10000).Require,
 			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).Require,
 			EnvironmentVariables.GetString("ALLOWED_SERVER_PORTS").MapParse(AllowedPorts.FromString).Require,
-			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).Require
+			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).Require,
+			(ushort) EnvironmentVariables.GetInteger("MAX_CONCURRENT_BACKUP_COMPRESSION_TASKS", min: 1, max: 10000).WithDefault(1)
 		);
 	}
 

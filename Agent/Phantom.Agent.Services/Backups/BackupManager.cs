@@ -5,15 +5,21 @@ using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
 
-sealed class BackupManager {
+sealed class BackupManager : IDisposable {
 	private readonly string destinationBasePath;
 	private readonly string temporaryBasePath;
+	private readonly SemaphoreSlim compressionSemaphore;
 
-	public BackupManager(AgentFolders agentFolders) {
+	public BackupManager(AgentFolders agentFolders, int maxConcurrentCompressionTasks) {
 		this.destinationBasePath = agentFolders.BackupsFolderPath;
 		this.temporaryBasePath = Path.Combine(agentFolders.TemporaryFolderPath, "backups");
+		this.compressionSemaphore = new SemaphoreSlim(maxConcurrentCompressionTasks, maxConcurrentCompressionTasks);
 	}
 
+	public void Dispose() {
+		compressionSemaphore.Dispose();
+	}
+	
 	public async Task<BackupCreationResult> CreateBackup(string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
 		try {
 			if (!await process.BackupSemaphore.Wait(TimeSpan.FromSeconds(1), cancellationToken)) {
@@ -26,23 +32,21 @@ sealed class BackupManager {
 		}
 
 		try {
-			return await new BackupCreator(destinationBasePath, temporaryBasePath, loggerName, process, cancellationToken).CreateBackup();
+			return await new BackupCreator(this, loggerName, process, cancellationToken).CreateBackup();
 		} finally {
 			process.BackupSemaphore.Release();
 		}
 	}
 
 	private sealed class BackupCreator {
-		private readonly string destinationBasePath;
-		private readonly string temporaryBasePath;
+		private readonly BackupManager manager;
 		private readonly string loggerName;
 		private readonly ILogger logger;
 		private readonly InstanceProcess process;
 		private readonly CancellationToken cancellationToken;
 
-		public BackupCreator(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
-			this.destinationBasePath = destinationBasePath;
-			this.temporaryBasePath = temporaryBasePath;
+		public BackupCreator(BackupManager manager, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
+			this.manager = manager;
 			this.loggerName = loggerName;
 			this.logger = PhantomLogger.Create<BackupManager>(loggerName);
 			this.process = process;
@@ -72,7 +76,7 @@ sealed class BackupManager {
 			try {
 				await dispatcher.DisableAutomaticSaving();
 				await dispatcher.SaveAllChunks();
-				return await new BackupArchiver(destinationBasePath, temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
+				return await new BackupArchiver(manager.destinationBasePath, manager.temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
 			} catch (OperationCanceledException) {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
@@ -92,11 +96,21 @@ sealed class BackupManager {
 				}
 			}
 		}
-
+		
 		private async Task CompressWorldArchive(string filePath, BackupCreationResult.Builder resultBuilder) {
-			var compressedFilePath = await BackupCompressor.Compress(filePath, cancellationToken);
-			if (compressedFilePath == null) {
-				resultBuilder.Warnings |= BackupCreationWarnings.CouldNotCompressWorldArchive;
+			if (!await manager.compressionSemaphore.WaitAsync(TimeSpan.FromSeconds(1), cancellationToken)) {
+				logger.Information("Too many compression tasks running, waiting for one of them to complete...");
+				await manager.compressionSemaphore.WaitAsync(cancellationToken);
+			}
+
+			logger.Information("Compressing backup...");
+			try {
+				var compressedFilePath = await BackupCompressor.Compress(filePath, cancellationToken);
+				if (compressedFilePath == null) {
+					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotCompressWorldArchive;
+				}
+			} finally {
+				manager.compressionSemaphore.Release();
 			}
 		}
 

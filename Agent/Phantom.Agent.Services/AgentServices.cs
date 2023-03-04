@@ -18,10 +18,10 @@ public sealed class AgentServices {
 	internal JavaRuntimeRepository JavaRuntimeRepository { get; }
 	internal InstanceSessionManager InstanceSessionManager { get; }
 
-	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders) {
+	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders, AgentServiceConfiguration serviceConfiguration) {
 		this.AgentFolders = agentFolders;
 		this.TaskManager = new TaskManager(PhantomLogger.Create<TaskManager, AgentServices>());
-		this.BackupManager = new BackupManager(agentFolders);
+		this.BackupManager = new BackupManager(agentFolders, serviceConfiguration.MaxConcurrentCompressionTasks);
 		this.JavaRuntimeRepository = new JavaRuntimeRepository();
 		this.InstanceSessionManager = new InstanceSessionManager(agentInfo, agentFolders, JavaRuntimeRepository, TaskManager, BackupManager);
 	}
@@ -39,6 +39,8 @@ public sealed class AgentServices {
 		InstanceSessionManager.Dispose();
 		
 		await TaskManager.Stop();
+		
+		BackupManager.Dispose();
 		
 		Logger.Information("Services stopped.");
 	}
