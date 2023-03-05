@@ -27,6 +27,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 		this.process = process;
 		this.serverPort = serverPort;
 		this.serverStatusProtocol = new ServerStatusProtocol(loggerName);
+		Start();
 	}
 
 	protected override async Task RunTask() {

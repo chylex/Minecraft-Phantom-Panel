@@ -8,9 +8,18 @@ public abstract class CancellableBackgroundTask {
 	protected ILogger Logger { get; }
 	protected CancellationToken CancellationToken { get; }
 
+	private readonly TaskManager taskManager;
+	private readonly string taskName;
+	
 	protected CancellableBackgroundTask(ILogger logger, TaskManager taskManager, string taskName) {
 		this.Logger = logger;
 		this.CancellationToken = cancellationTokenSource.Token;
+		
+		this.taskManager = taskManager;
+		this.taskName = taskName;
+	}
+
+	protected void Start() {
 		taskManager.Run(taskName, Run);
 	}
 
@@ -25,11 +34,14 @@ public abstract class CancellableBackgroundTask {
 			Logger.Fatal(e, "Caught exception in task.");
 		} finally {
 			cancellationTokenSource.Dispose();
+			Dispose();
 			Logger.Debug("Task stopped.");
 		}
 	}
 	
 	protected abstract Task RunTask();
+
+	protected virtual void Dispose() {}
 
 	public void Stop() {
 		try {
