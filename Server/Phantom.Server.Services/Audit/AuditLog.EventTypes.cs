@@ -25,9 +25,7 @@ public sealed partial class AuditLog {
 	}
 
 	public Task AddUserRolesChangedEvent(IdentityUser user, List<string> addedToRoles, List<string> removedFromRoles) {
-		var extra = new Dictionary<string, object?> {
-			{ "username", user.UserName }
-		};
+		var extra = new Dictionary<string, object?>();
 		
 		if (addedToRoles.Count > 0) {
 			extra["addedToRoles"] = addedToRoles;
@@ -37,7 +35,7 @@ public sealed partial class AuditLog {
 			extra["removedFromRoles"] = removedFromRoles;
 		}
 		
-		return AddItem(AuditLogEventType.UserDeleted, user.Id, extra);
+		return AddItem(AuditLogEventType.UserRolesChanged, user.Id, extra);
 	}
 	
 	public Task AddUserDeletedEvent(IdentityUser user) {
