@@ -40,8 +40,8 @@ public abstract class CancellableBackgroundTask {
 	}
 	
 	protected abstract Task RunTask();
-
-	protected virtual void Dispose() {}
+	
+	protected abstract void Dispose();
 
 	public void Stop() {
 		try {

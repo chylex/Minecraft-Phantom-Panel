@@ -15,7 +15,7 @@ public enum AuditLogEventType {
 	InstanceCommandExecuted
 }
 
-public static class AuditLogEventTypeExtensions {
+static class AuditLogEventTypeExtensions {
 	private static readonly Dictionary<AuditLogEventType, AuditLogSubjectType> SubjectTypes = new () {
 		{ AuditLogEventType.AdministratorUserCreated,  AuditLogSubjectType.User },
 		{ AuditLogEventType.AdministratorUserModified, AuditLogSubjectType.User },

@@ -10,7 +10,7 @@ public enum EventLogEventType {
 	InstanceBackupFailed,
 }
 
-internal static class EventLogEventTypeExtensions {
+static class EventLogEventTypeExtensions {
 	private static readonly Dictionary<EventLogEventType, EventLogSubjectType> SubjectTypes = new () {
 		{ EventLogEventType.InstanceLaunchSucceded, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceLaunchFailed, EventLogSubjectType.Instance },

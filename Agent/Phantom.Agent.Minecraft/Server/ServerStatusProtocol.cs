@@ -78,7 +78,7 @@ public sealed class ServerStatusProtocol {
 				return null;
 			}
 
-			string onlinePlayerCountStr = Encoding.BigEndianUnicode.GetString(messageBuffer[(separator1 + 1)..(separator2 - 1)]);
+			string onlinePlayerCountStr = Encoding.BigEndianUnicode.GetString(messageBuffer.AsSpan((separator1 + 1)..(separator2 - 1)));
 			if (!int.TryParse(onlinePlayerCountStr, out int onlinePlayerCount)) {
 				logger.Error("Could not parse online player count in response from server: {OnlinePlayerCount}.", onlinePlayerCountStr);
 				return null;

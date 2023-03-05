@@ -98,6 +98,6 @@ public readonly partial record struct RamAllocationUnits(
 	/// </summary>
 	/// <exception cref="ArgumentOutOfRangeException">If the <paramref name="definition"/> is in the incorrect format, or the value cannot be converted via <see cref="FromMegabytes"/>.</exception>
 	public static RamAllocationUnits FromString(string definition) {
-		return FromString((ReadOnlySpan<char>) definition);
+		return FromString(definition.AsSpan());
 	}
 }

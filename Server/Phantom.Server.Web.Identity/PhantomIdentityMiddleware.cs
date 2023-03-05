@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.Http;
 using Phantom.Server.Web.Identity.Authentication;
 using Phantom.Server.Web.Identity.Interfaces;
 

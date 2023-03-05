@@ -11,14 +11,14 @@ using Serilog.Events;
 namespace Phantom.Server.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
-	public static async Task Launch(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) {
+	public static Task Launch(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) {
 		var socket = new ServerSocket();
 		var options = socket.Options;
 
 		options.CurveServer = true;
 		options.CurveCertificate = config.ServerCertificate;
 
-		await new RpcLauncher(config, socket, listenerFactory, cancellationToken).Launch();
+		return new RpcLauncher(config, socket, listenerFactory, cancellationToken).Launch();
 	}
 
 	private readonly RpcConfiguration config;

@@ -79,10 +79,9 @@ public sealed class JavaRuntimeDiscovery {
 			WorkingDirectory = Path.GetDirectoryName(javaExecutablePath),
 			Arguments = "-XshowSettings:properties -version",
 			RedirectStandardInput = false,
-			RedirectStandardOutput = true,
+			RedirectStandardOutput = false,
 			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = false
+			UseShellExecute = false
 		};
 
 		var process = new Process { StartInfo = startInfo };

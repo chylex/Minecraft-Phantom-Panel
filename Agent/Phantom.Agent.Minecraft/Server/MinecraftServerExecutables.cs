@@ -10,7 +10,7 @@ public sealed partial class MinecraftServerExecutables {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutables>();
 
 	[GeneratedRegex(@"[^a-zA-Z0-9_\-\.]", RegexOptions.Compiled)]
-	private static partial Regex VersionFolderSanitizeRegex();
+	private static partial Regex SanitizePathRegex();
 
 	private readonly string basePath;
 	private readonly Dictionary<string, MinecraftServerExecutableDownloader> runningDownloadersByVersion = new ();
@@ -20,7 +20,7 @@ public sealed partial class MinecraftServerExecutables {
 	}
 
 	internal async Task<string?> DownloadAndGetPath(FileDownloadInfo? fileDownloadInfo, string minecraftVersion, EventHandler<DownloadProgressEventArgs> progressEventHandler, CancellationToken cancellationToken) {
-		string serverExecutableFolderPath = Path.Combine(basePath, VersionFolderSanitizeRegex().Replace(minecraftVersion, "_"));
+		string serverExecutableFolderPath = Path.Combine(basePath, SanitizePathRegex().IsMatch(minecraftVersion) ? SanitizePathRegex().Replace(minecraftVersion, "_") : minecraftVersion);
 		string serverExecutableFilePath = Path.Combine(serverExecutableFolderPath, "server.jar");
 
 		if (File.Exists(serverExecutableFilePath)) {

@@ -53,6 +53,6 @@ public sealed partial class AllowedPorts {
 	}
 
 	public static AllowedPorts FromString(string definitions) {
-		return FromString((ReadOnlySpan<char>) definitions);
+		return FromString(definitions.AsSpan());
 	}
 }

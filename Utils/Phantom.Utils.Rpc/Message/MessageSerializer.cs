@@ -8,7 +8,7 @@ static class MessageSerializer {
 	private static readonly MemoryPackSerializerOptions SerializerOptions = MemoryPackSerializerOptions.Utf8;
 
 	public static byte[] Serialize<T>(T message) {
-		return MemoryPackSerializer.Serialize(typeof(T), message, SerializerOptions);
+		return MemoryPackSerializer.Serialize(message, SerializerOptions);
 	}
 
 	public static void Serialize<T>(IBufferWriter<byte> destination, T message) {

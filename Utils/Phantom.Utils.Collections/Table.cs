@@ -68,8 +68,12 @@ public sealed class Table<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictionary
 		}
 	}
 
-	public IEnumerator<TRow> GetEnumerator() {
+	public List<TRow>.Enumerator GetEnumerator() {
 		return rowList.GetEnumerator();
+	}
+
+	IEnumerator<TRow> IEnumerable<TRow>.GetEnumerator() {
+		return GetEnumerator();
 	}
 
 	IEnumerator IEnumerable.GetEnumerator() {

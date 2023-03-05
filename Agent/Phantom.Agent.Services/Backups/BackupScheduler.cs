@@ -94,4 +94,8 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 			Logger.Debug("Detected server output, signalling to check for online players again.");
 		}
 	}
+
+	protected override void Dispose() {
+		serverOutputWhileWaitingForOnlinePlayers.Dispose();
+	}
 }
