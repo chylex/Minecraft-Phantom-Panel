@@ -1,11 +1,11 @@
 ﻿<Project>
   
   <ItemGroup>
-    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization"     Version="7.0.1" />
-    <PackageReference Update="Microsoft.AspNetCore.Components.Web"               Version="7.0.1" />
-    <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.1" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"               Version="7.0.1" />
-    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL"             Version="7.0.1" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization"     Version="7.0.3" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Web"               Version="7.0.3" />
+    <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.3" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"               Version="7.0.3" />
+    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL"             Version="7.0.3" />
   </ItemGroup>
   
   <ItemGroup>
@@ -13,7 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="MemoryPack" Version="1.9.7" />
+    <PackageReference Update="MemoryPack" Version="1.9.13" />
     <PackageReference Update="NetMQ"      Version="4.0.1.10" />
   </ItemGroup>
   
@@ -26,10 +26,10 @@
   
   <ItemGroup>
     <PackageReference Update="coverlet.collector"     Version="3.2.0" />
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.5.0" />
     <PackageReference Update="NUnit"                  Version="3.13.3" />
-    <PackageReference Update="NUnit.Analyzers"        Version="3.5.0" />
-    <PackageReference Update="NUnit3TestAdapter"      Version="4.3.1" />
+    <PackageReference Update="NUnit.Analyzers"        Version="3.6.0" />
+    <PackageReference Update="NUnit3TestAdapter"      Version="4.4.2" />
   </ItemGroup>
 
 </Project>
