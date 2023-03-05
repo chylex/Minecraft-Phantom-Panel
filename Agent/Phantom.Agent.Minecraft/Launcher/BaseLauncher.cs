@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Kajabity.Tools.Java;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
@@ -108,21 +107,8 @@ public abstract class BaseLauncher : IServerLauncher {
 	}
 
 	private static async Task UpdateServerProperties(InstanceProperties instanceProperties) {
-		var serverPropertiesFilePath = Path.Combine(instanceProperties.InstanceFolder, "server.properties");
-		var serverPropertiesData = new JavaProperties();
-
-		await using var fileStream = new FileStream(serverPropertiesFilePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-		try {
-			serverPropertiesData.Load(fileStream);
-		} catch (ParseException e) {
-			throw new Exception("Could not parse server.properties file: " + serverPropertiesFilePath, e);
-		}
-		
-		instanceProperties.ServerProperties.SetTo(serverPropertiesData);
-
-		fileStream.Seek(0L, SeekOrigin.Begin);
-		fileStream.SetLength(0L);
-		
-		serverPropertiesData.Store(fileStream, true);
+		var serverPropertiesEditor = new JavaPropertiesFileEditor();
+		instanceProperties.ServerProperties.SetTo(serverPropertiesEditor);
+		await serverPropertiesEditor.EditOrCreate(Path.Combine(instanceProperties.InstanceFolder, "server.properties"));
 	}
 }

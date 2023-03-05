@@ -1,4 +1,4 @@
-﻿using Kajabity.Tools.Java;
+﻿using Phantom.Agent.Minecraft.Java;
 
 namespace Phantom.Agent.Minecraft.Properties; 
 
@@ -12,7 +12,7 @@ abstract class MinecraftServerProperty<T> {
 	protected abstract T Read(string value);
 	protected abstract string Write(T value);
 
-	public void Set(JavaProperties properties, T value) {
-		properties.SetProperty(key, Write(value));
+	public void Set(JavaPropertiesFileEditor properties, T value) {
+		properties.Set(key, Write(value));
 	}
 }
