@@ -7,7 +7,7 @@ public sealed class InstanceProcess : IDisposable {
 	public InstanceProperties InstanceProperties { get; }
 	public CancellableSemaphore BackupSemaphore { get; } = new (1, 1);
 	
-	private readonly RingBuffer<string> outputBuffer = new (10000);
+	private readonly RingBuffer<string> outputBuffer = new (100);
 	private event EventHandler<string>? OutputEvent;
 
 	public event EventHandler? Ended;
