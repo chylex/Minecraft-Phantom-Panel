@@ -12,7 +12,6 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
-    <ProjectReference Include="..\..\Common\Phantom.Common.Minecraft\Phantom.Common.Minecraft.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Events\Phantom.Utils.Events.csproj" />
     <ProjectReference Include="..\Phantom.Server.Database\Phantom.Server.Database.csproj" />

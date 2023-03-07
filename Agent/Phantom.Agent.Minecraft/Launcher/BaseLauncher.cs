@@ -2,7 +2,7 @@
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
-using Phantom.Common.Minecraft;
+using Phantom.Common.Data.Java;
 using Phantom.Utils.Runtime;
 using Serilog;
 

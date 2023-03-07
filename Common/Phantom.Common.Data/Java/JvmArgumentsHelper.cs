@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace Phantom.Common.Minecraft;
+namespace Phantom.Common.Data.Java;
 
 public static class JvmArgumentsHelper {
 	public static ImmutableArray<string> Split(string arguments) {

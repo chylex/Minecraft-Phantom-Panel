@@ -2,12 +2,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
-using Phantom.Common.Minecraft;
 using Phantom.Server.Database;
 using Phantom.Server.Database.Entities;
 using Phantom.Server.Minecraft;

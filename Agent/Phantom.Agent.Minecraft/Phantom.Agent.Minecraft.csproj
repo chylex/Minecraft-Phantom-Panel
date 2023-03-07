@@ -13,7 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
-    <ProjectReference Include="..\..\Common\Phantom.Common.Minecraft\Phantom.Common.Minecraft.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Cryptography\Phantom.Utils.Cryptography.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
