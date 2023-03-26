@@ -1,5 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Rpc;
+using Phantom.Agent.Services.Instances.Procedures;
 using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
@@ -10,18 +11,12 @@ using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
 
-sealed class Instance : IDisposable {
-	private static uint loggerSequenceId = 0;
-
-	private static string GetLoggerName(Guid guid) {
-		var prefix = guid.ToString();
-		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref loggerSequenceId);
-	}
-
+sealed class Instance : IAsyncDisposable {
 	private InstanceServices Services { get; }
 	
 	public InstanceConfiguration Configuration { get; private set; }
 	private IServerLauncher Launcher { get; set; }
+	private readonly SemaphoreSlim configurationSemaphore = new (1, 1);
 
 	private readonly string shortName;
 	private readonly ILogger logger;
@@ -30,14 +25,14 @@ sealed class Instance : IDisposable {
 	private int statusUpdateCounter;
 	
 	private IInstanceState currentState;
-	private readonly SemaphoreSlim stateTransitioningActionSemaphore = new (1, 1);
-
 	public bool IsRunning => currentState is not InstanceNotRunningState;
 	
 	public event EventHandler? IsRunningChanged; 
+	
+	private readonly InstanceProcedureManager procedureManager;
 
-	public Instance(InstanceServices services, InstanceConfiguration configuration, IServerLauncher launcher) {
-		this.shortName = GetLoggerName(configuration.InstanceGuid);
+	public Instance(string shortName, InstanceServices services, InstanceConfiguration configuration, IServerLauncher launcher) {
+		this.shortName = shortName;
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
 		this.Services = services;
@@ -46,6 +41,8 @@ sealed class Instance : IDisposable {
 		
 		this.currentState = new InstanceNotRunningState();
 		this.currentStatus = InstanceStatus.NotRunning;
+		
+		this.procedureManager = new InstanceProcedureManager(this, new Context(this), services.TaskManager);
 	}
 
 	private void TryUpdateStatus(string taskName, Func<Task> getUpdateTask) {
@@ -76,7 +73,7 @@ sealed class Instance : IDisposable {
 		Services.TaskManager.Run("Report event for instance " + shortName, async () => await ServerMessaging.Send(message));
 	}
 	
-	private void TransitionState(IInstanceState newState) {
+	internal void TransitionState(IInstanceState newState) {
 		if (currentState == newState) {
 			return;
 		}
@@ -96,114 +93,92 @@ sealed class Instance : IDisposable {
 		}
 	}
 
-	private T TransitionStateAndReturn<T>((IInstanceState State, T Result) newStateAndResult) {
-		TransitionState(newStateAndResult.State);
-		return newStateAndResult.Result;
-	}
-
 	public async Task Reconfigure(InstanceConfiguration configuration, IServerLauncher launcher, CancellationToken cancellationToken) {
-		await stateTransitioningActionSemaphore.WaitAsync(cancellationToken);
+		await configurationSemaphore.WaitAsync(cancellationToken);
 		try {
 			Configuration = configuration;
 			Launcher = launcher;
 		} finally {
-			stateTransitioningActionSemaphore.Release();
+			configurationSemaphore.Release();
 		}
 	}
 
-	public async Task<LaunchInstanceResult> Launch(CancellationToken shutdownCancellationToken) {
-		await stateTransitioningActionSemaphore.WaitAsync(shutdownCancellationToken);
+	public async Task<LaunchInstanceResult> Launch(CancellationToken cancellationToken) {
+		if (IsRunning) {
+			return LaunchInstanceResult.InstanceAlreadyRunning;
+		}
+
+		if (await procedureManager.GetCurrentProcedure(cancellationToken) is LaunchInstanceProcedure) {
+			return LaunchInstanceResult.InstanceAlreadyLaunching;
+		}
+		
+		LaunchInstanceProcedure procedure;
+		
+		await configurationSemaphore.WaitAsync(cancellationToken);
 		try {
-			return TransitionStateAndReturn(currentState.Launch(new InstanceContextImpl(this, shutdownCancellationToken)));
-		} catch (Exception e) {
-			logger.Error(e, "Caught exception while launching instance.");
-			return LaunchInstanceResult.UnknownError;
+			procedure = new LaunchInstanceProcedure(Configuration, Launcher);
 		} finally {
-			stateTransitioningActionSemaphore.Release();
+			configurationSemaphore.Release();
 		}
+		
+		await procedureManager.Enqueue(procedure);
+		return LaunchInstanceResult.LaunchInitiated;
 	}
 
-	public async Task<StopInstanceResult> Stop(MinecraftStopStrategy stopStrategy) {
-		await stateTransitioningActionSemaphore.WaitAsync();
-		try {
-			return TransitionStateAndReturn(currentState.Stop(stopStrategy));
-		} catch (Exception e) {
-			logger.Error(e, "Caught exception while stopping instance.");
-			return StopInstanceResult.UnknownError;
-		} finally {
-			stateTransitioningActionSemaphore.Release();
+	public async Task<StopInstanceResult> Stop(MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
+		if (!IsRunning) {
+			return StopInstanceResult.InstanceAlreadyStopped;
 		}
-	}
-
-	public async Task StopAndWait(TimeSpan waitTime) {
-		await Stop(MinecraftStopStrategy.Instant);
-
-		using var waitTokenSource = new CancellationTokenSource(waitTime);
-		var waitToken = waitTokenSource.Token;
-
-		while (currentState is not InstanceNotRunningState) {
-			await Task.Delay(TimeSpan.FromMilliseconds(250), waitToken);
+		
+		if (await procedureManager.GetCurrentProcedure(cancellationToken) is StopInstanceProcedure) {
+			return StopInstanceResult.InstanceAlreadyStopping;
 		}
+		
+		await procedureManager.Enqueue(new StopInstanceProcedure(stopStrategy));
+		return StopInstanceResult.StopInitiated;
 	}
 
 	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
 		return await currentState.SendCommand(command, cancellationToken);
 	}
 
-	private sealed class InstanceContextImpl : InstanceContext {
-		private readonly Instance instance;
-		private readonly CancellationToken shutdownCancellationToken;
-		
-		public InstanceContextImpl(Instance instance, CancellationToken shutdownCancellationToken) : base(instance.Services, instance.Configuration, instance.Launcher) {
-			this.instance = instance;
-			this.shutdownCancellationToken = shutdownCancellationToken;
+	public async ValueTask DisposeAsync() {
+		await procedureManager.DisposeAsync();
+
+		while (currentState is not InstanceNotRunningState) {
+			await Task.Delay(TimeSpan.FromMilliseconds(250), CancellationToken.None);
 		}
 
-		public override ILogger Logger => instance.logger;
-		public override string ShortName => instance.shortName;
+		if (currentState is IDisposable disposable) {
+			disposable.Dispose();
+		}
+		
+		configurationSemaphore.Dispose();
+	}
 
-		public override void SetStatus(IInstanceStatus newStatus) {
+	private sealed class Context : IInstanceContext {
+		public string ShortName => instance.shortName;
+		public ILogger Logger => instance.logger;
+		
+		public InstanceServices Services => instance.Services;
+		public IInstanceState CurrentState => instance.currentState;
+
+		private readonly Instance instance;
+		
+		public Context(Instance instance) {
+			this.instance = instance;
+		}
+
+		public void SetStatus(IInstanceStatus newStatus) {
 			instance.ReportAndSetStatus(newStatus);
 		}
 
-		public override void ReportEvent(IInstanceEvent instanceEvent) {
+		public void ReportEvent(IInstanceEvent instanceEvent) {
 			instance.ReportEvent(instanceEvent);
 		}
 
-		public override void TransitionState(Func<(IInstanceState, IInstanceStatus?)> newStateAndStatus) {
-			instance.stateTransitioningActionSemaphore.Wait(CancellationToken.None);
-			try {
-				var (state, status) = newStateAndStatus();
-				
-				if (!instance.IsRunning) {
-					// Only InstanceSessionManager is allowed to transition an instance out of a non-running state.
-					instance.logger.Debug("Cancelled state transition to {State} because instance is not running.", state.GetType().Name);
-					return;
-				}
-				
-				if (state is not InstanceNotRunningState && shutdownCancellationToken.IsCancellationRequested) {
-					instance.logger.Debug("Cancelled state transition to {State} due to Agent shutdown.", state.GetType().Name);
-					return;
-				}
-
-				if (status != null) {
-					SetStatus(status);
-				}
-
-				instance.TransitionState(state);
-			} catch (Exception e) {
-				instance.logger.Error(e, "Caught exception during state transition.");
-			} finally {
-				instance.stateTransitioningActionSemaphore.Release();
-			}
-		}
-	}
-
-	public void Dispose() {
-		stateTransitioningActionSemaphore.Dispose();
-		
-		if (currentState is IDisposable disposable) {
-			disposable.Dispose();
+		public void EnqueueProcedure(IInstanceProcedure procedure, bool immediate) {
+			Services.TaskManager.Run("Enqueue procedure for instance " + instance.shortName, () => instance.procedureManager.Enqueue(procedure, immediate));
 		}
 	}
 }

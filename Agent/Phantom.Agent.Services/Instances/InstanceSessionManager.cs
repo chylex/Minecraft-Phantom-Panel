@@ -21,9 +21,9 @@ using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
 
-sealed class InstanceSessionManager : IDisposable {
+sealed class InstanceSessionManager : IAsyncDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceSessionManager>();
-	
+
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 
@@ -34,15 +34,17 @@ sealed class InstanceSessionManager : IDisposable {
 	private readonly CancellationToken shutdownCancellationToken;
 	private readonly SemaphoreSlim semaphore = new (1, 1);
 
+	private uint instanceLoggerSequenceId = 0;
+
 	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager, BackupManager backupManager) {
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
-		
+
 		var minecraftServerExecutables = new MinecraftServerExecutables(agentFolders.ServerExecutableFolderPath);
 		var launchServices = new LaunchServices(minecraftServerExecutables, javaRuntimeRepository);
 		var portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
-		
+
 		this.instanceServices = new InstanceServices(taskManager, portManager, backupManager, launchServices);
 	}
 
@@ -76,7 +78,7 @@ sealed class InstanceSessionManager : IDisposable {
 			var instanceGuid = configuration.InstanceGuid;
 			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
 			Directories.Create(instanceFolder, Chmod.URWX_GRX);
-			
+
 			var heapMegabytes = configuration.MemoryAllocation.InMegabytes;
 			var jvmProperties = new JvmProperties(
 				InitialHeapMegabytes: heapMegabytes / 2,
@@ -103,15 +105,15 @@ sealed class InstanceSessionManager : IDisposable {
 			if (instances.TryGetValue(instanceGuid, out var instance)) {
 				await instance.Reconfigure(configuration, launcher, shutdownCancellationToken);
 				Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
-				
+
 				if (alwaysReportStatus) {
 					instance.ReportLastStatus();
 				}
 			}
 			else {
-				instances[instanceGuid] = instance = new Instance(instanceServices, configuration, launcher);
+				instances[instanceGuid] = instance = new Instance(GetInstanceLoggerName(instanceGuid), instanceServices, configuration, launcher);
 				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
-				
+
 				instance.ReportLastStatus();
 				instance.IsRunningChanged += OnInstanceIsRunningChanged;
 			}
@@ -122,6 +124,11 @@ sealed class InstanceSessionManager : IDisposable {
 
 			return InstanceActionResult.Concrete(ConfigureInstanceResult.Success);
 		});
+	}
+
+	private string GetInstanceLoggerName(Guid guid) {
+		var prefix = guid.ToString();
+		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref instanceLoggerSequenceId);
 	}
 
 	private ImmutableArray<Instance> GetRunningInstancesInternal() {
@@ -167,38 +174,23 @@ sealed class InstanceSessionManager : IDisposable {
 	}
 
 	public Task<InstanceActionResult<StopInstanceResult>> Stop(Guid instanceGuid, MinecraftStopStrategy stopStrategy) {
-		return AcquireSemaphoreAndRunWithInstance(instanceGuid, instance => instance.Stop(stopStrategy));
+		return AcquireSemaphoreAndRunWithInstance(instanceGuid, instance => instance.Stop(stopStrategy, shutdownCancellationToken));
 	}
 
 	public Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommand(Guid instanceGuid, string command) {
 		return AcquireSemaphoreAndRunWithInstance(instanceGuid, async instance => await instance.SendCommand(command, shutdownCancellationToken) ? SendCommandToInstanceResult.Success : SendCommandToInstanceResult.UnknownError);
 	}
 
-	public async Task StopAll() {
-		shutdownCancellationTokenSource.Cancel();
-		
+	public async ValueTask DisposeAsync() {
 		Logger.Information("Stopping all instances...");
+		
+		shutdownCancellationTokenSource.Cancel();
 
 		await semaphore.WaitAsync(CancellationToken.None);
-		try {
-			await Task.WhenAll(instances.Values.Select(static instance => instance.StopAndWait(TimeSpan.FromSeconds(30))));
-			DisposeAllInstances();
-		} finally {
-			semaphore.Release();
-		}
-	}
-
-	public void Dispose() {
-		DisposeAllInstances();
+		await Task.WhenAll(instances.Values.Select(static instance => instance.DisposeAsync().AsTask()));
+		instances.Clear();
+		
 		shutdownCancellationTokenSource.Dispose();
 		semaphore.Dispose();
-	}
-
-	private void DisposeAllInstances() {
-		foreach (var (_, instance) in instances) {
-			instance.Dispose();
-		}
-
-		instances.Clear();
 	}
 }

@@ -35,9 +35,7 @@ public sealed class AgentServices {
 	public async Task Shutdown() {
 		Logger.Information("Stopping services...");
 		
-		await InstanceSessionManager.StopAll();
-		InstanceSessionManager.Dispose();
-		
+		await InstanceSessionManager.DisposeAsync();
 		await TaskManager.Stop();
 		
 		BackupManager.Dispose();

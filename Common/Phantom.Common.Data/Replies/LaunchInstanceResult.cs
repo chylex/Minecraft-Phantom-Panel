@@ -1,13 +1,11 @@
 ﻿namespace Phantom.Common.Data.Replies;
 
 public enum LaunchInstanceResult : byte {
-	UnknownError,
-	LaunchInitiated,
-	InstanceAlreadyLaunching,
-	InstanceAlreadyRunning,
-	InstanceIsStopping,
-	InstanceLimitExceeded,
-	MemoryLimitExceeded
+	LaunchInitiated          = 1,
+	InstanceAlreadyLaunching = 2,
+	InstanceAlreadyRunning   = 3,
+	InstanceLimitExceeded    = 4,
+	MemoryLimitExceeded      = 5
 }
 
 public static class LaunchInstanceResultExtensions {
@@ -16,7 +14,6 @@ public static class LaunchInstanceResultExtensions {
 			LaunchInstanceResult.LaunchInitiated          => "Launch initiated.",
 			LaunchInstanceResult.InstanceAlreadyLaunching => "Instance is already launching.",
 			LaunchInstanceResult.InstanceAlreadyRunning   => "Instance is already running.",
-			LaunchInstanceResult.InstanceIsStopping       => "Instance is stopping.",
 			LaunchInstanceResult.InstanceLimitExceeded    => "Agent does not have any more available instances.",
 			LaunchInstanceResult.MemoryLimitExceeded      => "Agent does not have enough available memory.",
 			_                                             => "Unknown error."
