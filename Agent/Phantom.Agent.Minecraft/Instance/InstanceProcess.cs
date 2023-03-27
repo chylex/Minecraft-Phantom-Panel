@@ -5,7 +5,6 @@ namespace Phantom.Agent.Minecraft.Instance;
 
 public sealed class InstanceProcess : IDisposable {
 	public InstanceProperties InstanceProperties { get; }
-	public CancellableSemaphore BackupSemaphore { get; } = new (1, 1);
 	
 	private readonly RingBuffer<string> outputBuffer = new (100);
 	private event EventHandler<string>? OutputEvent;
@@ -61,7 +60,6 @@ public sealed class InstanceProcess : IDisposable {
 
 	public void Dispose() {
 		process.Dispose();
-		BackupSemaphore.Dispose();
 		OutputEvent = null;
 		Ended = null;
 	}

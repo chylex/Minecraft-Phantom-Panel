@@ -29,7 +29,7 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 
 		this.logSender = new InstanceLogSender(context.Services.TaskManager, configuration.InstanceGuid, context.ShortName);
 
-		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, process, configuration.ServerPort, context.ShortName);
+		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, process, context, configuration.ServerPort);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
 	}
 

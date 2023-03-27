@@ -33,6 +33,7 @@ sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInsta
 		try {
 			// Too late to cancel the stop procedure now.
 			if (!process.HasEnded) {
+				context.Logger.Information("Session stopping now.");
 				await DoStop(context, process);
 			}
 		} finally {
@@ -66,14 +67,6 @@ sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInsta
 	}
 
 	private async Task DoStop(IInstanceContext context, InstanceProcess process) {
-		context.Logger.Information("Session stopping now.");
-
-		// Do not release the semaphore after this point.
-		if (!await process.BackupSemaphore.CancelAndWait(TimeSpan.FromSeconds(1))) {
-			context.Logger.Information("Waiting for backup to finish...");
-			await process.BackupSemaphore.CancelAndWait(Timeout.InfiniteTimeSpan);
-		}
-
 		context.Logger.Information("Sending stop command...");
 		await TrySendStopCommand(context, process);
 

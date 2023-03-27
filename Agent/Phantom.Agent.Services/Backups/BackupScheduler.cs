@@ -1,5 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Agent.Services.Instances;
+using Phantom.Agent.Services.Instances.Procedures;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
@@ -12,21 +14,22 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private static readonly TimeSpan BackupInterval = TimeSpan.FromMinutes(30);
 	private static readonly TimeSpan BackupFailureRetryDelay = TimeSpan.FromMinutes(5);
 
-	private readonly string loggerName;
 	private readonly BackupManager backupManager;
 	private readonly InstanceProcess process;
+	private readonly IInstanceContext context;
+	private readonly SemaphoreSlim backupSemaphore = new (1, 1);
 	private readonly int serverPort;
 	private readonly ServerStatusProtocol serverStatusProtocol;
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted; 
 
-	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceProcess process, int serverPort, string loggerName) : base(PhantomLogger.Create<BackupScheduler>(loggerName), taskManager, "Backup scheduler for " + loggerName) {
-		this.loggerName = loggerName;
+	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceProcess process, IInstanceContext context, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName), taskManager, "Backup scheduler for " + context.ShortName) {
 		this.backupManager = backupManager;
 		this.process = process;
+		this.context = context;
 		this.serverPort = serverPort;
-		this.serverStatusProtocol = new ServerStatusProtocol(loggerName);
+		this.serverStatusProtocol = new ServerStatusProtocol(context.ShortName);
 		Start();
 	}
 
@@ -51,7 +54,17 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	}
 
 	private async Task<BackupCreationResult> CreateBackup() {
-		return await backupManager.CreateBackup(loggerName, process, CancellationToken.None);
+		if (!await backupSemaphore.WaitAsync(TimeSpan.FromSeconds(1))) {
+			return new BackupCreationResult(BackupCreationResultKind.BackupAlreadyRunning);
+		}
+		
+		try {
+			var procedure = new BackupInstanceProcedure(backupManager);
+			context.EnqueueProcedure(procedure);
+			return await procedure.Result;
+		} finally {
+			backupSemaphore.Release();
+		}
 	}
 
 	private async Task WaitForOnlinePlayers() {
@@ -96,6 +109,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	}
 
 	protected override void Dispose() {
+		backupSemaphore.Dispose();
 		serverOutputWhileWaitingForOnlinePlayers.Dispose();
 	}
 }

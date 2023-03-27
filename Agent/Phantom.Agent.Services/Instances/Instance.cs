@@ -63,8 +63,10 @@ sealed class Instance : IAsyncDisposable {
 
 	private void ReportAndSetStatus(IInstanceStatus status) {
 		TryUpdateStatus("Report status of instance " + shortName + " as " + status.GetType().Name, async () => {
-			currentStatus = status;
-			await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
+			if (status != currentStatus) {
+				currentStatus = status;
+				await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
+			}
 		});
 	}
 
@@ -121,6 +123,7 @@ sealed class Instance : IAsyncDisposable {
 			configurationSemaphore.Release();
 		}
 		
+		ReportAndSetStatus(InstanceStatus.Launching);
 		await procedureManager.Enqueue(procedure);
 		return LaunchInstanceResult.LaunchInitiated;
 	}
@@ -134,6 +137,7 @@ sealed class Instance : IAsyncDisposable {
 			return StopInstanceResult.InstanceAlreadyStopping;
 		}
 		
+		ReportAndSetStatus(InstanceStatus.Stopping);
 		await procedureManager.Enqueue(new StopInstanceProcedure(stopStrategy));
 		return StopInstanceResult.StopInitiated;
 	}

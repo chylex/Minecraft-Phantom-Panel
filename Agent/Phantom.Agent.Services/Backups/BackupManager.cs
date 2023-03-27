@@ -16,26 +16,12 @@ sealed class BackupManager : IDisposable {
 		this.compressionSemaphore = new SemaphoreSlim(maxConcurrentCompressionTasks, maxConcurrentCompressionTasks);
 	}
 
+	public Task<BackupCreationResult> CreateBackup(string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
+		return new BackupCreator(this, loggerName, process, cancellationToken).CreateBackup();
+	}
+
 	public void Dispose() {
 		compressionSemaphore.Dispose();
-	}
-	
-	public async Task<BackupCreationResult> CreateBackup(string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
-		try {
-			if (!await process.BackupSemaphore.Wait(TimeSpan.FromSeconds(1), cancellationToken)) {
-				return new BackupCreationResult(BackupCreationResultKind.BackupAlreadyRunning);
-			}
-		} catch (ObjectDisposedException) {
-			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
-		} catch (OperationCanceledException) {
-			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
-		}
-
-		try {
-			return await new BackupCreator(this, loggerName, process, cancellationToken).CreateBackup();
-		} finally {
-			process.BackupSemaphore.Release();
-		}
 	}
 
 	private sealed class BackupCreator {
@@ -89,7 +75,7 @@ sealed class BackupManager : IDisposable {
 				try {
 					await dispatcher.EnableAutomaticSaving();
 				} catch (OperationCanceledException) {
-					// ignore
+					// Ignore.
 				} catch (Exception e) {
 					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotRestoreAutomaticSaving;
 					logger.Error(e, "Caught exception while enabling automatic saving after creating an instance backup.");
