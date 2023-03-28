@@ -32,10 +32,6 @@ sealed class InstanceProcedureManager : IAsyncDisposable {
 		return (await currentProcedure.Get(cancellationToken))?.Procedure;
 	}
 
-	public async Task CancelCurrentProcedure() {
-		(await currentProcedure.Get(shutdownCancellationTokenSource.Token))?.CancellationTokenSource.Cancel();
-	}
-
 	private async Task Run() {
 		try {
 			var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
@@ -77,7 +73,7 @@ sealed class InstanceProcedureManager : IAsyncDisposable {
 	public async ValueTask DisposeAsync() {
 		shutdownCancellationTokenSource.Cancel();
 
-		await CancelCurrentProcedure();
+		(await currentProcedure.Get(CancellationToken.None))?.CancellationTokenSource.Cancel();
 		await procedureQueueFinished.WaitHandle.WaitOneAsync();
 
 		currentProcedure.Dispose();
