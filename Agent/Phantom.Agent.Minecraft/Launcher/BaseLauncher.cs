@@ -2,7 +2,6 @@
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
-using Phantom.Common.Data.Java;
 using Phantom.Utils.Runtime;
 using Serilog;
 
@@ -20,10 +19,6 @@ public abstract class BaseLauncher : IServerLauncher {
 	public async Task<LaunchResult> Launch(ILogger logger, LaunchServices services, EventHandler<DownloadProgressEventArgs> downloadProgressEventHandler, CancellationToken cancellationToken) {
 		if (!services.JavaRuntimeRepository.TryGetByGuid(instanceProperties.JavaRuntimeGuid, out var javaRuntimeExecutable)) {
 			return new LaunchResult.InvalidJavaRuntime();
-		}
-
-		if (JvmArgumentsHelper.Validate(instanceProperties.JvmArguments) != null) {
-			return new LaunchResult.InvalidJvmArguments();
 		}
 
 		var vanillaServerJarPath = await services.ServerExecutables.DownloadAndGetPath(instanceProperties.LaunchProperties.ServerDownloadInfo, MinecraftVersion, downloadProgressEventHandler, cancellationToken);
@@ -61,16 +56,8 @@ public abstract class BaseLauncher : IServerLauncher {
 			UseShellExecute = false
 		};
 		
-		var jvmArguments = new JvmArgumentBuilder(instanceProperties.JvmProperties, instanceProperties.JvmArguments);
-		CustomizeJvmArguments(jvmArguments);
-
 		var processArguments = processConfigurator.ArgumentList;
-		jvmArguments.Build(processArguments);
-		
-		foreach (var extraArgument in serverJar.ExtraArgs) {
-			processArguments.Add(extraArgument);
-		}
-		
+		PrepareJvmArguments(serverJar).Build(processArguments);
 		processArguments.Add("-jar");
 		processArguments.Add(serverJar.FilePath);
 		processArguments.Add("nogui");
@@ -93,6 +80,21 @@ public abstract class BaseLauncher : IServerLauncher {
 		}
 
 		return new LaunchResult.Success(instanceProcess);
+	}
+
+	private JvmArgumentBuilder PrepareJvmArguments(ServerJarInfo serverJar) {
+		var builder = new JvmArgumentBuilder(instanceProperties.JvmProperties);
+
+		foreach (string argument in instanceProperties.JvmArguments) {
+			builder.Add(argument);
+		}
+
+		foreach (var argument in serverJar.ExtraArgs) {
+			builder.Add(argument);
+		}
+
+		CustomizeJvmArguments(builder);
+		return builder;
 	}
 
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}

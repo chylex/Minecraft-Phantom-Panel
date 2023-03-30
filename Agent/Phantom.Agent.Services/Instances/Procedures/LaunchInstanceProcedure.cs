@@ -63,9 +63,6 @@ sealed record LaunchInstanceProcedure(InstanceConfiguration Configuration, IServ
 		if (launchResult is LaunchResult.InvalidJavaRuntime) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.JavaRuntimeNotFound, "Session failed to launch, invalid Java runtime.");
 		}
-		else if (launchResult is LaunchResult.InvalidJvmArguments) {
-			throw new LaunchFailureException(InstanceLaunchFailReason.InvalidJvmArguments, "Session failed to launch, invalid JVM arguments.");
-		}
 		else if (launchResult is LaunchResult.CouldNotDownloadMinecraftServer) {
 			throw new LaunchFailureException(InstanceLaunchFailReason.CouldNotDownloadMinecraftServer, "Session failed to launch, could not download Minecraft server.");
 		}

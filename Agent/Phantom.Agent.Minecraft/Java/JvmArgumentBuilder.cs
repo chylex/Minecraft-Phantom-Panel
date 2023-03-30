@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 
 namespace Phantom.Agent.Minecraft.Java;
 
@@ -7,12 +6,12 @@ sealed class JvmArgumentBuilder {
 	private readonly JvmProperties basicProperties;
 	private readonly List<string> customArguments = new ();
 
-	public JvmArgumentBuilder(JvmProperties basicProperties, ImmutableArray<string> customArguments) {
+	public JvmArgumentBuilder(JvmProperties basicProperties) {
 		this.basicProperties = basicProperties;
+	}
 
-		foreach (var jvmArgument in customArguments) {
-			this.customArguments.Add(jvmArgument);
-		}
+	public void Add(string argument) {
+		customArguments.Add(argument);
 	}
 
 	public void AddProperty(string key, string value) {
@@ -24,6 +23,7 @@ sealed class JvmArgumentBuilder {
 			target.Add(property);
 		}
 
+		// In case of duplicate JVM arguments, typically the last one wins.
 		target.Add("-Xms" + basicProperties.InitialHeapMegabytes + "M");
 		target.Add("-Xmx" + basicProperties.MaximumHeapMegabytes + "M");
 		target.Add("-Xrs");

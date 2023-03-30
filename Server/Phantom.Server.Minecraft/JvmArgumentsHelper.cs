@@ -1,17 +1,21 @@
 ﻿using System.Collections.Immutable;
 
-namespace Phantom.Common.Data.Java;
+namespace Phantom.Server.Minecraft;
 
 public static class JvmArgumentsHelper {
 	public static ImmutableArray<string> Split(string arguments) {
 		return arguments.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToImmutableArray();
 	}
 
+	public static string Join(ImmutableArray<string> arguments) {
+		return string.Join('\n', arguments);
+	}
+
 	public static ValidationError? Validate(string arguments) {
 		return Validate(Split(arguments));
 	}
-	
-	public static ValidationError? Validate(ImmutableArray<string> arguments) {
+
+	private static ValidationError? Validate(ImmutableArray<string> arguments) {
 		if (!arguments.All(static argument => argument.StartsWith('-'))) {
 			return ValidationError.InvalidFormat;
 		}
@@ -26,10 +30,6 @@ public static class JvmArgumentsHelper {
 		}
 		
 		return null;
-	}
-
-	public static string Join(ImmutableArray<string> arguments) {
-		return string.Join('\n', arguments);
 	}
 
 	public enum ValidationError {

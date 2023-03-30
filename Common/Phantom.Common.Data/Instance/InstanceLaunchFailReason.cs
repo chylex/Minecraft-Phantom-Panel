@@ -1,17 +1,16 @@
 ﻿namespace Phantom.Common.Data.Instance;
 
 public enum InstanceLaunchFailReason : byte {
-	UnknownError,
-	ServerPortNotAllowed,
-	ServerPortAlreadyInUse,
-	RconPortNotAllowed,
-	RconPortAlreadyInUse,
-	JavaRuntimeNotFound,
-	InvalidJvmArguments,
-	CouldNotDownloadMinecraftServer,
-	CouldNotConfigureMinecraftServer,
-	CouldNotPrepareMinecraftServerLauncher,
-	CouldNotStartMinecraftServer
+	UnknownError                           = 0,
+	ServerPortNotAllowed                   = 1,
+	ServerPortAlreadyInUse                 = 2,
+	RconPortNotAllowed                     = 3,
+	RconPortAlreadyInUse                   = 4,
+	JavaRuntimeNotFound                    = 5,
+	CouldNotDownloadMinecraftServer        = 6,
+	CouldNotConfigureMinecraftServer       = 7,
+	CouldNotPrepareMinecraftServerLauncher = 8,
+	CouldNotStartMinecraftServer           = 9
 }
 
 public static class InstanceLaunchFailReasonExtensions {
@@ -22,7 +21,6 @@ public static class InstanceLaunchFailReasonExtensions {
 			InstanceLaunchFailReason.RconPortNotAllowed                     => "Rcon port not allowed.",
 			InstanceLaunchFailReason.RconPortAlreadyInUse                   => "Rcon port already in use.",
 			InstanceLaunchFailReason.JavaRuntimeNotFound                    => "Java runtime not found.",
-			InstanceLaunchFailReason.InvalidJvmArguments                    => "Invalid JVM arguments.",
 			InstanceLaunchFailReason.CouldNotDownloadMinecraftServer        => "Could not download Minecraft server.",
 			InstanceLaunchFailReason.CouldNotConfigureMinecraftServer       => "Could not configure Minecraft server.",
 			InstanceLaunchFailReason.CouldNotPrepareMinecraftServerLauncher => "Could not prepare Minecraft server launcher.",
