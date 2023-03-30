@@ -2,7 +2,7 @@
 
 namespace Phantom.Common.Data.Replies;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceActionResult<T>(
 	[property: MemoryPackOrder(0)] InstanceActionGeneralResult GeneralResult,
 	[property: MemoryPackOrder(1)] T? ConcreteResult

@@ -13,35 +13,35 @@ public partial interface IInstanceEvent {
 	void Accept(IInstanceEventVisitor visitor);
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceLaunchSuccededEvent : IInstanceEvent {
 	public void Accept(IInstanceEventVisitor visitor) {
 		visitor.OnLaunchSucceeded(this);
 	}
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceLaunchFailedEvent([property: MemoryPackOrder(0)] InstanceLaunchFailReason Reason) : IInstanceEvent {
 	public void Accept(IInstanceEventVisitor visitor) {
 		visitor.OnLaunchFailed(this);
 	}
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceCrashedEvent : IInstanceEvent {
 	public void Accept(IInstanceEventVisitor visitor) {
 		visitor.OnCrashed(this);
 	}
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceStoppedEvent : IInstanceEvent {
 	public void Accept(IInstanceEventVisitor visitor) {
 		visitor.OnStopped(this);
 	}
 }
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceBackupCompletedEvent([property: MemoryPackOrder(0)] BackupCreationResultKind Kind, [property: MemoryPackOrder(1)] BackupCreationWarnings Warnings) : IInstanceEvent {
 	public void Accept(IInstanceEventVisitor visitor) {
 		visitor.OnBackupCompleted(this);

@@ -14,31 +14,31 @@ namespace Phantom.Common.Data.Instance;
 [MemoryPackUnion(8, typeof(InstanceIsFailed))]
 public partial interface IInstanceStatus {}
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsOffline : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsInvalid([property: MemoryPackOrder(0)] string Reason) : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsNotRunning : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsDownloading([property: MemoryPackOrder(0)] byte Progress) : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsLaunching : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsRunning : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsRestarting : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsStopping : IInstanceStatus;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsFailed([property: MemoryPackOrder(0)] InstanceLaunchFailReason Reason) : IInstanceStatus;
 
 public static class InstanceStatus {

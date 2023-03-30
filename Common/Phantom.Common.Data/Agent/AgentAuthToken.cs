@@ -4,7 +4,7 @@ using MemoryPack;
 
 namespace Phantom.Common.Data.Agent;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed partial class AgentAuthToken {
 	internal const int Length = 12;

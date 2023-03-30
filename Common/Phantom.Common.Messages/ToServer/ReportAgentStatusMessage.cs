@@ -4,7 +4,7 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToServer; 
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record ReportAgentStatusMessage(
 	[property: MemoryPackOrder(0)] int RunningInstanceCount,
 	[property: MemoryPackOrder(1)] RamAllocationUnits RunningInstanceMemory

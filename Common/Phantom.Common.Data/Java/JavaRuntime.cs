@@ -3,7 +3,7 @@ using MemoryPack;
 
 namespace Phantom.Common.Data.Java;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record JavaRuntime(
 	[property: MemoryPackOrder(0)] string MainVersion,
 	[property: MemoryPackOrder(1)] string FullVersion,

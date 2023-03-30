@@ -2,7 +2,7 @@
 
 namespace Phantom.Common.Data.Backups;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record BackupCreationResult(
 	[property: MemoryPackOrder(0)] BackupCreationResultKind Kind,
 	[property: MemoryPackOrder(1)] BackupCreationWarnings Warnings = BackupCreationWarnings.None

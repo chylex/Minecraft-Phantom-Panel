@@ -5,7 +5,7 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToServer; 
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record AdvertiseJavaRuntimesMessage(
 	[property: MemoryPackOrder(0)] ImmutableArray<TaggedJavaRuntime> Runtimes
 ) : IMessageToServer {

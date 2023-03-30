@@ -2,7 +2,7 @@
 
 namespace Phantom.Common.Data.Agent;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record AgentInfo(
 	[property: MemoryPackOrder(0)] Guid Guid,
 	[property: MemoryPackOrder(1)] string Name,

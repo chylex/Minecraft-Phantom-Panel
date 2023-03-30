@@ -4,7 +4,7 @@ using Phantom.Utils.IO;
 
 namespace Phantom.Common.Data.Minecraft; 
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class FileDownloadInfo {
 	[MemoryPackOrder(0)]
 	public string DownloadUrl { get; }

@@ -4,7 +4,7 @@ using MemoryPack;
 
 namespace Phantom.Common.Data;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class AllowedPorts {
 	[MemoryPackOrder(0)]
 	[MemoryPackInclude]

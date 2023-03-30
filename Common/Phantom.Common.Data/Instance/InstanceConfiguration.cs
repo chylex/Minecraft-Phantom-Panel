@@ -4,7 +4,7 @@ using Phantom.Common.Data.Minecraft;
 
 namespace Phantom.Common.Data.Instance;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceConfiguration(
 	[property: MemoryPackOrder(0)] Guid AgentGuid,
 	[property: MemoryPackOrder(1)] Guid InstanceGuid,

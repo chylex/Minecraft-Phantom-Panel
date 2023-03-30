@@ -4,7 +4,7 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToServer;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record RegisterAgentMessage(
 	[property: MemoryPackOrder(0)] AgentAuthToken AuthToken,
 	[property: MemoryPackOrder(1)] AgentInfo AgentInfo

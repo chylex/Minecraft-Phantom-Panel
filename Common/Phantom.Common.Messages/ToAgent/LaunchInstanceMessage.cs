@@ -3,7 +3,7 @@ using Phantom.Common.Data.Replies;
 
 namespace Phantom.Common.Messages.ToAgent; 
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record LaunchInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid InstanceGuid
 ) : IMessageToAgent<InstanceActionResult<LaunchInstanceResult>> {

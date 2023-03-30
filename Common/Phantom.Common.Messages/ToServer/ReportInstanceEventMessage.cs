@@ -4,7 +4,7 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToServer; 
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record ReportInstanceEventMessage(
 	[property: MemoryPackOrder(0)] Guid EventGuid,
 	[property: MemoryPackOrder(1)] DateTime UtcTime,

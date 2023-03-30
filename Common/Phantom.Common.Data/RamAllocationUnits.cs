@@ -6,7 +6,7 @@ namespace Phantom.Common.Data;
 /// <summary>
 /// Represents a number of RAM allocation units, using the conversion factor of 256 MB per unit. Supports allocations up to 16 TB minus 256 MB (65535 units).
 /// </summary>
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public readonly partial record struct RamAllocationUnits(
 	[property: MemoryPackOrder(0)] ushort RawValue

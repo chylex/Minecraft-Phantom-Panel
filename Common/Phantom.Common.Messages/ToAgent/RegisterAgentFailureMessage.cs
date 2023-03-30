@@ -4,7 +4,7 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.ToAgent;
 
-[MemoryPackable]
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record RegisterAgentFailureMessage(
 	[property: MemoryPackOrder(0)] RegisterAgentFailure FailureKind
 ) : IMessageToAgent {
