@@ -26,6 +26,5 @@ sealed class JvmArgumentBuilder {
 		// In case of duplicate JVM arguments, typically the last one wins.
 		target.Add("-Xms" + basicProperties.InitialHeapMegabytes + "M");
 		target.Add("-Xmx" + basicProperties.MaximumHeapMegabytes + "M");
-		target.Add("-Xrs");
 	}
 }
