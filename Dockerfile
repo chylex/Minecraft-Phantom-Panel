@@ -1,12 +1,13 @@
 # +---------------------------+
 # | Prepare build environment |
 # +---------------------------+
-FROM mcr.microsoft.com/dotnet/nightly/sdk:8.0-preview AS phantom-base-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/sdk:8.0-preview AS phantom-base-builder
+ARG TARGETARCH
 
 ADD . /app
 WORKDIR /app
 
-RUN dotnet restore
+RUN dotnet restore --arch "$TARGETARCH"
 
 
 # +---------------------+
@@ -14,7 +15,13 @@ RUN dotnet restore
 # +---------------------+
 FROM phantom-base-builder AS phantom-agent-builder
 
-RUN dotnet publish Agent/Phantom.Agent/Phantom.Agent.csproj -c Release -o /app/out
+RUN dotnet publish Agent/Phantom.Agent/Phantom.Agent.csproj \
+    /p:DebugType=None                                       \
+    /p:DebugSymbols=false                                   \
+    --no-restore                                            \
+    --arch "$TARGETARCH"                                    \
+    --configuration Release                                 \
+    --output /app/out
 
 
 # +----------------------+
@@ -22,8 +29,21 @@ RUN dotnet publish Agent/Phantom.Agent/Phantom.Agent.csproj -c Release -o /app/o
 # +----------------------+
 FROM phantom-base-builder AS phantom-server-builder
 
-RUN dotnet publish Server/Phantom.Server.Web/Phantom.Server.Web.csproj -c Release -o /app/out
-RUN dotnet publish Server/Phantom.Server/Phantom.Server.csproj -c Release -o /app/out
+RUN dotnet publish Server/Phantom.Server.Web/Phantom.Server.Web.csproj \
+    /p:DebugType=None                                                  \
+    /p:DebugSymbols=false                                              \
+    --no-restore                                                       \
+    --arch "$TARGETARCH"                                               \
+    --configuration Release                                            \
+    --output /app/out
+
+RUN dotnet publish Server/Phantom.Server/Phantom.Server.csproj \
+    /p:DebugType=None                                          \
+    /p:DebugSymbols=false                                      \
+    --no-restore                                               \
+    --arch "$TARGETARCH"                                       \
+    --configuration Release                                    \
+    --output /app/out
 
 
 # +------------------------------+
