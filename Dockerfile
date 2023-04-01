@@ -1,7 +1,7 @@
 # +---------------------------+
 # | Prepare build environment |
 # +---------------------------+
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS phantom-base-builder
+FROM mcr.microsoft.com/dotnet/nightly/sdk:8.0-preview AS phantom-base-builder
 
 ADD . /app
 WORKDIR /app
@@ -29,7 +29,7 @@ RUN dotnet publish Server/Phantom.Server/Phantom.Server.csproj -c Release -o /ap
 # +------------------------------+
 # | Finalize Phantom Agent image |
 # +------------------------------+
-FROM mcr.microsoft.com/dotnet/runtime:7.0 AS phantom-agent
+FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0-preview AS phantom-agent
 
 RUN mkdir /data && chmod 777 /data
 WORKDIR /data
@@ -56,7 +56,7 @@ ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]
 # +-------------------------------+
 # | Finalize Phantom Server image |
 # +-------------------------------+
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS phantom-server
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0-preview AS phantom-server
 
 RUN mkdir /data && chmod 777 /data
 WORKDIR /data
