@@ -25,21 +25,21 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	PhantomLogger.Root.Information("Agent version: {Version}", fullVersion);
 
-	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrExit();
+	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrStop();
 
 	var agentKey = await AgentKey.Load(agentKeyToken, agentKeyFilePath);
 	if (agentKey == null) {
-		Environment.Exit(1);
+		return 1;
 	}
 
 	var folders = new AgentFolders("./data", "./temp", javaSearchPath);
 	if (!folders.TryCreate()) {
-		Environment.Exit(1);
+		return 1;
 	}
 
 	var agentGuid = await GuidFile.CreateOrLoad(folders.DataFolderPath);
 	if (agentGuid == null) {
-		Environment.Exit(1);
+		return 1;
 	}
 
 	var (serverCertificate, agentToken) = agentKey.Value;
@@ -67,10 +67,15 @@ try {
 		await rpcTask;
 		rpcDisconnectSemaphore.Dispose();
 	}
+
+	return 0;
 } catch (OperationCanceledException) {
-	// Ignore.
+	return 0;
+} catch (StopProcedureException) {
+	return 1;
 } catch (Exception e) {
 	PhantomLogger.Root.Fatal(e, "Caught exception in entry point.");
+	return 1;
 } finally {
 	shutdownCancellationTokenSource.Dispose();
 

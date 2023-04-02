@@ -41,13 +41,12 @@ sealed record Variables(
 		return JavaRuntimeDiscovery.GetSystemSearchPath() ?? throw new Exception("Could not automatically determine the path to Java installations on this system. Please set the JAVA_SEARCH_PATH environment variable to the folder containing Java installations.");
 	}
 
-	public static Variables LoadOrExit() {
+	public static Variables LoadOrStop() {
 		try {
 			return LoadOrThrow();
 		} catch (Exception e) {
 			PhantomLogger.Root.Fatal(e.Message);
-			Environment.Exit(1);
-			throw;
+			throw StopProcedureException.Instance;
 		}
 	}
 }

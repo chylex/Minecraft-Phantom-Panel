@@ -15,19 +15,18 @@ using WebConfiguration = Phantom.Server.Web.Configuration;
 using WebLauncher = Phantom.Server.Web.Launcher;
 
 var cancellationTokenSource = new CancellationTokenSource();
-var taskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Server"));
 
 PosixSignals.RegisterCancellation(cancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel server...");
 });
 
-static void CreateFolderOrExit(string path, UnixFileMode chmod) {
+static void CreateFolderOrStop(string path, UnixFileMode chmod) {
 	if (!Directory.Exists(path)) {
 		try {
 			Directories.Create(path, chmod);
 		} catch (Exception e) {
 			PhantomLogger.Root.Fatal(e, "Error creating folder: {FolderName}", path);
-			Environment.Exit(1);
+			throw StopProcedureException.Instance;
 		}
 	}
 }
@@ -38,49 +37,56 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel server...");
 	PhantomLogger.Root.Information("Server version: {Version}", fullVersion);
 	
-	var (webServerHost, webServerPort, webBasePath, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrExit();
+	var (webServerHost, webServerPort, webBasePath, rpcServerHost, rpcServerPort, sqlConnectionString) = Variables.LoadOrStop();
 
 	string secretsPath = Path.GetFullPath("./secrets");
-	CreateFolderOrExit(secretsPath, Chmod.URWX_GRX);
+	CreateFolderOrStop(secretsPath, Chmod.URWX_GRX);
 	
 	string webKeysPath = Path.GetFullPath("./keys");
-	CreateFolderOrExit(webKeysPath, Chmod.URWX);
+	CreateFolderOrStop(webKeysPath, Chmod.URWX);
 
 	var certificateData = await CertificateFiles.CreateOrLoad(secretsPath);
 	if (certificateData == null) {
-		Environment.Exit(1);
+		return 1;
 	}
 	
 	var (certificate, agentToken) = certificateData.Value;
 	
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), rpcServerHost, rpcServerPort, certificate);
-	var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, webKeysPath, cancellationTokenSource.Token);
-
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
-	var administratorToken = TokenGenerator.Create(60);
-	PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
-	PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", webConfiguration.HttpUrl, webConfiguration.BasePath + "setup");
+	var taskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Server"));
+	try {
+		var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), rpcServerHost, rpcServerPort, certificate);
+		var webConfiguration = new WebConfiguration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, webKeysPath, cancellationTokenSource.Token);
 
-	var serviceConfiguration = new ServiceConfiguration(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken), cancellationTokenSource.Token);
-	var webConfigurator = new WebConfigurator(serviceConfiguration, taskManager, agentToken);
-	var webApplication = await WebLauncher.CreateApplication(webConfiguration, webConfigurator, options => options.UseNpgsql(sqlConnectionString, static options => {
-		options.CommandTimeout(10).MigrationsAssembly(typeof(ApplicationDbContextDesignFactory).Assembly.FullName);
-	}));
+		var administratorToken = TokenGenerator.Create(60);
+		PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
+		PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", webConfiguration.HttpUrl, webConfiguration.BasePath + "setup");
 
-	await Task.WhenAll(
-		RpcLauncher.Launch(rpcConfiguration, webApplication.Services.GetRequiredService<MessageToServerListenerFactory>().CreateListener, cancellationTokenSource.Token),
-		WebLauncher.Launch(webConfiguration, webApplication)
-	);
+		var serviceConfiguration = new ServiceConfiguration(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken), cancellationTokenSource.Token);
+		var webConfigurator = new WebConfigurator(serviceConfiguration, taskManager, agentToken);
+		var webApplication = await WebLauncher.CreateApplication(webConfiguration, webConfigurator, options => options.UseNpgsql(sqlConnectionString, static options => {
+			options.CommandTimeout(10).MigrationsAssembly(typeof(ApplicationDbContextDesignFactory).Assembly.FullName);
+		}));
+
+		await Task.WhenAll(
+			RpcLauncher.Launch(rpcConfiguration, webApplication.Services.GetRequiredService<MessageToServerListenerFactory>().CreateListener, cancellationTokenSource.Token),
+			WebLauncher.Launch(webConfiguration, webApplication)
+		);
+	} finally {
+		cancellationTokenSource.Cancel();
+		await taskManager.Stop();
+	}
+
+	return 0;
 } catch (OperationCanceledException) {
-	// Ignore.
+	return 0;
 } catch (StopProcedureException) {
-	// Ignore.
+	return 1;
+} catch (Exception e) {
+	PhantomLogger.Root.Fatal(e, "Caught exception in entry point.");
+	return 1;
 } finally {
-	cancellationTokenSource.Cancel();
-	
-	await taskManager.Stop();
-	
 	cancellationTokenSource.Dispose();
 	PhantomLogger.Root.Information("Bye!");
 	PhantomLogger.Dispose();

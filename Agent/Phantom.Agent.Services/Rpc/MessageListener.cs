@@ -54,6 +54,8 @@ public sealed class MessageListener : IMessageToAgentListener {
 		};
 
 		Logger.Fatal("Agent authentication failed: {Error}", errorMessage);
+		
+		PhantomLogger.Dispose();
 		Environment.Exit(1);
 
 		return Task.FromResult(NoReply.Instance);

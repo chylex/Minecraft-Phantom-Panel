@@ -31,13 +31,12 @@ sealed record Variables(
 		);
 	}
 
-	public static Variables LoadOrExit() {
+	public static Variables LoadOrStop() {
 		try {
 			return LoadOrThrow();
 		} catch (Exception e) {
 			PhantomLogger.Root.Fatal(e.Message);
-			Environment.Exit(1);
-			throw;
+			throw StopProcedureException.Instance;
 		}
 	}
 }
