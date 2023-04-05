@@ -7,6 +7,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
+using Phantom.Utils.Tasks;
 
 const int ProtocolVersion = 1;
 

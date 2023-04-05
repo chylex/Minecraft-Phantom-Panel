@@ -19,7 +19,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
+    <ProjectReference Include="..\Phantom.Utils\Phantom.Utils.csproj" />
   </ItemGroup>
 
 </Project>

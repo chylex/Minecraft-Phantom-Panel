@@ -9,7 +9,7 @@ using Phantom.Server.Services.Agents;
 using Phantom.Server.Services.Events;
 using Phantom.Server.Services.Instances;
 using Phantom.Utils.Rpc.Message;
-using Phantom.Utils.Runtime;
+using Phantom.Utils.Tasks;
 
 namespace Phantom.Server.Services.Rpc;
 
@@ -22,7 +22,7 @@ public sealed class MessageToServerListener : IMessageToServerListener {
 	private readonly InstanceLogManager instanceLogManager;
 	private readonly EventLog eventLog;
 
-	private readonly TaskCompletionSource<Guid> agentGuidWaiter = Tasks.CreateCompletionSource<Guid>();
+	private readonly TaskCompletionSource<Guid> agentGuidWaiter = AsyncTasks.CreateCompletionSource<Guid>();
 
 	public bool IsDisposed { get; private set; }
 

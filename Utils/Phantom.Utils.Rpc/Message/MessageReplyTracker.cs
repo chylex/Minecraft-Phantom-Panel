@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using Phantom.Utils.Runtime;
+using Phantom.Utils.Tasks;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
@@ -16,7 +16,7 @@ public sealed class MessageReplyTracker {
 
 	public uint RegisterReply() {
 		var sequenceId = Interlocked.Increment(ref lastSequenceId);
-		replyTasks[sequenceId] = Tasks.CreateCompletionSource<byte[]>();
+		replyTasks[sequenceId] = AsyncTasks.CreateCompletionSource<byte[]>();
 		return sequenceId;
 	}
 

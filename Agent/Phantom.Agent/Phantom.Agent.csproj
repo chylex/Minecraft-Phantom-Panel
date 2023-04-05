@@ -12,8 +12,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.IO\Phantom.Utils.IO.csproj" />
-    <ProjectReference Include="..\..\Utils\Phantom.Utils.Runtime\Phantom.Utils.Runtime.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils\Phantom.Utils.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Minecraft\Phantom.Agent.Minecraft.csproj" />
     <ProjectReference Include="..\Phantom.Agent.Services\Phantom.Agent.Services.csproj" />
   </ItemGroup>

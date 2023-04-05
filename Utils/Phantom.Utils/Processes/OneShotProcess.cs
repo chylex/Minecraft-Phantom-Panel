@@ -1,6 +1,6 @@
 ﻿using Serilog;
 
-namespace Phantom.Utils.Runtime;
+namespace Phantom.Utils.Processes;
 
 public sealed class OneShotProcess {
 	private readonly ILogger logger;

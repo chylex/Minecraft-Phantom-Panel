@@ -11,7 +11,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Phantom.Utils.Collections\Phantom.Utils.Collections.csproj" />
+    <ProjectReference Include="..\Phantom.Utils\Phantom.Utils.csproj" />
   </ItemGroup>
   
 </Project>

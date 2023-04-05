@@ -2,7 +2,7 @@
 using Phantom.Utils.Collections;
 using Serilog;
 
-namespace Phantom.Utils.Runtime; 
+namespace Phantom.Utils.Tasks; 
 
 public sealed class TaskManager {
 	private readonly ILogger logger;

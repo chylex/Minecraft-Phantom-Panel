@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Phantom.Agent.Minecraft.Command;
 using Phantom.Agent.Minecraft.Instance;
-using Phantom.Utils.Runtime;
+using Phantom.Utils.Tasks;
 using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
@@ -14,9 +14,9 @@ sealed partial class BackupServerCommandDispatcher : IDisposable {
 	private readonly InstanceProcess process;
 	private readonly CancellationToken cancellationToken;
 
-	private readonly TaskCompletionSource automaticSavingDisabled = Tasks.CreateCompletionSource();
-	private readonly TaskCompletionSource savedTheGame = Tasks.CreateCompletionSource();
-	private readonly TaskCompletionSource automaticSavingEnabled = Tasks.CreateCompletionSource();
+	private readonly TaskCompletionSource automaticSavingDisabled = AsyncTasks.CreateCompletionSource();
+	private readonly TaskCompletionSource savedTheGame = AsyncTasks.CreateCompletionSource();
+	private readonly TaskCompletionSource automaticSavingEnabled = AsyncTasks.CreateCompletionSource();
 
 	public BackupServerCommandDispatcher(ILogger logger, InstanceProcess process, CancellationToken cancellationToken) {
 		this.logger = logger;

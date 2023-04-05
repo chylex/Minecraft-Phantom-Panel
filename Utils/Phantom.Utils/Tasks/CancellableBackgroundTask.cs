@@ -1,6 +1,6 @@
 ﻿using Serilog;
 
-namespace Phantom.Utils.Runtime; 
+namespace Phantom.Utils.Tasks; 
 
 public abstract class CancellableBackgroundTask {
 	private readonly CancellationTokenSource cancellationTokenSource = new ();

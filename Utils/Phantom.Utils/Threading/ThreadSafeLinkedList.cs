@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.Collections; 
+﻿namespace Phantom.Utils.Threading; 
 
 public sealed class ThreadSafeLinkedList<T> : IDisposable {
 	private readonly LinkedList<T> list = new ();

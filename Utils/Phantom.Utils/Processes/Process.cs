@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Phantom.Utils.Runtime;
+namespace Phantom.Utils.Processes;
 
 public sealed class Process : IDisposable {
 	public readonly record struct Output(string Line, bool IsError);

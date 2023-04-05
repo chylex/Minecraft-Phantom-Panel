@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.Runtime;
+﻿namespace Phantom.Utils.Threading;
 
 public static class WaitHandleExtensions {
 	public static Task WaitOneAsync(this WaitHandle waitHandle, CancellationToken cancellationToken = default) {

@@ -1,6 +1,6 @@
-﻿namespace Phantom.Utils.Runtime; 
+﻿namespace Phantom.Utils.Tasks; 
 
-public static class Tasks {
+public static class AsyncTasks {
 	public static TaskCompletionSource CreateCompletionSource() {
 		return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 	}

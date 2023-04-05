@@ -1,6 +1,7 @@
 using NUnit.Framework;
+using Phantom.Utils.Collections;
 
-namespace Phantom.Utils.Collections.Tests;
+namespace Phantom.Utils.Tests.Collections;
 
 [TestFixture]
 public sealed class RingBufferTests {
