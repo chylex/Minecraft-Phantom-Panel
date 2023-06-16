@@ -47,10 +47,8 @@ static class BackupCompressor {
 				Quality,
 				Memory,
 				Threads,
-				"-c",
 				"--rm",
 				"--no-progress",
-				"-c",
 				"-o", destinationFilePath,
 				"--", sourceFilePath
 			}
