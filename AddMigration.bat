@@ -5,4 +5,4 @@ if [%1]==[] (
     exit
 )
 
-dotnet ef migrations add %~1 --project Server/Phantom.Server.Database.Postgres
+dotnet ef migrations add %~1 --project Server/Phantom.Server.Database.Postgres --msbuildprojectextensionspath .artifacts/obj/Phantom.Server.Database.Postgres
