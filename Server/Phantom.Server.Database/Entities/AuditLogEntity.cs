@@ -2,7 +2,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Microsoft.AspNetCore.Identity;
 using Phantom.Server.Database.Enums;
 
 namespace Phantom.Server.Database.Entities; 
@@ -16,22 +15,22 @@ public class AuditLogEntity : IDisposable {
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	public long Id { get; set; }
 
-	public string? UserId { get; set; }
+	public Guid? UserGuid { get; set; }
 	public DateTime UtcTime { get; set; } // Note: Converting to UTC is not best practice, but for historical records it's good enough.
 	public AuditLogEventType EventType { get; set; }
 	public AuditLogSubjectType SubjectType { get; set; }
 	public string SubjectId { get; set; }
 	public JsonDocument? Data { get; set; }
 
-	public virtual IdentityUser? User { get; set; }
+	public virtual UserEntity? User { get; set; }
 	
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	internal AuditLogEntity() {
 		SubjectId = string.Empty;
 	}
 
-	public AuditLogEntity(string? userId, AuditLogEventType eventType, string subjectId, Dictionary<string, object?>? data) {
-		UserId = userId;
+	public AuditLogEntity(Guid? userGuid, AuditLogEventType eventType, string subjectId, Dictionary<string, object?>? data) {
+		UserGuid = userGuid;
 		UtcTime = DateTime.UtcNow;
 		EventType = eventType;
 		SubjectType = eventType.GetSubjectType();

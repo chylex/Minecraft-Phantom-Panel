@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Server.Database;
 using Phantom.Server.Web.Base;
@@ -34,10 +33,10 @@ public static class Launcher {
 
 		builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(config.KeyFolderPath));
 
-		builder.Services.AddDbContextPool<ApplicationDbContext>(dbOptionsBuilder, poolSize: 64);
+		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder, ServiceLifetime.Transient);
 		builder.Services.AddSingleton<DatabaseProvider>();
 
-		builder.Services.AddPhantomIdentity<IdentityUser, IdentityRole>(config.CancellationToken);
+		builder.Services.AddPhantomIdentity(config.CancellationToken);
 		builder.Services.AddScoped<ILoginEvents, LoginEvents>();
 
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");

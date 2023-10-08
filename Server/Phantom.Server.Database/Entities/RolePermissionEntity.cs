@@ -4,11 +4,11 @@ namespace Phantom.Server.Database.Entities;
 
 [Table("RolePermissions", Schema = "identity")]
 public sealed class RolePermissionEntity {
-	public string RoleId { get; set; }
+	public Guid RoleGuid { get; set; }
 	public string PermissionId { get; set; }
 	
-	public RolePermissionEntity(string roleId, string permissionId) {
-		RoleId = roleId;
+	public RolePermissionEntity(Guid roleGuid, string permissionId) {
+		RoleGuid = roleGuid;
 		PermissionId = permissionId;
 	}
 }

@@ -1,15 +1,14 @@
 ﻿@page "/audit"
 @attribute [Authorize(Permission.ViewAuditPolicy)]
-@using Phantom.Server.Database.Enums
 @using Phantom.Server.Services.Audit
 @using Phantom.Server.Services.Instances
-@using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Identity
+@using Phantom.Server.Services.Users
 @using System.Collections.Immutable
+@using Phantom.Server.Database.Enums
 @implements IDisposable
 @inject AuditLog AuditLog
 @inject InstanceManager InstanceManager
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager UserManager
 
 <h1>Audit Log</h1>
 
@@ -33,7 +32,7 @@
         <td>
           @(logItem.UserName ?? "-")
           <br>
-          <code class="text-uppercase">@logItem.UserId</code>
+          <code class="text-uppercase">@logItem.UserGuid</code>
         </td>
         <td>@logItem.EventType.ToNiceString()</td>
         <td>
@@ -55,7 +54,7 @@
 
   private CancellationTokenSource? initializationCancellationTokenSource;
   private AuditLogItem[] logItems = Array.Empty<AuditLogItem>();
-  private Dictionary<string, string>? userNamesById;
+  private Dictionary<Guid, string>? userNamesByGuid;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
@@ -64,7 +63,7 @@
 
     try {
       logItems = await AuditLog.GetItems(50, cancellationToken);
-      userNamesById = await UserManager.Users.ToDictionaryAsync(static user => user.Id, static user => user.UserName ?? user.Id, cancellationToken);
+      userNamesByGuid = await UserManager.GetAllByGuid(static user => user.Name, cancellationToken);
       instanceNamesByGuid = InstanceManager.GetInstanceNames();
     } finally {
       initializationCancellationTokenSource.Dispose();
@@ -74,7 +73,7 @@
   private string? GetSubjectName(AuditLogSubjectType type, string id) {
     return type switch {
            AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
-           AuditLogSubjectType.User     => userNamesById != null && userNamesById.TryGetValue(id, out var name) ? name : null,
+           AuditLogSubjectType.User     => userNamesByGuid != null && userNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
            _                            => null
     };
   }

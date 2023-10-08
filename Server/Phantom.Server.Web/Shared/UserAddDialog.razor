@@ -1,9 +1,11 @@
-﻿@using Microsoft.AspNetCore.Identity
+﻿@using Phantom.Server.Services.Users
+@using Phantom.Server.Database.Entities
 @using Phantom.Server.Services.Audit
 @using System.ComponentModel.DataAnnotations
+@using Phantom.Utils.Tasks
 @inherits PhantomComponent
 @inject IJSRuntime Js;
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager UserManager
 @inject AuditLog AuditLog
 
 <Form Model="form" OnSubmit="AddUser">
@@ -37,7 +39,7 @@
   public string ModalId { get; set; } = string.Empty;
   
   [Parameter]
-  public EventCallback<IdentityUser> UserAdded { get; set; }
+  public EventCallback<UserEntity> UserAdded { get; set; }
 
   private readonly AddUserFormModel form = new();
 
@@ -57,16 +59,17 @@
       return;
     }
 
-    var user = new IdentityUser(form.Username);
-    var result = await UserManager.CreateAsync(user, form.Password);
-    if (result.Succeeded) {
-      await AuditLog.AddUserCreatedEvent(user);
-      await UserAdded.InvokeAsync(user);
-      await Js.InvokeVoidAsync("closeModal", ModalId);
-      form.SubmitModel.StopSubmitting();
-    }
-    else {
-      form.SubmitModel.StopSubmitting(string.Join("\n", result.Errors.Select(static error => error.Description)));
+    switch (await UserManager.CreateUser(form.Username, form.Password)) {
+      case Result<UserEntity, AddUserError>.Ok ok:
+        await AuditLog.AddUserCreatedEvent(ok.Value);
+        await UserAdded.InvokeAsync(ok.Value);
+        await Js.InvokeVoidAsync("closeModal", ModalId);
+        form.SubmitModel.StopSubmitting();
+        break;
+        
+      case Result<UserEntity, AddUserError>.Fail fail:
+        form.SubmitModel.StopSubmitting(fail.Error.ToSentences("\n"));
+        break;
     }
   }
 

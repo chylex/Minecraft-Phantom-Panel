@@ -1,7 +1,6 @@
 ﻿@page "/login"
 @using Phantom.Server.Web.Identity.Interfaces
 @using Phantom.Server.Web.Identity.Authentication
-@using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @attribute [AllowAnonymous]
 @inject INavigation Navigation
@@ -51,21 +50,9 @@
     await form.SubmitModel.StartSubmitting();
     
     string? returnUrl = Navigation.GetQueryParameter("return", out var url) ? url : null;
-    var result = await LoginManager.SignIn(form.Username, form.Password, returnUrl);
-    if (result != SignInResult.Success) {
-      form.SubmitModel.StopSubmitting(GetErrorMessage(result));
-    }
-  }
-
-  private static string GetErrorMessage(SignInResult result) {
-    if (result == SignInResult.Failed) {
-      return "Invalid username or password.";
-    }
-    else if (result == SignInResult.LockedOut) {
-      return "Too many failed login attempts. Please try again later.";
-    }
-    else {
-      return "Unknown error.";
+    
+    if (!await LoginManager.SignIn(form.Username, form.Password, returnUrl)) {
+      form.SubmitModel.StopSubmitting("Invalid username or password.");
     }
   }
 

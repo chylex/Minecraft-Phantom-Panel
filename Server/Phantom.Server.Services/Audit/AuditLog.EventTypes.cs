@@ -1,30 +1,30 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Phantom.Server.Database.Entities;
 using Phantom.Server.Database.Enums;
 
 namespace Phantom.Server.Services.Audit;
 
 public sealed partial class AuditLog {
-	public Task AddAdministratorUserCreatedEvent(IdentityUser administratorUser) {
-		return AddItem(AuditLogEventType.AdministratorUserCreated, administratorUser.Id);
+	public Task AddAdministratorUserCreatedEvent(UserEntity administratorUser) {
+		return AddItem(AuditLogEventType.AdministratorUserCreated, administratorUser.UserGuid.ToString());
 	}
 
-	public Task AddAdministratorUserModifiedEvent(IdentityUser administratorUser) {
-		return AddItem(AuditLogEventType.AdministratorUserModified, administratorUser.Id);
+	public Task AddAdministratorUserModifiedEvent(UserEntity administratorUser) {
+		return AddItem(AuditLogEventType.AdministratorUserModified, administratorUser.UserGuid.ToString());
 	}
 
-	public void AddUserLoggedInEvent(string userId) {
-		AddItem(userId, AuditLogEventType.UserLoggedIn, userId);
+	public void AddUserLoggedInEvent(UserEntity user) {
+		AddItem(user.UserGuid, AuditLogEventType.UserLoggedIn, user.UserGuid.ToString());
 	}
 
-	public void AddUserLoggedOutEvent(string userId) {
-		AddItem(userId, AuditLogEventType.UserLoggedOut, userId);
+	public void AddUserLoggedOutEvent(Guid userGuid) {
+		AddItem(userGuid, AuditLogEventType.UserLoggedOut, userGuid.ToString());
 	}
 	
-	public Task AddUserCreatedEvent(IdentityUser user) {
-		return AddItem(AuditLogEventType.UserCreated, user.Id);
+	public Task AddUserCreatedEvent(UserEntity user) {
+		return AddItem(AuditLogEventType.UserCreated, user.UserGuid.ToString());
 	}
 
-	public Task AddUserRolesChangedEvent(IdentityUser user, List<string> addedToRoles, List<string> removedFromRoles) {
+	public Task AddUserRolesChangedEvent(UserEntity user, List<string> addedToRoles, List<string> removedFromRoles) {
 		var extra = new Dictionary<string, object?>();
 		
 		if (addedToRoles.Count > 0) {
@@ -35,12 +35,12 @@ public sealed partial class AuditLog {
 			extra["removedFromRoles"] = removedFromRoles;
 		}
 		
-		return AddItem(AuditLogEventType.UserRolesChanged, user.Id, extra);
+		return AddItem(AuditLogEventType.UserRolesChanged, user.UserGuid.ToString(), extra);
 	}
 	
-	public Task AddUserDeletedEvent(IdentityUser user) {
-		return AddItem(AuditLogEventType.UserDeleted, user.Id, new Dictionary<string, object?> {
-			{ "username", user.UserName }
+	public Task AddUserDeletedEvent(UserEntity user) {
+		return AddItem(AuditLogEventType.UserDeleted, user.UserGuid.ToString(), new Dictionary<string, object?> {
+			{ "username", user.Name }
 		});
 	}
 

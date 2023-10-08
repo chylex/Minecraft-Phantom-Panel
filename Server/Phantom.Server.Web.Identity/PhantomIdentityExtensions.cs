@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Phantom.Server.Database;
+using Microsoft.AspNetCore.Components.Server;
+using Phantom.Server.Services.Users;
 using Phantom.Server.Web.Identity.Authentication;
 using Phantom.Server.Web.Identity.Authorization;
 using Phantom.Server.Web.Identity.Data;
@@ -10,10 +10,8 @@ using Phantom.Server.Web.Identity.Data;
 namespace Phantom.Server.Web.Identity;
 
 public static class PhantomIdentityExtensions {
-	public static void AddPhantomIdentity<TUser, TRole>(this IServiceCollection services, CancellationToken cancellationToken) where TUser : class where TRole : class {
-		services.AddIdentity<TUser, TRole>(ConfigureIdentity).AddEntityFrameworkStores<ApplicationDbContext>();
-		services.ConfigureApplicationCookie(ConfigureIdentityCookie);
-		services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
+	public static void AddPhantomIdentity(this IServiceCollection services, CancellationToken cancellationToken) {
+		services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(ConfigureIdentityCookie);
 		services.AddAuthorization(ConfigureAuthorization);
 
 		services.AddSingleton(PhantomLoginStore.Create(cancellationToken));
@@ -21,8 +19,11 @@ public static class PhantomIdentityExtensions {
 		
 		services.AddScoped<PhantomIdentityConfigurator>();
 		services.AddScoped<IAuthorizationHandler, PermissionBasedPolicyHandler>();
-		services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<TUser>>();
+		services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 		
+		services.AddScoped<UserManager>();
+		services.AddScoped<RoleManager>();
+		services.AddScoped<UserRoleManager>();
 		services.AddTransient<PermissionManager>();
 	}
 
@@ -30,23 +31,6 @@ public static class PhantomIdentityExtensions {
 		application.UseAuthentication();
 		application.UseAuthorization();
 		application.UseWhen(PhantomIdentityMiddleware.AcceptsPath, static app => app.UseMiddleware<PhantomIdentityMiddleware>());
-	}
-
-	private static void ConfigureIdentity(IdentityOptions o) {
-		o.SignIn.RequireConfirmedAccount = false;
-		o.SignIn.RequireConfirmedEmail = false;
-		o.SignIn.RequireConfirmedPhoneNumber = false;
-
-		o.Password.RequireLowercase = true;
-		o.Password.RequireUppercase = true;
-		o.Password.RequireDigit = true;
-		o.Password.RequiredLength = 16;
-
-		o.Lockout.AllowedForNewUsers = true;
-		o.Lockout.MaxFailedAccessAttempts = 10;
-		o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
-
-		o.Stores.MaxLengthForKeys = 128;
 	}
 
 	private static void ConfigureIdentityCookie(CookieAuthenticationOptions o) {

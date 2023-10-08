@@ -1,6 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Phantom.Common.Data;
@@ -13,8 +11,12 @@ using Phantom.Server.Database.Factories;
 namespace Phantom.Server.Database;
 
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
-public class ApplicationDbContext : IdentityDbContext {
+public class ApplicationDbContext : DbContext {
+	public DbSet<UserEntity> Users { get; set; } = null!;
+	public DbSet<RoleEntity> Roles { get; set; } = null!;
 	public DbSet<PermissionEntity> Permissions { get; set; } = null!;
+	
+	public DbSet<UserRoleEntity> UserRoles { get; set; } = null!;
 	public DbSet<UserPermissionEntity> UserPermissions { get; set; } = null!;
 	public DbSet<RolePermissionEntity> RolePermissions { get; set; } = null!;
 	
@@ -34,26 +36,29 @@ public class ApplicationDbContext : IdentityDbContext {
 	protected override void OnModelCreating(ModelBuilder builder) {
 		base.OnModelCreating(builder);
 
-		const string IdentitySchema = "identity";
+		builder.Entity<AuditLogEntity>(static b => {
+			b.HasOne(static e => e.User).WithMany().HasForeignKey(static e => e.UserGuid).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
+		});
 		
-		builder.Entity<IdentityRole>().ToTable("Roles", schema: IdentitySchema);
-		builder.Entity<IdentityRoleClaim<string>>().ToTable("RoleClaims", schema: IdentitySchema);
+		builder.Entity<UserEntity>(static b => {
+			b.HasIndex(static e => e.Name).IsUnique();
+		});
 		
-		builder.Entity<IdentityUser>().ToTable("Users", schema: IdentitySchema);
-		builder.Entity<IdentityUserRole<string>>().ToTable("UserRoles", schema: IdentitySchema);
-		builder.Entity<IdentityUserLogin<string>>().ToTable("UserLogins", schema: IdentitySchema);
-		builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens", schema: IdentitySchema);
-		builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims", schema: IdentitySchema);
+		builder.Entity<UserRoleEntity>(static b => {
+			b.HasKey(static e => new { UserId = e.UserGuid, RoleId = e.RoleGuid });
+			b.HasOne(static e => e.User).WithMany().HasForeignKey(static e => e.UserGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
+			b.HasOne(static e => e.Role).WithMany().HasForeignKey(static e => e.RoleGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
+		});
 		
 		builder.Entity<UserPermissionEntity>(static b => {
-			b.HasKey(static e => new { e.UserId, e.PermissionId });
-			b.HasOne<IdentityUser>().WithMany().HasForeignKey(static e => e.UserId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+			b.HasKey(static e => new { UserId = e.UserGuid, e.PermissionId });
+			b.HasOne<UserEntity>().WithMany().HasForeignKey(static e => e.UserGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
 			b.HasOne<PermissionEntity>().WithMany().HasForeignKey(static e => e.PermissionId).IsRequired().OnDelete(DeleteBehavior.Cascade);
 		});
 		
 		builder.Entity<RolePermissionEntity>(static b => {
-			b.HasKey(static e => new { e.RoleId, e.PermissionId });
-			b.HasOne<IdentityRole>().WithMany().HasForeignKey(static e => e.RoleId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+			b.HasKey(static e => new { RoleId = e.RoleGuid, e.PermissionId });
+			b.HasOne<RoleEntity>().WithMany().HasForeignKey(static e => e.RoleGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
 			b.HasOne<PermissionEntity>().WithMany().HasForeignKey(static e => e.PermissionId).IsRequired().OnDelete(DeleteBehavior.Cascade);
 		});
 	}

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using Microsoft.AspNetCore.Identity;
 using Phantom.Common.Logging;
 using Phantom.Utils.Tasks;
 using ILogger = Serilog.ILogger;
@@ -30,7 +29,7 @@ public sealed class PhantomLoginStore {
 
 				foreach (var (token, entry) in loginEntries) {
 					if (entry.IsExpired) {
-						Logger.Debug("Expired login entry for {Username}.", entry.User.UserName);
+						Logger.Debug("Expired login entry for {Username}.", entry.Username);
 						loginEntries.TryRemove(token, out _);
 					}
 				}
@@ -40,8 +39,8 @@ public sealed class PhantomLoginStore {
 		}
 	}
 
-	internal void Add(string token, IdentityUser user, string password, string returnUrl) {
-		loginEntries[token] = new LoginEntry(user, password, returnUrl, Stopwatch.StartNew());
+	internal void Add(string token, string username, string password, string returnUrl) {
+		loginEntries[token] = new LoginEntry(username, password, returnUrl, Stopwatch.StartNew());
 	}
 
 	internal LoginEntry? Pop(string token) {
@@ -50,14 +49,14 @@ public sealed class PhantomLoginStore {
 		}
 
 		if (entry.IsExpired) {
-			Logger.Debug("Expired login entry for {Username}.", entry.User.UserName);
+			Logger.Debug("Expired login entry for {Username}.", entry.Username);
 			return null;
 		}
 		
 		return entry;
 	}
 
-	internal sealed record LoginEntry(IdentityUser User, string Password, string ReturnUrl, Stopwatch AddedTime) {
+	internal sealed record LoginEntry(string Username, string Password, string ReturnUrl, Stopwatch AddedTime) {
 		public bool IsExpired => AddedTime.Elapsed >= ExpirationTime;
 	}
 }

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Phantom.Utils.Collections; 
 
@@ -10,5 +11,25 @@ public static class EnumerableExtensions {
 				yield return item;
 			}
 		}
+	}
+	
+	public static async Task<ImmutableArray<TSource>> ToImmutableArrayAsync<TSource>(this IAsyncEnumerable<TSource> source, CancellationToken cancellationToken = default) {
+		var builder = ImmutableArray.CreateBuilder<TSource>();
+		
+		await foreach (var element in source.WithCancellation(cancellationToken)) {
+			builder.Add(element);
+		}
+
+		return builder.ToImmutable();
+	}
+	
+	public static async Task<ImmutableHashSet<TSource>> ToImmutableSetAsync<TSource>(this IAsyncEnumerable<TSource> source, CancellationToken cancellationToken = default) {
+		var builder = ImmutableHashSet.CreateBuilder<TSource>();
+		
+		await foreach (var element in source.WithCancellation(cancellationToken)) {
+			builder.Add(element);
+		}
+
+		return builder.ToImmutable();
 	}
 }

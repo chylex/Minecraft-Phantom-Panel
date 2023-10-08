@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.JSInterop;
+using Phantom.Server.Database.Entities;
 using Phantom.Server.Web.Base;
 using Phantom.Server.Web.Components.Forms;
 using Phantom.Server.Web.Identity.Data;
@@ -15,23 +15,23 @@ public abstract class UserEditDialogBase : PhantomComponent {
 	public string ModalId { get; set; } = string.Empty;
 
 	[Parameter]
-	public EventCallback<IdentityUser> UserModified { get; set; }
+	public EventCallback<UserEntity> UserModified { get; set; }
 
 	protected readonly FormButtonSubmit.SubmitModel SubmitModel = new();
 
-	private IdentityUser? EditedUser { get; set; } = null;
+	private UserEntity? EditedUser { get; set; } = null;
 	protected string EditedUserName { get; private set; } = string.Empty;
 
-	internal async Task Show(IdentityUser user) {
+	internal async Task Show(UserEntity user) {
 		EditedUser = user;
-		EditedUserName = user.UserName ?? $"<{user.Id}>";
+		EditedUserName = user.Name;
 		await BeforeShown(user);
 
 		StateHasChanged();
 		await Js.InvokeVoidAsync("showModal", ModalId);
 	}
 
-	protected virtual Task BeforeShown(IdentityUser user) {
+	protected virtual Task BeforeShown(UserEntity user) {
 		return Task.CompletedTask;
 	}
 
@@ -53,7 +53,7 @@ public abstract class UserEditDialogBase : PhantomComponent {
 		}
 	}
 	
-	protected abstract Task DoEdit(IdentityUser user);
+	protected abstract Task DoEdit(UserEntity user);
 
 	protected async Task OnEditSuccess() {
 		await UserModified.InvokeAsync(EditedUser);

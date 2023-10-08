@@ -1,10 +1,10 @@
-﻿@using Phantom.Utils.Collections
-@using System.Collections.Immutable
-@using Microsoft.AspNetCore.Identity
+﻿@using Phantom.Server.Database.Entities
 @using Phantom.Server.Services.Audit
+@using Phantom.Server.Services.Users
 @inherits UserEditDialogBase
-@inject UserManager<IdentityUser> UserManager
-@inject RoleManager<IdentityRole> RoleManager
+@inject UserManager UserManager
+@inject RoleManager RoleManager
+@inject UserRoleManager UserRoleManager
 @inject AuditLog AuditLog
 
 <Modal Id="@ModalId" TitleText="Manage User Roles">
@@ -14,7 +14,7 @@
       var item = items[index];
       <div class="mt-1">
         <input id="role-@index" type="checkbox" class="form-check-input" @bind="@item.Checked" />
-        <label for="role-@index" class="form-check-label">@item.Name</label>
+        <label for="role-@index" class="form-check-label">@item.Role.Name</label>
       </div>
     }
   </Body>
@@ -29,37 +29,34 @@
 
   private List<RoleItem> items = new();
 
-  protected override async Task BeforeShown(IdentityUser user) {
-    var userRoles = await GetUserRoles(user);
-    this.items = RoleManager.Roles
-                            .Select(static role => role.Name)
-                            .AsEnumerable()
-                            .WhereNotNull()
-                            .Select(role => new RoleItem(role, userRoles.Contains(role)))
-                            .ToList();
+  protected override async Task BeforeShown(UserEntity user) {
+    var userRoles = await UserRoleManager.GetUserRoleGuids(user);
+    var allRoles = await RoleManager.GetAll();
+    this.items = allRoles.Select(role => new RoleItem(role, userRoles.Contains(role.RoleGuid))).ToList();
   }
 
-  protected override async Task DoEdit(IdentityUser user) {
-    var userRoles = await GetUserRoles(user);
+  protected override async Task DoEdit(UserEntity user) {
+    var userRoles = await UserRoleManager.GetUserRoleGuids(user);
     var addedToRoles = new List<string>();
     var removedFromRoles = new List<string>();
     var errors = new List<string>();
 
     foreach (var item in items) {
       var shouldHaveRole = item.Checked;
-      var roleName = item.Name;
-
-      if (shouldHaveRole == userRoles.Contains(roleName)) {
+      if (shouldHaveRole == userRoles.Contains(item.Role.RoleGuid)) {
         continue;
       }
 
-      var result = shouldHaveRole ? await UserManager.AddToRoleAsync(user, roleName) : await UserManager.RemoveFromRoleAsync(user, roleName);
-      if (result.Succeeded) {
-        var modifiedList = shouldHaveRole ? addedToRoles : removedFromRoles;
-        modifiedList.Add(roleName);
+      bool success = shouldHaveRole ? await UserRoleManager.Add(user, item.Role) : await UserRoleManager.Remove(user, item.Role);
+      if (success) {
+          var modifiedList = shouldHaveRole ? addedToRoles : removedFromRoles;
+          modifiedList.Add(item.Role.Name);
+      }
+      else if (shouldHaveRole) {
+        errors.Add("Could not add role " + item.Role.Name + " to user.");
       }
       else {
-        errors.AddRange(result.Errors.Select(static error => error.Description));
+        errors.Add("Could not remove role " + item.Role.Name + " from user.");
       }
     }
 
@@ -72,16 +69,12 @@
     }
   }
 
-  private async Task<ImmutableHashSet<string>> GetUserRoles(IdentityUser user) {
-    return (await UserManager.GetRolesAsync(user)).ToImmutableHashSet();
-  }
-
   private sealed class RoleItem {
-    public string Name { get; }
+    public RoleEntity Role { get; }
     public bool Checked { get; set; }
 
-    public RoleItem(string name, bool @checked) {
-      this.Name = name;
+    public RoleItem(RoleEntity role, bool @checked) {
+      this.Role = role;
       this.Checked = @checked;
     }
   }

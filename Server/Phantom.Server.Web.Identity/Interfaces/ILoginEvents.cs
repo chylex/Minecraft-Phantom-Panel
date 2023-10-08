@@ -1,6 +1,8 @@
-﻿namespace Phantom.Server.Web.Identity.Interfaces; 
+﻿using Phantom.Server.Database.Entities;
+
+namespace Phantom.Server.Web.Identity.Interfaces; 
 
 public interface ILoginEvents {
-	void UserLoggedIn(string userId);
-	void UserLoggedOut(string userId);
+	void UserLoggedIn(UserEntity user);
+	void UserLoggedOut(Guid userGuid);
 }

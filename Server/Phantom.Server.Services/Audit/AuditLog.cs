@@ -11,21 +11,19 @@ namespace Phantom.Server.Services.Audit;
 public sealed partial class AuditLog {
 	private readonly CancellationToken cancellationToken;
 	private readonly DatabaseProvider databaseProvider;
-	private readonly IdentityLookup identityLookup;
 	private readonly AuthenticationStateProvider authenticationStateProvider;
 	private readonly TaskManager taskManager;
 
-	public AuditLog(ServiceConfiguration serviceConfiguration, DatabaseProvider databaseProvider, IdentityLookup identityLookup, AuthenticationStateProvider authenticationStateProvider, TaskManager taskManager) {
+	public AuditLog(ServiceConfiguration serviceConfiguration, DatabaseProvider databaseProvider, AuthenticationStateProvider authenticationStateProvider, TaskManager taskManager) {
 		this.cancellationToken = serviceConfiguration.CancellationToken;
 		this.databaseProvider = databaseProvider;
-		this.identityLookup = identityLookup;
 		this.authenticationStateProvider = authenticationStateProvider;
 		this.taskManager = taskManager;
 	}
 	
-	private async Task<string?> GetCurrentAuthenticatedUserId() {
+	private async Task<Guid?> GetCurrentAuthenticatedUserId() {
 		var authenticationState = await authenticationStateProvider.GetAuthenticationStateAsync();
-		return identityLookup.GetAuthenticatedUserId(authenticationState.User);
+		return UserManager.GetAuthenticatedUserId(authenticationState.User);
 	}
 
 	private async Task AddEntityToDatabase(AuditLogEntity logEntity) {
@@ -34,8 +32,8 @@ public sealed partial class AuditLog {
 		await scope.Ctx.SaveChangesAsync(cancellationToken);
 	}
 
-	private void AddItem(string? userId, AuditLogEventType eventType, string subjectId, Dictionary<string, object?>? extra = null) {
-		var logEntity = new AuditLogEntity(userId, eventType, subjectId, extra);
+	private void AddItem(Guid? userGuid, AuditLogEventType eventType, string subjectId, Dictionary<string, object?>? extra = null) {
+		var logEntity = new AuditLogEntity(userGuid, eventType, subjectId, extra);
 		taskManager.Run("Store audit log item to database", () => AddEntityToDatabase(logEntity));
 	}
 
@@ -50,7 +48,7 @@ public sealed partial class AuditLog {
 		                  .AsQueryable()
 		                  .OrderByDescending(static entity => entity.UtcTime)
 		                  .Take(count)
-		                  .Select(static entity => new AuditLogItem(entity.UtcTime, entity.UserId, entity.User == null ? null : entity.User.UserName, entity.EventType, entity.SubjectType, entity.SubjectId, entity.Data))
+		                  .Select(static entity => new AuditLogItem(entity.UtcTime, entity.UserGuid, entity.User == null ? null : entity.User.Name, entity.EventType, entity.SubjectType, entity.SubjectId, entity.Data))
 		                  .ToArrayAsync(cancellationToken);
 	}
 }

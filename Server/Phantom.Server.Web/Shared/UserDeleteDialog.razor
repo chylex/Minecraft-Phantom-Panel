@@ -1,7 +1,8 @@
-﻿@using Microsoft.AspNetCore.Identity
+﻿@using Phantom.Server.Database.Entities
 @using Phantom.Server.Services.Audit
+@using Phantom.Server.Services.Users
 @inherits UserEditDialogBase
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager UserManager
 @inject AuditLog AuditLog
 
 <Modal Id="@ModalId" TitleText="Delete User">
@@ -18,14 +19,20 @@
 
 @code {
 
-  protected override async Task DoEdit(IdentityUser user) {
-    var result = await UserManager.DeleteAsync(user);
-    if (result.Succeeded) {
-      await AuditLog.AddUserDeletedEvent(user);
-      await OnEditSuccess();
-    }
-    else {
-      OnEditFailure(string.Join("\n", result.Errors.Select(static error => error.Description)));
+  protected override async Task DoEdit(UserEntity user) {
+    switch (await UserManager.DeleteByGuid(user.UserGuid)) {
+      case DeleteUserResult.Deleted:
+        await AuditLog.AddUserDeletedEvent(user);
+        await OnEditSuccess();
+        break;
+
+      case DeleteUserResult.NotFound:
+        await OnEditSuccess();
+        break;
+        
+      case DeleteUserResult.Failed:
+        OnEditFailure("Could not delete user.");
+        break;
     }
   }
 

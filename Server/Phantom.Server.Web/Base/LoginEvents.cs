@@ -1,4 +1,5 @@
-﻿using Phantom.Server.Services.Audit;
+﻿using Phantom.Server.Database.Entities;
+using Phantom.Server.Services.Audit;
 using Phantom.Server.Web.Identity.Interfaces;
 
 namespace Phantom.Server.Web.Base;
@@ -10,11 +11,11 @@ sealed class LoginEvents : ILoginEvents {
 		this.auditLog = auditLog;
 	}
 
-	public void UserLoggedIn(string userId) {
-		auditLog.AddUserLoggedInEvent(userId);
+	public void UserLoggedIn(UserEntity user) {
+		auditLog.AddUserLoggedInEvent(user);
 	}
 
-	public void UserLoggedOut(string userId) {
-		auditLog.AddUserLoggedOutEvent(userId);
+	public void UserLoggedOut(Guid userGuid) {
+		auditLog.AddUserLoggedOutEvent(userGuid);
 	}
 }

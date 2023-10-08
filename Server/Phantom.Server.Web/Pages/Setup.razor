@@ -1,15 +1,19 @@
 ﻿@page "/setup"
+@using Phantom.Server.Services.Users
+@using Phantom.Utils.Tasks
+@using Phantom.Server.Database.Entities
 @using Phantom.Server.Services
 @using Phantom.Server.Services.Audit
 @using Phantom.Server.Web.Identity.Authentication
-@using Microsoft.AspNetCore.Identity
 @using System.ComponentModel.DataAnnotations
 @using Phantom.Utils.Cryptography
 @using System.Security.Cryptography
 @attribute [AllowAnonymous]
 @inject ServiceConfiguration ServiceConfiguration
 @inject PhantomLoginManager LoginManager
-@inject UserManager<IdentityUser> UserManager
+@inject UserManager UserManager
+@inject RoleManager RoleManager
+@inject UserRoleManager UserRoleManager
 @inject AuditLog AuditLog
 
 <h1>Administrator Setup</h1>
@@ -62,15 +66,14 @@
       form.SubmitModel.StopSubmitting("Invalid administrator token.");
       return;
     }
-    
-    var createUserResult = await CreateOrUpdateAdministrator();
-    if (!createUserResult.Succeeded) {
-      form.SubmitModel.StopSubmitting(GetErrors(createUserResult));
+
+    if (await CreateOrUpdateAdministrator() is Result<string>.Fail fail) {
+      form.SubmitModel.StopSubmitting(fail.Error);
       return;
     }
 
     var signInResult = await LoginManager.SignIn(form.Username, form.Password);
-    if (!signInResult.Succeeded) {
+    if (!signInResult) {
       form.SubmitModel.StopSubmitting("Error logging in.");
     }
   }
@@ -86,36 +89,46 @@
     return CryptographicOperations.FixedTimeEquals(formTokenBytes, ServiceConfiguration.AdministratorToken);
   }
 
-  private async Task<IdentityResult> CreateOrUpdateAdministrator() {
-    var existingUser = await UserManager.FindByNameAsync(form.Username);
+  private async Task<Result<string>> CreateOrUpdateAdministrator() {
+    var existingUser = await UserManager.GetByName(form.Username);
     return existingUser == null ? await CreateAdministrator() : await UpdateAdministrator(existingUser);
   }
 
-  private async Task<IdentityResult> CreateAdministrator() {
-    var newUser = new IdentityUser(form.Username);
-    var createUserResult = await UserManager.CreateAsync(newUser, form.Password);
-    if (!createUserResult.Succeeded) {
-      return createUserResult;
+  private async Task<Result<string>> CreateAdministrator() {
+    var administratorRole = await RoleManager.GetByGuid(Role.Administrator.Guid);
+    if (administratorRole == null) {
+      return Result.Fail("Administrator role not found.");
     }
-    
-    await AuditLog.AddAdministratorUserCreatedEvent(newUser);
 
-    var addToRoleResult = await UserManager.AddToRoleAsync(newUser, Role.Administrator.Name);
-    return addToRoleResult;
-  }
+    switch (await UserManager.CreateUser(form.Username, form.Password)) {
+      case Result<UserEntity, AddUserError>.Ok ok:
+        var administratorUser = ok.Value;
+        await AuditLog.AddAdministratorUserCreatedEvent(administratorUser);
 
-  private async Task<IdentityResult> UpdateAdministrator(IdentityUser existingUser) {
-    await UserManager.RemovePasswordAsync(existingUser);
-    var result = await UserManager.AddPasswordAsync(existingUser, form.Password);
-    if (result.Succeeded) {
-      await AuditLog.AddAdministratorUserModifiedEvent(existingUser);
+        if (!await UserRoleManager.Add(administratorUser, administratorRole)) {
+          return Result.Fail("Could not assign administrator role to user.");
+        }
+
+        return Result.Ok<string>();
+
+      case Result<UserEntity, AddUserError>.Fail fail:
+        return Result.Fail(fail.Error.ToSentences("\n"));
     }
-    
-    return result;
+
+    return Result.Fail("Unknown error.");
   }
 
-  private string GetErrors(IdentityResult result) {
-    return string.Join("\n", result.Errors.Select(static error => error.Description));
+  private async Task<Result<string>> UpdateAdministrator(UserEntity existingUser) {
+    switch (await UserManager.SetUserPassword(existingUser.UserGuid, form.Password)) {
+      case Result<SetUserPasswordError>.Ok:
+        await AuditLog.AddAdministratorUserModifiedEvent(existingUser);
+        return Result.Ok<string>();
+
+      case Result<SetUserPasswordError>.Fail fail:
+        return Result.Fail(fail.Error.ToSentences("\n"));
+    }
+
+    return Result.Fail("Unknown error.");
   }
-  
+
 }

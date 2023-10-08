@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Phantom.Common.Logging;
+using Phantom.Server.Services.Users;
 using Phantom.Server.Web.Identity.Interfaces;
 using Phantom.Utils.Cryptography;
 using ILogger = Serilog.ILogger;
@@ -13,67 +15,63 @@ public sealed class PhantomLoginManager {
 	public static bool IsAuthenticated(ClaimsPrincipal user) {
 		return user.Identity is { IsAuthenticated: true };
 	}
-	
-	internal static string? GetAuthenticatedUserId(ClaimsPrincipal user, UserManager<IdentityUser> userManager) {
-		return IsAuthenticated(user) ? userManager.GetUserId(user) : null;
-	}
-	
+
 	private readonly INavigation navigation;
+	private readonly UserManager userManager;
 	private readonly PhantomLoginStore loginStore;
-	private readonly UserManager<IdentityUser> userManager;
-	private readonly SignInManager<IdentityUser> signInManager;
 	private readonly ILoginEvents loginEvents;
 
-	public PhantomLoginManager(INavigation navigation, PhantomLoginStore loginStore, UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, ILoginEvents loginEvents) {
+	public PhantomLoginManager(INavigation navigation, UserManager userManager, PhantomLoginStore loginStore, ILoginEvents loginEvents) {
 		this.navigation = navigation;
-		this.loginStore = loginStore;
 		this.userManager = userManager;
-		this.signInManager = signInManager;
+		this.loginStore = loginStore;
 		this.loginEvents = loginEvents;
 	}
 
-	public async Task<SignInResult> SignIn(string username, string password, string? returnUrl = null) {
-		var user = await userManager.FindByNameAsync(username);
-		if (user == null) {
-			return SignInResult.Failed;
+	public async Task<bool> SignIn(string username, string password, string? returnUrl = null) {
+		if (await userManager.GetAuthenticated(username, password) == null) {
+			return false;
 		}
 		
-		var result = await signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
-		if (result == SignInResult.Success) {
-			Logger.Debug("Created login token for {Username}.", username);
-			
-			string token = TokenGenerator.Create(60);
-			loginStore.Add(token, user, password, returnUrl ?? string.Empty);
-			navigation.NavigateTo("login" + QueryString.Create("token", token), forceLoad: true);
-		}
-		
-		return result;
+		Logger.Debug("Created login token for {Username}.", username);
+
+		string token = TokenGenerator.Create(60);
+		loginStore.Add(token, username, password, returnUrl ?? string.Empty);
+		navigation.NavigateTo("login" + QueryString.Create("token", token), forceLoad: true);
+
+		return true;
 	}
 
-	internal async Task SignOut() {
-		if (GetAuthenticatedUserId(signInManager.Context.User, userManager) is {} userId) {
-			loginEvents.UserLoggedOut(userId);
-		}
-
-		await signInManager.SignOutAsync();
-	}
-
-	internal async Task<string?> ProcessTokenAndGetReturnUrl(string token) {
+	internal async Task<SignInResult?> ProcessToken(string token) {
 		var entry = loginStore.Pop(token);
 		if (entry == null) {
 			return null;
 		}
 
-		var user = entry.User;
-		var result = await signInManager.PasswordSignInAsync(user, entry.Password, lockoutOnFailure: false, isPersistent: true);
-		if (result == SignInResult.Success) {
-			Logger.Information("Successful login for {Username}.", user.UserName);
-			loginEvents.UserLoggedIn(user.Id);
-			return entry.ReturnUrl;
-		}
-		else {
-			Logger.Warning("Error logging in {Username}: {Result}.", user.UserName, result);
+		var user = await userManager.GetAuthenticated(entry.Username, entry.Password);
+		if (user == null) {
 			return null;
+		}
+
+		Logger.Information("Successful login for {Username}.", user.Name);
+		loginEvents.UserLoggedIn(user);
+
+		var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
+		identity.AddClaim(new Claim(ClaimTypes.Name, user.Name));
+		identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.UserGuid.ToString()));
+
+		var authenticationProperties = new AuthenticationProperties {
+			IsPersistent = true
+		};
+		
+		return new SignInResult(new ClaimsPrincipal(identity), authenticationProperties, entry.ReturnUrl);
+	}
+
+	internal sealed record SignInResult(ClaimsPrincipal ClaimsPrincipal, AuthenticationProperties AuthenticationProperties, string ReturnUrl);
+
+	internal void OnSignedOut(ClaimsPrincipal user) {
+		if (UserManager.GetAuthenticatedUserId(user) is {} userGuid) {
+			loginEvents.UserLoggedOut(userGuid);
 		}
 	}
 }

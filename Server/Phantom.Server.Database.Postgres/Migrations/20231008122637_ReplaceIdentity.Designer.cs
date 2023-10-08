@@ -3,6 +3,7 @@ using System;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Phantom.Server.Database;
@@ -12,9 +13,11 @@ using Phantom.Server.Database;
 namespace Phantom.Server.Database.Postgres.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231008122637_ReplaceIdentity")]
+    partial class ReplaceIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -81,8 +84,6 @@ namespace Phantom.Server.Database.Postgres.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("UserGuid");
 
                     b.ToTable("AuditLog", "system");
                 });
@@ -172,147 +173,6 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Permissions", "identity");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RoleEntity", b =>
-                {
-                    b.Property<Guid>("RoleGuid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("RoleGuid");
-
-                    b.ToTable("Roles", "identity");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RolePermissionEntity", b =>
-                {
-                    b.Property<Guid>("RoleGuid")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PermissionId")
-                        .HasColumnType("text");
-
-                    b.HasKey("RoleGuid", "PermissionId");
-
-                    b.HasIndex("PermissionId");
-
-                    b.ToTable("RolePermissions", "identity");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserEntity", b =>
-                {
-                    b.Property<Guid>("UserGuid")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("UserGuid");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Users", "identity");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserPermissionEntity", b =>
-                {
-                    b.Property<Guid>("UserGuid")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PermissionId")
-                        .HasColumnType("text");
-
-                    b.HasKey("UserGuid", "PermissionId");
-
-                    b.HasIndex("PermissionId");
-
-                    b.ToTable("UserPermissions", "identity");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserRoleEntity", b =>
-                {
-                    b.Property<Guid>("UserGuid")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("RoleGuid")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("UserGuid", "RoleGuid");
-
-                    b.HasIndex("RoleGuid");
-
-                    b.ToTable("UserRoles", "identity");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AuditLogEntity", b =>
-                {
-                    b.HasOne("Phantom.Server.Database.Entities.UserEntity", "User")
-                        .WithMany()
-                        .HasForeignKey("UserGuid")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RolePermissionEntity", b =>
-                {
-                    b.HasOne("Phantom.Server.Database.Entities.PermissionEntity", null)
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Phantom.Server.Database.Entities.RoleEntity", null)
-                        .WithMany()
-                        .HasForeignKey("RoleGuid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserPermissionEntity", b =>
-                {
-                    b.HasOne("Phantom.Server.Database.Entities.PermissionEntity", null)
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Phantom.Server.Database.Entities.UserEntity", null)
-                        .WithMany()
-                        .HasForeignKey("UserGuid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserRoleEntity", b =>
-                {
-                    b.HasOne("Phantom.Server.Database.Entities.RoleEntity", "Role")
-                        .WithMany()
-                        .HasForeignKey("RoleGuid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Phantom.Server.Database.Entities.UserEntity", "User")
-                        .WithMany()
-                        .HasForeignKey("UserGuid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-
-                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

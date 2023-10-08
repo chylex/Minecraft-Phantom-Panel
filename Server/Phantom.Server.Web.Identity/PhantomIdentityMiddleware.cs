@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Microsoft.AspNetCore.Authentication;
 using Phantom.Server.Web.Identity.Authentication;
 using Phantom.Server.Web.Identity.Interfaces;
 
@@ -22,11 +23,13 @@ sealed class PhantomIdentityMiddleware {
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	public async Task InvokeAsync(HttpContext context, INavigation navigation, PhantomLoginManager loginManager) {
 		var path = context.Request.Path;
-		if (path == LoginPath && context.Request.Query.TryGetValue("token", out var tokens) && tokens[0] is {} token && await loginManager.ProcessTokenAndGetReturnUrl(token) is {} returnUrl) {
-			context.Response.Redirect(navigation.BasePath + returnUrl);
+		if (path == LoginPath && context.Request.Query.TryGetValue("token", out var tokens) && tokens[0] is {} token && await loginManager.ProcessToken(token) is {} result) {
+			await context.SignInAsync(result.ClaimsPrincipal, result.AuthenticationProperties);
+			context.Response.Redirect(navigation.BasePath + result.ReturnUrl);
 		}
 		else if (path == LogoutPath) {
-			await loginManager.SignOut();
+			loginManager.OnSignedOut(context.User);
+			await context.SignOutAsync();
 			context.Response.Redirect(navigation.BasePath);
 		}
 		else {
