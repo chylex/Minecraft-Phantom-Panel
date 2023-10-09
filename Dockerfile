@@ -29,7 +29,7 @@ RUN dotnet publish Agent/Phantom.Agent/Phantom.Agent.csproj \
 # +----------------------+
 FROM phantom-base-builder AS phantom-server-builder
 
-RUN dotnet publish Server/Phantom.Server.Web/Phantom.Server.Web.csproj \
+RUN dotnet publish Web/Phantom.Web/Phantom.Web.csproj \
     /p:DebugType=None                                                  \
     /p:DebugSymbols=false                                              \
     --no-restore                                                       \
@@ -37,7 +37,7 @@ RUN dotnet publish Server/Phantom.Server.Web/Phantom.Server.Web.csproj \
     --configuration Release                                            \
     --output /app/out
 
-RUN dotnet publish Server/Phantom.Server/Phantom.Server.csproj \
+RUN dotnet publish Controller/Phantom.Controller/Phantom.Controller.csproj \
     /p:DebugType=None                                          \
     /p:DebugSymbols=false                                      \
     --no-restore                                               \
@@ -83,4 +83,4 @@ WORKDIR /data
 
 COPY --from=phantom-server-builder --chmod=755 /app/out /app
 
-ENTRYPOINT ["dotnet", "/app/Phantom.Server.dll"]
+ENTRYPOINT ["dotnet", "/app/Phantom.Controller.dll"]

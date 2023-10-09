@@ -6,6 +6,10 @@
   </PropertyGroup>
   
   <PropertyGroup>
+    <RootNamespace>Phantom.Server</RootNamespace>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <OutputType>Exe</OutputType>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
@@ -14,11 +18,11 @@
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils\Phantom.Utils.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Database.Postgres\Phantom.Server.Database.Postgres.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Minecraft\Phantom.Server.Minecraft.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Rpc\Phantom.Server.Rpc.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Services\Phantom.Server.Services.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Web\Phantom.Server.Web.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Database.Postgres\Phantom.Controller.Database.Postgres.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Minecraft\Phantom.Controller.Minecraft.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Rpc\Phantom.Controller.Rpc.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Services\Phantom.Controller.Services.csproj" />
+    <ProjectReference Include="..\..\Web\Phantom.Web\Phantom.Web.csproj" />
   </ItemGroup>
 
 </Project>

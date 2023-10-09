@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
+  <PropertyGroup>
+    <RootNamespace>Phantom.Server.Minecraft</RootNamespace>
+  </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />

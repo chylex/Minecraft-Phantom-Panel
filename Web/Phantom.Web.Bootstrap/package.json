@@ -6,6 +6,6 @@
     "sass": "^1.55.0"
   },
   "scripts": {
-    "compile": "sass --style=compressed ./src/bootstrap.scss ../Phantom.Server.Web/wwwroot/lib/bootstrap/bootstrap.min.css"
+    "compile": "sass --style=compressed ./src/bootstrap.scss ../Phantom.Web/wwwroot/lib/bootstrap/bootstrap.min.css"
   }
 }

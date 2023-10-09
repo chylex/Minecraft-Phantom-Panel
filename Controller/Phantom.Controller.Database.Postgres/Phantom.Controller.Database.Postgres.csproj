@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
+  <PropertyGroup>
+    <RootNamespace>Phantom.Server.Database.Postgres</RootNamespace>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
       <PrivateAssets>all</PrivateAssets>
@@ -14,7 +18,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Phantom.Server.Database\Phantom.Server.Database.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Database\Phantom.Controller.Database.csproj" />
   </ItemGroup>
 
 </Project>

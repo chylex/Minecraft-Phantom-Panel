@@ -6,6 +6,10 @@
   </PropertyGroup>
   
   <PropertyGroup>
+    <RootNamespace>Phantom.Server.Web</RootNamespace>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   
@@ -19,10 +23,10 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Phantom.Server.Database\Phantom.Server.Database.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Services\Phantom.Server.Services.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Web.Components\Phantom.Server.Web.Components.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Web.Identity\Phantom.Server.Web.Identity.csproj" />
+    <ProjectReference Include="..\..\Controller\Phantom.Controller.Database\Phantom.Controller.Database.csproj" />
+    <ProjectReference Include="..\..\Controller\Phantom.Controller.Services\Phantom.Controller.Services.csproj" />
+    <ProjectReference Include="..\Phantom.Web.Components\Phantom.Web.Components.csproj" />
+    <ProjectReference Include="..\Phantom.Web.Identity\Phantom.Web.Identity.csproj" />
   </ItemGroup>
   
 </Project>

@@ -6,15 +6,19 @@
   </PropertyGroup>
   
   <PropertyGroup>
+    <RootNamespace>Phantom.Server.Services</RootNamespace>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Events\Phantom.Utils.Events.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Database\Phantom.Server.Database.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Minecraft\Phantom.Server.Minecraft.csproj" />
-    <ProjectReference Include="..\Phantom.Server.Rpc\Phantom.Server.Rpc.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Database\Phantom.Controller.Database.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Minecraft\Phantom.Controller.Minecraft.csproj" />
+    <ProjectReference Include="..\Phantom.Controller.Rpc\Phantom.Controller.Rpc.csproj" />
   </ItemGroup>
 
 </Project>
