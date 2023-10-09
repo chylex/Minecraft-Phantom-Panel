@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Minecraft;
-using Phantom.Server.Database.Converters;
-using Phantom.Server.Database.Entities;
-using Phantom.Server.Database.Enums;
-using Phantom.Server.Database.Factories;
+using Phantom.Controller.Database.Converters;
+using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Database.Enums;
+using Phantom.Controller.Database.Factories;
 
-namespace Phantom.Server.Database;
+namespace Phantom.Controller.Database;
 
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public class ApplicationDbContext : DbContext {

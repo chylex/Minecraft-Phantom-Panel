@@ -1,7 +1,7 @@
 ﻿using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 
-namespace Phantom.Server.Services.Agents;
+namespace Phantom.Controller.Services.Agents;
 
 public sealed record Agent(
 	Guid Guid,

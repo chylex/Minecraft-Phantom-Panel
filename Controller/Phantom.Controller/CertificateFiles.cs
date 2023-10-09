@@ -5,7 +5,7 @@ using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Serilog;
 
-namespace Phantom.Server;
+namespace Phantom.Controller;
 
 static class CertificateFiles {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(CertificateFiles));

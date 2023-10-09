@@ -5,15 +5,15 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
-using Phantom.Server.Database;
-using Phantom.Server.Rpc;
-using Phantom.Server.Services.Instances;
+using Phantom.Controller.Database;
+using Phantom.Controller.Rpc;
+using Phantom.Controller.Services.Instances;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Tasks;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Services.Agents;
+namespace Phantom.Controller.Services.Agents;
 
 public sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();

@@ -1,8 +1,8 @@
-﻿using Phantom.Server.Database.Entities;
-using Phantom.Server.Services.Audit;
-using Phantom.Server.Web.Identity.Interfaces;
+﻿using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Services.Audit;
+using Phantom.Web.Identity.Interfaces;
 
-namespace Phantom.Server.Web.Base;
+namespace Phantom.Web.Base;
 
 sealed class LoginEvents : ILoginEvents {
 	private readonly AuditLog auditLog;

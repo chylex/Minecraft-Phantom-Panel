@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Authentication;
-using Phantom.Server.Web.Identity.Authentication;
-using Phantom.Server.Web.Identity.Interfaces;
+using Phantom.Web.Identity.Authentication;
+using Phantom.Web.Identity.Interfaces;
 
-namespace Phantom.Server.Web.Identity;
+namespace Phantom.Web.Identity;
 
 sealed class PhantomIdentityMiddleware {
 	public const string LoginPath = "/login";

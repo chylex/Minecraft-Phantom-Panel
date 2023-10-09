@@ -1,4 +1,4 @@
-﻿namespace Phantom.Server.Services;
+﻿namespace Phantom.Controller.Services;
 
 public sealed record ServiceConfiguration(
 	string Version,

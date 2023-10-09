@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using Phantom.Server.Database;
+using Phantom.Controller.Database;
 
 #nullable disable
 
-namespace Phantom.Server.Database.Postgres.Migrations
+namespace Phantom.Controller.Database.Postgres.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20230213040522_AuditLogRename")]
@@ -222,7 +222,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("UserTokens", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AgentEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AgentEntity", b =>
                 {
                     b.Property<Guid>("AgentGuid")
                         .ValueGeneratedOnAdd()
@@ -250,7 +250,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Agents", "agents");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AuditEventEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AuditEventEntity", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -286,7 +286,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("AuditLog", "system");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.InstanceEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.InstanceEntity", b =>
                 {
                     b.Property<Guid>("InstanceGuid")
                         .ValueGeneratedOnAdd()
@@ -331,7 +331,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Instances", "agents");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.PermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.PermissionEntity", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -341,7 +341,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Permissions", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RolePermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.RolePermissionEntity", b =>
                 {
                     b.Property<string>("RoleId")
                         .HasColumnType("text");
@@ -356,7 +356,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("RolePermissions", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserPermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserPermissionEntity", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("text");
@@ -422,7 +422,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AuditEventEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AuditEventEntity", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
@@ -431,9 +431,9 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RolePermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.RolePermissionEntity", b =>
                 {
-                    b.HasOne("Phantom.Server.Database.Entities.PermissionEntity", null)
+                    b.HasOne("Phantom.Controller.Database.Entities.PermissionEntity", null)
                         .WithMany()
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -446,9 +446,9 @@ namespace Phantom.Server.Database.Postgres.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserPermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserPermissionEntity", b =>
                 {
-                    b.HasOne("Phantom.Server.Database.Entities.PermissionEntity", null)
+                    b.HasOne("Phantom.Controller.Database.Entities.PermissionEntity", null)
                         .WithMany()
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)

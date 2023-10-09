@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Phantom.Server.Database.Entities; 
+namespace Phantom.Controller.Database.Entities; 
 
 [Table("RolePermissions", Schema = "identity")]
 public sealed class RolePermissionEntity {

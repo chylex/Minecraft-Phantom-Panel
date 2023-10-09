@@ -6,10 +6,6 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <RootNamespace>Phantom.Server</RootNamespace>
-  </PropertyGroup>
-  
-  <PropertyGroup>
     <OutputType>Exe</OutputType>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>

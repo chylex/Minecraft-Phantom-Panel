@@ -6,10 +6,6 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <RootNamespace>Phantom.Server.Web.Identity</RootNamespace>
-  </PropertyGroup>
-  
-  <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   

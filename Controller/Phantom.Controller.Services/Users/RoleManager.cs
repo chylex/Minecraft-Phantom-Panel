@@ -1,13 +1,13 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Common.Logging;
-using Phantom.Server.Database;
-using Phantom.Server.Database.Entities;
+using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Tasks;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Services.Users;
+namespace Phantom.Controller.Services.Users;
 
 public sealed class RoleManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<RoleManager>();

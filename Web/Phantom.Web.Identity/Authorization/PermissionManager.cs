@@ -1,9 +1,9 @@
 ﻿using System.Security.Claims;
-using Phantom.Server.Database;
-using Phantom.Server.Services.Users;
-using Phantom.Server.Web.Identity.Data;
+using Phantom.Controller.Database;
+using Phantom.Controller.Services.Users;
+using Phantom.Web.Identity.Data;
 
-namespace Phantom.Server.Web.Identity.Authorization;
+namespace Phantom.Web.Identity.Authorization;
 
 public sealed class PermissionManager {
 	private readonly DatabaseProvider databaseProvider;

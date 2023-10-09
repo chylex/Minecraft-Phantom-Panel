@@ -2,7 +2,7 @@
 using Phantom.Common.Logging;
 using Phantom.Utils.Runtime;
 
-namespace Phantom.Server;
+namespace Phantom.Controller;
 
 sealed record Variables(
 	string WebServerHost,

@@ -2,9 +2,9 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Phantom.Server.Database.Enums;
+using Phantom.Controller.Database.Enums;
 
-namespace Phantom.Server.Database.Entities; 
+namespace Phantom.Controller.Database.Entities; 
 
 [Table("EventLog", Schema = "system")]
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]

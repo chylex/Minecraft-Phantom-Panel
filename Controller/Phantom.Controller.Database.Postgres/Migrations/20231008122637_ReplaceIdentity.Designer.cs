@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using Phantom.Server.Database;
+using Phantom.Controller.Database;
 
 #nullable disable
 
-namespace Phantom.Server.Database.Postgres.Migrations
+namespace Phantom.Controller.Database.Postgres.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20231008122637_ReplaceIdentity")]
@@ -26,7 +26,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AgentEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AgentEntity", b =>
                 {
                     b.Property<Guid>("AgentGuid")
                         .ValueGeneratedOnAdd()
@@ -54,7 +54,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Agents", "agents");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AuditLogEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AuditLogEntity", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -88,7 +88,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("AuditLog", "system");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.EventLogEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.EventLogEntity", b =>
                 {
                     b.Property<Guid>("EventGuid")
                         .ValueGeneratedOnAdd()
@@ -120,7 +120,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("EventLog", "system");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.InstanceEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.InstanceEntity", b =>
                 {
                     b.Property<Guid>("InstanceGuid")
                         .ValueGeneratedOnAdd()
@@ -165,7 +165,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Instances", "agents");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.PermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.PermissionEntity", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");

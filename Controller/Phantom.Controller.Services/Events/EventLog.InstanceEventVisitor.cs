@@ -1,8 +1,8 @@
 ﻿using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
-using Phantom.Server.Database.Enums;
+using Phantom.Controller.Database.Enums;
 
-namespace Phantom.Server.Services.Events;
+namespace Phantom.Controller.Services.Events;
 
 public sealed partial class EventLog {
 	internal IInstanceEventVisitor CreateInstanceEventVisitor(Guid eventGuid, DateTime utcTime, Guid agentGuid, Guid instanceGuid) {

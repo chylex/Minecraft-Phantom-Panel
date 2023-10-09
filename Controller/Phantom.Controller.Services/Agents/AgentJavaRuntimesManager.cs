@@ -2,7 +2,7 @@
 using Phantom.Common.Data.Java;
 using Phantom.Utils.Collections;
 
-namespace Phantom.Server.Services.Agents; 
+namespace Phantom.Controller.Services.Agents; 
 
 public sealed class AgentJavaRuntimesManager {
 	private readonly RwLockedDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> runtimes = new (LockRecursionPolicy.NoRecursion);

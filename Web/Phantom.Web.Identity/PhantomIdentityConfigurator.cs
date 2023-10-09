@@ -1,16 +1,16 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Common.Logging;
-using Phantom.Server.Database;
-using Phantom.Server.Database.Entities;
-using Phantom.Server.Services.Users;
-using Phantom.Server.Web.Identity.Data;
+using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Services.Users;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;
+using Phantom.Web.Identity.Data;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Web.Identity;
+namespace Phantom.Web.Identity;
 
 public sealed class PhantomIdentityConfigurator {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomIdentityConfigurator>();

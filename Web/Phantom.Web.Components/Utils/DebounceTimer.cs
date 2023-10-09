@@ -1,7 +1,7 @@
 ﻿using System.Timers;
 using Timer = System.Timers.Timer;
 
-namespace Phantom.Server.Web.Components.Utils;
+namespace Phantom.Web.Components.Utils;
 
 sealed class DebounceTimer : IDisposable {
 	public event EventHandler? Fired;

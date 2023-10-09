@@ -1,7 +1,7 @@
 ﻿@page "/instances/{InstanceGuid:guid}/edit"
 @attribute [Authorize(Permission.CreateInstancesPolicy)]
-@using Phantom.Server.Services.Instances
 @using Phantom.Common.Data.Instance
+@using Phantom.Controller.Services.Instances
 @inherits PhantomComponent
 @inject InstanceManager InstanceManager
 

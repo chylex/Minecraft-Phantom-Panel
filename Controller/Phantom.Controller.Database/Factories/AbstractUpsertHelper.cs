@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace Phantom.Server.Database.Factories;
+namespace Phantom.Controller.Database.Factories;
 
 public abstract class AbstractUpsertHelper<T> where T : class {
 	private protected readonly ApplicationDbContext Ctx;

@@ -1,16 +1,16 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Data.Agent;
-using Phantom.Server.Minecraft;
-using Phantom.Server.Services;
-using Phantom.Server.Services.Agents;
-using Phantom.Server.Services.Audit;
-using Phantom.Server.Services.Events;
-using Phantom.Server.Services.Instances;
-using Phantom.Server.Services.Rpc;
+using Phantom.Controller.Minecraft;
+using Phantom.Controller.Services;
+using Phantom.Controller.Services.Agents;
+using Phantom.Controller.Services.Audit;
+using Phantom.Controller.Services.Events;
+using Phantom.Controller.Services.Instances;
+using Phantom.Controller.Services.Rpc;
 using Phantom.Utils.Tasks;
-using WebLauncher = Phantom.Server.Web.Launcher;
+using WebLauncher = Phantom.Web.Launcher;
 
-namespace Phantom.Server;
+namespace Phantom.Controller;
 
 sealed class WebConfigurator : WebLauncher.IConfigurator {
 	private readonly ServiceConfiguration serviceConfiguration;

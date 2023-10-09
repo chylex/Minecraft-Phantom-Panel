@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace Phantom.Server.Services.Users;
+namespace Phantom.Controller.Services.Users;
 
 public abstract record SetUserPasswordError {
 	private SetUserPasswordError() {}

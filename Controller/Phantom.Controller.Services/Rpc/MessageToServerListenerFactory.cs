@@ -1,9 +1,9 @@
-﻿using Phantom.Server.Rpc;
-using Phantom.Server.Services.Agents;
-using Phantom.Server.Services.Events;
-using Phantom.Server.Services.Instances;
+﻿using Phantom.Controller.Rpc;
+using Phantom.Controller.Services.Agents;
+using Phantom.Controller.Services.Events;
+using Phantom.Controller.Services.Instances;
 
-namespace Phantom.Server.Services.Rpc; 
+namespace Phantom.Controller.Services.Rpc; 
 
 public sealed class MessageToServerListenerFactory {
 	private readonly ServiceConfiguration configuration;

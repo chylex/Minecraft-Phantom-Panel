@@ -4,7 +4,7 @@ using Phantom.Common.Messages;
 using Phantom.Common.Messages.BiDirectional;
 using Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Server.Rpc;
+namespace Phantom.Controller.Rpc;
 
 public sealed class RpcClientConnection {
 	private readonly ServerSocket socket;

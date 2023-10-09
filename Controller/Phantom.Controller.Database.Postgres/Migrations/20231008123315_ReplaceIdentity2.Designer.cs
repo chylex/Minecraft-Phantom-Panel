@@ -6,11 +6,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using Phantom.Server.Database;
+using Phantom.Controller.Database;
 
 #nullable disable
 
-namespace Phantom.Server.Database.Postgres.Migrations
+namespace Phantom.Controller.Database.Postgres.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20231008123315_ReplaceIdentity2")]
@@ -26,7 +26,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AgentEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AgentEntity", b =>
                 {
                     b.Property<Guid>("AgentGuid")
                         .ValueGeneratedOnAdd()
@@ -54,7 +54,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Agents", "agents");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AuditLogEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AuditLogEntity", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -90,7 +90,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("AuditLog", "system");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.EventLogEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.EventLogEntity", b =>
                 {
                     b.Property<Guid>("EventGuid")
                         .ValueGeneratedOnAdd()
@@ -122,7 +122,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("EventLog", "system");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.InstanceEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.InstanceEntity", b =>
                 {
                     b.Property<Guid>("InstanceGuid")
                         .ValueGeneratedOnAdd()
@@ -167,7 +167,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Instances", "agents");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.PermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.PermissionEntity", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -177,7 +177,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Permissions", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RoleEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.RoleEntity", b =>
                 {
                     b.Property<Guid>("RoleGuid")
                         .ValueGeneratedOnAdd()
@@ -192,7 +192,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Roles", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RolePermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.RolePermissionEntity", b =>
                 {
                     b.Property<Guid>("RoleGuid")
                         .HasColumnType("uuid");
@@ -207,7 +207,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("RolePermissions", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserEntity", b =>
                 {
                     b.Property<Guid>("UserGuid")
                         .ValueGeneratedOnAdd()
@@ -229,7 +229,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("Users", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserPermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserPermissionEntity", b =>
                 {
                     b.Property<Guid>("UserGuid")
                         .HasColumnType("uuid");
@@ -244,7 +244,7 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("UserPermissions", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserRoleEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserRoleEntity", b =>
                 {
                     b.Property<Guid>("UserGuid")
                         .HasColumnType("uuid");
@@ -259,9 +259,9 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.ToTable("UserRoles", "identity");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.AuditLogEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.AuditLogEntity", b =>
                 {
-                    b.HasOne("Phantom.Server.Database.Entities.UserEntity", "User")
+                    b.HasOne("Phantom.Controller.Database.Entities.UserEntity", "User")
                         .WithMany()
                         .HasForeignKey("UserGuid")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -269,45 +269,45 @@ namespace Phantom.Server.Database.Postgres.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.RolePermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.RolePermissionEntity", b =>
                 {
-                    b.HasOne("Phantom.Server.Database.Entities.PermissionEntity", null)
+                    b.HasOne("Phantom.Controller.Database.Entities.PermissionEntity", null)
                         .WithMany()
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Phantom.Server.Database.Entities.RoleEntity", null)
+                    b.HasOne("Phantom.Controller.Database.Entities.RoleEntity", null)
                         .WithMany()
                         .HasForeignKey("RoleGuid")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserPermissionEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserPermissionEntity", b =>
                 {
-                    b.HasOne("Phantom.Server.Database.Entities.PermissionEntity", null)
+                    b.HasOne("Phantom.Controller.Database.Entities.PermissionEntity", null)
                         .WithMany()
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Phantom.Server.Database.Entities.UserEntity", null)
+                    b.HasOne("Phantom.Controller.Database.Entities.UserEntity", null)
                         .WithMany()
                         .HasForeignKey("UserGuid")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Phantom.Server.Database.Entities.UserRoleEntity", b =>
+            modelBuilder.Entity("Phantom.Controller.Database.Entities.UserRoleEntity", b =>
                 {
-                    b.HasOne("Phantom.Server.Database.Entities.RoleEntity", "Role")
+                    b.HasOne("Phantom.Controller.Database.Entities.RoleEntity", "Role")
                         .WithMany()
                         .HasForeignKey("RoleGuid")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Phantom.Server.Database.Entities.UserEntity", "User")
+                    b.HasOne("Phantom.Controller.Database.Entities.UserEntity", "User")
                         .WithMany()
                         .HasForeignKey("UserGuid")
                         .OnDelete(DeleteBehavior.Cascade)

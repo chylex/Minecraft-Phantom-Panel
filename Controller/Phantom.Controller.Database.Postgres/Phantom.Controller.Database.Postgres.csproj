@@ -5,10 +5,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
-  <PropertyGroup>
-    <RootNamespace>Phantom.Server.Database.Postgres</RootNamespace>
-  </PropertyGroup>
-  
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
       <PrivateAssets>all</PrivateAssets>

@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Minecraft;
 
-namespace Phantom.Server.Database.Entities; 
+namespace Phantom.Controller.Database.Entities; 
 
 [Table("Instances", Schema = "agents")]
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]

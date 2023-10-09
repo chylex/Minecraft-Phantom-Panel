@@ -8,7 +8,7 @@ using Phantom.Utils.IO;
 using Phantom.Utils.Runtime;
 using Serilog;
 
-namespace Phantom.Server.Minecraft;
+namespace Phantom.Controller.Minecraft;
 
 sealed class MinecraftVersionApi : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftVersionApi>();

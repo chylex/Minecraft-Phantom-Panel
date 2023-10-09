@@ -5,10 +5,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
-  <PropertyGroup>
-    <RootNamespace>Phantom.Server.Web.Components</RootNamespace>
-  </PropertyGroup>
-  
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>

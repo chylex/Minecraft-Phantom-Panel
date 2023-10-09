@@ -5,10 +5,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   
-  <PropertyGroup>
-    <RootNamespace>Phantom.Server.Rpc</RootNamespace>
-  </PropertyGroup>
-  
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Messages\Phantom.Common.Messages.csproj" />
   </ItemGroup>

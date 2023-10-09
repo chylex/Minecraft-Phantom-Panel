@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Phantom.Common.Data;
 
-namespace Phantom.Server.Database.Converters;
+namespace Phantom.Controller.Database.Converters;
 
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 sealed class RamAllocationUnitsConverter : ValueConverter<RamAllocationUnits, ushort> {

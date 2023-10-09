@@ -1,7 +1,7 @@
-﻿using Phantom.Server.Database.Entities;
-using Phantom.Server.Database.Enums;
+﻿using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Database.Enums;
 
-namespace Phantom.Server.Services.Audit;
+namespace Phantom.Controller.Services.Audit;
 
 public sealed partial class AuditLog {
 	public Task AddAdministratorUserCreatedEvent(UserEntity administratorUser) {

@@ -2,21 +2,20 @@
 using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
-using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages;
 using Phantom.Common.Messages.ToAgent;
-using Phantom.Server.Database;
-using Phantom.Server.Database.Entities;
-using Phantom.Server.Minecraft;
-using Phantom.Server.Services.Agents;
+using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Minecraft;
+using Phantom.Controller.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Services.Instances;
+namespace Phantom.Controller.Services.Instances;
 
 public sealed class InstanceManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManager>();

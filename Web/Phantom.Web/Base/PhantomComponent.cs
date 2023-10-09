@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Phantom.Common.Logging;
-using Phantom.Server.Web.Identity.Authorization;
-using Phantom.Server.Web.Identity.Data;
+using Phantom.Web.Identity.Authorization;
+using Phantom.Web.Identity.Data;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Web.Base; 
+namespace Phantom.Web.Base; 
 
 public abstract class PhantomComponent : ComponentBase {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomComponent>();

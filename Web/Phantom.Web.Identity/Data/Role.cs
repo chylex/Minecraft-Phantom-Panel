@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace Phantom.Server.Web.Identity.Data;
+namespace Phantom.Web.Identity.Data;
 
 public sealed record Role(Guid Guid, string Name, ImmutableArray<Permission> Permissions) {
 	private static readonly List<Role> AllRoles = new ();

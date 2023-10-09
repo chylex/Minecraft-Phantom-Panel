@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data;
 
-namespace Phantom.Server.Database.Entities;
+namespace Phantom.Controller.Database.Entities;
 
 [Table("Agents", Schema = "agents")]
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Phantom.Server.Database.Postgres.Migrations
+namespace Phantom.Controller.Database.Postgres.Migrations
 {
     /// <inheritdoc />
     public partial class ReplaceIdentity2 : Migration

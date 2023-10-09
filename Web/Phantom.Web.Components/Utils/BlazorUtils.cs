@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace Phantom.Server.Web.Components.Utils;
+namespace Phantom.Web.Components.Utils;
 
 static class BlazorUtils {
 	[SuppressMessage("ReSharper", "ConvertIfStatementToReturnStatement")]

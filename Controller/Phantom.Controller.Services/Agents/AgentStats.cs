@@ -1,6 +1,6 @@
 ﻿using Phantom.Common.Data;
 
-namespace Phantom.Server.Services.Agents;
+namespace Phantom.Controller.Services.Agents;
 
 public sealed record AgentStats(
 	int RunningInstanceCount,

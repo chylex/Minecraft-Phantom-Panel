@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Phantom.Server.Database;
-using Phantom.Server.Database.Entities;
-using Phantom.Server.Database.Enums;
-using Phantom.Server.Services.Users;
+using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Database.Enums;
+using Phantom.Controller.Services.Users;
 using Phantom.Utils.Tasks;
 
-namespace Phantom.Server.Services.Audit;
+namespace Phantom.Controller.Services.Audit;
 
 public sealed partial class AuditLog {
 	private readonly CancellationToken cancellationToken;

@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using Phantom.Server.Database.Entities;
-using Phantom.Server.Web.Base;
-using Phantom.Server.Web.Components.Forms;
-using Phantom.Server.Web.Identity.Data;
+using Phantom.Controller.Database.Entities;
+using Phantom.Web.Base;
+using Phantom.Web.Components.Forms;
+using Phantom.Web.Identity.Data;
 
-namespace Phantom.Server.Web.Shared;
+namespace Phantom.Web.Shared;
 
 public abstract class UserEditDialogBase : PhantomComponent {
 	[Inject]

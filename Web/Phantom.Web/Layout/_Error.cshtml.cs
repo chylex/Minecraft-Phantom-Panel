@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Phantom.Server.Web.Layout;
+namespace Phantom.Web.Layout;
 
 [AllowAnonymous]
 [IgnoreAntiforgeryToken]

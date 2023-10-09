@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.AspNetCore.Components.Web;
-using Phantom.Server.Web.Components.Forms.Base;
+using Phantom.Web.Components.Forms.Base;
 
-namespace Phantom.Server.Web.Components.Forms.Fields;
+namespace Phantom.Web.Components.Forms.Fields;
 
 public sealed class InputFieldText : InputBase<string?>, ICustomFormField {
 	[Parameter]

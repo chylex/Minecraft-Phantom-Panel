@@ -1,4 +1,4 @@
-﻿namespace Phantom.Server.Services.Instances;
+﻿namespace Phantom.Controller.Services.Instances;
 
 public enum AddOrEditInstanceResult : byte {
 	UnknownError,

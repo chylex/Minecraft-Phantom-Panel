@@ -1,4 +1,4 @@
-﻿namespace Phantom.Server.Web.Components.Forms;
+﻿namespace Phantom.Web.Components.Forms;
 
 public enum FormTextInputType {
 	Text,

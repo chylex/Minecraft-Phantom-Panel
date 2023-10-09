@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 
-namespace Phantom.Server.Web.Components.Utils;
+namespace Phantom.Web.Components.Utils;
 
 static class BootstrapEditContext {
 	public static EditContext Create(object model) {

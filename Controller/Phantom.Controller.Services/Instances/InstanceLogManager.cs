@@ -5,7 +5,7 @@ using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Services.Instances; 
+namespace Phantom.Controller.Services.Instances; 
 
 public sealed class InstanceLogManager {
 	private const int RetainedLines = 1000;

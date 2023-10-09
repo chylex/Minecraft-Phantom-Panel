@@ -1,8 +1,8 @@
 ﻿@page "/instances"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
 @using System.Collections.Immutable
-@using Phantom.Server.Services.Agents
-@using Phantom.Server.Services.Instances
+@using Phantom.Controller.Services.Instances
+@using Phantom.Controller.Services.Agents
 @implements IDisposable
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager

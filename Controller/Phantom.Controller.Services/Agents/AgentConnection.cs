@@ -1,7 +1,7 @@
 ﻿using Phantom.Common.Messages;
-using Phantom.Server.Rpc;
+using Phantom.Controller.Rpc;
 
-namespace Phantom.Server.Services.Agents;
+namespace Phantom.Controller.Services.Agents;
 
 sealed class AgentConnection {
 	private readonly RpcClientConnection connection;

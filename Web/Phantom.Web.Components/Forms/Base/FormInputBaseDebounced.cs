@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
-using Phantom.Server.Web.Components.Utils;
+using Phantom.Web.Components.Utils;
 
-namespace Phantom.Server.Web.Components.Forms.Base;
+namespace Phantom.Web.Components.Forms.Base;
 
 public abstract class FormInputBaseDebounced<TValue> : FormInputBase<TValue>, IDisposable {
 	private const uint DefaultDebounceMillis = 700;

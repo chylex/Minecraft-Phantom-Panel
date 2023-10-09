@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace Phantom.Server.Web.Identity.Authorization;
+namespace Phantom.Web.Identity.Authorization;
 
 sealed class PermissionBasedPolicyHandler : AuthorizationHandler<PermissionBasedPolicyRequirement> {
 	private readonly PermissionManager permissionManager;

@@ -6,10 +6,6 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <RootNamespace>Phantom.Server.Services</RootNamespace>
-  </PropertyGroup>
-  
-  <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   

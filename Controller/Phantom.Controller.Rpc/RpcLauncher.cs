@@ -8,7 +8,7 @@ using Phantom.Utils.Tasks;
 using Serilog;
 using Serilog.Events;
 
-namespace Phantom.Server.Rpc;
+namespace Phantom.Controller.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ServerSocket> {
 	public static Task Launch(RpcConfiguration config, Func<RpcClientConnection, IMessageToServerListener> listenerFactory, CancellationToken cancellationToken) {

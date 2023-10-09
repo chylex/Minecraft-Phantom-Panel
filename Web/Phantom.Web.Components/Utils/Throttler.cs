@@ -1,4 +1,4 @@
-﻿namespace Phantom.Server.Web.Components.Utils;
+﻿namespace Phantom.Web.Components.Utils;
 
 public sealed class Throttler {
 	private readonly TimeSpan interval;

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Text.RegularExpressions;
 
-namespace Phantom.Server.Services.Instances;
+namespace Phantom.Controller.Services.Instances;
 
 static partial class InstanceLogHtmlFilters {
 	/// <summary>

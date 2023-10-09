@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Web;
 using Microsoft.AspNetCore.Components;
-using Phantom.Server.Web.Identity.Interfaces;
+using Phantom.Web.Identity.Interfaces;
 
-namespace Phantom.Server.Web.Base; 
+namespace Phantom.Web.Base; 
 
 sealed class Navigation : INavigation {
 	public static Func<IServiceProvider, Navigation> Create(string basePath) {

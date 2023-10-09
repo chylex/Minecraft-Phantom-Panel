@@ -1,10 +1,10 @@
 ﻿@page "/audit"
 @attribute [Authorize(Permission.ViewAuditPolicy)]
-@using Phantom.Server.Services.Audit
-@using Phantom.Server.Services.Instances
-@using Phantom.Server.Services.Users
+@using Phantom.Controller.Services.Audit
+@using Phantom.Controller.Services.Instances
+@using Phantom.Controller.Services.Users
 @using System.Collections.Immutable
-@using Phantom.Server.Database.Enums
+@using Phantom.Controller.Database.Enums
 @implements IDisposable
 @inject AuditLog AuditLog
 @inject InstanceManager InstanceManager

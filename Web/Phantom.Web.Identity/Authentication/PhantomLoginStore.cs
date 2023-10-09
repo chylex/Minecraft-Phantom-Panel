@@ -4,7 +4,7 @@ using Phantom.Common.Logging;
 using Phantom.Utils.Tasks;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Web.Identity.Authentication; 
+namespace Phantom.Web.Identity.Authentication; 
 
 public sealed class PhantomLoginStore {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginStore>();

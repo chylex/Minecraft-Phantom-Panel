@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Phantom.Common.Logging;
-using Phantom.Server.Services.Users;
-using Phantom.Server.Web.Identity.Interfaces;
+using Phantom.Controller.Services.Users;
 using Phantom.Utils.Cryptography;
+using Phantom.Web.Identity.Interfaces;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Server.Web.Identity.Authentication;
+namespace Phantom.Web.Identity.Authentication;
 
 public sealed class PhantomLoginManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomLoginManager>();

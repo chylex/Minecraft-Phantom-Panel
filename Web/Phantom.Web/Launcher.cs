@@ -1,13 +1,13 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
-using Phantom.Server.Database;
-using Phantom.Server.Web.Base;
-using Phantom.Server.Web.Components.Utils;
-using Phantom.Server.Web.Identity;
-using Phantom.Server.Web.Identity.Interfaces;
+using Phantom.Controller.Database;
+using Phantom.Web.Base;
+using Phantom.Web.Components.Utils;
+using Phantom.Web.Identity;
+using Phantom.Web.Identity.Interfaces;
 using Serilog;
 
-namespace Phantom.Server.Web;
+namespace Phantom.Web;
 
 public static class Launcher {
 	public static async Task<WebApplication> CreateApplication(Configuration config, IConfigurator configurator, Action<DbContextOptionsBuilder> dbOptionsBuilder) {

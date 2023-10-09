@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Phantom.Server.Web.Utils;
+namespace Phantom.Web.Utils;
 
 static partial class EnumNameConverter {
 	[GeneratedRegex(@"\B([A-Z])", RegexOptions.NonBacktracking)]

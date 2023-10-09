@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Phantom.Server.Database.Postgres;
+namespace Phantom.Controller.Database.Postgres;
 
 public sealed class ApplicationDbContextDesignFactory : IDesignTimeDbContextFactory<ApplicationDbContext> {
 	public ApplicationDbContext CreateDbContext(string[] args) {

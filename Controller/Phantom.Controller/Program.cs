@@ -2,18 +2,18 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Phantom.Common.Logging;
-using Phantom.Server;
-using Phantom.Server.Database.Postgres;
-using Phantom.Server.Rpc;
-using Phantom.Server.Services;
-using Phantom.Server.Services.Rpc;
+using Phantom.Controller;
+using Phantom.Controller.Database.Postgres;
+using Phantom.Controller.Rpc;
+using Phantom.Controller.Services;
+using Phantom.Controller.Services.Rpc;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;
-using WebConfiguration = Phantom.Server.Web.Configuration;
-using WebLauncher = Phantom.Server.Web.Launcher;
+using WebConfiguration = Phantom.Web.Configuration;
+using WebLauncher = Phantom.Web.Launcher;
 
 var cancellationTokenSource = new CancellationTokenSource();
 

@@ -2,12 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
-using Phantom.Server.Services.Users;
-using Phantom.Server.Web.Identity.Authentication;
-using Phantom.Server.Web.Identity.Authorization;
-using Phantom.Server.Web.Identity.Data;
+using Phantom.Controller.Services.Users;
+using Phantom.Web.Identity.Authentication;
+using Phantom.Web.Identity.Authorization;
+using Phantom.Web.Identity.Data;
 
-namespace Phantom.Server.Web.Identity;
+namespace Phantom.Web.Identity;
 
 public static class PhantomIdentityExtensions {
 	public static void AddPhantomIdentity(this IServiceCollection services, CancellationToken cancellationToken) {

@@ -1,6 +1,6 @@
-﻿using Phantom.Server.Database.Entities;
+﻿using Phantom.Controller.Database.Entities;
 
-namespace Phantom.Server.Web.Identity.Interfaces; 
+namespace Phantom.Web.Identity.Interfaces; 
 
 public interface ILoginEvents {
 	void UserLoggedIn(UserEntity user);

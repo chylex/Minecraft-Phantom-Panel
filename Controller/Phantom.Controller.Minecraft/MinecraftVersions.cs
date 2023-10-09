@@ -4,7 +4,7 @@ using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Logging;
 using Serilog;
 
-namespace Phantom.Server.Minecraft;
+namespace Phantom.Controller.Minecraft;
 
 public sealed class MinecraftVersions : IDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftVersions>();

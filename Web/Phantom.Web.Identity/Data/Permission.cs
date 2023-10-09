@@ -1,4 +1,4 @@
-﻿namespace Phantom.Server.Web.Identity.Data;
+﻿namespace Phantom.Web.Identity.Data;
 
 public sealed record Permission(string Id, Permission? Parent) {
 	private static readonly List<Permission> AllPermissions = new ();

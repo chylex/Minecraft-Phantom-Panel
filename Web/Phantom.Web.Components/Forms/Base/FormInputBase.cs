@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components;
 
-namespace Phantom.Server.Web.Components.Forms.Base;
+namespace Phantom.Web.Components.Forms.Base;
 
 public abstract class FormInputBase<TValue> : ComponentBase {
 	[Parameter, EditorRequired]

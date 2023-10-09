@@ -1,10 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Phantom.Server.Database;
-using Phantom.Server.Database.Entities;
-using Phantom.Server.Database.Enums;
+using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Database.Enums;
 using Phantom.Utils.Tasks;
 
-namespace Phantom.Server.Services.Events; 
+namespace Phantom.Controller.Services.Events; 
 
 public sealed partial class EventLog {
 	private readonly CancellationToken cancellationToken;

@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Phantom.Server.Database.Postgres.Migrations
+namespace Phantom.Controller.Database.Postgres.Migrations
 {
     /// <inheritdoc />
     public partial class InstanceJvmArguments : Migration

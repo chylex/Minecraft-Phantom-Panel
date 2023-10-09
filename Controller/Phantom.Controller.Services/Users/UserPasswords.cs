@@ -1,8 +1,8 @@
 ﻿using System.Collections.Immutable;
 using Microsoft.AspNetCore.Identity;
-using Phantom.Server.Database.Entities;
+using Phantom.Controller.Database.Entities;
 
-namespace Phantom.Server.Services.Users;
+namespace Phantom.Controller.Services.Users;
 
 internal static class UserPasswords {
 	private static PasswordHasher<UserEntity> Hasher { get; } = new ();

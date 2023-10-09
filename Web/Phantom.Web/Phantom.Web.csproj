@@ -6,15 +6,11 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <RootNamespace>Phantom.Server.Web</RootNamespace>
-  </PropertyGroup>
-  
-  <PropertyGroup>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   
   <PropertyGroup>
-    <UserSecretsId>aspnet-Phantom.Server.Web-DF4010C9-78FB-43F0-89AE-24296A3DAEF7</UserSecretsId>
+    <UserSecretsId>aspnet-Phantom.Web-DF4010C9-78FB-43F0-89AE-24296A3DAEF7</UserSecretsId>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
   </PropertyGroup>
   

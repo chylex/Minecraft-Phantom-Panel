@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
-using Phantom.Server.Web.Identity.Data;
+using Phantom.Web.Identity.Data;
 
-namespace Phantom.Server.Web.Identity.Authorization; 
+namespace Phantom.Web.Identity.Authorization; 
 
 public sealed class IdentityPermissions {
 	internal static IdentityPermissions None { get; } = new ();

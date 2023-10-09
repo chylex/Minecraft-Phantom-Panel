@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Phantom.Server.Web.Components.Utils; 
+namespace Phantom.Web.Components.Utils; 
 
 public abstract class FormValidationAttribute<TModel, TValue> : ValidationAttribute {
 	public sealed override bool IsValid(object? value) {
