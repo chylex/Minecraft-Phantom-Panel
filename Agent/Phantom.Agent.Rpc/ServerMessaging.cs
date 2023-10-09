@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Logging;
-using Phantom.Common.Messages;
+using Phantom.Common.Messages.Agent;
 using Serilog;
 
 namespace Phantom.Agent.Rpc;
@@ -24,11 +24,11 @@ public static class ServerMessaging {
 		Logger.Information("Server connection ready.");
 	}
 
-	public static Task Send<TMessage>(TMessage message) where TMessage : IMessageToServer {
+	public static Task Send<TMessage>(TMessage message) where TMessage : IMessageToController {
 		return CurrentConnectionOrThrow.Send(message);
 	}
 
-	public static Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
+	public static Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToController<TReply> where TReply : class {
 		return CurrentConnectionOrThrow.Send<TMessage, TReply>(message, waitForReplyTime, waitForReplyCancellationToken);
 	}
 }

@@ -6,7 +6,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\Phantom.Common.Messages\Phantom.Common.Messages.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Messages.Agent\Phantom.Common.Messages.Agent.csproj" />
   </ItemGroup>
 
 </Project>

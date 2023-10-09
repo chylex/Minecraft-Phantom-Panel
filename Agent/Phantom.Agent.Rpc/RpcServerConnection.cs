@@ -1,7 +1,7 @@
 ﻿using NetMQ;
 using NetMQ.Sockets;
-using Phantom.Common.Messages;
-using Phantom.Common.Messages.BiDirectional;
+using Phantom.Common.Messages.Agent;
+using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Agent.Rpc;
@@ -15,17 +15,17 @@ public sealed class RpcServerConnection {
 		this.replyTracker = replyTracker;
 	}
 
-	internal async Task Send<TMessage>(TMessage message) where TMessage : IMessageToServer {
-		var bytes = MessageRegistries.ToServer.Write(message).ToArray();
+	internal async Task Send<TMessage>(TMessage message) where TMessage : IMessageToController {
+		var bytes = AgentMessageRegistries.ToController.Write(message).ToArray();
 		if (bytes.Length > 0) {
 			await socket.SendAsync(bytes);
 		}
 	}
 
-	internal async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToServer<TReply> where TReply : class {
+	internal async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToController<TReply> where TReply : class {
 		var sequenceId = replyTracker.RegisterReply();
 		
-		var bytes = MessageRegistries.ToServer.Write<TMessage, TReply>(sequenceId, message).ToArray();
+		var bytes = AgentMessageRegistries.ToController.Write<TMessage, TReply>(sequenceId, message).ToArray();
 		if (bytes.Length == 0) {
 			replyTracker.ForgetReply(sequenceId);
 			return null;

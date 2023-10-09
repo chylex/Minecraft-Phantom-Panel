@@ -3,8 +3,8 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
-using Phantom.Common.Messages;
-using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.Agent;
+using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
 using Phantom.Controller.Rpc;
 using Phantom.Controller.Services.Instances;
@@ -26,20 +26,20 @@ public sealed class AgentManager {
 	public EventSubscribers<ImmutableArray<Agent>> AgentsChanged => agents.Subs;
 
 	private readonly CancellationToken cancellationToken;
-	private readonly AgentAuthToken authToken;
-	private readonly DatabaseProvider databaseProvider;
+	private readonly AuthToken authToken;
+	private readonly IDatabaseProvider databaseProvider;
 
-	public AgentManager(ServiceConfiguration configuration, AgentAuthToken authToken, DatabaseProvider databaseProvider, TaskManager taskManager) {
-		this.cancellationToken = configuration.CancellationToken;
+	public AgentManager(AuthToken authToken, IDatabaseProvider databaseProvider, TaskManager taskManager, CancellationToken cancellationToken) {
 		this.authToken = authToken;
 		this.databaseProvider = databaseProvider;
+		this.cancellationToken = cancellationToken;
 		taskManager.Run("Refresh agent status loop", RefreshAgentStatus);
 	}
 
-	public async Task Initialize() {
-		using var scope = databaseProvider.CreateScope();
+	internal async Task Initialize() {
+		await using var ctx = databaseProvider.Provide();
 
-		await foreach (var entity in scope.Ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+		await foreach (var entity in ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var agent = new Agent(entity.AgentGuid, entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
 			if (!agents.ByGuid.AddOrReplaceIf(agent.Guid, agent, static oldAgent => oldAgent.IsOffline)) {
 				// TODO
@@ -52,7 +52,7 @@ public sealed class AgentManager {
 		return agents.ByGuid.ToImmutable();
 	}
 
-	internal async Task<bool> RegisterAgent(AgentAuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcClientConnection connection) {
+	internal async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcClientConnection<IMessageToAgentListener> connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
 			return false;
@@ -68,8 +68,8 @@ public sealed class AgentManager {
 			oldAgent.Connection?.Close();
 		}
 
-		using (var scope = databaseProvider.CreateScope()) {
-			var entity = scope.Ctx.AgentUpsert.Fetch(agent.Guid);
+		await using (var ctx = databaseProvider.Provide()) {
+			var entity = ctx.AgentUpsert.Fetch(agent.Guid);
 
 			entity.Name = agent.Name;
 			entity.ProtocolVersion = agent.ProtocolVersion;
@@ -77,7 +77,7 @@ public sealed class AgentManager {
 			entity.MaxInstances = agent.MaxInstances;
 			entity.MaxMemory = agent.MaxMemory;
 
-			await scope.Ctx.SaveChangesAsync(cancellationToken);
+			await ctx.SaveChangesAsync(cancellationToken);
 		}
 
 		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
@@ -88,7 +88,7 @@ public sealed class AgentManager {
 		return true;
 	}
 
-	internal bool UnregisterAgent(Guid agentGuid, RpcClientConnection connection) {
+	internal bool UnregisterAgent(Guid agentGuid, RpcClientConnection<IMessageToAgentListener> connection) {
 		if (agents.ByGuid.TryReplaceIf(agentGuid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent.Connection?.IsSame(connection) == true)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", agentGuid);
 			return true;

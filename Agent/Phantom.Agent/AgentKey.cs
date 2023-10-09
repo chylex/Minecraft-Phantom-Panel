@@ -10,7 +10,7 @@ namespace Phantom.Agent;
 static class AgentKey {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(AgentKey));
 
-	public static Task<(NetMQCertificate, AgentAuthToken)?> Load(string? agentKeyToken, string? agentKeyFilePath) {
+	public static Task<(NetMQCertificate, AuthToken)?> Load(string? agentKeyToken, string? agentKeyFilePath) {
 		if (agentKeyFilePath != null) {
 			return LoadFromFile(agentKeyFilePath);
 		}
@@ -22,7 +22,7 @@ static class AgentKey {
 		}
 	}
 
-	private static async Task<(NetMQCertificate, AgentAuthToken)?> LoadFromFile(string agentKeyFilePath) {
+	private static async Task<(NetMQCertificate, AuthToken)?> LoadFromFile(string agentKeyFilePath) {
 		if (!File.Exists(agentKeyFilePath)) {
 			Logger.Fatal("Missing agent key file: {AgentKeyFilePath}", agentKeyFilePath);
 			return null;
@@ -41,7 +41,7 @@ static class AgentKey {
 		}
 	}
 
-	private static (NetMQCertificate, AgentAuthToken)? LoadFromToken(string agentKey) {
+	private static (NetMQCertificate, AuthToken)? LoadFromToken(string agentKey) {
 		try {
 			return LoadFromBytes(TokenGenerator.DecodeBytes(agentKey));
 		} catch (Exception) {
@@ -50,11 +50,11 @@ static class AgentKey {
 		}
 	}
 
-	private static (NetMQCertificate, AgentAuthToken)? LoadFromBytes(byte[] agentKey) {
-		var (publicKey, agentToken) = AgentKeyData.FromBytes(agentKey);
-		var serverCertificate = NetMQCertificate.FromPublicKey(publicKey);
+	private static (NetMQCertificate, AuthToken)? LoadFromBytes(byte[] agentKey) {
+		var (publicKey, agentToken) = ConnectionCommonKey.FromBytes(agentKey);
+		var controllerCertificate = NetMQCertificate.FromPublicKey(publicKey);
 		
 		Logger.Information("Loaded agent key.");
-		return (serverCertificate, agentToken);
+		return (controllerCertificate, agentToken);
 	}
 }

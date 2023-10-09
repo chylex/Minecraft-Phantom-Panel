@@ -2,10 +2,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
-using Phantom.Controller.Services.Users;
 using Phantom.Web.Identity.Authentication;
 using Phantom.Web.Identity.Authorization;
-using Phantom.Web.Identity.Data;
 
 namespace Phantom.Web.Identity;
 
@@ -17,14 +15,8 @@ public static class PhantomIdentityExtensions {
 		services.AddSingleton(PhantomLoginStore.Create(cancellationToken));
 		services.AddScoped<PhantomLoginManager>();
 		
-		services.AddScoped<PhantomIdentityConfigurator>();
 		services.AddScoped<IAuthorizationHandler, PermissionBasedPolicyHandler>();
 		services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
-		
-		services.AddScoped<UserManager>();
-		services.AddScoped<RoleManager>();
-		services.AddScoped<UserRoleManager>();
-		services.AddTransient<PermissionManager>();
 	}
 
 	public static void UsePhantomIdentity(this IApplicationBuilder application) {

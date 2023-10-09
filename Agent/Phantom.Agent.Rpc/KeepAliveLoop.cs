@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Logging;
-using Phantom.Common.Messages.ToServer;
+using Phantom.Common.Messages.Agent.ToController;
 using Serilog;
 
 namespace Phantom.Agent.Rpc;

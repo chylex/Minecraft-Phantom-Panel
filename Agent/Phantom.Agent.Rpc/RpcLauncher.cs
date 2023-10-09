@@ -1,9 +1,9 @@
 ﻿using NetMQ;
 using NetMQ.Sockets;
 using Phantom.Common.Data.Agent;
-using Phantom.Common.Messages;
-using Phantom.Common.Messages.BiDirectional;
-using Phantom.Common.Messages.ToServer;
+using Phantom.Common.Messages.Agent;
+using Phantom.Common.Messages.Agent.BiDirectional;
+using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Tasks;
@@ -13,13 +13,13 @@ using Serilog.Events;
 namespace Phantom.Agent.Rpc;
 
 public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
-	public static Task Launch(RpcConfiguration config, AgentAuthToken authToken, AgentInfo agentInfo, Func<RpcServerConnection, IMessageToAgentListener> listenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) {
+	public static Task Launch(RpcConfiguration config, AuthToken authToken, AgentInfo agentInfo, Func<RpcServerConnection, IMessageToAgentListener> listenerFactory, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 
 		options.CurveServerCertificate = config.ServerCertificate;
 		options.CurveCertificate = new NetMQCertificate();
-		options.HelloMessage = MessageRegistries.ToServer.Write(new RegisterAgentMessage(authToken, agentInfo)).ToArray();
+		options.HelloMessage = AgentMessageRegistries.ToController.Write(new RegisterAgentMessage(authToken, agentInfo)).ToArray();
 
 		return new RpcLauncher(config, socket, agentInfo.Guid, listenerFactory, disconnectSemaphore, receiveCancellationToken).Launch();
 	}
@@ -63,7 +63,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 				LogMessageType(logger, data);
 				
 				if (data.Length > 0) {
-					MessageRegistries.ToAgent.Handle(data, handler);
+					AgentMessageRegistries.ToAgent.Handle(data, handler);
 				}
 			}
 		} catch (OperationCanceledException) {
@@ -81,11 +81,11 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 			return;
 		}
 
-		if (data.Length > 0 && MessageRegistries.ToAgent.TryGetType(data, out var type)) {
-			logger.Verbose("Received {MessageType} ({Bytes} B) from server.", type.Name, data.Length);
+		if (data.Length > 0 && AgentMessageRegistries.ToAgent.TryGetType(data, out var type)) {
+			logger.Verbose("Received {MessageType} ({Bytes} B) from controller.", type.Name, data.Length);
 		}
 		else {
-			logger.Verbose("Received {Bytes} B message from server.", data.Length);
+			logger.Verbose("Received {Bytes} B message from controller.", data.Length);
 		}
 	}
 
@@ -93,7 +93,7 @@ public sealed class RpcLauncher : RpcRuntime<ClientSocket> {
 		var unregisterTimeoutTask = Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None);
 		var finishedTask = await Task.WhenAny(ServerMessaging.Send(new UnregisterAgentMessage(agentGuid)), unregisterTimeoutTask);
 		if (finishedTask == unregisterTimeoutTask) {
-			config.RuntimeLogger.Error("Timed out communicating agent shutdown with the server.");
+			config.RuntimeLogger.Error("Timed out communicating agent shutdown with the controller.");
 		}
 	}
 

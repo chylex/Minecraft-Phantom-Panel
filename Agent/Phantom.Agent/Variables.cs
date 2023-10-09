@@ -6,8 +6,8 @@ using Phantom.Utils.Runtime;
 namespace Phantom.Agent;
 
 sealed record Variables(
-	string ServerHost,
-	ushort ServerPort,
+	string ControllerHost,
+	ushort ControllerPort,
 	string JavaSearchPath,
 	string? AgentKeyToken,
 	string? AgentKeyFilePath,
@@ -23,8 +23,8 @@ sealed record Variables(
 		var javaSearchPath = EnvironmentVariables.GetString("JAVA_SEARCH_PATH").WithDefaultGetter(GetDefaultJavaSearchPath);
 
 		return new Variables(
-			EnvironmentVariables.GetString("SERVER_HOST").Require,
-			EnvironmentVariables.GetPortNumber("SERVER_PORT").WithDefault(9401),
+			EnvironmentVariables.GetString("CONTROLLER_HOST").Require,
+			EnvironmentVariables.GetPortNumber("CONTROLLER_PORT").WithDefault(9401),
 			javaSearchPath,
 			agentKeyToken,
 			agentKeyFilePath,

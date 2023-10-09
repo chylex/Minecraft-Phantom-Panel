@@ -1,12 +1,9 @@
 ﻿using System.Collections.Immutable;
-using Microsoft.AspNetCore.Identity;
 using Phantom.Controller.Database.Entities;
 
 namespace Phantom.Controller.Services.Users;
 
 internal static class UserPasswords {
-	private static PasswordHasher<UserEntity> Hasher { get; } = new ();
-
 	private const int MinimumLength = 16;
 	
 	public static ImmutableArray<PasswordRequirementViolation> CheckRequirements(string password) {
@@ -32,10 +29,10 @@ internal static class UserPasswords {
 	}
 
 	public static void Set(UserEntity user, string password) {
-		user.PasswordHash = Hasher.HashPassword(user, password);
+		user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
 	}
 	
-	public static PasswordVerificationResult Verify(UserEntity user, string password) {
-		return Hasher.VerifyHashedPassword(user, user.PasswordHash, password);
+	public static bool Verify(UserEntity user, string password) {
+		return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
 	}
 }

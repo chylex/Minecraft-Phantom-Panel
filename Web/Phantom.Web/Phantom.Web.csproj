@@ -6,7 +6,8 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   
   <PropertyGroup>
@@ -19,8 +20,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Controller\Phantom.Controller.Database\Phantom.Controller.Database.csproj" />
-    <ProjectReference Include="..\..\Controller\Phantom.Controller.Services\Phantom.Controller.Services.csproj" />
     <ProjectReference Include="..\Phantom.Web.Components\Phantom.Web.Components.csproj" />
     <ProjectReference Include="..\Phantom.Web.Identity\Phantom.Web.Identity.csproj" />
   </ItemGroup>

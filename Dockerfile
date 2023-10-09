@@ -7,6 +7,7 @@ ARG TARGETARCH
 ADD . /app
 WORKDIR /app
 
+RUN mkdir /data && chmod 777 /data
 RUN dotnet restore --arch "$TARGETARCH"
 
 
@@ -24,25 +25,31 @@ RUN dotnet publish Agent/Phantom.Agent/Phantom.Agent.csproj \
     --output /app/out
 
 
-# +----------------------+
-# | Build Phantom Server |
-# +----------------------+
-FROM phantom-base-builder AS phantom-server-builder
-
-RUN dotnet publish Web/Phantom.Web/Phantom.Web.csproj \
-    /p:DebugType=None                                                  \
-    /p:DebugSymbols=false                                              \
-    --no-restore                                                       \
-    --arch "$TARGETARCH"                                               \
-    --configuration Release                                            \
-    --output /app/out
+# +--------------------------+
+# | Build Phantom Controller |
+# +--------------------------+
+FROM phantom-base-builder AS phantom-controller-builder
 
 RUN dotnet publish Controller/Phantom.Controller/Phantom.Controller.csproj \
-    /p:DebugType=None                                          \
-    /p:DebugSymbols=false                                      \
-    --no-restore                                               \
-    --arch "$TARGETARCH"                                       \
-    --configuration Release                                    \
+    /p:DebugType=None                                                      \
+    /p:DebugSymbols=false                                                  \
+    --no-restore                                                           \
+    --arch "$TARGETARCH"                                                   \
+    --configuration Release                                                \
+    --output /app/out
+
+
+# +-------------------+
+# | Build Phantom Web |
+# +-------------------+
+FROM phantom-base-builder AS phantom-controller-builder
+
+RUN dotnet publish Web/Phantom.Web/Phantom.Web.csproj \
+    /p:DebugType=None                                 \
+    /p:DebugSymbols=false                             \
+    --no-restore                                      \
+    --arch "$TARGETARCH"                              \
+    --configuration Release                           \
     --output /app/out
 
 
@@ -51,7 +58,6 @@ RUN dotnet publish Controller/Phantom.Controller/Phantom.Controller.csproj \
 # +------------------------------+
 FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0-preview AS phantom-agent
 
-RUN mkdir /data && chmod 777 /data
 WORKDIR /data
 
 COPY --from=eclipse-temurin:8-jre  /opt/java/openjdk /opt/java/8
@@ -73,14 +79,25 @@ COPY --from=phantom-agent-builder --chmod=755 /app/out /app
 ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]
 
 
-# +-------------------------------+
-# | Finalize Phantom Server image |
-# +-------------------------------+
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0-preview AS phantom-server
+# +-----------------------------------+
+# | Finalize Phantom Controller image |
+# +-----------------------------------+
+FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0-preview AS phantom-controller
 
-RUN mkdir /data && chmod 777 /data
 WORKDIR /data
 
-COPY --from=phantom-server-builder --chmod=755 /app/out /app
+COPY --from=phantom-controller-builder --chmod=755 /app/out /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Controller.dll"]
+
+
+# +----------------------------+
+# | Finalize Phantom Web image |
+# +----------------------------+
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0-preview AS phantom-web
+
+WORKDIR /data
+
+COPY --from=phantom-web-builder --chmod=755 /app/out /app
+
+ENTRYPOINT ["dotnet", "/app/Phantom.Web.dll"]

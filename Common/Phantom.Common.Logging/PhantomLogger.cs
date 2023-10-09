@@ -27,7 +27,7 @@ public static class PhantomLogger {
 	}
 
 	public static ILogger Create(string name1, string name2) {
-		return Create(name1 + ":" + name2);
+		return Create(ConcatNames(name1, name2));
 	}
 
 	public static ILogger Create<T>() {
@@ -37,9 +37,17 @@ public static class PhantomLogger {
 	public static ILogger Create<T>(string name) {
 		return Create(typeof(T).Name, name);
 	}
+	
+	public static ILogger Create<T>(string name1, string name2) {
+		return Create(typeof(T).Name, ConcatNames(name1, name2));
+	}
 
 	public static ILogger Create<T1, T2>() {
 		return Create(typeof(T1).Name, typeof(T2).Name);
+	}
+
+	private static string ConcatNames(string name1, string name2) {
+		return name1 + ":" + name2;
 	}
 
 	public static void Dispose() {

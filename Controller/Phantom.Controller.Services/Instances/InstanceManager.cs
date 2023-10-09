@@ -5,8 +5,8 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
-using Phantom.Common.Messages;
-using Phantom.Common.Messages.ToAgent;
+using Phantom.Common.Messages.Agent;
+using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Minecraft;
@@ -24,23 +24,23 @@ public sealed class InstanceManager {
 
 	public EventSubscribers<ImmutableDictionary<Guid, Instance>> InstancesChanged => instances.Subs;
 
-	private readonly CancellationToken cancellationToken;
 	private readonly AgentManager agentManager;
 	private readonly MinecraftVersions minecraftVersions;
-	private readonly DatabaseProvider databaseProvider;
+	private readonly IDatabaseProvider databaseProvider;
+	private readonly CancellationToken cancellationToken;
+	
 	private readonly SemaphoreSlim modifyInstancesSemaphore = new (1, 1);
 
-	public InstanceManager(ServiceConfiguration configuration, AgentManager agentManager, MinecraftVersions minecraftVersions, DatabaseProvider databaseProvider) {
-		this.cancellationToken = configuration.CancellationToken;
+	public InstanceManager(AgentManager agentManager, MinecraftVersions minecraftVersions, IDatabaseProvider databaseProvider, CancellationToken cancellationToken) {
 		this.agentManager = agentManager;
 		this.minecraftVersions = minecraftVersions;
 		this.databaseProvider = databaseProvider;
+		this.cancellationToken = cancellationToken;
 	}
 
 	public async Task Initialize() {
-		using var scope = databaseProvider.CreateScope();
-
-		await foreach (var entity in scope.Ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+		await using var ctx = databaseProvider.Provide();
+		await foreach (var entity in ctx.Instances.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var configuration = new InstanceConfiguration(
 				entity.AgentGuid,
 				entity.InstanceGuid,
@@ -98,8 +98,8 @@ public sealed class InstanceManager {
 			});
 			
 			if (result.Is(AddOrEditInstanceResult.Success)) {
-				using var scope = databaseProvider.CreateScope();
-				InstanceEntity entity = scope.Ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
+				await using var ctx = databaseProvider.Provide();
+				InstanceEntity entity = ctx.InstanceUpsert.Fetch(configuration.InstanceGuid);
 
 				entity.AgentGuid = configuration.AgentGuid;
 				entity.InstanceName = configuration.InstanceName;
@@ -111,7 +111,7 @@ public sealed class InstanceManager {
 				entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
 				entity.JvmArguments = JvmArgumentsHelper.Join(configuration.JvmArguments);
 
-				await scope.Ctx.SaveChangesAsync(cancellationToken);
+				await ctx.SaveChangesAsync(cancellationToken);
 			}
 			else if (isNewInstance) {
 				instances.ByGuid.Remove(configuration.InstanceGuid);
@@ -188,11 +188,11 @@ public sealed class InstanceManager {
 		try {
 			instances.ByGuid.TryReplace(instanceGuid, instance => instance with { LaunchAutomatically = shouldLaunchAutomatically });
 
-			using var scope = databaseProvider.CreateScope();
-			var entity = await scope.Ctx.Instances.FindAsync(instanceGuid, cancellationToken);
+			await using var ctx = databaseProvider.Provide();
+			var entity = await ctx.Instances.FindAsync(instanceGuid, cancellationToken);
 			if (entity != null) {
 				entity.LaunchAutomatically = shouldLaunchAutomatically;
-				await scope.Ctx.SaveChangesAsync(cancellationToken);
+				await ctx.SaveChangesAsync(cancellationToken);
 			}
 		} finally {
 			modifyInstancesSemaphore.Release();

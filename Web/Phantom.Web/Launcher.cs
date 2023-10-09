@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
-using Phantom.Controller.Database;
+using Phantom.Controller.Services;
+using Phantom.Utils.Tasks;
 using Phantom.Web.Base;
-using Phantom.Web.Components.Utils;
 using Phantom.Web.Identity;
 using Phantom.Web.Identity.Interfaces;
 using Serilog;
@@ -10,7 +9,7 @@ using Serilog;
 namespace Phantom.Web;
 
 public static class Launcher {
-	public static async Task<WebApplication> CreateApplication(Configuration config, IConfigurator configurator, Action<DbContextOptionsBuilder> dbOptionsBuilder) {
+	public static WebApplication CreateApplication(Configuration config, ServiceConfiguration serviceConfiguration, TaskManager taskManager) {
 		var assembly = typeof(Launcher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = assembly.GetName().Name,
@@ -26,15 +25,13 @@ public static class Launcher {
 			builder.WebHost.UseStaticWebAssets();
 		}
 
-		configurator.ConfigureServices(builder.Services);
+		builder.Services.AddSingleton(serviceConfiguration);
+		builder.Services.AddSingleton(taskManager);
 
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
 		builder.Services.AddScoped<INavigation>(Navigation.Create(config.BasePath));
 
 		builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(config.KeyFolderPath));
-
-		builder.Services.AddDbContext<ApplicationDbContext>(dbOptionsBuilder, ServiceLifetime.Transient);
-		builder.Services.AddSingleton<DatabaseProvider>();
 
 		builder.Services.AddPhantomIdentity(config.CancellationToken);
 		builder.Services.AddScoped<ILoginEvents, LoginEvents>();
@@ -42,16 +39,10 @@ public static class Launcher {
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();
 
-		var application = builder.Build();
-
-		await MigrateDatabase(config, application.Services.GetRequiredService<DatabaseProvider>());
-		await PhantomIdentityConfigurator.MigrateDatabase(application.Services);
-		await configurator.LoadFromDatabase(application.Services);
-
-		return application;
+		return builder.Build();
 	}
 
-	public static async Task Launch(Configuration config, WebApplication application) {
+	public static Task Launch(Configuration config, WebApplication application) {
 		var logger = config.Logger;
 
 		application.UseSerilogRequestLogging();
@@ -70,7 +61,7 @@ public static class Launcher {
 		application.MapFallbackToPage("/_Host");
 
 		logger.Information("Starting Web server on port {Port}...", config.Port);
-		await application.RunAsync(config.CancellationToken);
+		return application.RunAsync(config.CancellationToken);
 	}
 
 	private sealed class NullLifetime : IHostLifetime {
@@ -81,28 +72,5 @@ public static class Launcher {
 		public Task StopAsync(CancellationToken cancellationToken) {
 			return Task.CompletedTask;
 		}
-	}
-
-	private static async Task MigrateDatabase(Configuration config, DatabaseProvider databaseProvider) {
-		var logger = config.Logger;
-
-		using var scope = databaseProvider.CreateScope();
-		var database = scope.Ctx.Database;
-
-		logger.Information("Connecting to database...");
-
-		var retryConnection = new Throttler(TimeSpan.FromSeconds(10));
-		while (!await database.CanConnectAsync(config.CancellationToken)) {
-			logger.Warning("Cannot connect to database, retrying...");
-			await retryConnection.Wait();
-		}
-
-		logger.Information("Running database migrations...");
-		await database.MigrateAsync(); // Do not allow cancellation.
-	}
-
-	public interface IConfigurator {
-		void ConfigureServices(IServiceCollection services);
-		Task LoadFromDatabase(IServiceProvider serviceProvider);
 	}
 }

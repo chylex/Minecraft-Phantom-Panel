@@ -9,10 +9,10 @@
       <env name="AGENT_NAME" value="Agent 1" />
       <env name="ALLOWED_RCON_PORTS" value="25575,27000,27001" />
       <env name="ALLOWED_SERVER_PORTS" value="25565,26000,26001" />
+      <env name="CONTROLLER_HOST" value="localhost" />
       <env name="JAVA_SEARCH_PATH" value="~/.jdks" />
       <env name="MAX_INSTANCES" value="3" />
       <env name="MAX_MEMORY" value="12G" />
-      <env name="SERVER_HOST" value="localhost" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="USE_MONO" value="0" />

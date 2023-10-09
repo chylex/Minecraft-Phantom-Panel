@@ -6,16 +6,6 @@ using Serilog;
 namespace Phantom.Utils.Rpc;
 
 static class RpcRuntime {
-	private static bool HasRuntime { get; set; }
-
-	internal static void MarkRuntimeCreated() {
-		if (HasRuntime) {
-			throw new InvalidOperationException("Only one instance of RpcRuntime can be created.");
-		}
-		
-		HasRuntime = true;
-	}
-
 	internal static void SetDefaultSocketOptions(ThreadSafeSocketOptions options) {
 		// TODO test behavior when either agent or server are offline for a very long time
 		options.DelayAttachOnConnect = true;
@@ -24,14 +14,13 @@ static class RpcRuntime {
 	}
 }
 
-public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket, new() {
+public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket {
 	private readonly TSocket socket;
 	private readonly ILogger runtimeLogger;
 	private readonly MessageReplyTracker replyTracker;
 	private readonly TaskManager taskManager;
 
 	protected RpcRuntime(RpcConfiguration configuration, TSocket socket) {
-		RpcRuntime.MarkRuntimeCreated();
 		RpcRuntime.SetDefaultSocketOptions(socket.Options);
 		this.socket = socket;
 		this.runtimeLogger = configuration.RuntimeLogger;

@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
+    <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Rpc\Phantom.Utils.Rpc.csproj" />
+  </ItemGroup>
+
+</Project>

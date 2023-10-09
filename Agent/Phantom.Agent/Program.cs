@@ -26,7 +26,7 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	PhantomLogger.Root.Information("Agent version: {Version}", fullVersion);
 
-	var (serverHost, serverPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrStop();
+	var (controllerHost, controllerPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrStop();
 
 	var agentKey = await AgentKey.Load(agentKeyToken, agentKeyFilePath);
 	if (agentKey == null) {
@@ -43,7 +43,7 @@ try {
 		return 1;
 	}
 
-	var (serverCertificate, agentToken) = agentKey.Value;
+	var (controllerCertificate, agentToken) = agentKey.Value;
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
 	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks));
 
@@ -56,7 +56,7 @@ try {
 	await agentServices.Initialize();
 
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), serverHost, serverPort, serverCertificate);
+	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), controllerHost, controllerPort, controllerCertificate);
 	var rpcTask = RpcLauncher.Launch(rpcConfiguration, agentToken, agentInfo, MessageListenerFactory, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
 		await rpcTask.WaitAsync(shutdownCancellationToken);

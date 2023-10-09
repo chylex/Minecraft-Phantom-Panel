@@ -1,28 +1,28 @@
 ﻿using NetMQ;
 using NetMQ.Sockets;
-using Phantom.Common.Messages;
-using Phantom.Common.Messages.BiDirectional;
 using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Controller.Rpc;
 
-public sealed class RpcClientConnection {
+public sealed class RpcClientConnection<TListener> {
 	private readonly ServerSocket socket;
 	private readonly uint routingId;
 
+	private readonly MessageRegistry<TListener> messageRegistry;
 	private readonly MessageReplyTracker messageReplyTracker;
 
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
 	private bool isClosed;
 
-	internal RpcClientConnection(ServerSocket socket, uint routingId, MessageReplyTracker messageReplyTracker) {
+	internal RpcClientConnection(ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker messageReplyTracker) {
 		this.socket = socket;
 		this.routingId = routingId;
+		this.messageRegistry = messageRegistry;
 		this.messageReplyTracker = messageReplyTracker;
 	}
 
-	public bool IsSame(RpcClientConnection other) {
-		return this.routingId == other.routingId;
+	public bool IsSame(RpcClientConnection<TListener> other) {
+		return this.routingId == other.routingId && this.socket == other.socket;
 	}
 
 	public void Close() {
@@ -34,25 +34,25 @@ public sealed class RpcClientConnection {
 		}
 	}
 
-	public async Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
+	public async Task Send<TMessage>(TMessage message) where TMessage : IMessage<TListener, NoReply> {
 		if (isClosed) {
 			return;
 		}
 		
-		var bytes = MessageRegistries.ToAgent.Write(message).ToArray();
+		var bytes = messageRegistry.Write(message).ToArray();
 		if (bytes.Length > 0) {
 			await socket.SendAsync(routingId, bytes);
 		}
 	}
 
-	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
+	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessage<TListener, TReply> where TReply : class {
 		if (isClosed) {
 			return null;
 		}
 		
 		var sequenceId = messageReplyTracker.RegisterReply();
 		
-		var bytes = MessageRegistries.ToAgent.Write<TMessage, TReply>(sequenceId, message).ToArray();
+		var bytes = messageRegistry.Write<TMessage, TReply>(sequenceId, message).ToArray();
 		if (bytes.Length == 0) {
 			messageReplyTracker.ForgetReply(sequenceId);
 			return null;
@@ -62,7 +62,7 @@ public sealed class RpcClientConnection {
 		return await messageReplyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, waitForReplyCancellationToken);
 	}
 
-	public void Receive(ReplyMessage message) {
+	public void Receive(IReply message) {
 		messageReplyTracker.ReceiveReply(message.SequenceId, message.SerializedReply);
 	}
 }
