@@ -20,8 +20,6 @@ public sealed record Agent(
 	public bool IsOnline { get; internal init; }
 	public bool IsOffline => !IsOnline;
 
-	public RamAllocationUnits? AvailableMemory => MaxMemory - Stats?.RunningInstanceMemory;
-	
 	internal Agent(AgentInfo info) : this(info.Guid, info.Name, info.ProtocolVersion, info.BuildVersion, info.MaxInstances, info.MaxMemory, info.AllowedServerPorts, info.AllowedRconPorts) {}
 
 	internal Agent AsOnline(DateTimeOffset lastPing) => this with {

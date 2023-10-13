@@ -1,7 +1,8 @@
 ﻿@page "/agents"
-@using Phantom.Controller.Services.Agents
+@using Phantom.Common.Data.Web.Agent
 @using Phantom.Utils.Collections
-@implements IDisposable
+@using Phantom.Web.Services.Agents
+@inherits PhantomComponent
 @inject AgentManager AgentManager
 
 <h1>Agents</h1>
@@ -23,7 +24,7 @@
       @foreach (var agent in agentTable) {
         var usedInstances = agent.Stats?.RunningInstanceCount;
         var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
-        
+      
         <tr>
           <td>@agent.Name</td>
           <td class="text-end">
@@ -74,7 +75,7 @@
 
 @code {
 
-  private readonly Table<Agent, Guid> agentTable = new();
+  private readonly Table<AgentWithStats, Guid> agentTable = new();
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
@@ -84,7 +85,7 @@
     });
   }
 
-  void IDisposable.Dispose() {
+  protected override void OnDisposed() {
     AgentManager.AgentsChanged.Unsubscribe(this);
   }
 

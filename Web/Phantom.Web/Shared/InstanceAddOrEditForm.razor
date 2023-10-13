@@ -1,29 +1,32 @@
-﻿@using System.Collections.Immutable
+﻿@using Phantom.Web.Components.Utils
+@using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
-@using Phantom.Controller.Minecraft
-@using Phantom.Controller.Services.Agents
-@using Phantom.Controller.Services.Audit
-@using Phantom.Controller.Services.Instances
-@using Phantom.Web.Components.Utils
 @using Phantom.Common.Data.Minecraft
+@using Phantom.Common.Data.Web.Agent
+@using Phantom.Common.Data.Web.Instance
+@using Phantom.Common.Data.Web.Minecraft
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Common.Messages.Web.ToController
 @using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
-@using Phantom.Web.Identity.Interfaces
+@using Phantom.Web.Services
+@using Phantom.Web.Services.Agents
+@using Phantom.Web.Services.Instances
+@using Phantom.Web.Services.Rpc
+@inherits PhantomComponent
 @inject INavigation Nav
-@inject MinecraftVersions MinecraftVersions
+@inject ControllerConnection ControllerConnection
 @inject AgentManager AgentManager
-@inject AgentJavaRuntimesManager AgentJavaRuntimesManager
 @inject InstanceManager InstanceManager
-@inject AuditLog AuditLog
 
 <Form Model="form" OnSubmit="AddOrEditInstance">
   @{ var selectedAgent = form.SelectedAgent; }
   <div class="row">
     <div class="col-xl-7 mb-3">
       @{
-        static RenderFragment GetAgentOption(Agent agent) {
+        static RenderFragment GetAgentOption(AgentWithStats agent) {
           return @<option value="@agent.Guid">
                    @agent.Name
                    &bullet;
@@ -36,14 +39,14 @@
       @if (EditedInstanceConfiguration == null) {
         <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
           <option value="" selected>Select which agent will run the instance...</option>
-          @foreach (var agent in form.AgentsByGuid.Values.Where(static agent => agent.IsOnline).OrderBy(static agent => agent.Name)) {
+          @foreach (var agent in allAgentsByGuid.Values.Where(static agent => agent.IsOnline).OrderBy(static agent => agent.Name)) {
             @GetAgentOption(agent)
           }
         </FormSelectInput>
       }
       else {
         <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid" disabled="true">
-          @if (form.SelectedAgentGuid is {} guid && form.AgentsByGuid.TryGetValue(guid, out var agent)) {
+          @if (form.SelectedAgentGuid is {} guid && allAgentsByGuid.TryGetValue(guid, out var agent)) {
             @GetAgentOption(agent)
           }
         </FormSelectInput>
@@ -162,23 +165,25 @@
 @code {
 
   [Parameter, EditorRequired]
-  public InstanceConfiguration? EditedInstanceConfiguration { get; set; }
+  public InstanceConfiguration? EditedInstanceConfiguration { get; init; }
 
   private ConfigureInstanceFormModel form = null!;
 
+  private ImmutableDictionary<Guid, AgentWithStats> allAgentsByGuid = ImmutableDictionary<Guid, AgentWithStats>.Empty;
+  private ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> allAgentJavaRuntimes = ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>.Empty;
+  
   private MinecraftVersionType minecraftVersionType = MinecraftVersionType.Release;
+  private ImmutableArray<MinecraftVersion> allMinecraftVersions = ImmutableArray<MinecraftVersion>.Empty;
   private ImmutableArray<MinecraftVersion> availableMinecraftVersions = ImmutableArray<MinecraftVersion>.Empty;
 
   private bool IsSubmittable => form.SelectedAgentGuid != null && !form.EditContext.GetValidationMessages(form.EditContext.Field(nameof(ConfigureInstanceFormModel.SelectedAgentGuid))).Any();
 
   private sealed class ConfigureInstanceFormModel : FormModel {
-    public ImmutableDictionary<Guid, Agent> AgentsByGuid { get; }
-    private readonly ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> javaRuntimesByAgentGuid;
+    private readonly InstanceAddOrEditForm page;
     private readonly RamAllocationUnits? editedInstanceRamAllocation;
 
-    public ConfigureInstanceFormModel(AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, RamAllocationUnits? editedInstanceRamAllocation) {
-      this.AgentsByGuid = agentManager.GetAgents().ToImmutableDictionary();
-      this.javaRuntimesByAgentGuid = agentJavaRuntimesManager.All;
+    public ConfigureInstanceFormModel(InstanceAddOrEditForm page, RamAllocationUnits? editedInstanceRamAllocation) {
+      this.page = page;
       this.editedInstanceRamAllocation = editedInstanceRamAllocation;
     }
 
@@ -192,14 +197,14 @@
       }
     }
 
-    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out Agent? agent) {
-      return TryGet(AgentsByGuid, agentGuid, out agent);
+    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentWithStats? agent) {
+      return TryGet(page.allAgentsByGuid, agentGuid, out agent);
     }
 
-    public Agent? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agent) ? agent : null;
-    
-    public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(javaRuntimesByAgentGuid, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
-    
+    public AgentWithStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agent) ? agent : null;
+
+    public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(page.allAgentJavaRuntimes, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
+
     public ushort MaximumMemoryUnits => SelectedAgent?.MaxMemory.RawValue ?? 0;
     public ushort AvailableMemoryUnits => Math.Min((SelectedAgent?.AvailableMemory + editedInstanceRamAllocation)?.RawValue ?? MaximumMemoryUnits, MaximumMemoryUnits);
     private ushort selectedMemoryUnits = 4;
@@ -265,8 +270,17 @@
   }
 
   protected override void OnInitialized() {
-    form = new ConfigureInstanceFormModel(AgentManager, AgentJavaRuntimesManager, EditedInstanceConfiguration?.MemoryAllocation);
+    form = new ConfigureInstanceFormModel(this, EditedInstanceConfiguration?.MemoryAllocation);
+  }
+
+  protected override async Task OnInitializedAsync() {
+    var agentJavaRuntimesTask = ControllerConnection.Send<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(new GetAgentJavaRuntimesMessage(), TimeSpan.FromSeconds(30));
+    var minecraftVersionsTask = ControllerConnection.Send<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(new GetMinecraftVersionsMessage(), TimeSpan.FromSeconds(30));
     
+    allAgentsByGuid = AgentManager.ToDictionaryByGuid();
+    allAgentJavaRuntimes = await agentJavaRuntimesTask;
+    allMinecraftVersions = await minecraftVersionsTask;
+
     if (EditedInstanceConfiguration != null) {
       form.SelectedAgentGuid = EditedInstanceConfiguration.AgentGuid;
       form.InstanceName = EditedInstanceConfiguration.InstanceName;
@@ -277,28 +291,21 @@
       form.MemoryUnits = EditedInstanceConfiguration.MemoryAllocation.RawValue;
       form.JavaRuntimeGuid = EditedInstanceConfiguration.JavaRuntimeGuid;
       form.JvmArguments = JvmArgumentsHelper.Join(EditedInstanceConfiguration.JvmArguments);
+      
+      minecraftVersionType = allMinecraftVersions.FirstOrDefault(version => version.Id == EditedInstanceConfiguration.MinecraftVersion)?.Type ?? minecraftVersionType;
     }
-    
+
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.MemoryUnits));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.JavaRuntimeGuid));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.ServerPort));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.RconPort));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.ServerPort), revalidated: nameof(ConfigureInstanceFormModel.RconPort));
+    
+    SetMinecraftVersionType(minecraftVersionType);
   }
 
-  protected override async Task OnInitializedAsync() {
-    if (EditedInstanceConfiguration != null) {
-      var allMinecraftVersions = await MinecraftVersions.GetVersions(CancellationToken.None);
-      minecraftVersionType = allMinecraftVersions.FirstOrDefault(version => version.Id == EditedInstanceConfiguration.MinecraftVersion)?.Type ?? minecraftVersionType;
-    }
-
-    await SetMinecraftVersionType(minecraftVersionType);
-  }
-
-  private async Task SetMinecraftVersionType(MinecraftVersionType type) {
+  private void SetMinecraftVersionType(MinecraftVersionType type) {
     minecraftVersionType = type;
-
-    var allMinecraftVersions = await MinecraftVersions.GetVersions(CancellationToken.None);
     availableMinecraftVersions = allMinecraftVersions.Where(version => version.Type == type).ToImmutableArray();
 
     if (!availableMinecraftVersions.IsEmpty && !availableMinecraftVersions.Any(version => version.Id == form.MinecraftVersion)) {
@@ -314,6 +321,12 @@
 
     await form.SubmitModel.StartSubmitting();
 
+    var loggedInUserGuid = await GetUserGuid();
+    if (loggedInUserGuid == null || !await CheckPermission(Permission.CreateInstances)) {
+      form.SubmitModel.StopSubmitting("You do not have permission to edit instances.");
+      return;
+    }
+      
     var instance = new InstanceConfiguration(
       EditedInstanceConfiguration?.AgentGuid ?? selectedAgent.Guid,
       EditedInstanceConfiguration?.InstanceGuid ?? Guid.NewGuid(),
@@ -327,14 +340,13 @@
       JvmArgumentsHelper.Split(form.JvmArguments)
     );
 
-    var result = await InstanceManager.AddOrEditInstance(instance);
-    if (result.Is(AddOrEditInstanceResult.Success)) {
-      await (EditedInstanceConfiguration == null ? AuditLog.AddInstanceCreatedEvent(instance.InstanceGuid) : AuditLog.AddInstanceEditedEvent(instance.InstanceGuid));
-      Nav.NavigateTo("instances/" + instance.InstanceGuid);
+    var result = await InstanceManager.CreateOrUpdateInstance(loggedInUserGuid.Value, instance, CancellationToken);
+    if (result.Is(CreateOrUpdateInstanceResult.Success)) {
+      await Nav.NavigateTo("instances/" + instance.InstanceGuid);
     }
     else {
-      form.SubmitModel.StopSubmitting(result.ToSentence(AddOrEditInstanceResultExtensions.ToSentence));
+      form.SubmitModel.StopSubmitting(result.ToSentence(CreateOrUpdateInstanceResultExtensions.ToSentence));
     }
   }
-  
+
 }

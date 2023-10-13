@@ -32,4 +32,14 @@ public static class EnumerableExtensions {
 
 		return builder.ToImmutable();
 	}
+	
+	public static async Task<ImmutableDictionary<TKey, TValue>> ToImmutableDictionaryAsync<TSource, TKey, TValue>(this IAsyncEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TSource, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull {
+		var builder = ImmutableDictionary.CreateBuilder<TKey, TValue>();
+		
+		await foreach (var element in source.WithCancellation(cancellationToken)) {
+			builder.Add(keySelector(element), valueSelector(element));
+		}
+
+		return builder.ToImmutable();
+	}
 }

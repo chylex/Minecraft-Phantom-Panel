@@ -69,6 +69,26 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
+	public bool GetOrAdd(TKey key, Func<TKey, TValue> valueFactory, out TValue value) {
+		rwLock.EnterUpgradeableReadLock();
+		try {
+			if (dict.TryGetValue(key, out var existingValue)) {
+				value = existingValue;
+				return false;
+			}
+
+			rwLock.EnterWriteLock();
+			try {
+				dict[key] = value = valueFactory(key);
+				return true;
+			} finally {
+				rwLock.ExitWriteLock();
+			}
+		} finally {
+			rwLock.ExitUpgradeableReadLock();
+		}
+	}
+	
 	public bool TryAdd(TKey key, TValue newValue) {
 		rwLock.EnterWriteLock();
 		try {
@@ -108,11 +128,11 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool TryReplace(TKey key, Func<TValue, TValue> replacementValue) {
-		return TryReplaceIf(key, replacementValue, static _ => true);
+	public bool TryReplace(TKey key, Func<TValue, TValue> replacementValueFactory) {
+		return TryReplaceIf(key, replacementValueFactory, static _ => true);
 	}
 
-	public bool TryReplaceIf(TKey key, Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
+	public bool TryReplaceIf(TKey key, Func<TValue, TValue> replacementValueFactory, Predicate<TValue> replaceCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
 			if (!dict.TryGetValue(key, out var oldValue) || !replaceCondition(oldValue)) {
@@ -121,7 +141,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 
 			rwLock.EnterWriteLock();
 			try {
-				dict[key] = replacementValue(oldValue);
+				dict[key] = replacementValueFactory(oldValue);
 				return true;
 			} finally {
 				rwLock.ExitWriteLock();
@@ -131,11 +151,11 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool ReplaceAll(Func<TValue, TValue> replacementValue) {
+	public bool ReplaceAll(Func<TValue, TValue> replacementValueFactory) {
 		rwLock.EnterWriteLock();
 		try {
 			foreach (var (key, oldValue) in dict) {
-				dict[key] = replacementValue(oldValue);
+				dict[key] = replacementValueFactory(oldValue);
 			}
 
 			return dict.Count > 0;
@@ -144,7 +164,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		}
 	}
 
-	public bool ReplaceAllIf(Func<TValue, TValue> replacementValue, Predicate<TValue> replaceCondition) {
+	public bool ReplaceAllIf(Func<TValue, TValue> replacementValueFactory, Predicate<TValue> replaceCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
 			bool hasChanged = false;
@@ -157,7 +177,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 						}
 
 						hasChanged = true;
-						dict[key] = replacementValue(oldValue);
+						dict[key] = replacementValueFactory(oldValue);
 					}
 				}
 			} finally {

@@ -1,12 +1,11 @@
-﻿@using Phantom.Controller.Services.Instances
-@using Phantom.Controller.Services.Audit
+﻿@using Phantom.Web.Services.Instances
 @using System.ComponentModel.DataAnnotations
+@using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Data.Replies
 @inherits PhantomComponent
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
-@inject AuditLog AuditLog
 
 <Form Model="form" OnSubmit="StopInstance">
   <Modal Id="@ModalId" TitleText="Stop Instance">
@@ -33,13 +32,13 @@
 @code {
 
   [Parameter, EditorRequired]
-  public Guid InstanceGuid { get; set; }
+  public Guid InstanceGuid { get; init; }
 
   [Parameter, EditorRequired]
-  public string ModalId { get; set; } = string.Empty;
+  public string ModalId { get; init; } = string.Empty;
 
   [Parameter]
-  public bool Disabled { get; set; }
+  public bool Disabled { get; init; }
 
   private readonly StopInstanceFormModel form = new ();
 
@@ -51,14 +50,14 @@
   private async Task StopInstance(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    if (!await CheckPermission(Permission.ControlInstances)) {
+    var loggedInUserGuid = await GetUserGuid();
+    if (loggedInUserGuid == null || !await CheckPermission(Permission.ControlInstances)) {
       form.SubmitModel.StopSubmitting("You do not have permission to stop instances.");
       return;
     }
-    
-    var result = await InstanceManager.StopInstance(InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds));
+
+    var result = await InstanceManager.StopInstance(loggedInUserGuid.Value, InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds), CancellationToken);
     if (result.Is(StopInstanceResult.StopInitiated)) {
-      await AuditLog.AddInstanceStoppedEvent(InstanceGuid, form.StopInSeconds);
       await Js.InvokeVoidAsync("closeModal", ModalId);
       form.SubmitModel.StopSubmitting();
     }

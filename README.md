@@ -149,8 +149,8 @@ The repository includes a [Rider](https://www.jetbrains.com/rider/) projects wit
    - `Controller` starts the Controller.
    - `Web` starts the Web server.
    - `Agent 1`, `Agent 2`, `Agent 3` start one of the Agents.
-   - `Controller + Agent` starts the Controller and Agent 1.
-   - `Controller + Agent x3` starts the Controller and Agent 1, 2, and 3.
+   - `Controller + Web + Agent` starts the Controller and Agent 1.
+   - `Controller + Web + Agent x3` starts the Controller and Agent 1, 2, and 3.
 
 ## Bootstrap
 

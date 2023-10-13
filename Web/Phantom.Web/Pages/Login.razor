@@ -1,10 +1,10 @@
 ﻿@page "/login"
-@using Phantom.Web.Identity.Interfaces
-@using Phantom.Web.Identity.Authentication
+@using Phantom.Web.Services
+@using Phantom.Web.Services.Authentication
 @using System.ComponentModel.DataAnnotations
 @attribute [AllowAnonymous]
 @inject INavigation Navigation
-@inject PhantomLoginManager LoginManager
+@inject UserLoginManager LoginManager
 
 <h1>Login</h1>
 
@@ -51,7 +51,7 @@
     
     string? returnUrl = Navigation.GetQueryParameter("return", out var url) ? url : null;
     
-    if (!await LoginManager.SignIn(form.Username, form.Password, returnUrl)) {
+    if (!await LoginManager.LogIn(form.Username, form.Password, returnUrl)) {
       form.SubmitModel.StopSubmitting("Invalid username or password.");
     }
   }

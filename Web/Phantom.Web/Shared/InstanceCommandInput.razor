@@ -1,9 +1,8 @@
-﻿@using Phantom.Controller.Services.Instances
-@using Phantom.Controller.Services.Audit
+﻿@using Phantom.Web.Services.Instances
+@using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Data.Replies
 @inherits PhantomComponent
 @inject InstanceManager InstanceManager
-@inject AuditLog AuditLog
 
 <Form Model="form" OnSubmit="ExecuteCommand">
   <label for="command-input" class="form-label">Instance Name</label>
@@ -16,7 +15,7 @@
 </Form>
 
 @code {
-  
+
   [Parameter]
   public Guid InstanceGuid { get; set; }
 
@@ -24,24 +23,24 @@
   public bool Disabled { get; set; }
 
   private readonly SendCommandFormModel form = new ();
-  
+
   private sealed class SendCommandFormModel : FormModel {
     public string Command { get; set; } = string.Empty;
   }
-  
+
   private ElementReference commandInputElement;
 
   private async Task ExecuteCommand(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    if (!await CheckPermission(Permission.ControlInstances)) {
+    var loggedInUserGuid = await GetUserGuid();
+    if (loggedInUserGuid == null || !await CheckPermission(Permission.ControlInstances)) {
       form.SubmitModel.StopSubmitting("You do not have permission to execute commands.");
       return;
     }
 
-    var result = await InstanceManager.SendCommand(InstanceGuid, form.Command);
+    var result = await InstanceManager.SendCommandToInstance(loggedInUserGuid.Value, InstanceGuid, form.Command, CancellationToken);
     if (result.Is(SendCommandToInstanceResult.Success)) {
-      await AuditLog.AddInstanceCommandExecutedEvent(InstanceGuid, form.Command);
       form.Command = string.Empty;
       form.SubmitModel.StopSubmitting();
     }
@@ -51,5 +50,5 @@
 
     await commandInputElement.FocusAsync(preventScroll: true);
   }
-  
+
 }

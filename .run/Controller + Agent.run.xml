@@ -1,7 +1,0 @@
-﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Controller + Agent" type="CompoundRunConfigurationType">
-    <toRun name="Agent 1" type="DotNetProject" />
-    <toRun name="Controller" type="DotNetProject" />
-    <method v="2" />
-  </configuration>
-</component>

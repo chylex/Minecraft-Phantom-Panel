@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next.StrongName" />
+    <PackageReference Include="MemoryPack" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+  </ItemGroup>
+  
+</Project>

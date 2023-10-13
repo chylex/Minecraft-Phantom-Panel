@@ -1,9 +1,12 @@
 ﻿@page "/instances"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
 @using System.Collections.Immutable
-@using Phantom.Controller.Services.Instances
-@using Phantom.Controller.Services.Agents
-@implements IDisposable
+@using Phantom.Common.Data.Web.Instance
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Agents
+@using Phantom.Web.Services.Authorization
+@using Phantom.Web.Services.Instances
+@inherits PhantomComponent
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager
 
@@ -30,7 +33,7 @@
   @if (!instances.IsEmpty) {
     <tbody>
       @foreach (var (configuration, status, _) in instances) {
-        var agentName = agentNames.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
+        var agentName = agentNamesByGuid.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
         var instanceGuid = configuration.InstanceGuid.ToString();
         <tr>
           <td>@agentName</td>
@@ -71,22 +74,25 @@
 
 @code {
 
-  private ImmutableDictionary<Guid, string> agentNames = ImmutableDictionary<Guid, string>.Empty;
+  private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
   private ImmutableArray<Instance> instances = ImmutableArray<Instance>.Empty;
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
-      this.agentNames = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
+      this.agentNamesByGuid = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
       InvokeAsync(StateHasChanged);
     });
 
     InstanceManager.InstancesChanged.Subscribe(this, instances => {
-      this.instances = instances.Values.OrderBy(instance => agentNames.TryGetValue(instance.Configuration.AgentGuid, out var agentName) ? agentName : string.Empty).ThenBy(static instance => instance.Configuration.InstanceName).ToImmutableArray();
+      this.instances = instances.Values
+                                .OrderBy(instance => agentNamesByGuid.TryGetValue(instance.Configuration.AgentGuid, out var agentName) ? agentName : string.Empty)
+                                .ThenBy(static instance => instance.Configuration.InstanceName)
+                                .ToImmutableArray();
       InvokeAsync(StateHasChanged);
     });
   }
 
-  void IDisposable.Dispose() {
+  protected override void OnDisposed() {
     AgentManager.AgentsChanged.Unsubscribe(this);
     InstanceManager.InstancesChanged.Unsubscribe(this);
   }

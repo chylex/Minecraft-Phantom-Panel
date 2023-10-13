@@ -1,5 +1,5 @@
 ﻿using NetMQ;
-using Phantom.Common.Data.Agent;
+using Phantom.Common.Data;
 
 namespace Phantom.Controller;
 

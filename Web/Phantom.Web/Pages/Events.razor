@@ -1,13 +1,14 @@
 ﻿@page "/events"
 @attribute [Authorize(Permission.ViewEventsPolicy)]
 @using System.Collections.Immutable
-@using Phantom.Controller.Services.Events
-@using Phantom.Controller.Services.Instances
-@using Phantom.Controller.Database.Enums
-@using Phantom.Controller.Services.Agents
-@implements IDisposable
+@using Phantom.Common.Data.Web.EventLog
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Agents
+@using Phantom.Web.Services.Events
+@using Phantom.Web.Services.Instances
+@inherits PhantomComponent
 @inject AgentManager AgentManager
-@inject EventLog EventLog
+@inject EventLogManager EventLogManager
 @inject InstanceManager InstanceManager
 
 <h1>Event Log</h1>
@@ -48,7 +49,7 @@
           <code class="text-uppercase">@logItem.SubjectId</code>
         </td>
         <td>
-          <code>@logItem.Data?.RootElement.ToString()</code>
+          <code>@logItem.JsonData</code>
         </td>
       </tr>
     }
@@ -58,7 +59,7 @@
 @code {
 
   private CancellationTokenSource? initializationCancellationTokenSource;
-  private EventLogItem[] logItems = Array.Empty<EventLogItem>();
+  private ImmutableArray<EventLogItem> logItems = ImmutableArray<EventLogItem>.Empty;
   private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
@@ -67,9 +68,9 @@
     var cancellationToken = initializationCancellationTokenSource.Token;
 
     try {
-      logItems = await EventLog.GetItems(50, cancellationToken);
-      agentNamesByGuid = AgentManager.GetAgents().ToImmutableDictionary(static kvp => kvp.Key, static kvp => kvp.Value.Name);
-      instanceNamesByGuid = InstanceManager.GetInstanceNames();
+      logItems = await EventLogManager.GetMostRecentItems(50, cancellationToken);
+      agentNamesByGuid = AgentManager.GetAll().ToImmutableDictionary(static kvp => kvp.Guid, static kvp => kvp.Name);
+      instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.Configuration.InstanceGuid, static instance => instance.Configuration.InstanceName);
     } finally {
       initializationCancellationTokenSource.Dispose();
     }
@@ -78,7 +79,7 @@
   private string GetAgentName(Guid agentGuid) {
     return agentNamesByGuid.TryGetValue(agentGuid, out var name) ? name : "?";
   }
-  
+
   private string? GetSubjectName(EventLogSubjectType type, string id) {
     return type switch {
            EventLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
@@ -86,7 +87,7 @@
     };
   }
 
-  public void Dispose() {
+  protected override void OnDisposed() {
     try {
       initializationCancellationTokenSource?.Cancel();
     } catch (ObjectDisposedException) {}

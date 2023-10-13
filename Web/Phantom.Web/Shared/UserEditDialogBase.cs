@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
-using Phantom.Controller.Database.Entities;
+using Phantom.Common.Data.Web.Users;
 using Phantom.Web.Base;
 using Phantom.Web.Components.Forms;
-using Phantom.Web.Identity.Data;
 
 namespace Phantom.Web.Shared;
 
@@ -15,14 +14,14 @@ public abstract class UserEditDialogBase : PhantomComponent {
 	public string ModalId { get; set; } = string.Empty;
 
 	[Parameter]
-	public EventCallback<UserEntity> UserModified { get; set; }
+	public EventCallback<UserInfo> UserModified { get; set; }
 
 	protected readonly FormButtonSubmit.SubmitModel SubmitModel = new();
 
-	private UserEntity? EditedUser { get; set; } = null;
+	private UserInfo? EditedUser { get; set; } = null;
 	protected string EditedUserName { get; private set; } = string.Empty;
 
-	internal async Task Show(UserEntity user) {
+	internal async Task Show(UserInfo user) {
 		EditedUser = user;
 		EditedUserName = user.Name;
 		await BeforeShown(user);
@@ -31,7 +30,7 @@ public abstract class UserEditDialogBase : PhantomComponent {
 		await Js.InvokeVoidAsync("showModal", ModalId);
 	}
 
-	protected virtual Task BeforeShown(UserEntity user) {
+	protected virtual Task BeforeShown(UserInfo user) {
 		return Task.CompletedTask;
 	}
 
@@ -42,18 +41,19 @@ public abstract class UserEditDialogBase : PhantomComponent {
 	protected async Task Submit() {
 		await SubmitModel.StartSubmitting();
 
-		if (!await CheckPermission(Permission.EditUsers)) {
+		var loggedInUserGuid = await GetUserGuid();
+		if (loggedInUserGuid == null || !await CheckPermission(Permission.EditUsers)) {
 			SubmitModel.StopSubmitting("You do not have permission to edit users.");
 		}
 		else if (EditedUser == null) {
 			SubmitModel.StopSubmitting("Invalid user.");
 		}
 		else {
-			await DoEdit(EditedUser);
+			await DoEdit(loggedInUserGuid.Value, EditedUser);
 		}
 	}
 	
-	protected abstract Task DoEdit(UserEntity user);
+	protected abstract Task DoEdit(Guid loggedInUserGuid, UserInfo user);
 
 	protected async Task OnEditSuccess() {
 		await UserModified.InvokeAsync(EditedUser);

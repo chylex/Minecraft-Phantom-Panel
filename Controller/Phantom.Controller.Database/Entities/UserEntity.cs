@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Phantom.Common.Data.Web.Users;
 
 namespace Phantom.Controller.Database.Entities;
 
@@ -11,9 +12,13 @@ public sealed class UserEntity {
 	public string Name { get; set; }
 	public string PasswordHash { get; set; }
 
-	public UserEntity(Guid userGuid, string name) {
+	public UserEntity(Guid userGuid, string name, string passwordHash) {
 		UserGuid = userGuid;
 		Name = name;
-		PasswordHash = null!;
+		PasswordHash = passwordHash;
+	}
+	
+	public UserInfo ToUserInfo() {
+		return new UserInfo(UserGuid, Name);
 	}
 }

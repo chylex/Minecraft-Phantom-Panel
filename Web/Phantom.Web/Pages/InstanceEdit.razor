@@ -1,7 +1,8 @@
 ﻿@page "/instances/{InstanceGuid:guid}/edit"
 @attribute [Authorize(Permission.CreateInstancesPolicy)]
 @using Phantom.Common.Data.Instance
-@using Phantom.Controller.Services.Instances
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Instances
 @inherits PhantomComponent
 @inject InstanceManager InstanceManager
 
@@ -17,12 +18,12 @@ else {
 @code {
 
   [Parameter]
-  public Guid InstanceGuid { get; set; }
+  public Guid InstanceGuid { get; init; }
 
   private InstanceConfiguration? InstanceConfiguration { get; set; }
 
   protected override void OnInitialized() {
-    InstanceConfiguration = InstanceManager.GetInstanceConfiguration(InstanceGuid);
+    InstanceConfiguration = InstanceManager.GetByGuid(InstanceGuid)?.Configuration;
   }
 
 }

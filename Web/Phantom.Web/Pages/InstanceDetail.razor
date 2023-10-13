@@ -1,13 +1,13 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
-@inherits PhantomComponent
 @using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Replies
-@using Phantom.Controller.Services.Audit
-@using Phantom.Controller.Services.Instances
-@implements IDisposable
+@using Phantom.Common.Data.Web.Instance
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Instances
+@using Phantom.Web.Services.Authorization
+@inherits PhantomComponent
 @inject InstanceManager InstanceManager
-@inject AuditLog AuditLog
 
 @if (Instance == null) {
   <h1>Instance Not Found</h1>
@@ -46,7 +46,7 @@ else {
 @code {
 
   [Parameter]
-  public Guid InstanceGuid { get; set; }
+  public Guid InstanceGuid { get; init; }
 
   private string? lastError = null;
   private bool isLaunchingInstance = false;
@@ -68,16 +68,14 @@ else {
     lastError = null;
 
     try {
-      if (!await CheckPermission(Permission.ControlInstances)) {
+      var loggedInUserGuid = await GetUserGuid();
+      if (loggedInUserGuid == null || !await CheckPermission(Permission.ControlInstances)) {
         lastError = "You do not have permission to launch instances.";
         return;
       }
 
-      var result = await InstanceManager.LaunchInstance(InstanceGuid);
-      if (result.Is(LaunchInstanceResult.LaunchInitiated)) {
-        await AuditLog.AddInstanceLaunchedEvent(InstanceGuid);
-      }
-      else {
+      var result = await InstanceManager.LaunchInstance(loggedInUserGuid.Value, InstanceGuid, CancellationToken);
+      if (!result.Is(LaunchInstanceResult.LaunchInitiated)) {
         lastError = result.ToSentence(Messages.ToSentence);
       }
     } finally {
@@ -85,7 +83,7 @@ else {
     }
   }
 
-  public void Dispose() {
+  protected override void OnDisposed() {
     InstanceManager.InstancesChanged.Unsubscribe(this);
   }
 

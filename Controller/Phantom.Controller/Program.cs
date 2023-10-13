@@ -52,7 +52,7 @@ try {
 	}
 	
 	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
-	var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, shutdownCancellationToken);
+	var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken);
 	
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	

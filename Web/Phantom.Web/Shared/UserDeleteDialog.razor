@@ -1,9 +1,7 @@
-﻿@using Phantom.Controller.Database.Entities
-@using Phantom.Controller.Services.Audit
-@using Phantom.Controller.Services.Users
+﻿@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Users
 @inherits UserEditDialogBase
 @inject UserManager UserManager
-@inject AuditLog AuditLog
 
 <Modal Id="@ModalId" TitleText="Delete User">
   <Body>
@@ -19,17 +17,13 @@
 
 @code {
 
-  protected override async Task DoEdit(UserEntity user) {
-    switch (await UserManager.DeleteByGuid(user.UserGuid)) {
+  protected override async Task DoEdit(Guid loggedInUserGuid, UserInfo user) {
+    switch (await UserManager.DeleteByGuid(loggedInUserGuid, user.Guid, CancellationToken)) {
       case DeleteUserResult.Deleted:
-        await AuditLog.AddUserDeletedEvent(user);
-        await OnEditSuccess();
-        break;
-
       case DeleteUserResult.NotFound:
         await OnEditSuccess();
         break;
-        
+
       case DeleteUserResult.Failed:
         OnEditFailure("Could not delete user.");
         break;

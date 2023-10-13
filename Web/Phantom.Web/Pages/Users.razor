@@ -1,11 +1,13 @@
 ﻿@page "/users"
-@using Phantom.Controller.Database.Entities
-@using Phantom.Controller.Services.Users
-@using System.Collections.Immutable
 @attribute [Authorize(Permission.ViewUsersPolicy)]
+@using System.Collections.Immutable
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Users
+@using Phantom.Web.Services.Authorization
+@inherits PhantomComponent
 @inject UserManager UserManager
+@inject RoleManager RoleManager
 @inject UserRoleManager UserRoleManager
-@inject PermissionManager PermissionManager
 
 <h1>Users</h1>
 
@@ -28,12 +30,11 @@
         </tr>
       </thead>
       <tbody>
-        @{ var myUserId = UserManager.GetAuthenticatedUserId(context.User); }
         @foreach (var user in allUsers) {
-          var isMe = myUserId == user.UserGuid;
+          var isMe = me == user.Guid;
           <tr>
             <td>
-              <code class="text-uppercase">@user.UserGuid</code>
+              <code class="text-uppercase">@user.Guid</code>
             </td>
             @if (isMe) {
               <td class="fw-semibold">@user.Name</td>
@@ -41,7 +42,7 @@
             else {
               <td>@user.Name</td>
             }
-            <td>@(userGuidToRoleDescription.TryGetValue(user.UserGuid, out var roles) ? roles : "?")</td>
+            <td>@(userGuidToRoleDescription.TryGetValue(user.Guid, out var roles) ? roles : "?")</td>
             @if (canEdit) {
               <td>
                 @if (!isMe) {
@@ -65,46 +66,53 @@
 
 @code {
 
-  private ImmutableArray<UserEntity> allUsers = ImmutableArray<UserEntity>.Empty;
+  private Guid? me = Guid.Empty;
+  private ImmutableArray<UserInfo> allUsers = ImmutableArray<UserInfo>.Empty;
+  private ImmutableDictionary<Guid, RoleInfo> allRolesByGuid = ImmutableDictionary<Guid, RoleInfo>.Empty;
   private readonly Dictionary<Guid, string> userGuidToRoleDescription = new();
 
   private UserRolesDialog userRolesDialog = null!;
   private UserDeleteDialog userDeleteDialog = null!;
 
   protected override async Task OnInitializedAsync() {
-    var unsortedUsers = await UserManager.GetAll();
-    allUsers = unsortedUsers.Sort(static (a, b) => a.Name.CompareTo(b.Name));
+    me = await GetUserGuid();
+
+    allUsers = (await UserManager.GetAll(CancellationToken)).Sort(static (a, b) => a.Name.CompareTo(b.Name));
+    allRolesByGuid = (await RoleManager.GetAll(CancellationToken)).ToImmutableDictionary(static role => role.Guid, static role => role);
+
+    var allUserGuids = allUsers
+        .Select(static user => user.Guid)
+        .ToImmutableHashSet();
     
-    foreach (var (userGuid, roles) in await UserRoleManager.GetAllByUserGuid()) {
-      userGuidToRoleDescription[userGuid] = StringifyRoles(roles);
-    }
-    
-    foreach (var user in allUsers) {
-      await RefreshUserRoles(user);
+    foreach (var (userGuid, roleGuids) in await UserRoleManager.GetUserRoles(allUserGuids, CancellationToken)) {
+      userGuidToRoleDescription[userGuid] = StringifyRoles(roleGuids);
     }
   }
 
-  private async Task RefreshUserRoles(UserEntity user) {
-    var roles = await UserRoleManager.GetUserRoles(user);
-    userGuidToRoleDescription[user.UserGuid] = StringifyRoles(roles);
+  private async Task RefreshUserRoles(UserInfo user) {
+    userGuidToRoleDescription[user.Guid] = StringifyRoles(await UserRoleManager.GetUserRoles(user.Guid, CancellationToken));
   }
 
-  private static string StringifyRoles(ImmutableArray<RoleEntity> roles) {
-    return roles.IsEmpty ? "-" : string.Join(", ", roles.Select(static role => role.Name));
+  private string StringifyRoles(ImmutableArray<Guid> roleGuids) {
+    return roleGuids.IsEmpty ? "-" : string.Join(", ", roleGuids.Select(StringifyRole));
   }
 
-  private Task OnUserAdded(UserEntity user) {
+  private string StringifyRole(Guid role) {
+    return allRolesByGuid.TryGetValue(role, out var roleInfo) ? roleInfo.Name : "?";
+  }
+
+  private Task OnUserAdded(UserInfo user) {
     allUsers = allUsers.Add(user);
     return RefreshUserRoles(user);
   }
 
-  private Task OnUserRolesChanged(UserEntity user) {
+  private Task OnUserRolesChanged(UserInfo user) {
     return RefreshUserRoles(user);
   }
 
-  private void OnUserDeleted(UserEntity user) {
+  private void OnUserDeleted(UserInfo user) {
     allUsers = allUsers.Remove(user);
-    userGuidToRoleDescription.Remove(user.UserGuid);
+    userGuidToRoleDescription.Remove(user.Guid);
   }
 
 }

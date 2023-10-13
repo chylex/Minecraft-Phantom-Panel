@@ -11,11 +11,11 @@ using Phantom.Controller.Services.Instances;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Tasks;
-using ILogger = Serilog.ILogger;
+using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
 
-public sealed class AgentManager {
+sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 
 	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
@@ -27,17 +27,17 @@ public sealed class AgentManager {
 
 	private readonly CancellationToken cancellationToken;
 	private readonly AuthToken authToken;
-	private readonly IDatabaseProvider databaseProvider;
+	private readonly IDbContextProvider dbProvider;
 
-	public AgentManager(AuthToken authToken, IDatabaseProvider databaseProvider, TaskManager taskManager, CancellationToken cancellationToken) {
+	public AgentManager(AuthToken authToken, IDbContextProvider dbProvider, TaskManager taskManager, CancellationToken cancellationToken) {
 		this.authToken = authToken;
-		this.databaseProvider = databaseProvider;
+		this.dbProvider = dbProvider;
 		this.cancellationToken = cancellationToken;
 		taskManager.Run("Refresh agent status loop", RefreshAgentStatus);
 	}
 
 	internal async Task Initialize() {
-		await using var ctx = databaseProvider.Provide();
+		await using var ctx = dbProvider.Eager();
 
 		await foreach (var entity in ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var agent = new Agent(entity.AgentGuid, entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
@@ -68,7 +68,7 @@ public sealed class AgentManager {
 			oldAgent.Connection?.Close();
 		}
 
-		await using (var ctx = databaseProvider.Provide()) {
+		await using (var ctx = dbProvider.Eager()) {
 			var entity = ctx.AgentUpsert.Fetch(agent.Guid);
 
 			entity.Name = agent.Name;

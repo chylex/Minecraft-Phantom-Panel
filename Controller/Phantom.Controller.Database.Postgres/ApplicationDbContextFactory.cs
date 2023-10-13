@@ -4,15 +4,19 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace Phantom.Controller.Database.Postgres;
 
-public sealed class ApplicationDbContextFactory : IDatabaseProvider {
+public sealed class ApplicationDbContextFactory : IDbContextProvider {
 	private readonly PooledDbContextFactory<ApplicationDbContext> factory;
 	
 	public ApplicationDbContextFactory(string connectionString) {
 		this.factory = new PooledDbContextFactory<ApplicationDbContext>(CreateOptions(connectionString), poolSize: 32);
 	}
 
-	public ApplicationDbContext Provide() {
+	public ApplicationDbContext Eager() {
 		return factory.CreateDbContext();
+	}
+
+	public ILazyDbContext Lazy() {
+		return new LazyDbContext(this);
 	}
 
 	private static DbContextOptions<ApplicationDbContext> CreateOptions(string connectionString) {

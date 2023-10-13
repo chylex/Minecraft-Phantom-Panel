@@ -8,8 +8,8 @@ namespace Phantom.Controller.Database;
 public static class DatabaseMigrator {
 	private static readonly ILogger Logger = PhantomLogger.Create(nameof(DatabaseMigrator));
 	
-	public static async Task Run(IDatabaseProvider databaseProvider, CancellationToken cancellationToken) {
-		await using var ctx = databaseProvider.Provide();
+	public static async Task Run(IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+		await using var ctx = dbProvider.Eager();
 
 		Logger.Information("Connecting to database...");
 

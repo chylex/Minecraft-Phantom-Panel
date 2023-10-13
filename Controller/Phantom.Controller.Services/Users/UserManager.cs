@@ -1,136 +1,134 @@
 ﻿using System.Collections.Immutable;
-using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
+using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Logging;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
-using Phantom.Utils.Collections;
-using Phantom.Utils.Tasks;
-using ILogger = Serilog.ILogger;
+using Phantom.Controller.Database.Repositories;
+using Serilog;
 
 namespace Phantom.Controller.Services.Users;
 
-public sealed class UserManager {
+sealed class UserManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserManager>();
 
-	private const int MaxUserNameLength = 40;
+	private readonly IDbContextProvider dbProvider;
 
-	private readonly IDatabaseProvider databaseProvider;
-
-	public UserManager(IDatabaseProvider databaseProvider) {
-		this.databaseProvider = databaseProvider;
+	public UserManager(IDbContextProvider dbProvider) {
+		this.dbProvider = dbProvider;
 	}
 
-	public static Guid? GetAuthenticatedUserId(ClaimsPrincipal user) {
-		if (user.Identity is not { IsAuthenticated: true }) {
-			return null;
-		}
+	public async Task<ImmutableArray<UserInfo>> GetAll() {
+		await using var db = dbProvider.Lazy();
+		var userRepository = new UserRepository(db);
 
-		var claim = user.FindFirst(ClaimTypes.NameIdentifier);
-		if (claim == null) {
-			return null;
-		}
-
-		return Guid.TryParse(claim.Value, out var guid) ? guid : null;
-	}
-
-	public async Task<ImmutableArray<UserEntity>> GetAll() {
-		await using var ctx = databaseProvider.Provide();
-		return await ctx.Users.AsAsyncEnumerable().ToImmutableArrayAsync();
-	}
-
-	public async Task<Dictionary<Guid, T>> GetAllByGuid<T>(Func<UserEntity, T> valueSelector, CancellationToken cancellationToken = default) {
-		await using var ctx = databaseProvider.Provide();
-		return await ctx.Users.ToDictionaryAsync(static user => user.UserGuid, valueSelector, cancellationToken);
-	}
-
-	public async Task<UserEntity?> GetByName(string username) {
-		await using var ctx = databaseProvider.Provide();
-		return await ctx.Users.FirstOrDefaultAsync(user => user.Name == username);
+		var allUsers = await userRepository.GetAll();
+		return allUsers.Select(static user => user.ToUserInfo()).ToImmutableArray();
 	}
 
 	public async Task<UserEntity?> GetAuthenticated(string username, string password) {
-		await using var ctx = databaseProvider.Provide();
-		var user = await ctx.Users.FirstOrDefaultAsync(user => user.Name == username);
-		return user != null && UserPasswords.Verify(user, password) ? user : null;
+		await using var db = dbProvider.Lazy();
+		var userRepository = new UserRepository(db);
+
+		var user = await userRepository.GetByName(username);
+		return user != null && UserPasswords.Verify(password, user.PasswordHash) ? user : null;
 	}
 
-	public async Task<Result<UserEntity, AddUserError>> CreateUser(string username, string password) {
-		if (string.IsNullOrWhiteSpace(username)) {
-			return Result.Fail<UserEntity, AddUserError>(new AddUserError.NameIsEmpty());
-		}
-		else if (username.Length > MaxUserNameLength) {
-			return Result.Fail<UserEntity, AddUserError>(new AddUserError.NameIsTooLong(MaxUserNameLength));
-		}
+	public async Task<CreateOrUpdateAdministratorUserResult> CreateOrUpdateAdministrator(string username, string password) {
+		await using var db = dbProvider.Lazy();
+		var userRepository = new UserRepository(db);
+		var auditLogWriter = new AuditLogRepository(db).Writer(currentUserGuid: null);
 
-		var requirementViolations = UserPasswords.CheckRequirements(password);
-		if (!requirementViolations.IsEmpty) {
-			return Result.Fail<UserEntity, AddUserError>(new AddUserError.PasswordIsInvalid(requirementViolations));
-		}
-
-		UserEntity newUser;
 		try {
-			await using var ctx = databaseProvider.Provide();
-			
-			if (await ctx.Users.AnyAsync(user => user.Name == username)) {
-				return Result.Fail<UserEntity, AddUserError>(new AddUserError.NameAlreadyExists());
-			}
+			bool wasCreated;
 
-			newUser = new UserEntity(Guid.NewGuid(), username);
-			UserPasswords.Set(newUser, password);
-
-			ctx.Users.Add(newUser);
-			await ctx.SaveChangesAsync();
-		} catch (Exception e) {
-			Logger.Error(e, "Could not create user \"{Name}\".", username);
-			return Result.Fail<UserEntity, AddUserError>(new AddUserError.UnknownError());
-		}
-		
-		Logger.Information("Created user \"{Name}\" (GUID {Guid}).", username, newUser.UserGuid);
-		return Result.Ok<UserEntity, AddUserError>(newUser);
-	}
-
-	public async Task<Result<SetUserPasswordError>> SetUserPassword(Guid guid, string password) {
-		UserEntity foundUser;
-		
-		await using (var ctx = databaseProvider.Provide()) {
-			var user = await ctx.Users.FindAsync(guid);
+			var user = await userRepository.GetByName(username);
 			if (user == null) {
-				return Result.Fail<SetUserPasswordError>(new SetUserPasswordError.UserNotFound());
+				var result = await userRepository.CreateUser(username, password);
+				if (result) {
+					user = result.Value;
+					auditLogWriter.AdministratorUserCreated(user);
+					wasCreated = true;
+				}
+				else {
+					return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.CreationFailed(result.Error);
+				}
 			}
-
-			foundUser = user;
-			try {
-				var requirementViolations = UserPasswords.CheckRequirements(password);
-				if (!requirementViolations.IsEmpty) {
-					return Result.Fail<SetUserPasswordError>(new SetUserPasswordError.PasswordIsInvalid(requirementViolations));
+			else {
+				var result = userRepository.SetUserPassword(user, password);
+				if (!result) {
+					return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.UpdatingFailed(result.Error);
 				}
 
-				UserPasswords.Set(user, password);
-				await ctx.SaveChangesAsync();
-			} catch (Exception e) {
-				Logger.Error(e, "Could not change password for user \"{Name}\" (GUID {Guid}).", user.Name, user.UserGuid);
-				return Result.Fail<SetUserPasswordError>(new SetUserPasswordError.UnknownError());
+				auditLogWriter.AdministratorUserModified(user);
+				wasCreated = false;
 			}
-		}
 
-		Logger.Information("Changed password for user \"{Name}\" (GUID {Guid}).", foundUser.Name, foundUser.UserGuid);
-		return Result.Ok<SetUserPasswordError>();
+			var role = await new RoleRepository(db).GetByGuid(Role.Administrator.Guid);
+			if (role == null) {
+				return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.AddingToRoleFailed();
+			}
+
+			await new UserRoleRepository(db).Add(user, role);
+			await db.Ctx.SaveChangesAsync();
+
+			// ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+			if (wasCreated) {
+				Logger.Information("Created administrator user \"{Username}\" (GUID {Guid}).", username, user.UserGuid);
+			}
+			else {
+				Logger.Information("Updated administrator user \"{Username}\" (GUID {Guid}).", username, user.UserGuid);
+			}
+
+			return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.Success(user.ToUserInfo());
+		} catch (Exception e) {
+			Logger.Error(e, "Could not create or update administrator user \"{Username}\".", username);
+			return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.UnknownError();
+		}
 	}
 
-	public async Task<DeleteUserResult> DeleteByGuid(Guid guid) {
-		await using var ctx = databaseProvider.Provide();
-		var user = await ctx.Users.FindAsync(guid);
+	public async Task<CreateUserResult> Create(Guid loggedInUserGuid, string username, string password) {
+		await using var db = dbProvider.Lazy();
+		var userRepository = new UserRepository(db);
+		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUserGuid);
+
+		try {
+			var result = await userRepository.CreateUser(username, password);
+			if (!result) {
+				return new Common.Data.Web.Users.CreateUserResults.CreationFailed(result.Error);
+			}
+
+			var user = result.Value;
+			
+			auditLogWriter.UserCreated(user);
+			await db.Ctx.SaveChangesAsync();
+
+			Logger.Information("Created user \"{Username}\" (GUID {Guid}).", username, user.UserGuid);
+			return new Common.Data.Web.Users.CreateUserResults.Success(user.ToUserInfo());
+		} catch (Exception e) {
+			Logger.Error(e, "Could not create user \"{Username}\".", username);
+			return new Common.Data.Web.Users.CreateUserResults.UnknownError();
+		}
+	}
+	
+	public async Task<DeleteUserResult> DeleteByGuid(Guid loggedInUserGuid, Guid userGuid) {
+		await using var db = dbProvider.Lazy();
+		var userRepository = new UserRepository(db);
+
+		var user = await userRepository.GetByGuid(userGuid);
 		if (user == null) {
 			return DeleteUserResult.NotFound;
 		}
 
+		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUserGuid);
 		try {
-			ctx.Users.Remove(user);
-			await ctx.SaveChangesAsync();
+			userRepository.DeleteUser(user);
+			auditLogWriter.UserDeleted(user);
+			await db.Ctx.SaveChangesAsync();
+
+			Logger.Information("Deleted user \"{Username}\" (GUID {Guid}).", user.Name, user.UserGuid);
 			return DeleteUserResult.Deleted;
 		} catch (Exception e) {
-			Logger.Error(e, "Could not delete user \"{Name}\" (GUID {Guid}).", user.Name, user.UserGuid);
+			Logger.Error(e, "Could not delete user \"{Username}\" (GUID {Guid}).", user.Name, user.UserGuid);
 			return DeleteUserResult.Failed;
 		}
 	}

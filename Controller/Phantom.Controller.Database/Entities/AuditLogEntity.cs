@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Phantom.Controller.Database.Enums;
+using Phantom.Common.Data.Web.AuditLog;
 
 namespace Phantom.Controller.Database.Entities;
 

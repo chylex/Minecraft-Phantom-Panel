@@ -1,5 +1,4 @@
-﻿@using Phantom.Web.Identity.Interfaces
-@using Phantom.Web.Identity.Authentication
+﻿@using Phantom.Web.Services
 @inject INavigation Nav
 @inject NavigationManager NavigationManager
 
@@ -8,13 +7,13 @@
     <Found Context="routeData">
       <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
         <NotAuthorized>
-          @if (!PhantomLoginManager.IsAuthenticated(context.User)) {
-            var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimEnd('/');
-            Nav.NavigateTo("login" + QueryString.Create("return", returnUrl), forceLoad: true);
-          }
-          else {
+          @if (context.User.Identity is { IsAuthenticated: true }) {
             <h1>Forbidden</h1>
             <p role="alert">You do not have permission to visit this page.</p>
+          }
+          else {
+            var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimEnd('/');
+            Nav.NavigateTo("login" + QueryString.Create("return", returnUrl), forceLoad: true);
           }
         </NotAuthorized>
       </AuthorizeRouteView>

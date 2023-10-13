@@ -20,8 +20,9 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\Utils\Phantom.Utils\Phantom.Utils.csproj" />
     <ProjectReference Include="..\Phantom.Web.Components\Phantom.Web.Components.csproj" />
-    <ProjectReference Include="..\Phantom.Web.Identity\Phantom.Web.Identity.csproj" />
+    <ProjectReference Include="..\Phantom.Web.Services\Phantom.Web.Services.csproj" />
   </ItemGroup>
   
 </Project>

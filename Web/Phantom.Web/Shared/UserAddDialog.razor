@@ -1,17 +1,15 @@
-﻿@using Phantom.Controller.Services.Users
-@using Phantom.Utils.Tasks
-@using Phantom.Controller.Database.Entities
-@using Phantom.Controller.Services.Audit
+﻿@using Phantom.Common.Data.Web.Users
+@using Phantom.Common.Data.Web.Users.CreateUserResults
+@using Phantom.Web.Services.Users
 @using System.ComponentModel.DataAnnotations
 @inherits PhantomComponent
 @inject IJSRuntime Js;
-@inject UserManager UserManager
-@inject AuditLog AuditLog
+@inject UserManager UserManager;
 
 <Form Model="form" OnSubmit="AddUser">
   <Modal Id="@ModalId" TitleText="Add User">
     <Body>
-      
+
       <div class="row">
         <div class="mb-3">
           <FormTextInput Id="account-username" Label="Username" @bind-Value="form.Username" autocomplete="off" />
@@ -23,7 +21,7 @@
           <FormTextInput Id="account-password" Label="Password" Type="FormTextInputType.Password" autocomplete="new-password" @bind-Value="form.Password" />
         </div>
       </div>
-      
+
     </Body>
     <Footer>
       <FormSubmitError />
@@ -37,9 +35,9 @@
 
   [Parameter, EditorRequired]
   public string ModalId { get; set; } = string.Empty;
-  
+
   [Parameter]
-  public EventCallback<UserEntity> UserAdded { get; set; }
+  public EventCallback<UserInfo> UserAdded { get; set; }
 
   private readonly AddUserFormModel form = new();
 
@@ -54,21 +52,25 @@
   private async Task AddUser(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    if (!await CheckPermission(Permission.EditUsers)) {
+    var loggedInUserGuid = await GetUserGuid();
+    if (loggedInUserGuid == null || !await CheckPermission(Permission.EditUsers)) {
       form.SubmitModel.StopSubmitting("You do not have permission to add users.");
       return;
     }
 
-    switch (await UserManager.CreateUser(form.Username, form.Password)) {
-      case Result<UserEntity, AddUserError>.Ok ok:
-        await AuditLog.AddUserCreatedEvent(ok.Value);
-        await UserAdded.InvokeAsync(ok.Value);
+    switch (await UserManager.Create(loggedInUserGuid.Value, form.Username, form.Password, CancellationToken)) {
+      case Success success:
+        await UserAdded.InvokeAsync(success.User);
         await Js.InvokeVoidAsync("closeModal", ModalId);
         form.SubmitModel.StopSubmitting();
         break;
-        
-      case Result<UserEntity, AddUserError>.Fail fail:
+
+      case CreationFailed fail:
         form.SubmitModel.StopSubmitting(fail.Error.ToSentences("\n"));
+        break;
+
+      default:
+        form.SubmitModel.StopSubmitting("Unknown error.");
         break;
     }
   }

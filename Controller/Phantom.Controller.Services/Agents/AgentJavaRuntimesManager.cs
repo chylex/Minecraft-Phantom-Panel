@@ -4,7 +4,7 @@ using Phantom.Utils.Collections;
 
 namespace Phantom.Controller.Services.Agents;
 
-public sealed class AgentJavaRuntimesManager {
+sealed class AgentJavaRuntimesManager {
 	private readonly RwLockedDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> runtimes = new (LockRecursionPolicy.NoRecursion);
 
 	public ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> All => runtimes.ToImmutable();

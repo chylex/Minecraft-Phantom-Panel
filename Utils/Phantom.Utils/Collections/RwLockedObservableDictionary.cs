@@ -47,6 +47,10 @@ public sealed class RwLockedObservableDictionary<TKey, TValue> where TKey : notn
 	public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value) {
 		return dict.TryGetValue(key, out value);
 	}
+	
+	public bool GetOrAdd(TKey key, Func<TKey, TValue> valueFactory, out TValue value) {
+		return FireCollectionChangedIf(dict.GetOrAdd(key, valueFactory, out value));
+	}
 
 	public bool TryAdd(TKey key, TValue newValue) {
 		return FireCollectionChangedIf(dict.TryAdd(key, newValue));

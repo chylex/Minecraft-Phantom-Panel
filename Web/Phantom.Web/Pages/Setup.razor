@@ -1,20 +1,17 @@
 ﻿@page "/setup"
-@using Phantom.Controller.Services.Users
-@using Phantom.Utils.Cryptography
 @using Phantom.Utils.Tasks
-@using Phantom.Controller.Database.Entities
-@using Phantom.Controller.Services
-@using Phantom.Controller.Services.Audit
-@using Phantom.Web.Identity.Authentication
+@using Phantom.Web.Services.Authentication
+@using Phantom.Web.Services.Rpc
 @using System.ComponentModel.DataAnnotations
+@using Phantom.Utils.Cryptography
 @using System.Security.Cryptography
+@using Phantom.Common.Messages.Web.ToController
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults
 @attribute [AllowAnonymous]
 @inject ServiceConfiguration ServiceConfiguration
-@inject PhantomLoginManager LoginManager
-@inject UserManager UserManager
-@inject RoleManager RoleManager
-@inject UserRoleManager UserRoleManager
-@inject AuditLog AuditLog
+@inject UserLoginManager LoginManager
+@inject ControllerConnection ControllerConnection
 
 <h1>Administrator Setup</h1>
 
@@ -72,7 +69,7 @@
       return;
     }
 
-    var signInResult = await LoginManager.SignIn(form.Username, form.Password);
+    var signInResult = await LoginManager.LogIn(form.Username, form.Password);
     if (!signInResult) {
       form.SubmitModel.StopSubmitting("Error logging in.");
     }
@@ -90,45 +87,15 @@
   }
 
   private async Task<Result<string>> CreateOrUpdateAdministrator() {
-    var existingUser = await UserManager.GetByName(form.Username);
-    return existingUser == null ? await CreateAdministrator() : await UpdateAdministrator(existingUser);
-  }
-
-  private async Task<Result<string>> CreateAdministrator() {
-    var administratorRole = await RoleManager.GetByGuid(Role.Administrator.Guid);
-    if (administratorRole == null) {
-      return Result.Fail("Administrator role not found.");
-    }
-
-    switch (await UserManager.CreateUser(form.Username, form.Password)) {
-      case Result<UserEntity, AddUserError>.Ok ok:
-        var administratorUser = ok.Value;
-        await AuditLog.AddAdministratorUserCreatedEvent(administratorUser);
-
-        if (!await UserRoleManager.Add(administratorUser, administratorRole)) {
-          return Result.Fail("Could not assign administrator role to user.");
-        }
-
-        return Result.Ok<string>();
-
-      case Result<UserEntity, AddUserError>.Fail fail:
-        return Result.Fail(fail.Error.ToSentences("\n"));
-    }
-
-    return Result.Fail("Unknown error.");
-  }
-
-  private async Task<Result<string>> UpdateAdministrator(UserEntity existingUser) {
-    switch (await UserManager.SetUserPassword(existingUser.UserGuid, form.Password)) {
-      case Result<SetUserPasswordError>.Ok:
-        await AuditLog.AddAdministratorUserModifiedEvent(existingUser);
-        return Result.Ok<string>();
-
-      case Result<SetUserPasswordError>.Fail fail:
-        return Result.Fail(fail.Error.ToSentences("\n"));
-    }
-
-    return Result.Fail("Unknown error.");
+    var reply = await ControllerConnection.Send<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(new CreateOrUpdateAdministratorUserMessage(form.Username, form.Password), Timeout.InfiniteTimeSpan);
+    return reply switch {
+           Success             => Result.Ok<string>(),
+           CreationFailed fail => fail.Error.ToSentences("\n"),
+           UpdatingFailed fail => fail.Error.ToSentences("\n"),
+           AddingToRoleFailed  => "Could not assign administrator role to user.",
+           null                => "Timed out.",
+           _                   => "Unknown error."
+    };
   }
 
 }

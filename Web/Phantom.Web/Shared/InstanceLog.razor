@@ -1,11 +1,11 @@
-﻿@inherits PhantomComponent
-@using Phantom.Utils.Collections
+﻿@using Phantom.Utils.Collections
 @using Phantom.Utils.Events
 @using System.Diagnostics
-@using Phantom.Controller.Services.Instances
-@implements IDisposable
+@using Phantom.Web.Services.Instances
+@using Phantom.Common.Data.Web.Users
+@inherits PhantomComponent
 @inject IJSRuntime Js;
-@inject InstanceLogManager InstanceLogManager
+@inject InstanceLogManager InstanceLogManager;
 
 <div id="log" class="font-monospace mb-3">
   @foreach (var line in instanceLogs.EnumerateLast(uint.MaxValue)) {
@@ -16,7 +16,7 @@
 @code {
 
   [Parameter, EditorRequired]
-  public Guid InstanceGuid { get; set; }
+  public Guid InstanceGuid { get; init; }
 
   private IJSObjectReference? PageJs { get; set; }
 
@@ -57,7 +57,7 @@
 
   private async Task RecheckPermissions() {
     recheckPermissionsStopwatch.Restart();
-    
+
     if (!await CheckPermission(Permission.ViewInstanceLogs)) {
       await Task.Yield();
       Dispose();
@@ -65,7 +65,7 @@
     }
   }
 
-  public void Dispose() {
+  protected override void OnDisposed() {
     instanceLogsSubs.Unsubscribe(this);
   }
 

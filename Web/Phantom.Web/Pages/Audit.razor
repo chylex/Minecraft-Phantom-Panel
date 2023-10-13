@@ -1,12 +1,12 @@
 ﻿@page "/audit"
 @attribute [Authorize(Permission.ViewAuditPolicy)]
-@using Phantom.Controller.Services.Audit
-@using Phantom.Controller.Services.Instances
-@using Phantom.Controller.Services.Users
 @using System.Collections.Immutable
-@using Phantom.Controller.Database.Enums
-@implements IDisposable
-@inject AuditLog AuditLog
+@using Phantom.Common.Data.Web.AuditLog
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Users
+@using Phantom.Web.Services.Instances
+@inherits PhantomComponent
+@inject AuditLogManager AuditLogManager
 @inject InstanceManager InstanceManager
 @inject UserManager UserManager
 
@@ -43,7 +43,7 @@
           <code class="text-uppercase">@(logItem.SubjectId ?? "-")</code>
         </td>
         <td>
-          <code>@logItem.Data?.RootElement.ToString()</code>
+          <code>@logItem.JsonData</code>
         </td>
       </tr>
     }
@@ -53,8 +53,8 @@
 @code {
 
   private CancellationTokenSource? initializationCancellationTokenSource;
-  private AuditLogItem[] logItems = Array.Empty<AuditLogItem>();
-  private Dictionary<Guid, string>? userNamesByGuid;
+  private ImmutableArray<AuditLogItem> logItems = ImmutableArray<AuditLogItem>.Empty;
+  private ImmutableDictionary<Guid, string>? userNamesByGuid;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
@@ -62,14 +62,14 @@
     var cancellationToken = initializationCancellationTokenSource.Token;
 
     try {
-      logItems = await AuditLog.GetItems(50, cancellationToken);
-      userNamesByGuid = await UserManager.GetAllByGuid(static user => user.Name, cancellationToken);
-      instanceNamesByGuid = InstanceManager.GetInstanceNames();
+      logItems = await AuditLogManager.GetMostRecentItems(50, cancellationToken);
+      userNamesByGuid = (await UserManager.GetAll(cancellationToken)).ToImmutableDictionary(static user => user.Guid, static user => user.Name);
+      instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.Configuration.InstanceGuid, static instance => instance.Configuration.InstanceName);
     } finally {
       initializationCancellationTokenSource.Dispose();
     }
   }
-  
+
   private string? GetSubjectName(AuditLogSubjectType type, string id) {
     return type switch {
            AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
@@ -78,7 +78,7 @@
     };
   }
 
-  public void Dispose() {
+  protected override void OnDisposed() {
     try {
       initializationCancellationTokenSource?.Cancel();
     } catch (ObjectDisposedException) {}

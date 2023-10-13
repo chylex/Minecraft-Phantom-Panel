@@ -11,10 +11,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="System.Linq.Async" />
   </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Data.Web\Phantom.Common.Data.Web.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
   </ItemGroup>
 

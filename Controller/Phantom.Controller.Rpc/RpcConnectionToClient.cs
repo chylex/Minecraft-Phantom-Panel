@@ -19,7 +19,7 @@ public sealed class RpcConnectionToClient<TListener> {
 	}
 
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
-	private bool isClosed;
+	public bool IsClosed { get; private set; }
 
 	internal RpcConnectionToClient(ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker messageReplyTracker) {
 		this.socket = socket;
@@ -33,16 +33,22 @@ public sealed class RpcConnectionToClient<TListener> {
 	}
 
 	public void Close() {
+		bool hasClosed = false;
+		
 		lock (this) {
-			if (!isClosed) {
-				isClosed = true;
-				Closed?.Invoke(this, new RpcClientConnectionClosedEventArgs(routingId));
+			if (!IsClosed) {
+				IsClosed = true;
+				hasClosed = true;
 			}
+		}
+
+		if (hasClosed) {
+			Closed?.Invoke(this, new RpcClientConnectionClosedEventArgs(routingId));
 		}
 	}
 
 	public async Task Send<TMessage>(TMessage message) where TMessage : IMessage<TListener, NoReply> {
-		if (isClosed) {
+		if (IsClosed) {
 			return;
 		}
 		
@@ -53,7 +59,7 @@ public sealed class RpcConnectionToClient<TListener> {
 	}
 
 	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessage<TListener, TReply> where TReply : class {
-		if (isClosed) {
+		if (IsClosed) {
 			return null;
 		}
 		

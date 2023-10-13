@@ -1,0 +1,11 @@
+﻿@page "/logout"
+@using Phantom.Web.Services.Authentication
+@inject UserLoginManager LoginManager
+
+@code {
+
+  protected override Task OnInitializedAsync() {
+    return LoginManager.LogOut();
+  }
+
+}

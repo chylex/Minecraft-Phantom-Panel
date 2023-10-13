@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Utils.Rpc.Message;
 

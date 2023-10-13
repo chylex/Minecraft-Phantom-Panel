@@ -19,18 +19,18 @@ public sealed class AgentMessageListener : IMessageToControllerListener {
 	private readonly AgentJavaRuntimesManager agentJavaRuntimesManager;
 	private readonly InstanceManager instanceManager;
 	private readonly InstanceLogManager instanceLogManager;
-	private readonly EventLog eventLog;
+	private readonly EventLogManager eventLogManager;
 	private readonly CancellationToken cancellationToken;
 
 	private readonly TaskCompletionSource<Guid> agentGuidWaiter = AsyncTasks.CreateCompletionSource<Guid>();
 
-	internal AgentMessageListener(RpcConnectionToClient<IMessageToAgentListener> connection, AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, InstanceManager instanceManager, InstanceLogManager instanceLogManager, EventLog eventLog, CancellationToken cancellationToken) {
+	internal AgentMessageListener(RpcConnectionToClient<IMessageToAgentListener> connection, AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, InstanceManager instanceManager, InstanceLogManager instanceLogManager, EventLogManager eventLogManager, CancellationToken cancellationToken) {
 		this.connection = connection;
 		this.agentManager = agentManager;
 		this.agentJavaRuntimesManager = agentJavaRuntimesManager;
 		this.instanceManager = instanceManager;
 		this.instanceLogManager = instanceLogManager;
-		this.eventLog = eventLog;
+		this.eventLogManager = eventLogManager;
 		this.cancellationToken = cancellationToken;
 	}
 
@@ -83,12 +83,12 @@ public sealed class AgentMessageListener : IMessageToControllerListener {
 	}
 
 	public async Task<NoReply> HandleReportInstanceEvent(ReportInstanceEventMessage message) {
-		message.Event.Accept(eventLog.CreateInstanceEventVisitor(message.EventGuid, message.UtcTime, await WaitForAgentGuid(), message.InstanceGuid));
+		message.Event.Accept(eventLogManager.CreateInstanceEventVisitor(message.EventGuid, message.UtcTime, await WaitForAgentGuid(), message.InstanceGuid));
 		return NoReply.Instance;
 	}
 
 	public Task<NoReply> HandleInstanceOutput(InstanceOutputMessage message) {
-		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
+		instanceLogManager.ReceiveLines(message.InstanceGuid, message.Lines);
 		return Task.FromResult(NoReply.Instance);
 	}
 

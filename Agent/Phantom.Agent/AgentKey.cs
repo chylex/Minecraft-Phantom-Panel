@@ -1,5 +1,5 @@
 ﻿using NetMQ;
-using Phantom.Common.Data.Agent;
+using Phantom.Common.Data;
 using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;

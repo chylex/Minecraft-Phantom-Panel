@@ -1,7 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Web;
 using Microsoft.AspNetCore.Components;
-using Phantom.Web.Identity.Interfaces;
+using Microsoft.AspNetCore.Components.Routing;
+using Phantom.Web.Services;
 
 namespace Phantom.Web.Base;
 
@@ -27,7 +28,24 @@ sealed class Navigation : INavigation {
 		return value != null;
 	}
 	
-	public void NavigateTo(string url, bool forceLoad = false) {
-		navigationManager.NavigateTo(BasePath + url, forceLoad);
+	public async Task NavigateTo(string url, bool forceLoad = false) {
+		var newPath = BasePath + url;
+		
+		var navigationTaskSource = new TaskCompletionSource();
+		navigationManager.LocationChanged += NavigationManagerOnLocationChanged;
+		try {
+			navigationManager.NavigateTo(newPath, forceLoad);
+			await navigationTaskSource.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		} finally {
+			navigationManager.LocationChanged -= NavigationManagerOnLocationChanged;
+		}
+
+		return;
+
+		void NavigationManagerOnLocationChanged(object? sender, LocationChangedEventArgs e) {
+			if (Uri.TryCreate(e.Location, UriKind.Absolute, out var uri) && uri.AbsolutePath == newPath) {
+				navigationTaskSource.SetResult();
+			}
+		}
 	}
 }

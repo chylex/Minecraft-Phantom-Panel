@@ -1,0 +1,26 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Web" type="DotNetProject" factoryName=".NET Project">
+    <option name="EXE_PATH" value="$PROJECT_DIR$/.artifacts/bin/Phantom.Web/debug/Phantom.Web.exe" />
+    <option name="PROGRAM_PARAMETERS" value="" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Web" />
+    <option name="PASS_PARENT_ENVS" value="1" />
+    <envs>
+      <env name="ASPNETCORE_ENVIRONMENT" value="Development" />
+      <env name="CONTROLLER_HOST" value="localhost" />
+      <env name="WEB_KEY" value="BMNHM9RRPMCBBY29D9XHS6KBKZSRY7F5XFN27YZX96XXWJC2NM2D6YRHM9PZN9JGQGCSJ6FMB2GGZ" />
+      <env name="WEB_SERVER_HOST" value="localhost" />
+    </envs>
+    <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    <option name="USE_MONO" value="0" />
+    <option name="RUNTIME_ARGUMENTS" value="" />
+    <option name="PROJECT_PATH" value="$PROJECT_DIR$/Web/Phantom.Web/Phantom.Web.csproj" />
+    <option name="PROJECT_EXE_PATH_TRACKING" value="1" />
+    <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
+    <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="0" />
+    <option name="PROJECT_KIND" value="DotNetCore" />
+    <option name="PROJECT_TFM" value="net8.0" />
+    <method v="2">
+      <option name="Build" />
+    </method>
+  </configuration>
+</component>
