@@ -1,6 +1,7 @@
 ﻿using NetMQ.Sockets;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Message;
+using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Tasks;
 using Serilog;
 using Serilog.Events;
@@ -8,49 +9,28 @@ using Serilog.Events;
 namespace Phantom.Controller.Rpc;
 
 public static class RpcRuntime {
-	public static Task Launch<TOutgoingListener, TIncomingListener, TReplyMessage>(RpcConfiguration config, IMessageDefinitions<TOutgoingListener, TIncomingListener, TReplyMessage> messageDefinitions, Func<RpcClientConnection<TOutgoingListener>, TIncomingListener> listenerFactory, CancellationToken cancellationToken) where TReplyMessage : IMessage<TOutgoingListener, NoReply>, IMessage<TIncomingListener, NoReply> {
-		return RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMessage>.Launch(config, messageDefinitions, listenerFactory, cancellationToken);
+	public static Task Launch<TClientListener, TServerListener, TReplyMessage>(RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory, CancellationToken cancellationToken) where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
+		return RpcRuntime<TClientListener, TServerListener, TReplyMessage>.Launch(config, messageDefinitions, listenerFactory, cancellationToken);
 	}
 }
 
-internal sealed class RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMessage> : RpcRuntime<ServerSocket> where TReplyMessage : IMessage<TOutgoingListener, NoReply>, IMessage<TIncomingListener, NoReply> {
-	internal static Task Launch(RpcConfiguration config, IMessageDefinitions<TOutgoingListener, TIncomingListener, TReplyMessage> messageDefinitions, Func<RpcClientConnection<TOutgoingListener>, TIncomingListener> listenerFactory, CancellationToken cancellationToken) {
-		return new RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMessage>(config, messageDefinitions, listenerFactory, cancellationToken).Launch();
+internal sealed class RpcRuntime<TClientListener, TServerListener, TReplyMessage> : RpcRuntime<ServerSocket> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
+	internal static Task Launch(RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory, CancellationToken cancellationToken) {
+		var socket = RpcServerSocket.Connect(config);
+		return new RpcRuntime<TClientListener, TServerListener, TReplyMessage>(socket, messageDefinitions, listenerFactory, cancellationToken).Launch();
 	}
 
-	private static ServerSocket CreateSocket(RpcConfiguration config) {
-		var socket = new ServerSocket();
-		var options = socket.Options;
-
-		options.CurveServer = true;
-		options.CurveCertificate = config.ServerCertificate;
-		
-		return socket;
-	}
-	
-	private readonly RpcConfiguration config;
-	private readonly IMessageDefinitions<TOutgoingListener, TIncomingListener, TReplyMessage> messageDefinitions;
-	private readonly Func<RpcClientConnection<TOutgoingListener>, TIncomingListener> listenerFactory;
+	private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
+	private readonly Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory;
 	private readonly CancellationToken cancellationToken;
 
-	private RpcRuntime(RpcConfiguration config, IMessageDefinitions<TOutgoingListener, TIncomingListener, TReplyMessage> messageDefinitions, Func<RpcClientConnection<TOutgoingListener>, TIncomingListener> listenerFactory, CancellationToken cancellationToken) : base(config, CreateSocket(config)) {
-		this.config = config;
+	private RpcRuntime(RpcServerSocket socket, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory, CancellationToken cancellationToken) : base(socket) {
 		this.messageDefinitions = messageDefinitions;
 		this.listenerFactory = listenerFactory;
 		this.cancellationToken = cancellationToken;
 	}
 
-	protected override void Connect(ServerSocket socket) {
-		var logger = config.RuntimeLogger;
-		var url = config.TcpUrl;
-
-		logger.Information("Starting ZeroMQ server on {Url}...", url);
-		socket.Bind(url);
-		logger.Information("ZeroMQ server initialized, listening for connections on port {Port}.", config.Port);
-	}
-
-	protected override void Run(ServerSocket socket, MessageReplyTracker replyTracker, TaskManager taskManager) {
-		var logger = config.RuntimeLogger;
+	protected override void Run(ServerSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager) {
 		var clients = new Dictionary<ulong, Client>();
 
 		void OnConnectionClosed(object? sender, RpcClientConnectionClosedEventArgs e) {
@@ -71,7 +51,7 @@ internal sealed class RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMes
 					continue;
 				}
 
-				var connection = new RpcClientConnection<TOutgoingListener>(socket, routingId, messageDefinitions.Outgoing, replyTracker);
+				var connection = new RpcConnectionToClient<TClientListener>(socket, routingId, messageDefinitions.ToClient, replyTracker);
 				connection.Closed += OnConnectionClosed;
 
 				client = new Client(connection, messageDefinitions, listenerFactory(connection), logger, taskManager, cancellationToken);
@@ -79,7 +59,7 @@ internal sealed class RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMes
 			}
 
 			LogMessageType(logger, routingId, data);
-			messageDefinitions.Incoming.Handle(data, client);
+			messageDefinitions.ToServer.Handle(data, client);
 		}
 
 		foreach (var client in clients.Values) {
@@ -92,7 +72,7 @@ internal sealed class RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMes
 			return;
 		}
 
-		if (data.Length > 0 && messageDefinitions.Incoming.TryGetType(data, out var type)) {
+		if (data.Length > 0 && messageDefinitions.ToServer.TryGetType(data, out var type)) {
 			logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", type.Name, data.Length, routingId);
 		}
 		else {
@@ -101,7 +81,7 @@ internal sealed class RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMes
 	}
 
 	private bool CheckIsRegistrationMessage(ReadOnlyMemory<byte> data, ILogger logger, uint routingId) {
-		if (messageDefinitions.Incoming.TryGetType(data, out var type) && messageDefinitions.IsRegistrationMessage(type)) {
+		if (messageDefinitions.ToServer.TryGetType(data, out var type) && messageDefinitions.IsRegistrationMessage(type)) {
 			return true;
 		}
 
@@ -109,12 +89,12 @@ internal sealed class RpcRuntime<TOutgoingListener, TIncomingListener, TReplyMes
 		return false;
 	}
 	
-	private sealed class Client : MessageHandler<TIncomingListener> {
-		public RpcClientConnection<TOutgoingListener> Connection { get; }
+	private sealed class Client : MessageHandler<TServerListener> {
+		public RpcConnectionToClient<TClientListener> Connection { get; }
 		
-		private readonly IMessageDefinitions<TOutgoingListener, TIncomingListener, TReplyMessage> messageDefinitions;
+		private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
 		
-		public Client(RpcClientConnection<TOutgoingListener> connection, IMessageDefinitions<TOutgoingListener, TIncomingListener, TReplyMessage> messageDefinitions, TIncomingListener listener, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) : base(listener, logger, taskManager, cancellationToken) {
+		public Client(RpcConnectionToClient<TClientListener> connection, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, TServerListener listener, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) : base(listener, logger, taskManager, cancellationToken) {
 			this.Connection = connection;
 			this.messageDefinitions = messageDefinitions;
 		}

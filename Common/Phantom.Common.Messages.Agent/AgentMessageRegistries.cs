@@ -34,14 +34,14 @@ public static class AgentMessageRegistries {
 	}
 
 	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToAgentListener, IMessageToControllerListener, ReplyMessage> {
-		public MessageRegistry<IMessageToAgentListener> Outgoing => ToAgent;
-		public MessageRegistry<IMessageToControllerListener> Incoming => ToController;
+		public MessageRegistry<IMessageToAgentListener> ToClient => ToAgent;
+		public MessageRegistry<IMessageToControllerListener> ToServer => ToController;
 
 		public bool IsRegistrationMessage(Type messageType) {
 			return messageType == typeof(RegisterAgentMessage);
 		}
 
-		public ReplyMessage CreateReplyMessage( uint sequenceId, byte[] serializedReply) {
+		public ReplyMessage CreateReplyMessage(uint sequenceId, byte[] serializedReply) {
 			return new ReplyMessage(sequenceId, serializedReply);
 		}
 	}

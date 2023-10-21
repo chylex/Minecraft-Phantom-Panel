@@ -52,7 +52,7 @@ public sealed class AgentManager {
 		return agents.ByGuid.ToImmutable();
 	}
 
-	internal async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcClientConnection<IMessageToAgentListener> connection) {
+	internal async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcConnectionToClient<IMessageToAgentListener> connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
 			return false;
@@ -88,7 +88,7 @@ public sealed class AgentManager {
 		return true;
 	}
 
-	internal bool UnregisterAgent(Guid agentGuid, RpcClientConnection<IMessageToAgentListener> connection) {
+	internal bool UnregisterAgent(Guid agentGuid, RpcConnectionToClient<IMessageToAgentListener> connection) {
 		if (agents.ByGuid.TryReplaceIf(agentGuid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent.Connection?.IsSame(connection) == true)) {
 			Logger.Information("Unregistered agent with GUID {Guid}.", agentGuid);
 			return true;

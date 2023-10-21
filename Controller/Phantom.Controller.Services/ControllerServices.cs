@@ -53,11 +53,11 @@ public sealed class ControllerServices {
 		this.cancellationToken = shutdownCancellationToken;
 	}
 
-	public AgentMessageListener CreateAgentMessageListener(RpcClientConnection<IMessageToAgentListener> connection) {
+	public AgentMessageListener CreateAgentMessageListener(RpcConnectionToClient<IMessageToAgentListener> connection) {
 		return new AgentMessageListener(connection, AgentManager, AgentJavaRuntimesManager, InstanceManager, InstanceLogManager, EventLog, cancellationToken);
 	}
 
-	public WebMessageListener CreateWebMessageListener(RpcClientConnection<IMessageToWebListener> connection) {
+	public WebMessageListener CreateWebMessageListener(RpcConnectionToClient<IMessageToWebListener> connection) {
 		return new WebMessageListener(connection);
 	}
 

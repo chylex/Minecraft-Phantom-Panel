@@ -1,11 +1,11 @@
-﻿using Phantom.Agent.Rpc;
-using Phantom.Common.Data.Instance;
+﻿using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Message;
 using Serilog;
 
@@ -14,11 +14,11 @@ namespace Phantom.Agent.Services.Rpc;
 public sealed class MessageListener : IMessageToAgentListener {
 	private static ILogger Logger { get; } = PhantomLogger.Create<MessageListener>();
 
-	private readonly RpcServerConnection connection;
+	private readonly RpcConnectionToServer<IMessageToControllerListener> connection;
 	private readonly AgentServices agent;
 	private readonly CancellationTokenSource shutdownTokenSource;
 
-	public MessageListener(RpcServerConnection connection, AgentServices agent, CancellationTokenSource shutdownTokenSource) {
+	public MessageListener(RpcConnectionToServer<IMessageToControllerListener> connection, AgentServices agent, CancellationTokenSource shutdownTokenSource) {
 		this.connection = connection;
 		this.agent = agent;
 		this.shutdownTokenSource = shutdownTokenSource;
@@ -40,7 +40,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 			}
 		}
 
-		await ServerMessaging.Send(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
+		await connection.Send(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
 		await agent.InstanceSessionManager.RefreshAgentStatus();
 		
 		return NoReply.Instance;

@@ -1,5 +1,7 @@
 ﻿using Phantom.Common.Logging;
+using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Rpc;
 using Serilog;
 
 namespace Phantom.Agent.Rpc;
@@ -9,10 +11,10 @@ sealed class KeepAliveLoop {
 
 	private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(10);
 
-	private readonly RpcServerConnection connection;
+	private readonly RpcConnectionToServer<IMessageToControllerListener> connection;
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
 
-	public KeepAliveLoop(RpcServerConnection connection) {
+	public KeepAliveLoop(RpcConnectionToServer<IMessageToControllerListener> connection) {
 		this.connection = connection;
 		Task.Run(Run);
 	}

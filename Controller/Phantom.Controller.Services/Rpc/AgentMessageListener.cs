@@ -14,7 +14,7 @@ using Phantom.Utils.Tasks;
 namespace Phantom.Controller.Services.Rpc;
 
 public sealed class AgentMessageListener : IMessageToControllerListener {
-	private readonly RpcClientConnection<IMessageToAgentListener> connection;
+	private readonly RpcConnectionToClient<IMessageToAgentListener> connection;
 	private readonly AgentManager agentManager;
 	private readonly AgentJavaRuntimesManager agentJavaRuntimesManager;
 	private readonly InstanceManager instanceManager;
@@ -24,7 +24,7 @@ public sealed class AgentMessageListener : IMessageToControllerListener {
 
 	private readonly TaskCompletionSource<Guid> agentGuidWaiter = AsyncTasks.CreateCompletionSource<Guid>();
 
-	internal AgentMessageListener(RpcClientConnection<IMessageToAgentListener> connection, AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, InstanceManager instanceManager, InstanceLogManager instanceLogManager, EventLog eventLog, CancellationToken cancellationToken) {
+	internal AgentMessageListener(RpcConnectionToClient<IMessageToAgentListener> connection, AgentManager agentManager, AgentJavaRuntimesManager agentJavaRuntimesManager, InstanceManager instanceManager, InstanceLogManager instanceLogManager, EventLog eventLog, CancellationToken cancellationToken) {
 		this.connection = connection;
 		this.agentManager = agentManager;
 		this.agentJavaRuntimesManager = agentJavaRuntimesManager;

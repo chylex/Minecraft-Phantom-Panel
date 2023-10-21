@@ -4,13 +4,13 @@ using Phantom.Controller.Rpc;
 namespace Phantom.Controller.Services.Agents;
 
 sealed class AgentConnection {
-	private readonly RpcClientConnection<IMessageToAgentListener> connection;
+	private readonly RpcConnectionToClient<IMessageToAgentListener> connection;
 
-	internal AgentConnection(RpcClientConnection<IMessageToAgentListener> connection) {
+	internal AgentConnection(RpcConnectionToClient<IMessageToAgentListener> connection) {
 		this.connection = connection;
 	}
 
-	public bool IsSame(RpcClientConnection<IMessageToAgentListener> connection) {
+	public bool IsSame(RpcConnectionToClient<IMessageToAgentListener> connection) {
 		return this.connection.IsSame(connection);
 	}
 

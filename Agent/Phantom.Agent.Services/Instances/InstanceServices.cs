@@ -1,7 +1,8 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
+using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Backups;
 using Phantom.Utils.Tasks;
 
 namespace Phantom.Agent.Services.Instances;
 
-sealed record InstanceServices(TaskManager TaskManager, PortManager PortManager, BackupManager BackupManager, LaunchServices LaunchServices);
+sealed record InstanceServices(ControllerConnection ControllerConnection, TaskManager TaskManager, PortManager PortManager, BackupManager BackupManager, LaunchServices LaunchServices);

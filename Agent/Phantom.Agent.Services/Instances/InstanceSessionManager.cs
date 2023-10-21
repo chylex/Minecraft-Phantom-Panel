@@ -24,6 +24,7 @@ namespace Phantom.Agent.Services.Instances;
 sealed class InstanceSessionManager : IAsyncDisposable {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceSessionManager>();
 
+	private readonly ControllerConnection controllerConnection;
 	private readonly AgentInfo agentInfo;
 	private readonly string basePath;
 
@@ -36,7 +37,8 @@ sealed class InstanceSessionManager : IAsyncDisposable {
 
 	private uint instanceLoggerSequenceId = 0;
 
-	public InstanceSessionManager(AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager, BackupManager backupManager) {
+	public InstanceSessionManager(ControllerConnection controllerConnection, AgentInfo agentInfo, AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, TaskManager taskManager, BackupManager backupManager) {
+		this.controllerConnection = controllerConnection;
 		this.agentInfo = agentInfo;
 		this.basePath = agentFolders.InstancesFolderPath;
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
@@ -45,7 +47,7 @@ sealed class InstanceSessionManager : IAsyncDisposable {
 		var launchServices = new LaunchServices(minecraftServerExecutables, javaRuntimeRepository);
 		var portManager = new PortManager(agentInfo.AllowedServerPorts, agentInfo.AllowedRconPorts);
 
-		this.instanceServices = new InstanceServices(taskManager, portManager, backupManager, launchServices);
+		this.instanceServices = new InstanceServices(controllerConnection, taskManager, portManager, backupManager, launchServices);
 	}
 
 	private async Task<InstanceActionResult<T>> AcquireSemaphoreAndRun<T>(Func<Task<InstanceActionResult<T>>> func) {
@@ -146,7 +148,7 @@ sealed class InstanceSessionManager : IAsyncDisposable {
 				var runningInstances = GetRunningInstancesInternal();
 				var runningInstanceCount = runningInstances.Length;
 				var runningInstanceMemory = runningInstances.Aggregate(RamAllocationUnits.Zero, static (total, instance) => total + instance.Configuration.MemoryAllocation);
-				await ServerMessaging.Send(new ReportAgentStatusMessage(runningInstanceCount, runningInstanceMemory));
+				await controllerConnection.Send(new ReportAgentStatusMessage(runningInstanceCount, runningInstanceMemory));
 			} finally {
 				semaphore.Release();
 			}

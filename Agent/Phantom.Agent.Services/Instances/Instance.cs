@@ -1,5 +1,4 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Instances.Procedures;
 using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
@@ -57,7 +56,7 @@ sealed class Instance : IAsyncDisposable {
 
 	public void ReportLastStatus() {
 		TryUpdateStatus("Report last status of instance " + shortName, async () => {
-			await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
+			await Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
 		});
 	}
 
@@ -65,14 +64,14 @@ sealed class Instance : IAsyncDisposable {
 		TryUpdateStatus("Report status of instance " + shortName + " as " + status.GetType().Name, async () => {
 			if (status != currentStatus) {
 				currentStatus = status;
-				await ServerMessaging.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
+				await Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
 			}
 		});
 	}
 
 	private void ReportEvent(IInstanceEvent instanceEvent) {
 		var message = new ReportInstanceEventMessage(Guid.NewGuid(), DateTime.UtcNow, Configuration.InstanceGuid, instanceEvent);
-		Services.TaskManager.Run("Report event for instance " + shortName, async () => await ServerMessaging.Send(message));
+		Services.TaskManager.Run("Report event for instance " + shortName, async () => await Services.ControllerConnection.Send(message));
 	}
 	
 	internal void TransitionState(IInstanceState newState) {

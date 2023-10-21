@@ -4,7 +4,7 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Controller.Rpc;
 
-public sealed class RpcClientConnection<TListener> {
+public sealed class RpcConnectionToClient<TListener> {
 	private readonly ServerSocket socket;
 	private readonly uint routingId;
 
@@ -14,14 +14,14 @@ public sealed class RpcClientConnection<TListener> {
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
 	private bool isClosed;
 
-	internal RpcClientConnection(ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker messageReplyTracker) {
+	internal RpcConnectionToClient(ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker messageReplyTracker) {
 		this.socket = socket;
 		this.routingId = routingId;
 		this.messageRegistry = messageRegistry;
 		this.messageReplyTracker = messageReplyTracker;
 	}
 
-	public bool IsSame(RpcClientConnection<TListener> other) {
+	public bool IsSame(RpcConnectionToClient<TListener> other) {
 		return this.routingId == other.routingId && this.socket == other.socket;
 	}
 

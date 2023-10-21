@@ -16,12 +16,14 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 	
 	private static readonly TimeSpan SendDelay = TimeSpan.FromMilliseconds(200);
 
+	private readonly ControllerConnection controllerConnection;
 	private readonly Guid instanceGuid;
 	private readonly Channel<string> outputChannel;
 	
 	private int droppedLinesSinceLastSend;
 
-	public InstanceLogSender(TaskManager taskManager, Guid instanceGuid, string loggerName) : base(PhantomLogger.Create<InstanceLogSender>(loggerName), taskManager, "Instance log sender for " + loggerName) {
+	public InstanceLogSender(ControllerConnection controllerConnection, TaskManager taskManager, Guid instanceGuid, string loggerName) : base(PhantomLogger.Create<InstanceLogSender>(loggerName), taskManager, "Instance log sender for " + loggerName) {
+		this.controllerConnection = controllerConnection;
 		this.instanceGuid = instanceGuid;
 		this.outputChannel = Channel.CreateBounded<string>(BufferOptions, OnLineDropped);
 		Start();
@@ -61,7 +63,7 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 
 	private async Task SendOutputToServer(ImmutableArray<string> lines) {
 		if (!lines.IsEmpty) {
-			await ServerMessaging.Send(new InstanceOutputMessage(instanceGuid, lines));
+			await controllerConnection.Send(new InstanceOutputMessage(instanceGuid, lines));
 		}
 	}
 

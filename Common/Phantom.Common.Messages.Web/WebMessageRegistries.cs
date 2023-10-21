@@ -17,14 +17,14 @@ public static class WebMessageRegistries {
 	}
 
 	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToWebListener, IMessageToControllerListener, ReplyMessage> {
-		public MessageRegistry<IMessageToWebListener> Outgoing => ToWeb;
-		public MessageRegistry<IMessageToControllerListener> Incoming => ToController;
+		public MessageRegistry<IMessageToWebListener> ToClient => ToWeb;
+		public MessageRegistry<IMessageToControllerListener> ToServer => ToController;
 
 		public bool IsRegistrationMessage(Type messageType) {
 			return false;
 		}
 
-		public ReplyMessage CreateReplyMessage( uint sequenceId, byte[] serializedReply) {
+		public ReplyMessage CreateReplyMessage(uint sequenceId, byte[] serializedReply) {
 			return new ReplyMessage(sequenceId, serializedReply);
 		}
 	}

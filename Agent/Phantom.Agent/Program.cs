@@ -1,11 +1,15 @@
 ﻿using System.Reflection;
+using NetMQ;
 using Phantom.Agent;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Logging;
+using Phantom.Common.Messages.Agent;
+using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;
 
@@ -45,19 +49,18 @@ try {
 
 	var (controllerCertificate, agentToken) = agentKey.Value;
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
-	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks));
-
-	MessageListener MessageListenerFactory(RpcServerConnection connection) {
-		return new MessageListener(connection, agentServices, shutdownCancellationTokenSource);
-	}
-
+	
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
+	
+	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), controllerHost, controllerPort, controllerCertificate);
+	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, AgentMessageRegistries.Definitions, new RegisterAgentMessage(agentToken, agentInfo));
 
+	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcSocket.Connection));
 	await agentServices.Initialize();
 
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), controllerHost, controllerPort, controllerCertificate);
-	var rpcTask = RpcLauncher.Launch(rpcConfiguration, agentToken, agentInfo, MessageListenerFactory, rpcDisconnectSemaphore, shutdownCancellationToken);
+	var rpcMessageListener = new MessageListener(rpcSocket.Connection, agentServices, shutdownCancellationTokenSource);
+	var rpcTask = RpcClientRuntime.Launch(rpcSocket, agentInfo, rpcMessageListener, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
 		await rpcTask.WaitAsync(shutdownCancellationToken);
 	} finally {
@@ -67,6 +70,8 @@ try {
 		rpcDisconnectSemaphore.Release();
 		await rpcTask;
 		rpcDisconnectSemaphore.Dispose();
+		
+		NetMQConfig.Cleanup();
 	}
 
 	return 0;
