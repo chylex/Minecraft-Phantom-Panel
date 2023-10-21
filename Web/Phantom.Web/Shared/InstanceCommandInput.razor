@@ -46,7 +46,7 @@
       form.SubmitModel.StopSubmitting();
     }
     else {
-      form.SubmitModel.StopSubmitting(result.ToSentence(SendCommandToInstanceResultExtensions.ToSentence));
+      form.SubmitModel.StopSubmitting(result.ToSentence(Messages.ToSentence));
     }
 
     await commandInputElement.FocusAsync(preventScroll: true);

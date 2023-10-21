@@ -102,7 +102,7 @@ sealed class BackupManager : IDisposable {
 
 		private void LogBackupResult(BackupCreationResult result) {
 			if (result.Kind != BackupCreationResultKind.Success) {
-				logger.Warning("Backup failed: {Reason}", result.Kind.ToSentence());
+				logger.Warning("Backup failed: {Reason}", DescribeResult(result.Kind));
 				return;
 			}
 			
@@ -113,6 +113,20 @@ sealed class BackupManager : IDisposable {
 			else {
 				logger.Information("Backup finished successfully.");
 			}
+		}
+
+		private static string DescribeResult(BackupCreationResultKind kind) {
+			return kind switch {
+				BackupCreationResultKind.Success                            => "Backup created successfully.",
+				BackupCreationResultKind.InstanceNotRunning                 => "Instance is not running.",
+				BackupCreationResultKind.BackupCancelled                    => "Backup cancelled.",
+				BackupCreationResultKind.BackupAlreadyRunning               => "A backup is already being created.",
+				BackupCreationResultKind.BackupFileAlreadyExists            => "Backup with the same name already exists.",
+				BackupCreationResultKind.CouldNotCreateBackupFolder         => "Could not create backup folder.",
+				BackupCreationResultKind.CouldNotCopyWorldToTemporaryFolder => "Could not copy world to temporary folder.",
+				BackupCreationResultKind.CouldNotCreateWorldArchive         => "Could not create world archive.",
+				_                                                           => "Unknown error."
+			};
 		}
 	}
 }

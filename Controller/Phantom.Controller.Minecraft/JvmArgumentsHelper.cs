@@ -37,13 +37,4 @@ public static class JvmArgumentsHelper {
 		XmxNotAllowed,
 		XmsNotAllowed
 	}
-
-	public static string ToSentence(this ValidationError? result) {
-		return result switch {
-			ValidationError.InvalidFormat => "Invalid format.",
-			ValidationError.XmxNotAllowed => "The -Xmx argument must not be specified manually.",
-			ValidationError.XmsNotAllowed => "The -Xms argument must not be specified manually.",
-			_                             => throw new ArgumentOutOfRangeException(nameof(result), result, null)
-		};
-	}
 }

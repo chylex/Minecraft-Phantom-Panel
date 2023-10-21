@@ -78,7 +78,7 @@ else {
         await AuditLog.AddInstanceLaunchedEvent(InstanceGuid);
       }
       else {
-        lastError = result.ToSentence(LaunchInstanceResultExtensions.ToSentence);
+        lastError = result.ToSentence(Messages.ToSentence);
       }
     } finally {
       isLaunchingInstance = false;
