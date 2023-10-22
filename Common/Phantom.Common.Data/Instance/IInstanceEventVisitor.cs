@@ -1,4 +1,4 @@
-﻿namespace Phantom.Common.Data.Instance; 
+﻿namespace Phantom.Common.Data.Instance;
 
 public interface IInstanceEventVisitor {
 	void OnLaunchSucceeded(InstanceLaunchSuccededEvent e);

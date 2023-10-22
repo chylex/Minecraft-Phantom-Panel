@@ -5,7 +5,7 @@ using Phantom.Common.Messages.ToAgent;
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Common.Messages; 
+namespace Phantom.Common.Messages;
 
 public static class MessageRegistries {
 	public static MessageRegistry<IMessageToAgentListener> ToAgent { get; } = new (PhantomLogger.Create("MessageRegistry:ToAgent"));

@@ -1,4 +1,4 @@
-﻿namespace Phantom.Controller.Services.Users; 
+﻿namespace Phantom.Controller.Services.Users;
 
 public enum DeleteUserResult : byte {
 	Deleted,

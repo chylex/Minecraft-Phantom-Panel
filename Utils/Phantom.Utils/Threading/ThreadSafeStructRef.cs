@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.Threading; 
+﻿namespace Phantom.Utils.Threading;
 
 public sealed class ThreadSafeStructRef<T> : IDisposable where T : struct {
 	private T? value;

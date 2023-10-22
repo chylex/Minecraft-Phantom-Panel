@@ -1,7 +1,7 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Minecraft;
 
-namespace Phantom.Common.Data.Instance; 
+namespace Phantom.Common.Data.Instance;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceLaunchProperties(

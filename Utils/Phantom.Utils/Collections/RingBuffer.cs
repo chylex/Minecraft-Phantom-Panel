@@ -1,4 +1,4 @@
-namespace Phantom.Utils.Collections; 
+namespace Phantom.Utils.Collections;
 
 public sealed class RingBuffer<T> {
 	private readonly T[] buffer;

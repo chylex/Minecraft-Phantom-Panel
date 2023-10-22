@@ -3,7 +3,7 @@ using Phantom.Common.Logging;
 using Phantom.Utils.IO;
 using Serilog;
 
-namespace Phantom.Agent; 
+namespace Phantom.Agent;
 
 static class GuidFile {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(GuidFile));

@@ -27,7 +27,7 @@ sealed class Instance : IAsyncDisposable {
 	private IInstanceState currentState;
 	public bool IsRunning => currentState is not InstanceNotRunningState;
 	
-	public event EventHandler? IsRunningChanged; 
+	public event EventHandler? IsRunningChanged;
 	
 	private readonly InstanceProcedureManager procedureManager;
 

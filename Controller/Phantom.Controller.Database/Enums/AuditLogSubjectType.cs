@@ -1,4 +1,4 @@
-﻿namespace Phantom.Controller.Database.Enums; 
+﻿namespace Phantom.Controller.Database.Enums;
 
 public enum AuditLogSubjectType {
 	User,

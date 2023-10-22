@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Phantom.Controller.Database.Enums;
 
-namespace Phantom.Controller.Database.Entities; 
+namespace Phantom.Controller.Database.Entities;
 
 [Table("EventLog", Schema = "system")]
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]

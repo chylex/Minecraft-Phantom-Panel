@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Phantom.Controller.Database; 
+namespace Phantom.Controller.Database;
 
 public sealed class DatabaseProvider {
 	private readonly IServiceScopeFactory serviceScopeFactory;

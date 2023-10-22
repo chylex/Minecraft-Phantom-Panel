@@ -2,7 +2,7 @@
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 
-namespace Phantom.Common.Data.Minecraft; 
+namespace Phantom.Common.Data.Minecraft;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial class FileDownloadInfo {

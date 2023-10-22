@@ -1,7 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 
-namespace Phantom.Utils.Processes; 
+namespace Phantom.Utils.Processes;
 
 public sealed class ProcessConfigurator {
 	private readonly ProcessStartInfo startInfo = new () {

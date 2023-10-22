@@ -3,7 +3,7 @@ using Phantom.Agent.Minecraft.Instance;
 using Phantom.Utils.IO;
 using Serilog;
 
-namespace Phantom.Agent.Minecraft.Launcher.Types; 
+namespace Phantom.Agent.Minecraft.Launcher.Types;
 
 public sealed class FabricLauncher : BaseLauncher {
 	public FabricLauncher(InstanceProperties instanceProperties) : base(instanceProperties) {}

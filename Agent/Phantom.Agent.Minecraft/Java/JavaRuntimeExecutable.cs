@@ -1,6 +1,6 @@
 ﻿using Phantom.Common.Data.Java;
 
-namespace Phantom.Agent.Minecraft.Java; 
+namespace Phantom.Agent.Minecraft.Java;
 
 public sealed class JavaRuntimeExecutable {
 	internal string ExecutablePath { get; }

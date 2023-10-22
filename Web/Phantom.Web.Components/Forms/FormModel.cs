@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Forms;
 using Phantom.Web.Components.Utils;
 
-namespace Phantom.Web.Components.Forms; 
+namespace Phantom.Web.Components.Forms;
 
 public abstract class FormModel {
 	public EditContext EditContext { get; }

@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.IO; 
+﻿namespace Phantom.Utils.IO;
 
 public static class Directories {
 	public static void Create(string path, UnixFileMode mode) {

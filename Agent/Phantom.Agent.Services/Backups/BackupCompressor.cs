@@ -2,7 +2,7 @@
 using Phantom.Utils.Processes;
 using Serilog;
 
-namespace Phantom.Agent.Services.Backups; 
+namespace Phantom.Agent.Services.Backups;
 
 static class BackupCompressor {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(BackupCompressor));

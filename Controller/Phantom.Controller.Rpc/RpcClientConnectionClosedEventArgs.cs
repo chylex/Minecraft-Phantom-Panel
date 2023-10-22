@@ -1,4 +1,4 @@
-﻿namespace Phantom.Controller.Rpc; 
+﻿namespace Phantom.Controller.Rpc;
 
 sealed class RpcClientConnectionClosedEventArgs : EventArgs {
 	public uint RoutingId { get; }

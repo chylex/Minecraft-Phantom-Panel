@@ -6,7 +6,7 @@ using System.Text;
 using Phantom.Common.Logging;
 using Serilog;
 
-namespace Phantom.Agent.Minecraft.Server; 
+namespace Phantom.Agent.Minecraft.Server;
 
 public sealed class ServerStatusProtocol {
 	private readonly ILogger logger;

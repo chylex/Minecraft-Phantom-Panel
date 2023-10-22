@@ -2,7 +2,7 @@
 using Phantom.Common.Messages.ToServer;
 using Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Common.Messages; 
+namespace Phantom.Common.Messages;
 
 public interface IMessageToServerListener {
 	bool IsDisposed { get; }

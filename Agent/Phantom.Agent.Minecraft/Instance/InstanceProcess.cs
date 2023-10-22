@@ -1,7 +1,7 @@
 ﻿using Phantom.Utils.Collections;
 using Phantom.Utils.Processes;
 
-namespace Phantom.Agent.Minecraft.Instance; 
+namespace Phantom.Agent.Minecraft.Instance;
 
 public sealed class InstanceProcess : IDisposable {
 	public InstanceProperties InstanceProperties { get; }

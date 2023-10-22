@@ -3,7 +3,7 @@ using MemoryPack;
 using Phantom.Common.Data.Java;
 using Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Common.Messages.ToServer; 
+namespace Phantom.Common.Messages.ToServer;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record AdvertiseJavaRuntimesMessage(

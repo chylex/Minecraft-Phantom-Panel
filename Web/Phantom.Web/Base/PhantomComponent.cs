@@ -5,7 +5,7 @@ using Phantom.Web.Identity.Authorization;
 using Phantom.Web.Identity.Data;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Web.Base; 
+namespace Phantom.Web.Base;
 
 public abstract class PhantomComponent : ComponentBase {
 	private static readonly ILogger Logger = PhantomLogger.Create<PhantomComponent>();

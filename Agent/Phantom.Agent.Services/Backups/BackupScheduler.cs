@@ -23,7 +23,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private readonly ServerStatusProtocol serverStatusProtocol;
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
 	
-	public event EventHandler<BackupCreationResult>? BackupCompleted; 
+	public event EventHandler<BackupCreationResult>? BackupCompleted;
 
 	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceProcess process, IInstanceContext context, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName), taskManager, "Backup scheduler for " + context.ShortName) {
 		this.backupManager = backupManager;

@@ -1,7 +1,7 @@
 ﻿using Phantom.Utils.Tasks;
 using Serilog;
 
-namespace Phantom.Utils.Rpc.Message; 
+namespace Phantom.Utils.Rpc.Message;
 
 public abstract class MessageHandler<TListener> {
 	protected TListener Listener { get; }

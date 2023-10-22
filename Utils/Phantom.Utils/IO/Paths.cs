@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.IO; 
+﻿namespace Phantom.Utils.IO;
 
 public static class Paths {
 	public static string ExpandTilde(string path) {

@@ -3,7 +3,7 @@ using System.Web;
 using Microsoft.AspNetCore.Components;
 using Phantom.Web.Identity.Interfaces;
 
-namespace Phantom.Web.Base; 
+namespace Phantom.Web.Base;
 
 sealed class Navigation : INavigation {
 	public static Func<IServiceProvider, Navigation> Create(string basePath) {

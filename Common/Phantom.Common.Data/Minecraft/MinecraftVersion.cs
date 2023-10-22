@@ -1,4 +1,4 @@
-﻿namespace Phantom.Common.Data.Minecraft; 
+﻿namespace Phantom.Common.Data.Minecraft;
 
 public sealed record MinecraftVersion(
 	string Id,

@@ -2,7 +2,7 @@
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 
-namespace Phantom.Common.Messages.ToAgent; 
+namespace Phantom.Common.Messages.ToAgent;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record StopInstanceMessage(

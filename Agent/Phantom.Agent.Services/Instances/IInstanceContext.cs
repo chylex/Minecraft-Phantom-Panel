@@ -3,7 +3,7 @@ using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
 using Serilog;
 
-namespace Phantom.Agent.Services.Instances; 
+namespace Phantom.Agent.Services.Instances;
 
 interface IInstanceContext {
 	string ShortName { get; }

@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Phantom.Utils.Runtime; 
+namespace Phantom.Utils.Runtime;
 
 public static class AssemblyAttributes {
 	public static string GetFullVersion(Assembly assembly) {

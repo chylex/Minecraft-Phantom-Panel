@@ -7,7 +7,7 @@ using Phantom.Common.Logging;
 using Phantom.Utils.IO;
 using Serilog;
 
-namespace Phantom.Agent.Services.Backups; 
+namespace Phantom.Agent.Services.Backups;
 
 sealed class BackupArchiver {
 	private readonly string destinationBasePath;

@@ -1,4 +1,4 @@
-﻿namespace Phantom.Agent.Services.Instances.States; 
+﻿namespace Phantom.Agent.Services.Instances.States;
 
 sealed class InstanceNotRunningState : IInstanceState {
 	public void Initialize() {}

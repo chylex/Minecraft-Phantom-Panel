@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.Cryptography; 
+﻿namespace Phantom.Utils.Cryptography;
 
 public static class StableHashCode {
 	public static int ForString(string str) {

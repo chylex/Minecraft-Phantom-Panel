@@ -1,3 +1,3 @@
-﻿namespace Phantom.Agent.Minecraft.Server; 
+﻿namespace Phantom.Agent.Minecraft.Server;
 
 sealed record MinecraftServerExecutableDownloadListener(EventHandler<DownloadProgressEventArgs> DownloadProgressEventHandler, CancellationToken CancellationToken);

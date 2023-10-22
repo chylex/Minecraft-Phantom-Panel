@@ -1,7 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Server;
 using Serilog;
 
-namespace Phantom.Agent.Minecraft.Launcher.Types; 
+namespace Phantom.Agent.Minecraft.Launcher.Types;
 
 public sealed class InvalidLauncher : IServerLauncher {
 	public static InvalidLauncher Instance { get; } = new ();

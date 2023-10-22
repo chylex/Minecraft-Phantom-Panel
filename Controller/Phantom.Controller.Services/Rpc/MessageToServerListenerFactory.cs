@@ -3,7 +3,7 @@ using Phantom.Controller.Services.Agents;
 using Phantom.Controller.Services.Events;
 using Phantom.Controller.Services.Instances;
 
-namespace Phantom.Controller.Services.Rpc; 
+namespace Phantom.Controller.Services.Rpc;
 
 public sealed class MessageToServerListenerFactory {
 	private readonly ServiceConfiguration configuration;

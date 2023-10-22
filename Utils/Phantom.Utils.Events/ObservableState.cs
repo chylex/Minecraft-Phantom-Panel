@@ -1,6 +1,6 @@
 ﻿using Serilog;
 
-namespace Phantom.Utils.Events; 
+namespace Phantom.Utils.Events;
 
 public abstract class ObservableState<T> {
 	public EventSubscribers<T> Subs { get; }

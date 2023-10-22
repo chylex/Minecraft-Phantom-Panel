@@ -1,4 +1,4 @@
-﻿namespace Phantom.Agent.Minecraft.Command; 
+﻿namespace Phantom.Agent.Minecraft.Command;
 
 public static class MinecraftCommand {
 	public const string SaveOn = "save-on";

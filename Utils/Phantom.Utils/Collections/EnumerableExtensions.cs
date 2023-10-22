@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Phantom.Utils.Collections; 
+namespace Phantom.Utils.Collections;
 
 public static class EnumerableExtensions {
 	[SuppressMessage("ReSharper", "LoopCanBeConvertedToQuery")]

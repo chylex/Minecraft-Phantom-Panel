@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Phantom.Controller.Database.Entities;
 
-namespace Phantom.Controller.Database.Factories; 
+namespace Phantom.Controller.Database.Factories;
 
 public sealed class InstanceEntityUpsert : AbstractUpsertHelper<InstanceEntity> {
 	internal InstanceEntityUpsert(ApplicationDbContext ctx) : base(ctx) {}

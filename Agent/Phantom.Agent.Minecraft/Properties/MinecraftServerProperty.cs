@@ -1,6 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Java;
 
-namespace Phantom.Agent.Minecraft.Properties; 
+namespace Phantom.Agent.Minecraft.Properties;
 
 abstract class MinecraftServerProperty<T> {
 	private readonly string key;

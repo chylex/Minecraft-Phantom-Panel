@@ -4,7 +4,7 @@ using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Database.Enums;
 using Phantom.Utils.Tasks;
 
-namespace Phantom.Controller.Services.Events; 
+namespace Phantom.Controller.Services.Events;
 
 public sealed partial class EventLog {
 	private readonly CancellationToken cancellationToken;

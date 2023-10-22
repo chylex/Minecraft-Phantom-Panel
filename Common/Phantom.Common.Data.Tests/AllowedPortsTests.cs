@@ -1,6 +1,6 @@
 ﻿using NUnit.Framework;
 
-namespace Phantom.Common.Data.Tests; 
+namespace Phantom.Common.Data.Tests;
 
 [TestFixture]
 public sealed class AllowedPortsTests {

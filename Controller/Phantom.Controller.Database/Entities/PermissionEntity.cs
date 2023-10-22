@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Phantom.Controller.Database.Entities; 
+namespace Phantom.Controller.Database.Entities;
 
 [Table("Permissions", Schema = "identity")]
 public sealed class PermissionEntity {

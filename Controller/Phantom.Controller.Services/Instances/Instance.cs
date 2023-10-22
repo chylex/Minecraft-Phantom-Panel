@@ -1,6 +1,6 @@
 ﻿using Phantom.Common.Data.Instance;
 
-namespace Phantom.Controller.Services.Instances; 
+namespace Phantom.Controller.Services.Instances;
 
 public sealed record Instance(
 	InstanceConfiguration Configuration,

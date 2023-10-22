@@ -1,6 +1,6 @@
 ﻿using System.Buffers;
 
-namespace Phantom.Utils.IO; 
+namespace Phantom.Utils.IO;
 
 public sealed class StreamCopier : IDisposable {
 	private const int DefaultBufferSize = 81920;

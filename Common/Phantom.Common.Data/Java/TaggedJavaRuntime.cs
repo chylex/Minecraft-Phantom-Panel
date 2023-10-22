@@ -1,6 +1,6 @@
 ﻿using MemoryPack;
 
-namespace Phantom.Common.Data.Java; 
+namespace Phantom.Common.Data.Java;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record TaggedJavaRuntime(

@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.IO; 
+﻿namespace Phantom.Utils.IO;
 
 public static class Chmod {
 	public const UnixFileMode URWX = UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute;
