@@ -42,12 +42,14 @@ internal sealed class RpcRuntime<TClientListener, TServerListener, TReplyMessage
 			var (routingId, data) = socket.Receive(cancellationToken);
 
 			if (data.Length == 0) {
-				LogMessageType(logger, routingId, data);
+				LogMessageType(logger, routingId, data, messageType: null);
 				continue;
 			}
 
+			Type? messageType = messageDefinitions.ToServer.TryGetType(data, out var type) ? type : null;
+			
 			if (!clients.TryGetValue(routingId, out var client)) {
-				if (!CheckIsRegistrationMessage(data, logger, routingId)) {
+				if (!CheckIsRegistrationMessage(messageType, logger, routingId)) {
 					continue;
 				}
 
@@ -58,7 +60,11 @@ internal sealed class RpcRuntime<TClientListener, TServerListener, TReplyMessage
 				clients[routingId] = client;
 			}
 
-			LogMessageType(logger, routingId, data);
+			if (!client.Connection.IsAuthorized && !CheckIsRegistrationMessage(messageType, logger, routingId)) {
+				continue;
+			}
+
+			LogMessageType(logger, routingId, data, messageType);
 			messageDefinitions.ToServer.Handle(data, client);
 		}
 
@@ -67,25 +73,25 @@ internal sealed class RpcRuntime<TClientListener, TServerListener, TReplyMessage
 		}
 	}
 
-	private void LogMessageType(ILogger logger, uint routingId, ReadOnlyMemory<byte> data) {
+	private void LogMessageType(ILogger logger, uint routingId, ReadOnlyMemory<byte> data, Type? messageType) {
 		if (!logger.IsEnabled(LogEventLevel.Verbose)) {
 			return;
 		}
 
-		if (data.Length > 0 && messageDefinitions.ToServer.TryGetType(data, out var type)) {
-			logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", type.Name, data.Length, routingId);
+		if (data.Length > 0 && messageType != null) {
+			logger.Verbose("Received {MessageType} ({Bytes} B) from {RoutingId}.", messageType.Name, data.Length, routingId);
 		}
 		else {
 			logger.Verbose("Received {Bytes} B message from {RoutingId}.", data.Length, routingId);
 		}
 	}
 
-	private bool CheckIsRegistrationMessage(ReadOnlyMemory<byte> data, ILogger logger, uint routingId) {
-		if (messageDefinitions.ToServer.TryGetType(data, out var type) && messageDefinitions.IsRegistrationMessage(type)) {
+	private bool CheckIsRegistrationMessage(Type? messageType, ILogger logger, uint routingId) {
+		if (messageType != null && messageDefinitions.IsRegistrationMessage(messageType)) {
 			return true;
 		}
 
-		logger.Warning("Received {MessageType} from {RoutingId} who is not registered.", type?.Name ?? "unknown message", routingId);
+		logger.Warning("Received {MessageType} from {RoutingId} who is not registered.", messageType?.Name ?? "unknown message", routingId);
 		return false;
 	}
 	
@@ -98,7 +104,7 @@ internal sealed class RpcRuntime<TClientListener, TServerListener, TReplyMessage
 			this.Connection = connection;
 			this.messageDefinitions = messageDefinitions;
 		}
-	
+
 		protected override Task SendReply(uint sequenceId, byte[] serializedReply) {
 			return Connection.Send(messageDefinitions.CreateReplyMessage(sequenceId, serializedReply));
 		}

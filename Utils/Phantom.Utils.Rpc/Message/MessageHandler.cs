@@ -4,14 +4,13 @@ using Serilog;
 namespace Phantom.Utils.Rpc.Message;
 
 public abstract class MessageHandler<TListener> {
-	protected TListener Listener { get; }
-	
+	private readonly TListener listener;
 	private readonly ILogger logger;
 	private readonly TaskManager taskManager;
 	private readonly CancellationToken cancellationToken;
 
 	protected MessageHandler(TListener listener, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) {
-		this.Listener = listener;
+		this.listener = listener;
 		this.logger = logger;
 		this.taskManager = taskManager;
 		this.cancellationToken = cancellationToken;
@@ -29,12 +28,11 @@ public abstract class MessageHandler<TListener> {
 	}
 
 	private async Task Handle<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
-		TReply reply = await message.Accept(Listener);
-		
+		TReply reply = await message.Accept(listener);
 		if (reply is not NoReply) {
 			await SendReply(sequenceId, MessageSerializer.Serialize(reply));
 		}
 	}
-	
+
 	protected abstract Task SendReply(uint sequenceId, byte[] serializedReply);
 }

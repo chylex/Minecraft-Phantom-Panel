@@ -39,8 +39,8 @@ public sealed class AgentMessageListener : IMessageToControllerListener {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.ConnectionAlreadyHasAnAgent));
 		}
 		else if (await agentManager.RegisterAgent(message.AuthToken, message.AgentInfo, instanceManager, connection)) {
-			var guid = message.AgentInfo.Guid;
-			agentGuidWaiter.SetResult(guid);
+			connection.IsAuthorized = true;
+			agentGuidWaiter.SetResult(message.AgentInfo.Guid);
 		}
 		
 		return NoReply.Instance;
@@ -51,8 +51,11 @@ public sealed class AgentMessageListener : IMessageToControllerListener {
 	}
 	
 	public Task<NoReply> HandleUnregisterAgent(UnregisterAgentMessage message) {
-		if (agentManager.UnregisterAgent(message.AgentGuid, connection)) {
-			instanceManager.SetInstanceStatesForAgent(message.AgentGuid, InstanceStatus.Offline);
+		if (agentGuidWaiter.Task.IsCompleted) {
+			var agentGuid = agentGuidWaiter.Task.Result;
+			if (agentManager.UnregisterAgent(agentGuid, connection)) {
+				instanceManager.SetInstanceStatesForAgent(agentGuid, InstanceStatus.Offline);
+			}
 		}
 
 		connection.Close();

@@ -11,6 +11,13 @@ public sealed class RpcConnectionToClient<TListener> {
 	private readonly MessageRegistry<TListener> messageRegistry;
 	private readonly MessageReplyTracker messageReplyTracker;
 
+	private volatile bool isAuthorized;
+
+	public bool IsAuthorized {
+		get => isAuthorized;
+		set => isAuthorized = value;
+	}
+
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
 	private bool isClosed;
 
