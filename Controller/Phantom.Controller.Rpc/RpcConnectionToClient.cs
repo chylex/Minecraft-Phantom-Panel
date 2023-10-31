@@ -66,7 +66,7 @@ public sealed class RpcConnectionToClient<TListener> {
 		}
 
 		await socket.SendAsync(routingId, bytes);
-		return await messageReplyTracker.WaitForReply<TReply>(sequenceId, waitForReplyTime, waitForReplyCancellationToken);
+		return await messageReplyTracker.TryWaitForReply<TReply>(sequenceId, waitForReplyTime, waitForReplyCancellationToken);
 	}
 
 	public void Receive(IReply message) {

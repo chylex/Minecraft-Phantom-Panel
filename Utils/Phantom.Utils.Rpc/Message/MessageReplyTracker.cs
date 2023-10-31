@@ -20,24 +20,34 @@ public sealed class MessageReplyTracker {
 		return sequenceId;
 	}
 
-	public async Task<TReply?> WaitForReply<TReply>(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TReply : class {
+	public async Task<TReply> WaitForReply<TReply>(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) {
 		if (!replyTasks.TryGetValue(sequenceId, out var completionSource)) {
 			logger.Warning("No reply callback for id {SequenceId}.", sequenceId);
-			return null;
+			throw new ArgumentException("No reply callback for id: " + sequenceId, nameof(sequenceId));
 		}
 		
 		try {
 			byte[] replyBytes = await completionSource.Task.WaitAsync(waitForReplyTime, cancellationToken);
 			return MessageSerializer.Deserialize<TReply>(replyBytes);
 		} catch (TimeoutException) {
-			return null;
+			logger.Debug("Timed out waiting for reply with id {SequenceId}.", sequenceId);
+			throw;
 		} catch (OperationCanceledException) {
-			return null;
+			logger.Debug("Cancelled waiting for reply with id {SequenceId}.", sequenceId);
+			throw;
 		} catch (Exception e) {
 			logger.Warning(e, "Error processing reply with id {SequenceId}.", sequenceId);
-			return null;
+			throw;
 		} finally {
 			ForgetReply(sequenceId);
+		}
+	}
+	
+	public async Task<TReply?> TryWaitForReply<TReply>(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TReply : class {
+		try {
+			return await WaitForReply<TReply>(sequenceId, waitForReplyTime, cancellationToken);
+		} catch (Exception) {
+			return null;
 		}
 	}
 
