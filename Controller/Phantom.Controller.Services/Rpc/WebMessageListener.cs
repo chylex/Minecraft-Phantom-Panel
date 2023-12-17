@@ -108,11 +108,12 @@ public sealed class WebMessageListener : IMessageToControllerListener {
 	public async Task<NoReply> HandleRegisterWeb(RegisterWebMessage message) {
 		if (authToken.FixedTimeEquals(message.AuthToken)) {
 			Logger.Information("Web authorized successfully.");
-			connection.IsAuthorized = true;
+			connection.SetAuthorizationResult(true);
 			await connection.Send(new RegisterWebResultMessage(true));
 		}
 		else {
 			Logger.Warning("Web failed to authorize, invalid token.");
+			connection.SetAuthorizationResult(false);
 			await connection.Send(new RegisterWebResultMessage(false));
 		}
 

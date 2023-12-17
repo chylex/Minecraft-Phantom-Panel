@@ -36,14 +36,14 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 		try {
 			while (await lineReader.WaitToReadAsync(CancellationToken)) {
 				await Task.Delay(SendDelay, CancellationToken);
-				await SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
+				SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.
 		}
 
 		// Flush remaining lines.
-		await SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
+		SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
 	}
 
 	private ImmutableArray<string> ReadLinesFromChannel(ChannelReader<string> reader, ImmutableArray<string>.Builder builder) {
@@ -61,9 +61,9 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 		return builder.ToImmutable();
 	}
 
-	private async Task SendOutputToServer(ImmutableArray<string> lines) {
+	private void SendOutputToServer(ImmutableArray<string> lines) {
 		if (!lines.IsEmpty) {
-			await controllerConnection.Send(new InstanceOutputMessage(instanceGuid, lines));
+			controllerConnection.Send(new InstanceOutputMessage(instanceGuid, lines));
 		}
 	}
 

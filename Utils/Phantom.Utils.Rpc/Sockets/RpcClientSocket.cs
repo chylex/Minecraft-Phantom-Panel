@@ -1,5 +1,6 @@
 ﻿using NetMQ;
 using NetMQ.Sockets;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Runtime;
 
@@ -22,20 +23,20 @@ public sealed class RpcClientSocket<TClientListener, TServerListener, TReplyMess
 		RpcSocket.SetDefaultSocketOptions(options);
 
 		var url = config.TcpUrl;
-		var logger = config.RuntimeLogger;
-		
+		var logger = PhantomLogger.Create(config.LoggerName);
+
 		logger.Information("Starting ZeroMQ client and connecting to {Url}...", url);
 		socket.Connect(url);
 		logger.Information("ZeroMQ client ready.");
-		
+
 		return new RpcClientSocket<TClientListener, TServerListener, TReplyMessage>(socket, config, messageDefinitions);
 	}
 
 	public RpcConnectionToServer<TServerListener> Connection { get; }
 	internal IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> MessageDefinitions { get; }
-	
+
 	private RpcClientSocket(ClientSocket socket, RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions) : base(socket, config) {
 		MessageDefinitions = messageDefinitions;
-		Connection = new RpcConnectionToServer<TServerListener>(socket, messageDefinitions.ToServer, ReplyTracker);
+		Connection = new RpcConnectionToServer<TServerListener>(config.LoggerName, socket, messageDefinitions.ToServer, ReplyTracker);
 	}
 }

@@ -1,49 +1,50 @@
-﻿using NetMQ;
+﻿using System.Diagnostics.CodeAnalysis;
+using NetMQ;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Sockets;
-using Phantom.Utils.Tasks;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Runtime;
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket {
 	private readonly TSocket socket;
-	private readonly ILogger runtimeLogger;
-	private readonly MessageReplyTracker replyTracker;
-	private readonly TaskManager taskManager;
 
+	private protected string LoggerName { get; }
+	private protected ILogger RuntimeLogger { get; }
+	private protected MessageReplyTracker ReplyTracker { get; }
+	
 	protected RpcRuntime(RpcSocket<TSocket> socket) {
 		this.socket = socket.Socket;
-		this.runtimeLogger = socket.Config.RuntimeLogger;
-		this.replyTracker = socket.ReplyTracker;
-		this.taskManager = new TaskManager(socket.Config.TaskManagerLogger);
+		
+		this.LoggerName = socket.Config.LoggerName;
+		this.RuntimeLogger = PhantomLogger.Create(LoggerName);
+		this.ReplyTracker = socket.ReplyTracker;
 	}
 
 	protected async Task Launch() {
-		void RunTask() {
+		[SuppressMessage("ReSharper", "AccessToDisposedClosure")]
+		async Task RunTask() {
 			try {
-				Run(socket, runtimeLogger, replyTracker, taskManager);
+				await Run(socket);
 			} catch (Exception e) {
-				runtimeLogger.Error(e, "Caught exception in RPC thread.");
+				RuntimeLogger.Error(e, "Caught exception in RPC thread.");
 			}
 		}
 		
 		try {
-			await Task.Factory.StartNew(RunTask, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+			await Task.Factory.StartNew(RunTask, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} finally {
-			await taskManager.Stop();
-			await Disconnect(socket, runtimeLogger);
+			await Disconnect(socket);
 			
 			socket.Dispose();
-			runtimeLogger.Information("ZeroMQ runtime stopped.");
+			RuntimeLogger.Information("ZeroMQ runtime stopped.");
 		}
 	}
 	
-	private protected abstract void Run(TSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager);
+	private protected abstract Task Run(TSocket socket);
 	
-	protected virtual Task Disconnect(TSocket socket, ILogger logger) {
-		return Task.CompletedTask;
-	}
+	private protected abstract Task Disconnect(TSocket socket);
 }

@@ -4,28 +4,26 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Utils.Rpc.Runtime;
 
-public sealed class RpcConnectionToClient<TListener> {
+public sealed class RpcConnectionToClient<TListener> : RpcConnection<TListener> {
 	private readonly ServerSocket socket;
 	private readonly uint routingId;
 
-	private readonly MessageRegistry<TListener> messageRegistry;
-	private readonly MessageReplyTracker messageReplyTracker;
-
-	private volatile bool isAuthorized;
-
-	public bool IsAuthorized {
-		get => isAuthorized;
-		set => isAuthorized = value;
-	}
+	private readonly TaskCompletionSource<bool> authorizationCompletionSource = new ();
 
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
 	public bool IsClosed { get; private set; }
 
-	internal RpcConnectionToClient(ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker messageReplyTracker) {
+	internal RpcConnectionToClient(string loggerName, ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker replyTracker) : base(loggerName, messageRegistry, replyTracker) {
 		this.socket = socket;
 		this.routingId = routingId;
-		this.messageRegistry = messageRegistry;
-		this.messageReplyTracker = messageReplyTracker;
+	}
+
+	internal Task<bool> GetAuthorization() {
+		return authorizationCompletionSource.Task;
+	}
+	
+	public void SetAuthorizationResult(bool isAuthorized) {
+		authorizationCompletionSource.SetResult(isAuthorized);
 	}
 
 	public bool IsSame(RpcConnectionToClient<TListener> other) {
@@ -47,35 +45,7 @@ public sealed class RpcConnectionToClient<TListener> {
 		}
 	}
 
-	public async Task Send<TMessage>(TMessage message) where TMessage : IMessage<TListener, NoReply> {
-		if (IsClosed) {
-			return;
-		}
-		
-		var bytes = messageRegistry.Write(message).ToArray();
-		if (bytes.Length > 0) {
-			await socket.SendAsync(routingId, bytes);
-		}
-	}
-
-	public async Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessage<TListener, TReply> where TReply : class {
-		if (IsClosed) {
-			return null;
-		}
-		
-		var sequenceId = messageReplyTracker.RegisterReply();
-		
-		var bytes = messageRegistry.Write<TMessage, TReply>(sequenceId, message).ToArray();
-		if (bytes.Length == 0) {
-			messageReplyTracker.ForgetReply(sequenceId);
-			return null;
-		}
-
-		await socket.SendAsync(routingId, bytes);
-		return await messageReplyTracker.TryWaitForReply<TReply>(sequenceId, waitForReplyTime, waitForReplyCancellationToken);
-	}
-
-	public void Receive(IReply message) {
-		messageReplyTracker.ReceiveReply(message.SequenceId, message.SerializedReply);
+	private protected override ValueTask Send(byte[] bytes) {
+		return socket.SendAsync(routingId, bytes);
 	}
 }

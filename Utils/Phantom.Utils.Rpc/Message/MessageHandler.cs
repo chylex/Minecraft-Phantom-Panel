@@ -1,38 +1,41 @@
-﻿using Phantom.Utils.Tasks;
+﻿using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
 
 abstract class MessageHandler<TListener> {
+	protected ILogger Logger { get; }
+	
 	private readonly TListener listener;
-	private readonly ILogger logger;
-	private readonly TaskManager taskManager;
-	private readonly CancellationToken cancellationToken;
+	private readonly MessageQueues messageQueues;
 
-	protected MessageHandler(TListener listener, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) {
+	protected MessageHandler(string loggerName, TListener listener) {
+		this.Logger = PhantomLogger.Create("MessageHandler", loggerName);
 		this.listener = listener;
-		this.logger = logger;
-		this.taskManager = taskManager;
-		this.cancellationToken = cancellationToken;
+		this.messageQueues = new MessageQueues(loggerName + ":Receive");
 	}
 	
 	internal void Enqueue<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
-		cancellationToken.ThrowIfCancellationRequested();
-		taskManager.Run("Handle message " + message.GetType().Name, async () => {
-			try {
-				await Handle<TMessage, TReply>(sequenceId, message);
-			} catch (Exception e) {
-				logger.Error(e, "Failed to handle message {Type}.", message.GetType().Name);
-			}
-		});
+		messageQueues.Enqueue(message.QueueKey, () => TryHandle<TMessage, TReply>(sequenceId, message));
 	}
 
-	private async Task Handle<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
-		TReply reply = await message.Accept(listener);
+	private async Task TryHandle<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
+		TReply reply;
+		try {
+			reply = await message.Accept(listener);
+		} catch (Exception e) {
+			Logger.Error(e, "Failed to handle message {Type}.", message.GetType().Name);
+			return;
+		}
+		
 		if (reply is not NoReply) {
 			await SendReply(sequenceId, MessageSerializer.Serialize(reply));
 		}
 	}
 
 	protected abstract Task SendReply(uint sequenceId, byte[] serializedReply);
+
+	internal Task StopReceiving() {
+		return messageQueues.Stop();
+	}
 }

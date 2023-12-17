@@ -1,4 +1,5 @@
 ﻿using NetMQ.Sockets;
+using Phantom.Utils.Logging;
 
 namespace Phantom.Utils.Rpc.Sockets; 
 
@@ -12,7 +13,7 @@ public sealed class RpcServerSocket : RpcSocket<ServerSocket> {
 		RpcSocket.SetDefaultSocketOptions(options);
 
 		var url = config.TcpUrl;
-		var logger = config.RuntimeLogger;
+		var logger = PhantomLogger.Create(config.LoggerName);
 		
 		logger.Information("Starting ZeroMQ server on {Url}...", url);
 		socket.Bind(url);

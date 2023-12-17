@@ -3,7 +3,7 @@ using NetMQ.Sockets;
 
 namespace Phantom.Utils.Rpc;
 
-public static class RpcExtensions {
+static class RpcExtensions {
 	public static ReadOnlyMemory<byte> Receive(this ClientSocket socket, CancellationToken cancellationToken) {
 		var msg = new Msg();
 		msg.InitEmpty();

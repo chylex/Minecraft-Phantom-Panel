@@ -36,10 +36,11 @@ public sealed class AgentMessageListener : IMessageToControllerListener {
 
 	public async Task<NoReply> HandleRegisterAgent(RegisterAgentMessage message) {
 		if (agentGuidWaiter.Task.IsCompleted && agentGuidWaiter.Task.Result != message.AgentInfo.Guid) {
+			connection.SetAuthorizationResult(false);
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.ConnectionAlreadyHasAnAgent));
 		}
 		else if (await agentManager.RegisterAgent(message.AuthToken, message.AgentInfo, instanceManager, connection)) {
-			connection.IsAuthorized = true;
+			connection.SetAuthorizationResult(true);
 			agentGuidWaiter.SetResult(message.AgentInfo.Guid);
 		}
 		

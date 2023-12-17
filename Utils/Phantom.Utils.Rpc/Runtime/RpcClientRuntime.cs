@@ -1,7 +1,6 @@
 ﻿using NetMQ.Sockets;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Sockets;
-using Phantom.Utils.Tasks;
 using Serilog;
 using Serilog.Events;
 
@@ -23,18 +22,18 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 		this.receiveCancellationToken = receiveCancellationToken;
 	}
 
-	private protected sealed override void Run(ClientSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager) {
-		RunWithConnection(socket, connection, logger, taskManager);
+	private protected sealed override Task Run(ClientSocket socket) {
+		return RunWithConnection(socket, connection);
 	}
 
-	protected virtual void RunWithConnection(ClientSocket socket, RpcConnectionToServer<TServerListener> connection, ILogger logger, TaskManager taskManager) {
-		var handler = new Handler(connection, messageDefinitions, messageListener, logger, taskManager, receiveCancellationToken);
+	protected virtual async Task RunWithConnection(ClientSocket socket, RpcConnectionToServer<TServerListener> connection) {
+		var handler = new Handler(LoggerName, connection, messageDefinitions, messageListener);
 
 		try {
 			while (!receiveCancellationToken.IsCancellationRequested) {
 				var data = socket.Receive(receiveCancellationToken);
 				
-				LogMessageType(logger, data);
+				LogMessageType(RuntimeLogger, data);
 				
 				if (data.Length > 0) {
 					messageDefinitions.ToClient.Handle(data, handler);
@@ -43,10 +42,24 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} finally {
-			logger.Debug("ZeroMQ client stopped receiving messages.");
-			disconnectSemaphore.Wait(CancellationToken.None);
+			await handler.StopReceiving();
+			RuntimeLogger.Debug("ZeroMQ client stopped receiving messages.");
+			
+			await disconnectSemaphore.WaitAsync(CancellationToken.None);
 		}
 	}
+
+	private protected sealed override async Task Disconnect(ClientSocket socket) {
+		try {
+			await connection.StopSending().WaitAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
+		} catch (TimeoutException) {
+			RuntimeLogger.Error("Timed out waiting for message sending queue.");
+		}
+
+		await SendDisconnectMessage(socket, RuntimeLogger);
+	}
+	
+	protected abstract Task SendDisconnectMessage(ClientSocket socket, ILogger logger);
 
 	private void LogMessageType(ILogger logger, ReadOnlyMemory<byte> data) {
 		if (!logger.IsEnabled(LogEventLevel.Verbose)) {
@@ -65,7 +78,7 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 		private readonly RpcConnectionToServer<TServerListener> connection;
 		private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
 		
-		public Handler(RpcConnectionToServer<TServerListener> connection, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, TClientListener listener, ILogger logger, TaskManager taskManager, CancellationToken cancellationToken) : base(listener, logger, taskManager, cancellationToken) {
+		public Handler(string loggerName, RpcConnectionToServer<TServerListener> connection, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, TClientListener listener) : base(loggerName, listener) {
 			this.connection = connection;
 			this.messageDefinitions = messageDefinitions;
 		}

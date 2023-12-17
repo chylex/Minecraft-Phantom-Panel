@@ -26,7 +26,7 @@ sealed class KeepAliveLoop {
 		try {
 			while (true) {
 				await Task.Delay(KeepAliveInterval, cancellationToken);
-				await connection.Send(new AgentIsAliveMessage());
+				await connection.Send(new AgentIsAliveMessage()).WaitAsync(cancellationToken);
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.

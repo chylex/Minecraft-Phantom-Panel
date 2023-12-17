@@ -11,7 +11,6 @@ using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Runtime;
-using Phantom.Utils.Tasks;
 
 const int ProtocolVersion = 1;
 
@@ -52,7 +51,7 @@ try {
 	
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 	
-	var rpcConfiguration = new RpcConfiguration(PhantomLogger.Create("Rpc"), PhantomLogger.Create<TaskManager>("Rpc"), controllerHost, controllerPort, controllerCertificate);
+	var rpcConfiguration = new RpcConfiguration("Rpc", controllerHost, controllerPort, controllerCertificate);
 	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, AgentMessageRegistries.Definitions, new RegisterAgentMessage(agentToken, agentInfo));
 
 	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcSocket.Connection));
@@ -60,7 +59,7 @@ try {
 
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
 	var rpcMessageListener = new MessageListener(rpcSocket.Connection, agentServices, shutdownCancellationTokenSource);
-	var rpcTask = RpcClientRuntime.Launch(rpcSocket, agentInfo, rpcMessageListener, rpcDisconnectSemaphore, shutdownCancellationToken);
+	var rpcTask = RpcClientRuntime.Launch(rpcSocket, rpcMessageListener, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
 		await rpcTask.WaitAsync(shutdownCancellationToken);
 	} finally {

@@ -20,6 +20,6 @@ public abstract class RpcSocket<TSocket> where TSocket : ThreadSafeSocket {
 	protected RpcSocket(TSocket socket, RpcConfiguration config) {
 		Socket = socket;
 		Config = config;
-		ReplyTracker = new MessageReplyTracker(config.RuntimeLogger);
+		ReplyTracker = new MessageReplyTracker(config.LoggerName);
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 using Serilog;
 
@@ -10,8 +11,8 @@ sealed class MessageReplyTracker {
 	
 	private uint lastSequenceId;
 
-	internal MessageReplyTracker(ILogger logger) {
-		this.logger = logger;
+	internal MessageReplyTracker(string loggerName) {
+		this.logger = PhantomLogger.Create<MessageReplyTracker>(loggerName);
 	}
 
 	public uint RegisterReply() {
@@ -40,14 +41,6 @@ sealed class MessageReplyTracker {
 			throw;
 		} finally {
 			ForgetReply(sequenceId);
-		}
-	}
-	
-	public async Task<TReply?> TryWaitForReply<TReply>(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) where TReply : class {
-		try {
-			return await WaitForReply<TReply>(sequenceId, waitForReplyTime, cancellationToken);
-		} catch (Exception) {
-			return null;
 		}
 	}
 

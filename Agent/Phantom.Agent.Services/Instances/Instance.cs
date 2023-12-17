@@ -21,8 +21,7 @@ sealed class Instance : IAsyncDisposable {
 	private readonly ILogger logger;
 
 	private IInstanceStatus currentStatus;
-	private int statusUpdateCounter;
-	
+
 	private IInstanceState currentState;
 	public bool IsRunning => currentState is not InstanceNotRunningState;
 	
@@ -38,40 +37,23 @@ sealed class Instance : IAsyncDisposable {
 		this.Configuration = configuration;
 		this.Launcher = launcher;
 		
-		this.currentState = new InstanceNotRunningState();
 		this.currentStatus = InstanceStatus.NotRunning;
+		this.currentState = new InstanceNotRunningState();
 		
 		this.procedureManager = new InstanceProcedureManager(this, new Context(this), services.TaskManager);
 	}
 
-	private void TryUpdateStatus(string taskName, Func<Task> getUpdateTask) {
-		int myStatusUpdateCounter = Interlocked.Increment(ref statusUpdateCounter);
-		
-		Services.TaskManager.Run(taskName, async () => {
-			if (myStatusUpdateCounter == statusUpdateCounter) {
-				await getUpdateTask();
-			}
-		});
-	}
-
 	public void ReportLastStatus() {
-		TryUpdateStatus("Report last status of instance " + shortName, async () => {
-			await Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
-		});
+		Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
 	}
 
 	private void ReportAndSetStatus(IInstanceStatus status) {
-		TryUpdateStatus("Report status of instance " + shortName + " as " + status.GetType().Name, async () => {
-			if (status != currentStatus) {
-				currentStatus = status;
-				await Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
-			}
-		});
+		currentStatus = status;
+		Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
 	}
 
 	private void ReportEvent(IInstanceEvent instanceEvent) {
-		var message = new ReportInstanceEventMessage(Guid.NewGuid(), DateTime.UtcNow, Configuration.InstanceGuid, instanceEvent);
-		Services.TaskManager.Run("Report event for instance " + shortName, async () => await Services.ControllerConnection.Send(message));
+		Services.ControllerConnection.Send(new ReportInstanceEventMessage(Guid.NewGuid(), DateTime.UtcNow, Configuration.InstanceGuid, instanceEvent));
 	}
 	
 	internal void TransitionState(IInstanceState newState) {

@@ -13,6 +13,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\Phantom.Utils\Phantom.Utils.csproj" />
+    <ProjectReference Include="..\Phantom.Utils.Logging\Phantom.Utils.Logging.csproj" />
   </ItemGroup>
 
 </Project>

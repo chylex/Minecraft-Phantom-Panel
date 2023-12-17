@@ -59,15 +59,17 @@ try {
 	await controllerServices.Initialize();
 
 	static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
-		return new RpcConfiguration(PhantomLogger.Create("Rpc", serviceName), PhantomLogger.Create<TaskManager>("Rpc", serviceName), host, port, connectionKey.Certificate);
+		return new RpcConfiguration("Rpc:" + serviceName, host, port, connectionKey.Certificate);
 	}
 
+	var rpcTaskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Rpc"));
 	try {
 		await Task.WhenAll(
 			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.CreateAgentMessageListener, shutdownCancellationToken),
 			RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.CreateWebMessageListener, shutdownCancellationToken)
 		);
 	} finally {
+		await rpcTaskManager.Stop();
 		NetMQConfig.Cleanup();
 	}
 
