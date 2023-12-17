@@ -1,6 +1,5 @@
 ﻿@using Phantom.Web.Services
-@inject INavigation Nav
-@inject NavigationManager NavigationManager
+@inject Navigation Navigation
 
 <CascadingAuthenticationState>
   <Router AppAssembly="@typeof(App).Assembly">
@@ -12,8 +11,7 @@
             <p role="alert">You do not have permission to visit this page.</p>
           }
           else {
-            var returnUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).TrimEnd('/');
-            Nav.NavigateTo("login" + QueryString.Create("return", returnUrl), forceLoad: true);
+            Navigation.NavigateTo("login" + QueryString.Create("return", Navigation.CreateReturnUrl()), forceLoad: true);
           }
         </NotAuthorized>
       </AuthorizeRouteView>

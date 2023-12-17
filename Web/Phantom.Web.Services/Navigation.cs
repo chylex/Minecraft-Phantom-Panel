@@ -2,11 +2,10 @@
 using System.Web;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
-using Phantom.Web.Services;
 
-namespace Phantom.Web.Base;
+namespace Phantom.Web.Services;
 
-sealed class Navigation : INavigation {
+public sealed class Navigation {
 	public static Func<IServiceProvider, Navigation> Create(string basePath) {
 		return provider => new Navigation(basePath, provider.GetRequiredService<NavigationManager>());
 	}
@@ -26,6 +25,10 @@ sealed class Navigation : INavigation {
 		
 		value = query.Get(key);
 		return value != null;
+	}
+
+	public string CreateReturnUrl() {
+		return navigationManager.ToBaseRelativePath(navigationManager.Uri).TrimEnd('/');
 	}
 	
 	public async Task NavigateTo(string url, bool forceLoad = false) {

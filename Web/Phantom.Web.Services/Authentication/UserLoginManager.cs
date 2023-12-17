@@ -9,13 +9,13 @@ namespace Phantom.Web.Services.Authentication;
 public sealed class UserLoginManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserLoginManager>();
 
-	private readonly INavigation navigation;
+	private readonly Navigation navigation;
 	private readonly UserSessionManager sessionManager;
 	private readonly UserSessionBrowserStorage sessionBrowserStorage;
 	private readonly CustomAuthenticationStateProvider authenticationStateProvider;
 	private readonly ControllerConnection controllerConnection;
 
-	public UserLoginManager(INavigation navigation, UserSessionManager sessionManager, UserSessionBrowserStorage sessionBrowserStorage, CustomAuthenticationStateProvider authenticationStateProvider, ControllerConnection controllerConnection) {
+	public UserLoginManager(Navigation navigation, UserSessionManager sessionManager, UserSessionBrowserStorage sessionBrowserStorage, CustomAuthenticationStateProvider authenticationStateProvider, ControllerConnection controllerConnection) {
 		this.navigation = navigation;
 		this.sessionManager = sessionManager;
 		this.sessionBrowserStorage = sessionBrowserStorage;

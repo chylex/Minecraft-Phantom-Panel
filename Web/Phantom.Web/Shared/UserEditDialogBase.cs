@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Web.Base;
+using Phantom.Web.Components;
 using Phantom.Web.Components.Forms;
 
 namespace Phantom.Web.Shared;

@@ -10,6 +10,7 @@ using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;
 using Phantom.Web;
+using Phantom.Web.Services;
 using Phantom.Web.Services.Rpc;
 
 var shutdownCancellationTokenSource = new CancellationTokenSource();
@@ -48,15 +49,15 @@ try {
 
 	var (controllerCertificate, webToken) = webKey.Value;
 	
+	var administratorToken = TokenGenerator.Create(60);
+	var applicationProperties = new ApplicationProperties(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken));
+	
 	var rpcConfiguration = new RpcConfiguration("Rpc", controllerHost, controllerPort, controllerCertificate);
 	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, WebMessageRegistries.Definitions, new RegisterWebMessage(webToken));
-	
-	var configuration = new Configuration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, dataProtectionKeysPath, shutdownCancellationToken);
-	var administratorToken = TokenGenerator.Create(60);
 
+	var webConfiguration = new WebLauncher.Configuration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, dataProtectionKeysPath, shutdownCancellationToken);
 	var taskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Web"));
-	var serviceConfiguration = new ServiceConfiguration(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken), shutdownCancellationToken);
-	var webApplication = WebLauncher.CreateApplication(configuration, taskManager, serviceConfiguration, rpcSocket.Connection);
+	var webApplication = WebLauncher.CreateApplication(webConfiguration, taskManager, applicationProperties, rpcSocket.Connection);
 
 	MessageListener messageListener;
 	await using (var scope = webApplication.Services.CreateAsyncScope()) {
@@ -77,9 +78,9 @@ try {
 		
 		PhantomLogger.Root.InformationHeading("Launching Phantom Panel web...");
 		PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
-		PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", configuration.HttpUrl, configuration.BasePath + "setup");
+		PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", webConfiguration.HttpUrl, webConfiguration.BasePath + "setup");
 		
-		await WebLauncher.Launch(configuration, webApplication);
+		await WebLauncher.Launch(webConfiguration, webApplication);
 	} finally {
 		shutdownCancellationTokenSource.Cancel();
 		await taskManager.Stop();

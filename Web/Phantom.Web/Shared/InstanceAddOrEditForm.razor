@@ -15,8 +15,8 @@
 @using Phantom.Web.Services.Agents
 @using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Rpc
-@inherits PhantomComponent
-@inject INavigation Nav
+@inherits Phantom.Web.Components.PhantomComponent
+@inject Navigation Navigation
 @inject ControllerConnection ControllerConnection
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager
@@ -342,7 +342,7 @@
 
     var result = await InstanceManager.CreateOrUpdateInstance(loggedInUserGuid.Value, instance, CancellationToken);
     if (result.Is(CreateOrUpdateInstanceResult.Success)) {
-      await Nav.NavigateTo("instances/" + instance.InstanceGuid);
+      await Navigation.NavigateTo("instances/" + instance.InstanceGuid);
     }
     else {
       form.SubmitModel.StopSubmitting(result.ToSentence(CreateOrUpdateInstanceResultExtensions.ToSentence));

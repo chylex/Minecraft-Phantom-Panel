@@ -1,6 +1,7 @@
-﻿@using Phantom.Web.Services.Authorization
+﻿@using Phantom.Web.Services
+@using Phantom.Web.Services.Authorization
 @using Phantom.Common.Data.Web.Users
-@inject ServiceConfiguration Configuration
+@inject ApplicationProperties ApplicationProperties
 @inject PermissionManager PermissionManager
 
 <div class="navbar navbar-dark">
@@ -45,7 +46,7 @@
     </AuthorizeView>
   </nav>
   <footer>
-    Build @Configuration.Version
+    Build @ApplicationProperties.Version
   </footer>
 </div>
 

@@ -13,4 +13,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
   </ItemGroup>
   
+  <ItemGroup>
+    <ProjectReference Include="..\Phantom.Web.Services\Phantom.Web.Services.csproj" />
+  </ItemGroup>
+  
 </Project>

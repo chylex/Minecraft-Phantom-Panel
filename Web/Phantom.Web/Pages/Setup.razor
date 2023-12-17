@@ -1,5 +1,6 @@
 ﻿@page "/setup"
 @using Phantom.Utils.Tasks
+@using Phantom.Web.Services
 @using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Rpc
 @using System.ComponentModel.DataAnnotations
@@ -9,7 +10,7 @@
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults
 @attribute [AllowAnonymous]
-@inject ServiceConfiguration ServiceConfiguration
+@inject ApplicationProperties ApplicationProperties
 @inject UserLoginManager LoginManager
 @inject ControllerConnection ControllerConnection
 
@@ -83,7 +84,7 @@
       return false;
     }
 
-    return CryptographicOperations.FixedTimeEquals(formTokenBytes, ServiceConfiguration.AdministratorToken);
+    return CryptographicOperations.FixedTimeEquals(formTokenBytes, ApplicationProperties.AdministratorToken);
   }
 
   private async Task<Result<string>> CreateOrUpdateAdministrator() {

@@ -2,14 +2,18 @@
 using Phantom.Common.Messages.Web;
 using Phantom.Utils.Rpc.Runtime;
 using Phantom.Utils.Tasks;
-using Phantom.Web.Base;
 using Phantom.Web.Services;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Phantom.Web;
 
 static class WebLauncher {
-	public static WebApplication CreateApplication(Configuration config, TaskManager taskManager, ServiceConfiguration serviceConfiguration, RpcConnectionToServer<IMessageToControllerListener> controllerConnection) {
+	internal sealed record Configuration(ILogger Logger, string Host, ushort Port, string BasePath, string DataProtectionKeyFolderPath, CancellationToken CancellationToken) {
+		public string HttpUrl => "http://" + Host + ":" + Port;
+	}
+	
+	internal static WebApplication CreateApplication(Configuration config, TaskManager taskManager, ApplicationProperties applicationProperties, RpcConnectionToServer<IMessageToControllerListener> controllerConnection) {
 		var assembly = typeof(WebLauncher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = assembly.GetName().Name,
@@ -26,12 +30,12 @@ static class WebLauncher {
 		}
 
 		builder.Services.AddSingleton(taskManager);
-		builder.Services.AddSingleton(serviceConfiguration);
+		builder.Services.AddSingleton(applicationProperties);
 		builder.Services.AddSingleton(controllerConnection);
 		builder.Services.AddPhantomServices();
 
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
-		builder.Services.AddScoped<INavigation>(Navigation.Create(config.BasePath));
+		builder.Services.AddScoped(Navigation.Create(config.BasePath));
 
 		builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(config.DataProtectionKeyFolderPath));
 
@@ -41,7 +45,7 @@ static class WebLauncher {
 		return builder.Build();
 	}
 
-	public static Task Launch(Configuration config, WebApplication application) {
+	internal static Task Launch(Configuration config, WebApplication application) {
 		var logger = config.Logger;
 
 		application.UseSerilogRequestLogging();
