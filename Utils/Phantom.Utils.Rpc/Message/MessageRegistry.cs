@@ -36,7 +36,7 @@ public sealed class MessageRegistry<TListener> {
 		codeToTypeMapping.Add(code, typeof(TMessage));
 	}
 
-	public bool TryGetType(ReadOnlyMemory<byte> data, [NotNullWhen(true)] out Type? type) {
+	internal bool TryGetType(ReadOnlyMemory<byte> data, [NotNullWhen(true)] out Type? type) {
 		try {
 			var code = MessageSerializer.ReadCode(ref data);
 			return codeToTypeMapping.TryGetValue(code, out type);
@@ -78,7 +78,7 @@ public sealed class MessageRegistry<TListener> {
 		}
 	}
 
-	public void Handle(ReadOnlyMemory<byte> data, MessageHandler<TListener> handler) {
+	internal void Handle(ReadOnlyMemory<byte> data, MessageHandler<TListener> handler) {
 		ushort code;
 		try {
 			code = MessageSerializer.ReadCode(ref data);

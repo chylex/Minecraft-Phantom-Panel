@@ -15,7 +15,6 @@
     <ProjectReference Include="..\..\Utils\Phantom.Utils\Phantom.Utils.csproj" />
     <ProjectReference Include="..\Phantom.Controller.Database.Postgres\Phantom.Controller.Database.Postgres.csproj" />
     <ProjectReference Include="..\Phantom.Controller.Minecraft\Phantom.Controller.Minecraft.csproj" />
-    <ProjectReference Include="..\Phantom.Controller.Rpc\Phantom.Controller.Rpc.csproj" />
     <ProjectReference Include="..\Phantom.Controller.Services\Phantom.Controller.Services.csproj" />
   </ItemGroup>
 

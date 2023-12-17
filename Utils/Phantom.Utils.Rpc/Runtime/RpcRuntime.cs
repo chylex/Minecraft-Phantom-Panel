@@ -4,7 +4,7 @@ using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Tasks;
 using Serilog;
 
-namespace Phantom.Utils.Rpc;
+namespace Phantom.Utils.Rpc.Runtime;
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket {
 	private readonly TSocket socket;
@@ -41,7 +41,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket {
 		}
 	}
 	
-	protected abstract void Run(TSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager);
+	private protected abstract void Run(TSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager);
 	
 	protected virtual Task Disconnect(TSocket socket, ILogger logger) {
 		return Task.CompletedTask;

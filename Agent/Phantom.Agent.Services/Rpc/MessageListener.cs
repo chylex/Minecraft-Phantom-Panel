@@ -5,8 +5,8 @@ using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Message;
+using Phantom.Utils.Rpc.Runtime;
 using Serilog;
 
 namespace Phantom.Agent.Services.Rpc;

@@ -4,7 +4,7 @@ using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
 
-public sealed class MessageReplyTracker {
+sealed class MessageReplyTracker {
 	private readonly ILogger logger;
 	private readonly ConcurrentDictionary<uint, TaskCompletionSource<byte[]>> replyTasks = new (4, 16);
 	

@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Messages.Agent;
-using Phantom.Controller.Rpc;
+using Phantom.Utils.Rpc.Runtime;
 
 namespace Phantom.Controller.Services.Agents;
 

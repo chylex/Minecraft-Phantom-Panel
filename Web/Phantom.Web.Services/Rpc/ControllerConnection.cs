@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Messages.Web;
-using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Runtime;
 
 namespace Phantom.Web.Services.Rpc;
 

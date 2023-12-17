@@ -4,11 +4,11 @@ using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Web;
 using Phantom.Controller;
 using Phantom.Controller.Database.Postgres;
-using Phantom.Controller.Rpc;
 using Phantom.Controller.Services;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Runtime;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;
 
@@ -64,8 +64,8 @@ try {
 
 	try {
 		await Task.WhenAll(
-			RpcRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.CreateAgentMessageListener, shutdownCancellationToken),
-			RpcRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.CreateWebMessageListener, shutdownCancellationToken)
+			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.CreateAgentMessageListener, shutdownCancellationToken),
+			RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.CreateWebMessageListener, shutdownCancellationToken)
 		);
 	} finally {
 		NetMQConfig.Cleanup();

@@ -5,7 +5,7 @@ using Phantom.Utils.Tasks;
 using Serilog;
 using Serilog.Events;
 
-namespace Phantom.Utils.Rpc;
+namespace Phantom.Utils.Rpc.Runtime;
 
 public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyMessage> : RpcRuntime<ClientSocket> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
 	private readonly RpcConnectionToServer<TServerListener> connection;
@@ -23,7 +23,7 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 		this.receiveCancellationToken = receiveCancellationToken;
 	}
 
-	protected sealed override void Run(ClientSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager) {
+	private protected sealed override void Run(ClientSocket socket, ILogger logger, MessageReplyTracker replyTracker, TaskManager taskManager) {
 		RunWithConnection(socket, connection, logger, taskManager);
 	}
 

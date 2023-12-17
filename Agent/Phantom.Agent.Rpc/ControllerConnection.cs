@@ -1,6 +1,6 @@
 ﻿using Phantom.Common.Messages.Agent;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Runtime;
 using Serilog;
 
 namespace Phantom.Agent.Rpc;

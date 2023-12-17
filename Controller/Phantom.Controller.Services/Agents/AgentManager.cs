@@ -5,11 +5,11 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
-using Phantom.Controller.Rpc;
 using Phantom.Controller.Services.Instances;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc.Runtime;
 using Phantom.Utils.Tasks;
 using Serilog;
 

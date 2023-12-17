@@ -4,7 +4,7 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToController;
-using Phantom.Utils.Rpc;
+using Phantom.Utils.Rpc.Runtime;
 using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Tasks;
 using Serilog;

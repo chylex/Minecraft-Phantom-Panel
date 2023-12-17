@@ -1,6 +1,6 @@
-﻿namespace Phantom.Controller.Rpc;
+﻿namespace Phantom.Utils.Rpc.Runtime;
 
-public sealed class RpcClientConnectionClosedEventArgs : EventArgs {
+sealed class RpcClientConnectionClosedEventArgs : EventArgs {
 	internal uint RoutingId { get; }
 
 	internal RpcClientConnectionClosedEventArgs(uint routingId) {

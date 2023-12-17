@@ -2,7 +2,7 @@
 using NetMQ.Sockets;
 using Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Utils.Rpc;
+namespace Phantom.Utils.Rpc.Runtime;
 
 public sealed class RpcConnectionToServer<TListener> {
 	private readonly ClientSocket socket;

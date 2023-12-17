@@ -3,7 +3,7 @@ using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
 
-public abstract class MessageHandler<TListener> {
+abstract class MessageHandler<TListener> {
 	private readonly TListener listener;
 	private readonly ILogger logger;
 	private readonly TaskManager taskManager;
