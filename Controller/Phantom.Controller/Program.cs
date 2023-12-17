@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using NetMQ;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Web;
 using Phantom.Controller;
@@ -8,6 +7,7 @@ using Phantom.Controller.Database.Postgres;
 using Phantom.Controller.Rpc;
 using Phantom.Controller.Services;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;

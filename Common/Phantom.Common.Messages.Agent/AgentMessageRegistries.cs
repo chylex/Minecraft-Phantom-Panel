@@ -1,8 +1,8 @@
 ﻿using Phantom.Common.Data.Replies;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Common.Messages.Agent;

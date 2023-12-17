@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Serilog.Events;
 
-namespace Phantom.Common.Logging;
+namespace Phantom.Utils.Logging;
 
 static class DefaultLogLevel {
 	private const string ENVIRONMENT_VARIABLE = "LOG_LEVEL";

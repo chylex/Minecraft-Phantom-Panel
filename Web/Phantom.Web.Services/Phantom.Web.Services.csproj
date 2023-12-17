@@ -12,9 +12,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Data.Web\Phantom.Common.Data.Web.csproj" />
-    <ProjectReference Include="..\..\Common\Phantom.Common.Logging\Phantom.Common.Logging.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Messages.Web\Phantom.Common.Messages.Web.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Events\Phantom.Utils.Events.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Logging\Phantom.Utils.Logging.csproj" />
   </ItemGroup>
   
   <ItemGroup>

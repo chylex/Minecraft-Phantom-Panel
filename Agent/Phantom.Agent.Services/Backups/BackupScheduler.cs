@@ -3,7 +3,7 @@ using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Services.Instances;
 using Phantom.Agent.Services.Instances.Procedures;
 using Phantom.Common.Data.Backups;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 using Phantom.Utils.Threading;
 

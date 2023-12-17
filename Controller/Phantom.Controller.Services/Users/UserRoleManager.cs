@@ -1,8 +1,8 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Logging;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Repositories;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Controller.Services.Users; 

@@ -1,6 +1,6 @@
 ﻿using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Web.ToController;
+using Phantom.Utils.Logging;
 using Phantom.Web.Services.Rpc;
 using ILogger = Serilog.ILogger;
 

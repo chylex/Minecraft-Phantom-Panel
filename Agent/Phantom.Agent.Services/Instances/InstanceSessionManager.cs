@@ -13,9 +13,9 @@ using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 using Serilog;
 

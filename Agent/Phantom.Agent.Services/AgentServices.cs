@@ -3,7 +3,7 @@ using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Instances;
 using Phantom.Common.Data.Agent;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 using Serilog;
 

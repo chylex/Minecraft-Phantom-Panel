@@ -1,8 +1,8 @@
 ﻿using NetMQ;
 using Phantom.Common.Data;
-using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using ILogger = Serilog.ILogger;
 
 namespace Phantom.Web;

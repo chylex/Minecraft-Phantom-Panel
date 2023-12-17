@@ -6,7 +6,6 @@ using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Data.Web.Minecraft;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
@@ -16,6 +15,7 @@ using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Agents;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Controller.Services.Instances;

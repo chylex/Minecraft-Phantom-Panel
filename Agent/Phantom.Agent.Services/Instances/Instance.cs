@@ -4,8 +4,8 @@ using Phantom.Agent.Services.Instances.States;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;

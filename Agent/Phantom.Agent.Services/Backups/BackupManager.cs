@@ -1,6 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Backups;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Services.Backups;

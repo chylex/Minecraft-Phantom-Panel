@@ -1,4 +1,4 @@
-﻿using Phantom.Common.Logging;
+﻿using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Web;

@@ -1,6 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Java;
 using Phantom.Common.Data;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Agent;

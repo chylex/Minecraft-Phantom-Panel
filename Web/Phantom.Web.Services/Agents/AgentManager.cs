@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data.Web.Agent;
-using Phantom.Common.Logging;
 using Phantom.Utils.Events;
+using Phantom.Utils.Logging;
 
 namespace Phantom.Web.Services.Agents; 
 

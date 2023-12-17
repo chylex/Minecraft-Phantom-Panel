@@ -1,8 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using Phantom.Common.Logging;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Events;
+using Phantom.Utils.Logging;
 using ILogger = Serilog.ILogger;
 
 namespace Phantom.Web.Services.Instances; 

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Phantom.Common.Data.Java;
-using Phantom.Common.Logging;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Java;

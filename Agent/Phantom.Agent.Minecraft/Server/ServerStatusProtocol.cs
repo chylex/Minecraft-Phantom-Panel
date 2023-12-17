@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;

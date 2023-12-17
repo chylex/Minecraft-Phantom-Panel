@@ -1,8 +1,8 @@
 using System.Collections.Immutable;
 using System.Threading.Channels;
 using Phantom.Agent.Rpc;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 
 namespace Phantom.Agent.Services.Instances;

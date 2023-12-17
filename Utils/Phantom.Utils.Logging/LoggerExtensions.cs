@@ -1,6 +1,6 @@
 ﻿using Serilog;
 
-namespace Phantom.Common.Logging;
+namespace Phantom.Utils.Logging;
 
 public static class LoggerExtensions {
 	private static readonly string HeadingPadding = new (' ', 23);

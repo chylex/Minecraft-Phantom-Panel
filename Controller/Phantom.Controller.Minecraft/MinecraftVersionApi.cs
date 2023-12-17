@@ -2,9 +2,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Phantom.Common.Data.Minecraft;
-using Phantom.Common.Logging;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 using Serilog;
 

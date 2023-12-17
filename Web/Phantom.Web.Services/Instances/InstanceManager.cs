@@ -3,9 +3,9 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Web.ToController;
 using Phantom.Utils.Events;
+using Phantom.Utils.Logging;
 using Phantom.Web.Services.Rpc;
 
 namespace Phantom.Web.Services.Instances;

@@ -1,5 +1,5 @@
-﻿using Phantom.Common.Logging;
-using Phantom.Common.Messages.Agent;
+﻿using Phantom.Common.Messages.Agent;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Serilog;
 

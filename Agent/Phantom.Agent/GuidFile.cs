@@ -1,6 +1,6 @@
 ﻿using System.Text;
-using Phantom.Common.Logging;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent;

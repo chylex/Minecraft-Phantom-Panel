@@ -1,10 +1,10 @@
 ﻿using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Logging;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Message;
 using Serilog;

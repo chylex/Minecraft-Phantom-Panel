@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using ILogger = Serilog.ILogger;
 
 namespace Phantom.Web.Services.Authentication; 

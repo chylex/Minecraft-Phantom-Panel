@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Logging;
+using Phantom.Utils.Logging;
 using Phantom.Web.Services.Authorization;
 using ILogger = Serilog.ILogger;
 using UserInfo = Phantom.Web.Services.Authentication.UserInfo;

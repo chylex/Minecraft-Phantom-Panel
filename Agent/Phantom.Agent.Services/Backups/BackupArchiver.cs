@@ -3,8 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Formats.Tar;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Common.Data.Backups;
-using Phantom.Common.Logging;
 using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
