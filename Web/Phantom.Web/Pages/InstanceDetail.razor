@@ -14,14 +14,19 @@
   <p>Return to <a href="instances">all instances</a>.</p>
 }
 else {
-  <h1>Instance: @Instance.Configuration.InstanceName</h1>
+  <div class="d-flex flex-row align-items-center gap-3 mb-3">
+    <h1 class="mb-0">Instance: @Instance.Configuration.InstanceName</h1>
+    <span class="fs-4 text-muted">//</span>
+    <div class="mt-2">
+      <InstanceStatusText Status="Instance.Status" />
+    </div>
+  </div>
   <div class="d-flex flex-row align-items-center gap-2">
     <PermissionView Permission="Permission.ControlInstances">
       <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
       <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#stop-instance" disabled="@(!Instance.Status.CanStop())">Stop...</button>
       <span><!-- extra spacing --></span>
     </PermissionView>
-    <InstanceStatusText Status="Instance.Status" />
     <PermissionView Permission="Permission.CreateInstances">
       <a href="instances/@InstanceGuid/edit" class="btn btn-warning ms-auto">Edit Configuration</a>
     </PermissionView>

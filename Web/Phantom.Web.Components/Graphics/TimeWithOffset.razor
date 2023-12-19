@@ -1,0 +1,14 @@
+﻿@using System.Globalization
+<p>
+  <time datetime="@Time.ToString("o", CultureInfo.InvariantCulture)" data-time-type="relative">
+    @Time.ToString("dd MMM yyyy, HH:mm:ss", CultureInfo.InvariantCulture)
+  </time>
+</p>
+<small>@Time.ToString("zzz", CultureInfo.InvariantCulture)</small>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public DateTimeOffset Time { get; set; }
+
+}

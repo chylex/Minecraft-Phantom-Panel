@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Phantom.Utils.Collections;
 
-public sealed class Table<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictionary<TKey, TRow> where TRow : notnull where TKey : notnull {
+public sealed class TableData<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictionary<TKey, TRow> where TRow : notnull where TKey : notnull {
 	private readonly List<TRow> rowList = new();
 	private readonly Dictionary<TKey, TRow> rowDictionary = new ();
 

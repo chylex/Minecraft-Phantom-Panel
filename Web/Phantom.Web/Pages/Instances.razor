@@ -6,7 +6,7 @@
 @using Phantom.Web.Services.Agents
 @using Phantom.Web.Services.Authorization
 @using Phantom.Web.Services.Instances
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject AgentManager AgentManager
 @inject InstanceManager InstanceManager
 
@@ -16,66 +16,56 @@
   <a href="instances/create" class="btn btn-primary" role="button">New Instance</a>
 </PermissionView>
 
-<table class="table align-middle">
-  <thead>
-    <tr>
-      <Column Width="200px; 28%">Agent</Column>
-      <Column Width="200px; 28%">Name</Column>
-      <Column Width="130px; 11%">Version</Column>
-      <Column Width="110px;  8%" Class="text-center">Server Port</Column>
-      <Column Width="110px;  8%" Class="text-center">Rcon Port</Column>
-      <Column Width=" 90px;  8%" Class="text-end">Memory</Column>
-      <Column Width="320px">Identifier</Column>
-      <Column Width="200px;  9%">Status</Column>
-      <Column Width=" 75px">Actions</Column>
-    </tr>
-  </thead>
-  @if (!instances.IsEmpty) {
-    <tbody>
-      @foreach (var (configuration, status, _) in instances) {
-        var agentName = agentNamesByGuid.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
-        var instanceGuid = configuration.InstanceGuid.ToString();
-        <tr>
-          <td>@agentName</td>
-          <td>@configuration.InstanceName</td>
-          <td>@configuration.MinecraftServerKind @configuration.MinecraftVersion</td>
-          <td class="text-center">
-            <code>@configuration.ServerPort</code>
-          </td>
-          <td class="text-center">
-            <code>@configuration.RconPort</code>
-          </td>
-          <td class="text-end">
-            <code>@configuration.MemoryAllocation.InMegabytes MB</code>
-          </td>
-          <td>
-            <code class="text-uppercase">@instanceGuid</code>
-          </td>
-          <td>
-            <InstanceStatusText Status="status" />
-          </td>
-          <td>
-            <a href="instances/@instanceGuid" class="btn btn-info btn-sm">Detail</a>
-          </td>
-        </tr>
-      }
-    </tbody>
-  }
-  @if (instances.IsEmpty) {
-    <tfoot>
-      <tr>
-        <td colspan="9">
-          No instances.
-        </td>
-      </tr>
-    </tfoot>
-  }
-</table>
+<Table TItem="Instance" Items="instances">
+  <HeaderRow>
+    <Column Width="40%">Agent</Column>
+    <Column Width="40%">Name</Column>
+    <Column MinWidth="215px">Status</Column>
+    <Column Width="20%">Version</Column>
+    <Column Class="text-center" MinWidth="110px">Server Port</Column>
+    <Column Class="text-center" MinWidth="110px">Rcon Port</Column>
+    <Column Class="text-end" MinWidth="90px">Memory</Column>
+    <Column MinWidth="75px">Actions</Column>
+  </HeaderRow>
+  <ItemRow Context="instance">
+    @{
+      var configuration = instance.Configuration;
+      var agentName = agentNamesByGuid.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
+    }
+    <td>
+      <p class="fw-semibold">@agentName</p>
+      <small class="font-monospace text-uppercase">@configuration.AgentGuid.ToString()</small>
+    </td>
+    <td>
+      <p class="fw-semibold">@configuration.InstanceName</p>
+      <small class="font-monospace text-uppercase">@configuration.InstanceGuid.ToString()</small>
+    </td>
+    <td>
+      <InstanceStatusText Status="instance.Status" />
+    </td>
+    <td>@configuration.MinecraftServerKind @configuration.MinecraftVersion</td>
+    <td class="text-center">
+      <p class="font-monospace">@configuration.ServerPort.ToString()</p>
+    </td>
+    <td class="text-center">
+      <p class="font-monospace">@configuration.RconPort.ToString()</p>
+    </td>
+    <td class="text-end">
+      <p class="font-monospace">@configuration.MemoryAllocation.InMegabytes.ToString() MB</p>
+    </td>
+    <td>
+      <a href="instances/@configuration.InstanceGuid.ToString()" class="btn btn-info btn-sm">Detail</a>
+    </td>
+  </ItemRow>
+  <NoItemsRow>
+    No instances found.
+  </NoItemsRow>
+</Table>
 
 @code {
 
   private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
-  private ImmutableArray<Instance> instances = ImmutableArray<Instance>.Empty;
+  private ImmutableArray<Instance>? instances;
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {

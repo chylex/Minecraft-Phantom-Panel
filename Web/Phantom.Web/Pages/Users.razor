@@ -18,43 +18,36 @@
 <AuthorizeView>
   <Authorized>
     @{ var canEdit = PermissionManager.CheckPermission(context.User, Permission.EditUsers); }
-    <table class="table align-middle">
-      <thead>
-        <tr>
-          <Column Width="320px">Identifier</Column>
-          <Column Width="125px; 40%">Username</Column>
-          <Column Width="125px; 60%">Roles</Column>
-          @if (canEdit) {
-            <Column Width="175px">Actions</Column>
-          }
-        </tr>
-      </thead>
-      <tbody>
-        @foreach (var user in allUsers) {
-          var isMe = me == user.Guid;
-          <tr>
-            <td>
-              <code class="text-uppercase">@user.Guid</code>
-            </td>
-            @if (isMe) {
-              <td class="fw-semibold">@user.Name</td>
-            }
-            else {
-              <td>@user.Name</td>
-            }
-            <td>@(userGuidToRoleDescription.TryGetValue(user.Guid, out var roles) ? roles : "?")</td>
-            @if (canEdit) {
-              <td>
-                @if (!isMe) {
-                  <button class="btn btn-primary btn-sm" @onclick="() => userRolesDialog.Show(user)">Edit Roles</button>
-                  <button class="btn btn-danger btn-sm" @onclick="() => userDeleteDialog.Show(user)">Delete...</button>
-                }
-              </td>
-            }
-          </tr>
+    <Table TItem="UserInfo" Items="allUsers">
+      <HeaderRow>
+        <Column>Username</Column>
+        <Column Width="100%">Roles</Column>
+        @if (canEdit) {
+          <Column MinWidth="175px">Actions</Column>
         }
-      </tbody>
-    </table>
+      </HeaderRow>
+      <ItemRow Context="user">
+        @{ var isMe = me == user.Guid; }
+        <td>
+          <p class="fw-semibold">@user.Name</p>
+          <small class="font-monospace text-uppercase">@user.Guid.ToString()</small>
+        </td>
+        <td>
+          @(userGuidToRoleDescription.TryGetValue(user.Guid, out var roles) ? roles : "?")
+        </td>
+        @if (canEdit) {
+          <td>
+            @if (!isMe) {
+              <button class="btn btn-primary btn-sm" @onclick="() => userRolesDialog.Show(user)">Edit Roles</button>
+              <button class="btn btn-danger btn-sm" @onclick="() => userDeleteDialog.Show(user)">Delete...</button>
+            }
+          </td>
+        }
+      </ItemRow>
+      <NoItemsRow>
+        No users found.
+      </NoItemsRow>
+    </Table>
   </Authorized>
 </AuthorizeView>
 
@@ -67,10 +60,12 @@
 @code {
 
   private Guid? me = Guid.Empty;
-  private ImmutableArray<UserInfo> allUsers = ImmutableArray<UserInfo>.Empty;
+  private ImmutableArray<UserInfo>? allUsers;
   private ImmutableDictionary<Guid, RoleInfo> allRolesByGuid = ImmutableDictionary<Guid, RoleInfo>.Empty;
-  private readonly Dictionary<Guid, string> userGuidToRoleDescription = new();
+  private readonly Dictionary<Guid, string> userGuidToRoleDescription = new ();
 
+  private ImmutableArray<UserInfo> AllUsers => allUsers.GetValueOrDefault(ImmutableArray<UserInfo>.Empty);
+  
   private UserRolesDialog userRolesDialog = null!;
   private UserDeleteDialog userDeleteDialog = null!;
 
@@ -81,9 +76,10 @@
     allRolesByGuid = (await RoleManager.GetAll(CancellationToken)).ToImmutableDictionary(static role => role.Guid, static role => role);
 
     var allUserGuids = allUsers
-        .Select(static user => user.Guid)
-        .ToImmutableHashSet();
-    
+                       .Value
+                       .Select(static user => user.Guid)
+                       .ToImmutableHashSet();
+
     foreach (var (userGuid, roleGuids) in await UserRoleManager.GetUserRoles(allUserGuids, CancellationToken)) {
       userGuidToRoleDescription[userGuid] = StringifyRoles(roleGuids);
     }
@@ -102,7 +98,7 @@
   }
 
   private Task OnUserAdded(UserInfo user) {
-    allUsers = allUsers.Add(user);
+    allUsers = AllUsers.Add(user);
     return RefreshUserRoles(user);
   }
 
@@ -111,7 +107,7 @@
   }
 
   private void OnUserDeleted(UserInfo user) {
-    allUsers = allUsers.Remove(user);
+    allUsers = AllUsers.Remove(user);
     userGuidToRoleDescription.Remove(user.Guid);
   }
 

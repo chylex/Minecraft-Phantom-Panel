@@ -7,75 +7,63 @@
 
 <h1>Agents</h1>
 
-<table class="table align-middle">
-  <thead>
-    <tr>
-      <Column Width="200px; 44%">Name</Column>
-      <Column Width=" 90px; 19%" Class="text-end">Instances</Column>
-      <Column Width="145px; 21%" Class="text-end">Memory</Column>
-      <Column Width="180px;  8%">Version</Column>
-      <Column Width="320px">Identifier</Column>
-      <Column Width="100px;  8%" Class="text-center">Status</Column>
-      <Column Width="215px" Class="text-end">Last Ping</Column>
-    </tr>
-  </thead>
-  @if (!agentTable.IsEmpty) {
-    <tbody>
-      @foreach (var agent in agentTable) {
-        var usedInstances = agent.Stats?.RunningInstanceCount;
-        var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
-      
-        <tr>
-          <td>@agent.Name</td>
-          <td class="text-end">
-            <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@agent.MaxInstances">
-              @(usedInstances?.ToString() ?? "?") / @agent.MaxInstances
-            </ProgressBar>
-          </td>
-          <td class="text-end">
-            <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@agent.MaxMemory.InMegabytes">
-              @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes MB
-            </ProgressBar>
-          </td>
-          <td class="text-condensed">
-            Build: <code>@agent.BuildVersion</code>
-            <br>
-            Protocol: <code>v@(agent.ProtocolVersion)</code>
-          </td>
-          <td>
-            <code class="text-uppercase">@agent.Guid.ToString()</code>
-          </td>
-          @if (agent.IsOnline) {
-            <td class="text-center text-success">Online</td>
-            <td class="text-end"></td>
-          }
-          else {
-            <td class="text-center text-danger">Offline</td>
-            @if (agent.LastPing is {} lastPing) {
-              <td class="text-end">
-                <time datetime="@lastPing.ToString("o")" data-time-type="relative">@lastPing.ToString()</time>
-              </td>
-            }
-            else {
-              <td class="text-end">-</td>
-            }
-          }
-        </tr>
+<Table Items="agentTable">
+  <HeaderRow>
+    <Column Width="50%">Name</Column>
+    <Column Class="text-end" Width="24%" MinWidth="90px">Instances</Column>
+    <Column Class="text-end" Width="26%" MinWidth="145px">Memory</Column>
+    <Column>Version</Column>
+    <Column Class="text-center">Status</Column>
+    <Column Class="text-end" MinWidth="200px">Last Ping</Column>
+  </HeaderRow>
+  <ItemRow Context="agent">
+    @{
+      var usedInstances = agent.Stats?.RunningInstanceCount;
+      var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
+    }
+    <td>
+      <p class="fw-semibold">@agent.Name</p>
+      <small class="font-monospace text-uppercase">@agent.Guid.ToString()</small>
+    </td>
+    <td class="text-end">
+      <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@agent.MaxInstances">
+        @(usedInstances?.ToString() ?? "?") / @agent.MaxInstances.ToString()
+      </ProgressBar>
+    </td>
+    <td class="text-end">
+      <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@agent.MaxMemory.InMegabytes">
+        @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes.ToString() MB
+      </ProgressBar>
+    </td>
+    <td class="text-condensed">
+      Build: <span class="font-monospace">@agent.BuildVersion</span>
+      <br>
+      Protocol: <span class="font-monospace">v@(agent.ProtocolVersion.ToString())</span>
+    </td>
+    @if (agent.IsOnline) {
+      <td class="fw-semibold text-center text-success">Online</td>
+      <td class="text-end">-</td>
+    }
+    else {
+      <td class="fw-semibold text-center">Offline</td>
+      <td class="text-end">
+      @if (agent.LastPing is {} lastPing) {
+          <TimeWithOffset Time="lastPing" />
       }
-    </tbody>
-  }
-  else {
-    <tfoot>
-      <tr>
-        <td colspan="7">No agents registered.</td>
-      </tr>
-    </tfoot>
-  }
-</table>
+      else {
+        <text>N/A</text>
+      }
+      </td>
+    }
+  </ItemRow>
+  <NoItemsRow>
+    No agents registered.
+  </NoItemsRow>
+</Table>
 
 @code {
 
-  private readonly Table<AgentWithStats, Guid> agentTable = new();
+  private readonly TableData<AgentWithStats, Guid> agentTable = new();
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {

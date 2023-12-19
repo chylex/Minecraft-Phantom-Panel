@@ -26,14 +26,19 @@
     flex-direction: column;
     position: sticky;
     top: 0;
-    width: 250px;
+    width: 230px;
     min-height: 100vh;
   }
 }
 
 main {
   flex: 1;
+  min-width: 0;
   padding: 1.1rem 1.5rem 0;
+}
+
+h1 {
+  font-weight: 600;
 }
 
 h1:focus {
@@ -51,14 +56,30 @@ code {
 
 .table {
   margin-top: 0.5rem;
+  white-space: nowrap;
 }
 
 .table > :not(:first-child) {
   border-top: 2px solid #a6a6a6;
 }
 
-.table > :not(caption) > * > * {
-  padding: 0.5rem 0.75rem;
+.table th, .table td {
+  padding: 0.5rem 1.25rem;
+}
+
+.table p {
+  margin: 0;
+}
+
+.table small {
+  display: block;
+  font-weight: normal;
+  font-size: 0.825rem;
+  color: #666;
+}
+
+.table small.font-monospace {
+  font-size: 0.875rem;
 }
 
 .form-range {
@@ -91,9 +112,19 @@ code {
 
 .text-condensed {
   font-size: 0.9rem;
-  line-height: 1.05rem;
+  line-height: 1.15rem;
 }
 
 .text-condensed code {
   font-size: 0.9rem;
+}
+
+.horizontal-scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  margin-bottom: 1rem;
+}
+
+.horizontal-scroll > .table {
+  margin-bottom: 0;
 }

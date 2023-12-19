@@ -12,48 +12,42 @@
 
 <h1>Audit Log</h1>
 
-<table class="table">
-  <thead>
-    <tr>
-      <Column Width="165px" Class="text-end">Time</Column>
-      <Column Width="320px; 20%">User</Column>
-      <Column Width="160px">Event Type</Column>
-      <Column Width="320px; 20%">Subject</Column>
-      <Column Width="100px; 60%">Data</Column>
-    </tr>
-  </thead>
-  <tbody>
-    @foreach (var logItem in logItems) {
-      DateTimeOffset time = logItem.UtcTime.ToLocalTime();
-      <tr>
-        <td class="text-end">
-          <time datetime="@time.ToString("o")">@time.ToString()</time>
-        </td>
-        <td>
-          @(logItem.UserName ?? "-")
-          <br>
-          <code class="text-uppercase">@logItem.UserGuid</code>
-        </td>
-        <td>@logItem.EventType.ToNiceString()</td>
-        <td>
-          @if (logItem.SubjectId is {} subjectId && GetSubjectName(logItem.SubjectType, subjectId) is {} subjectName) {
-            @subjectName
-            <br>
-          }
-          <code class="text-uppercase">@(logItem.SubjectId ?? "-")</code>
-        </td>
-        <td>
-          <code>@logItem.JsonData</code>
-        </td>
-      </tr>
-    }
-  </tbody>
-</table>
+<Table TItem="AuditLogItem" Items="logItems">
+  <HeaderRow>
+    <Column Class="text-end" MinWidth="200px">Time</Column>
+    <Column>User</Column>
+    <Column>Event Type</Column>
+    <Column>Subject</Column>
+    <Column Width="100%">Data</Column>
+  </HeaderRow>
+  <ItemRow Context="logItem">
+    <td class="text-end">
+      <TimeWithOffset Time="logItem.UtcTime.ToLocalTime()" />
+    </td>
+    <td>
+      <p class="fw-semibold">@(logItem.UserName ?? "-")</p>
+      <small class="font-monospace text-uppercase">@logItem.UserGuid.ToString()</small>
+    </td>
+    <td>
+      <p>@logItem.EventType.ToNiceString()</p>
+    </td>
+    <td>
+      <p class="fw-semibold">@(logItem.SubjectId is {} subjectId && GetSubjectName(logItem.SubjectType, subjectId) is {} subjectName ? subjectName : "-")</p>
+      <small class="font-monospace text-uppercase">@(logItem.SubjectId ?? "-")</small>
+    </td>
+    <td>
+      <code>@logItem.JsonData</code>
+    </td>
+  </ItemRow>
+  <NoItemsRow>
+    No audit log entries found.
+  </NoItemsRow>
+</Table>
 
 @code {
 
   private CancellationTokenSource? initializationCancellationTokenSource;
-  private ImmutableArray<AuditLogItem> logItems = ImmutableArray<AuditLogItem>.Empty;
+  private ImmutableArray<AuditLogItem>? logItems;
   private ImmutableDictionary<Guid, string>? userNamesByGuid;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
@@ -72,9 +66,9 @@
 
   private string? GetSubjectName(AuditLogSubjectType type, string id) {
     return type switch {
-           AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
-           AuditLogSubjectType.User     => userNamesByGuid != null && userNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
-           _                            => null
+      AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
+      AuditLogSubjectType.User     => userNamesByGuid != null && userNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
+      _                            => null
     };
   }
 

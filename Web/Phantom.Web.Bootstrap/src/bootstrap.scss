@@ -39,8 +39,10 @@ $dropdown-link-active-bg:    mix($gray-200, $gray-300, 75%);
 
 @import "./components";
 
-.spinner-border-sm {
-  --bs-spinner-border-width: 0.15em;
+.spinner-border {
+  --bs-spinner-width: 1em;
+  --bs-spinner-height: 1em;
+  --bs-spinner-border-width: 0.15rem;
 }
 
 .progress {

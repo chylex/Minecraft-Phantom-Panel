@@ -1,0 +1,58 @@
+﻿@typeparam TItem
+
+<div class="horizontal-scroll">
+  <table class="table align-middle@(Class.Length == 0 ? "" : " " + Class)">
+
+    <thead>
+      <tr>
+        @HeaderRow
+      </tr>
+    </thead>
+
+    @if (Items is null) {
+      <tbody>
+        <tr>
+          <td colspan="1000" class="fw-semibold">
+            Loading...
+          </td>
+        </tr>
+      </tbody>
+    }
+    else if (Items.Count > 0) {
+      <tbody>
+        @foreach (var item in Items) {
+          <tr>
+            @ItemRow(item)
+          </tr>
+        }
+      </tbody>
+    }
+    else if (NoItemsRow != null) {
+      <tfoot>
+        <tr>
+          <td colspan="1000">@NoItemsRow</td>
+        </tr>
+      </tfoot>
+    }
+
+  </table>
+</div>
+
+@code {
+
+  [Parameter]
+  public string Class { get; set; } = string.Empty;
+
+  [Parameter, EditorRequired]
+  public RenderFragment HeaderRow { get; set; } = null!;
+
+  [Parameter, EditorRequired]
+  public RenderFragment<TItem> ItemRow { get; set; } = null!;
+
+  [Parameter]
+  public RenderFragment? NoItemsRow { get; set; } = null!;
+
+  [Parameter, EditorRequired]
+  public IReadOnlyList<TItem>? Items { get; set; }
+
+}
