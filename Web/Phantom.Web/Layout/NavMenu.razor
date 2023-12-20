@@ -6,7 +6,10 @@
 
 <div class="navbar navbar-dark">
   <div class="container-fluid">
-    <a class="navbar-brand" href="">Phantom Panel</a>
+    <div class="pt-1 pb-2">
+      <a class="navbar-brand" href="">Phantom Panel</a>
+      <small class="navbar-text">Version&nbsp;@ApplicationProperties.Version</small>
+    </div>
     <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -45,9 +48,6 @@
       </Authorized>
     </AuthorizeView>
   </nav>
-  <footer>
-    Build @ApplicationProperties.Version
-  </footer>
 </div>
 
 @code {
