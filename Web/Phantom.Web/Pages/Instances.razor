@@ -16,7 +16,7 @@
   <a href="instances/create" class="btn btn-primary" role="button">New Instance</a>
 </PermissionView>
 
-<Table TItem="Instance" Items="instances">
+<Table TItem="Instance" Items="instances" ItemUrl="@(static instance => "instances/" + instance.Configuration.InstanceGuid)">
   <HeaderRow>
     <Column Width="40%">Agent</Column>
     <Column Width="40%">Name</Column>
@@ -28,34 +28,31 @@
     <Column MinWidth="75px">Actions</Column>
   </HeaderRow>
   <ItemRow Context="instance">
-    @{
-      var configuration = instance.Configuration;
-      var agentName = agentNamesByGuid.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty;
-    }
-    <td>
-      <p class="fw-semibold">@agentName</p>
+    @{ var configuration = instance.Configuration; }
+    <Cell>
+      <p class="fw-semibold">@(agentNamesByGuid.TryGetValue(configuration.AgentGuid, out var name) ? name : string.Empty)</p>
       <small class="font-monospace text-uppercase">@configuration.AgentGuid.ToString()</small>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <p class="fw-semibold">@configuration.InstanceName</p>
       <small class="font-monospace text-uppercase">@configuration.InstanceGuid.ToString()</small>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <InstanceStatusText Status="instance.Status" />
-    </td>
-    <td>@configuration.MinecraftServerKind @configuration.MinecraftVersion</td>
-    <td class="text-center">
+    </Cell>
+    <Cell>@configuration.MinecraftServerKind @configuration.MinecraftVersion</Cell>
+    <Cell class="text-center">
       <p class="font-monospace">@configuration.ServerPort.ToString()</p>
-    </td>
-    <td class="text-center">
+    </Cell>
+    <Cell class="text-center">
       <p class="font-monospace">@configuration.RconPort.ToString()</p>
-    </td>
-    <td class="text-end">
+    </Cell>
+    <Cell class="text-end">
       <p class="font-monospace">@configuration.MemoryAllocation.InMegabytes.ToString() MB</p>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <a href="instances/@configuration.InstanceGuid.ToString()" class="btn btn-info btn-sm">Detail</a>
-    </td>
+    </Cell>
   </ItemRow>
   <NoItemsRow>
     No instances found.

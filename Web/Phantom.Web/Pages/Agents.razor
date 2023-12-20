@@ -21,39 +21,39 @@
       var usedInstances = agent.Stats?.RunningInstanceCount;
       var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
     }
-    <td>
+    <Cell>
       <p class="fw-semibold">@agent.Name</p>
       <small class="font-monospace text-uppercase">@agent.Guid.ToString()</small>
-    </td>
-    <td class="text-end">
+    </Cell>
+    <Cell class="text-end">
       <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@agent.MaxInstances">
         @(usedInstances?.ToString() ?? "?") / @agent.MaxInstances.ToString()
       </ProgressBar>
-    </td>
-    <td class="text-end">
+    </Cell>
+    <Cell class="text-end">
       <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@agent.MaxMemory.InMegabytes">
         @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes.ToString() MB
       </ProgressBar>
-    </td>
-    <td class="text-condensed">
+    </Cell>
+    <Cell class="text-condensed">
       Build: <span class="font-monospace">@agent.BuildVersion</span>
       <br>
       Protocol: <span class="font-monospace">v@(agent.ProtocolVersion.ToString())</span>
-    </td>
+    </Cell>
     @if (agent.IsOnline) {
-      <td class="fw-semibold text-center text-success">Online</td>
-      <td class="text-end">-</td>
+      <Cell class="fw-semibold text-center text-success">Online</Cell>
+      <Cell class="text-end">-</Cell>
     }
     else {
-      <td class="fw-semibold text-center">Offline</td>
-      <td class="text-end">
+      <Cell class="fw-semibold text-center">Offline</Cell>
+      <Cell class="text-end">
       @if (agent.LastPing is {} lastPing) {
           <TimeWithOffset Time="lastPing" />
       }
       else {
         <text>N/A</text>
       }
-      </td>
+      </Cell>
     }
   </ItemRow>
   <NoItemsRow>

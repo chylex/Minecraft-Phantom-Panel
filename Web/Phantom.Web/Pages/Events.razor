@@ -22,10 +22,10 @@
     <Column Width="100%">Data</Column>
   </HeaderRow>
   <ItemRow Context="logItem">
-    <td class="text-end">
+    <Cell class="text-end">
       <TimeWithOffset Time="logItem.UtcTime.ToLocalTime()" />
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       @if (logItem.AgentGuid is {} agentGuid) {
         <p class="fw-semibold">@(GetAgentName(agentGuid))</p>
         <small class="font-monospace text-uppercase">@agentGuid.ToString()</small>
@@ -33,15 +33,15 @@
       else {
         <text>-</text>
       }
-    </td>
-    <td>@logItem.EventType.ToNiceString()</td>
-    <td>
+    </Cell>
+    <Cell>@logItem.EventType.ToNiceString()</Cell>
+    <Cell>
       <p class="fw-semibold">@(GetSubjectName(logItem.SubjectType, logItem.SubjectId) ?? "-")</p>
       <small class="font-monospace text-uppercase">@(logItem.SubjectId)</small>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <code>@logItem.JsonData</code>
-    </td>
+    </Cell>
   </ItemRow>
   <NoItemsRow>
     No event log entries found.

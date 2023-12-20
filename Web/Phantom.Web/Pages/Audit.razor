@@ -21,23 +21,23 @@
     <Column Width="100%">Data</Column>
   </HeaderRow>
   <ItemRow Context="logItem">
-    <td class="text-end">
+    <Cell class="text-end">
       <TimeWithOffset Time="logItem.UtcTime.ToLocalTime()" />
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <p class="fw-semibold">@(logItem.UserName ?? "-")</p>
       <small class="font-monospace text-uppercase">@logItem.UserGuid.ToString()</small>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <p>@logItem.EventType.ToNiceString()</p>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <p class="fw-semibold">@(logItem.SubjectId is {} subjectId && GetSubjectName(logItem.SubjectType, subjectId) is {} subjectName ? subjectName : "-")</p>
       <small class="font-monospace text-uppercase">@(logItem.SubjectId ?? "-")</small>
-    </td>
-    <td>
+    </Cell>
+    <Cell>
       <code>@logItem.JsonData</code>
-    </td>
+    </Cell>
   </ItemRow>
   <NoItemsRow>
     No audit log entries found.

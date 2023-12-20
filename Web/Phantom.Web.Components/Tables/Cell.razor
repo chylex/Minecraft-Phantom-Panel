@@ -1,0 +1,23 @@
+﻿@if (Url == null) {
+  <td @attributes="AdditionalAttributes">
+    @ChildContent
+  </td>
+}
+else {
+  <td class="p-0" @attributes="AdditionalAttributes">
+    <a class="table-link" href="@Url">@ChildContent</a>
+  </td>
+}
+
+@code {
+
+  [CascadingParameter(Name = "Url")]
+  public string? Url { get; set; }
+
+  [Parameter]
+  public RenderFragment? ChildContent { get; set; }
+
+  [Parameter(CaptureUnmatchedValues = true)]
+  public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+}

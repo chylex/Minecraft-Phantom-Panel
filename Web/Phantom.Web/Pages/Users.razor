@@ -28,20 +28,20 @@
       </HeaderRow>
       <ItemRow Context="user">
         @{ var isMe = me == user.Guid; }
-        <td>
+        <Cell>
           <p class="fw-semibold">@user.Name</p>
           <small class="font-monospace text-uppercase">@user.Guid.ToString()</small>
-        </td>
-        <td>
+        </Cell>
+        <Cell>
           @(userGuidToRoleDescription.TryGetValue(user.Guid, out var roles) ? roles : "?")
-        </td>
+        </Cell>
         @if (canEdit) {
-          <td>
+          <Cell>
             @if (!isMe) {
               <button class="btn btn-primary btn-sm" @onclick="() => userRolesDialog.Show(user)">Edit Roles</button>
               <button class="btn btn-danger btn-sm" @onclick="() => userDeleteDialog.Show(user)">Delete...</button>
             }
-          </td>
+          </Cell>
         }
       </ItemRow>
       <NoItemsRow>

@@ -60,14 +60,21 @@ code {
 .table {
   margin-top: 0.5rem;
   white-space: nowrap;
+  --bs-table-hover-bg: rgba(15, 100, 119, 0.05);
 }
 
 .table > :not(:first-child) {
   border-top: 2px solid #a6a6a6;
 }
 
-.table th, .table td {
+.table th, .table td, .table td > .table-link {
   padding: 0.5rem 1.25rem;
+}
+
+.table .table-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .table p {

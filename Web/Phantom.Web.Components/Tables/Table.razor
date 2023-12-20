@@ -1,7 +1,7 @@
 ﻿@typeparam TItem
 
 <div class="horizontal-scroll">
-  <table class="table align-middle@(Class.Length == 0 ? "" : " " + Class)">
+  <table class="@FullClass">
 
     <thead>
       <tr>
@@ -22,7 +22,9 @@
       <tbody>
         @foreach (var item in Items) {
           <tr>
-            @ItemRow(item)
+            <CascadingValue Name="Url" Value="@ItemUrl?.Invoke(item)">
+              @ItemRow(item)
+            </CascadingValue>
           </tr>
         }
       </tbody>
@@ -43,6 +45,25 @@
   [Parameter]
   public string Class { get; set; } = string.Empty;
 
+  private string FullClass {
+    get {
+      List<string> classes = new (4) {
+        "table",
+        "align-middle"
+      };
+
+      if (ItemUrl != null) {
+        classes.Add("table-hover");
+      }
+
+      if (Class.Length > 0) {
+        classes.Add(Class);
+      }
+      
+      return string.Join(' ', classes);
+    }
+  }
+
   [Parameter, EditorRequired]
   public RenderFragment HeaderRow { get; set; } = null!;
 
@@ -54,5 +75,8 @@
 
   [Parameter, EditorRequired]
   public IReadOnlyList<TItem>? Items { get; set; }
+
+  [Parameter]
+  public Func<TItem, string>? ItemUrl { get; set; } = null;
 
 }
