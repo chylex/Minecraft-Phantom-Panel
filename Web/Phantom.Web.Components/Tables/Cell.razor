@@ -1,10 +1,11 @@
-﻿@if (Url == null) {
+﻿@using Phantom.Web.Components.Utils
+@if (Url == null) {
   <td @attributes="AdditionalAttributes">
     @ChildContent
   </td>
 }
 else {
-  <td class="p-0" @attributes="AdditionalAttributes">
+  <td @attributes="AdditionalAttributes" class="@(BlazorUtils.CombineClassNames(AdditionalAttributes, "p-0"))">
     <a class="table-link" href="@Url">@ChildContent</a>
   </td>
 }
