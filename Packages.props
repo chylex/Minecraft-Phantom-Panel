@@ -1,12 +1,12 @@
 ﻿<Project>
   
   <ItemGroup>
-    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization"     Version="7.0.11" />
-    <PackageReference Update="Microsoft.AspNetCore.Components.Web"               Version="7.0.11" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational"          Version="7.0.11" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"               Version="7.0.11" />
-    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL"             Version="7.0.11" />
-    <PackageReference Update="System.Linq.Async"                                 Version="4.0.0" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization"     Version="8.0.0" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Web"               Version="8.0.0" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational"          Version="8.0.0" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"               Version="8.0.0" />
+    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL"             Version="8.0.0" />
+    <PackageReference Update="System.Linq.Async"                                 Version="6.0.1" />
   </ItemGroup>
   
   <ItemGroup>
@@ -18,21 +18,21 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="MemoryPack" Version="1.9.16" />
+    <PackageReference Update="MemoryPack" Version="1.10.0" />
     <PackageReference Update="NetMQ"      Version="4.0.1.13" />
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="Serilog"               Version="3.0.1" />
-    <PackageReference Update="Serilog.AspNetCore"    Version="7.0.0" />
+    <PackageReference Update="Serilog"               Version="3.1.1" />
+    <PackageReference Update="Serilog.AspNetCore"    Version="8.0.0" />
     <PackageReference Update="Serilog.Sinks.Async"   Version="1.5.0" />
-    <PackageReference Update="Serilog.Sinks.Console" Version="4.1.0" />
+    <PackageReference Update="Serilog.Sinks.Console" Version="5.0.1" />
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.7.2" />
-    <PackageReference Update="NUnit"                  Version="3.13.3" />
-    <PackageReference Update="NUnit.Analyzers"        Version="3.8.0" />
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Update="NUnit"                  Version="4.0.1" />
+    <PackageReference Update="NUnit.Analyzers"        Version="3.10.0" />
     <PackageReference Update="NUnit3TestAdapter"      Version="4.5.0" />
   </ItemGroup>
 
