@@ -24,8 +24,8 @@ sealed partial class EventLogManager {
 			this.instanceGuid = instanceGuid;
 		}
 
-		public void OnLaunchSucceeded(InstanceLaunchSuccededEvent e) {
-			eventLogManager.EnqueueItem(eventGuid, utcTime, agentGuid, EventLogEventType.InstanceLaunchSucceded, instanceGuid.ToString());
+		public void OnLaunchSucceeded(InstanceLaunchSucceededEvent e) {
+			eventLogManager.EnqueueItem(eventGuid, utcTime, agentGuid, EventLogEventType.InstanceLaunchSucceeded, instanceGuid.ToString());
 		}
 
 		public void OnLaunchFailed(InstanceLaunchFailedEvent e) {

@@ -4,7 +4,7 @@ using Phantom.Common.Data.Backups;
 namespace Phantom.Common.Data.Instance;
 
 [MemoryPackable]
-[MemoryPackUnion(0, typeof(InstanceLaunchSuccededEvent))]
+[MemoryPackUnion(0, typeof(InstanceLaunchSucceededEvent))]
 [MemoryPackUnion(1, typeof(InstanceLaunchFailedEvent))]
 [MemoryPackUnion(2, typeof(InstanceCrashedEvent))]
 [MemoryPackUnion(3, typeof(InstanceStoppedEvent))]
@@ -14,7 +14,7 @@ public partial interface IInstanceEvent {
 }
 
 [MemoryPackable(GenerateType.VersionTolerant)]
-public sealed partial record InstanceLaunchSuccededEvent : IInstanceEvent {
+public sealed partial record InstanceLaunchSucceededEvent : IInstanceEvent {
 	public void Accept(IInstanceEventVisitor visitor) {
 		visitor.OnLaunchSucceeded(this);
 	}
@@ -49,7 +49,7 @@ public sealed partial record InstanceBackupCompletedEvent([property: MemoryPackO
 }
 
 public static class InstanceEvent {
-	public static readonly IInstanceEvent LaunchSucceded = new InstanceLaunchSuccededEvent();
+	public static readonly IInstanceEvent LaunchSucceeded = new InstanceLaunchSucceededEvent();
 	public static readonly IInstanceEvent Crashed = new InstanceCrashedEvent();
 	public static readonly IInstanceEvent Stopped = new InstanceStoppedEvent();
 }

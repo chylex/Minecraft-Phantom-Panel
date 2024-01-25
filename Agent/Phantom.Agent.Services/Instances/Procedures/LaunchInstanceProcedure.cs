@@ -81,7 +81,7 @@ sealed record LaunchInstanceProcedure(InstanceConfiguration Configuration, IServ
 		}
 
 		context.SetStatus(InstanceStatus.Running);
-		context.ReportEvent(InstanceEvent.LaunchSucceded);
+		context.ReportEvent(InstanceEvent.LaunchSucceeded);
 		return launchSuccess.Process;
 	}
 

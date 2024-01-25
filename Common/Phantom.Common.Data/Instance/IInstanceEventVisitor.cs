@@ -1,7 +1,7 @@
 ﻿namespace Phantom.Common.Data.Instance;
 
 public interface IInstanceEventVisitor {
-	void OnLaunchSucceeded(InstanceLaunchSuccededEvent e);
+	void OnLaunchSucceeded(InstanceLaunchSucceededEvent e);
 	void OnLaunchFailed(InstanceLaunchFailedEvent e);
 	void OnCrashed(InstanceCrashedEvent e);
 	void OnStopped(InstanceStoppedEvent e);

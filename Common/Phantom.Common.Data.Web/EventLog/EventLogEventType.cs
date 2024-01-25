@@ -1,7 +1,7 @@
 ﻿namespace Phantom.Common.Data.Web.EventLog;
 
 public enum EventLogEventType {
-	InstanceLaunchSucceded,
+	InstanceLaunchSucceeded,
 	InstanceLaunchFailed,
 	InstanceCrashed,
 	InstanceStopped,
@@ -12,7 +12,7 @@ public enum EventLogEventType {
 
 public static class EventLogEventTypeExtensions {
 	private static readonly Dictionary<EventLogEventType, EventLogSubjectType> SubjectTypes = new () {
-		{ EventLogEventType.InstanceLaunchSucceded, EventLogSubjectType.Instance },
+		{ EventLogEventType.InstanceLaunchSucceeded, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceLaunchFailed, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceCrashed, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceStopped, EventLogSubjectType.Instance },
