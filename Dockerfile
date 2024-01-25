@@ -1,63 +1,27 @@
-# +---------------------------+
-# | Prepare build environment |
-# +---------------------------+
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/sdk:8.0-preview AS phantom-base-builder
+# +---------------+
+# | Prepare build |
+# +---------------+
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/sdk:8.0 AS phantom-builder
 ARG TARGETARCH
 
 ADD . /app
 WORKDIR /app
 
+RUN dotnet publish PhantomPanel.sln \
+    /p:DebugType=None               \
+    /p:DebugSymbols=false           \
+    --arch "$TARGETARCH"            \
+    --configuration Release
+
+RUN find .artifacts/publish/*/* -maxdepth 0 -execdir mv '{}' 'release' \;
+
+
+# +---------------------+
+# | Phantom Agent image |
+# +---------------------+
+FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0 AS phantom-agent
+
 RUN mkdir /data && chmod 777 /data
-RUN dotnet restore --arch "$TARGETARCH"
-
-
-# +---------------------+
-# | Build Phantom Agent |
-# +---------------------+
-FROM phantom-base-builder AS phantom-agent-builder
-
-RUN dotnet publish Agent/Phantom.Agent/Phantom.Agent.csproj \
-    /p:DebugType=None                                       \
-    /p:DebugSymbols=false                                   \
-    --no-restore                                            \
-    --arch "$TARGETARCH"                                    \
-    --configuration Release                                 \
-    --output /app/out
-
-
-# +--------------------------+
-# | Build Phantom Controller |
-# +--------------------------+
-FROM phantom-base-builder AS phantom-controller-builder
-
-RUN dotnet publish Controller/Phantom.Controller/Phantom.Controller.csproj \
-    /p:DebugType=None                                                      \
-    /p:DebugSymbols=false                                                  \
-    --no-restore                                                           \
-    --arch "$TARGETARCH"                                                   \
-    --configuration Release                                                \
-    --output /app/out
-
-
-# +-------------------+
-# | Build Phantom Web |
-# +-------------------+
-FROM phantom-base-builder AS phantom-controller-builder
-
-RUN dotnet publish Web/Phantom.Web/Phantom.Web.csproj \
-    /p:DebugType=None                                 \
-    /p:DebugSymbols=false                             \
-    --no-restore                                      \
-    --arch "$TARGETARCH"                              \
-    --configuration Release                           \
-    --output /app/out
-
-
-# +------------------------------+
-# | Finalize Phantom Agent image |
-# +------------------------------+
-FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0-preview AS phantom-agent
-
 WORKDIR /data
 
 COPY --from=eclipse-temurin:8-jre  /opt/java/openjdk /opt/java/8
@@ -74,30 +38,32 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
     apt-get install -y                                          \
     zstd
 
-COPY --from=phantom-agent-builder --chmod=755 /app/out /app
+COPY --from=phantom-builder --chmod=755 /app/.artifacts/publish/Phantom.Agent/release /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]
 
 
-# +-----------------------------------+
-# | Finalize Phantom Controller image |
-# +-----------------------------------+
-FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0-preview AS phantom-controller
+# +--------------------------+
+# | Phantom Controller image |
+# +--------------------------+
+FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0 AS phantom-controller
 
+RUN mkdir /data && chmod 777 /data
 WORKDIR /data
 
-COPY --from=phantom-controller-builder --chmod=755 /app/out /app
+COPY --from=phantom-builder --chmod=755 /app/.artifacts/publish/Phantom.Controller/release /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Controller.dll"]
 
 
-# +----------------------------+
-# | Finalize Phantom Web image |
-# +----------------------------+
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0-preview AS phantom-web
+# +-------------------+
+# | Phantom Web image |
+# +-------------------+
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0 AS phantom-web
 
+RUN mkdir /data && chmod 777 /data
 WORKDIR /data
 
-COPY --from=phantom-web-builder --chmod=755 /app/out /app
+COPY --from=phantom-builder --chmod=755 /app/.artifacts/publish/Phantom.Web/release /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Web.dll"]
