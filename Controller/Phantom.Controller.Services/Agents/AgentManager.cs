@@ -1,153 +1,94 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Concurrent;
+using Akka.Actor;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
+using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
-using Phantom.Controller.Services.Instances;
-using Phantom.Utils.Collections;
-using Phantom.Utils.Events;
+using Phantom.Controller.Minecraft;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime;
-using Phantom.Utils.Tasks;
 using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
 
 sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
-
-	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
-	private static readonly TimeSpan DisconnectionThreshold = TimeSpan.FromSeconds(12);
-
-	private readonly ObservableAgents agents = new (PhantomLogger.Create<AgentManager, ObservableAgents>());
-
-	public EventSubscribers<ImmutableArray<Agent>> AgentsChanged => agents.Subs;
-
-	private readonly CancellationToken cancellationToken;
+	
+	private readonly ActorSystem actorSystem;
 	private readonly AuthToken authToken;
+	private readonly ControllerState controllerState;
+	private readonly MinecraftVersions minecraftVersions;
 	private readonly IDbContextProvider dbProvider;
-
-	public AgentManager(AuthToken authToken, IDbContextProvider dbProvider, TaskManager taskManager, CancellationToken cancellationToken) {
+	private readonly CancellationToken cancellationToken;
+	
+	private readonly ConcurrentDictionary<Guid, ActorRef<AgentActor.ICommand>> agentsByGuid = new ();
+	private readonly Func<Guid, AgentConfiguration, ActorRef<AgentActor.ICommand>> addAgentActorFactory;
+	
+	public AgentManager(ActorSystem actorSystem, AuthToken authToken, ControllerState controllerState, MinecraftVersions minecraftVersions, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+		this.actorSystem = actorSystem;
 		this.authToken = authToken;
+		this.controllerState = controllerState;
+		this.minecraftVersions = minecraftVersions;
 		this.dbProvider = dbProvider;
 		this.cancellationToken = cancellationToken;
-		taskManager.Run("Refresh agent status loop", RefreshAgentStatus);
+		
+		this.addAgentActorFactory = CreateAgentActor;
 	}
 
-	internal async Task Initialize() {
+	private ActorRef<AgentActor.ICommand> CreateAgentActor(Guid agentGuid, AgentConfiguration agentConfiguration) {
+		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, dbProvider, cancellationToken);
+		var name = "Agent:" + agentGuid;
+		return actorSystem.ActorOf(AgentActor.Factory(init), name);
+	}
+
+	public async Task Initialize() {
 		await using var ctx = dbProvider.Eager();
 
 		await foreach (var entity in ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
-			var agent = new Agent(entity.AgentGuid, entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
-			if (!agents.ByGuid.AddOrReplaceIf(agent.Guid, agent, static oldAgent => oldAgent.IsOffline)) {
-				// TODO
-				throw new InvalidOperationException("Unable to register agent from database: " + agent.Guid);
+			var agentGuid = entity.AgentGuid;
+			var agentConfiguration = new AgentConfiguration(entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
+
+			if (agentsByGuid.TryAdd(agentGuid, CreateAgentActor(agentGuid, agentConfiguration))) {
+				Logger.Information("Loaded agent \"{AgentName}\" (GUID {AgentGuid}) from database.", agentConfiguration.AgentName, agentGuid);
 			}
 		}
 	}
 
-	public ImmutableDictionary<Guid, Agent> GetAgents() {
-		return agents.ByGuid.ToImmutable();
-	}
-
-	internal async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, InstanceManager instanceManager, RpcConnectionToClient<IMessageToAgentListener> connection) {
+	public async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, RpcConnectionToClient<IMessageToAgentListener> connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
 			return false;
 		}
-
-		var agent = new Agent(agentInfo) {
-			LastPing = DateTimeOffset.Now,
-			IsOnline = true,
-			Connection = new AgentConnection(connection)
-		};
-
-		if (agents.ByGuid.AddOrReplace(agent.Guid, agent, out var oldAgent)) {
-			oldAgent.Connection?.Close();
-		}
-
-		await using (var ctx = dbProvider.Eager()) {
-			var entity = ctx.AgentUpsert.Fetch(agent.Guid);
-
-			entity.Name = agent.Name;
-			entity.ProtocolVersion = agent.ProtocolVersion;
-			entity.BuildVersion = agent.BuildVersion;
-			entity.MaxInstances = agent.MaxInstances;
-			entity.MaxMemory = agent.MaxMemory;
-
-			await ctx.SaveChangesAsync(cancellationToken);
-		}
-
-		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
-
-		var instanceConfigurations = await instanceManager.GetInstanceConfigurationsForAgent(agent.Guid);
-		await connection.Send(new RegisterAgentSuccessMessage(instanceConfigurations));
+		
+		var agentProperties = AgentConfiguration.From(agentInfo);
+		var agentActorRef = agentsByGuid.GetOrAdd(agentInfo.AgentGuid, addAgentActorFactory, agentProperties);
+		var configureInstanceMessages = await agentActorRef.Request(new AgentActor.RegisterCommand(agentProperties, connection), cancellationToken);
+		await connection.Send(new RegisterAgentSuccessMessage(configureInstanceMessages));
 		
 		return true;
 	}
 
-	internal bool UnregisterAgent(Guid agentGuid, RpcConnectionToClient<IMessageToAgentListener> connection) {
-		if (agents.ByGuid.TryReplaceIf(agentGuid, static oldAgent => oldAgent.AsOffline(), oldAgent => oldAgent.Connection?.IsSame(connection) == true)) {
-			Logger.Information("Unregistered agent with GUID {Guid}.", agentGuid);
+	public bool TellAgent(Guid agentGuid, AgentActor.ICommand command) {
+		if (agentsByGuid.TryGetValue(agentGuid, out var agent)) {
+			agent.Tell(command);
 			return true;
 		}
 		else {
+			Logger.Warning("Could not deliver command {CommandType} to agent {AgentGuid}, agent not registered.", command.GetType().Name, agentGuid);
 			return false;
 		}
 	}
-	
-	internal Agent? GetAgent(Guid guid) {
-		return agents.ByGuid.TryGetValue(guid, out var agent) ? agent : null;
-	}
 
-	internal void NotifyAgentIsAlive(Guid agentGuid) {
-		agents.ByGuid.TryReplace(agentGuid, static agent => agent.AsOnline(DateTimeOffset.Now));
-	}
-
-	internal void SetAgentStats(Guid agentGuid, int runningInstanceCount, RamAllocationUnits runningInstanceMemory) {
-		agents.ByGuid.TryReplace(agentGuid, agent => agent with { Stats = new AgentStats(runningInstanceCount, runningInstanceMemory) });
-	}
-
-	private async Task RefreshAgentStatus() {
-		static Agent MarkAgentAsOffline(Agent agent) {
-			Logger.Warning("Lost connection to agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
-			return agent.AsDisconnected();
+	public async Task<InstanceActionResult<TReply>> DoInstanceAction<TCommand, TReply>(Guid agentGuid, TCommand command) where TCommand : class, AgentActor.ICommand, ICanReply<InstanceActionResult<TReply>> {
+		if (agentsByGuid.TryGetValue(agentGuid, out var agent)) {
+			return await agent.Request(command, cancellationToken);
 		}
-
-		while (!cancellationToken.IsCancellationRequested) {
-			await Task.Delay(DisconnectionRecheckInterval, cancellationToken);
-
-			var now = DateTimeOffset.Now;
-			agents.ByGuid.ReplaceAllIf(MarkAgentAsOffline, agent => agent.IsOnline && agent.LastPing is {} lastPing && now - lastPing >= DisconnectionThreshold);
-		}
-	}
-
-	internal async Task<TReply?> SendMessage<TMessage, TReply>(Guid guid, TMessage message, TimeSpan waitForReplyTime) where TMessage : IMessageToAgent<TReply> where TReply : class {
-		var connection = agents.ByGuid.TryGetValue(guid, out var agent) ? agent.Connection : null;
-		if (connection == null || agent == null) {
-			// TODO handle missing agent?
-			return null;
-		}
-
-		try {
-			return await connection.Send<TMessage, TReply>(message, waitForReplyTime, cancellationToken);
-		} catch (Exception e) {
-			Logger.Error(e, "Could not send message to agent \"{Name}\" (GUID {Guid}).", agent.Name, agent.Guid);
-			return null;
-		}
-	}
-
-	private sealed class ObservableAgents : ObservableState<ImmutableArray<Agent>> {
-		public RwLockedObservableDictionary<Guid, Agent> ByGuid { get; } = new (LockRecursionPolicy.NoRecursion);
-
-		public ObservableAgents(ILogger logger) : base(logger) {
-			ByGuid.CollectionChanged += Update;
-		}
-
-		protected override ImmutableArray<Agent> GetData() {
-			return ByGuid.ValuesCopy;
+		else {
+			return InstanceActionResult.General<TReply>(InstanceActionGeneralResult.AgentDoesNotExist);
 		}
 	}
 }

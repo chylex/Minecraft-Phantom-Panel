@@ -16,7 +16,10 @@
 
 @code {
 
-  [Parameter]
+  [Parameter, EditorRequired]
+  public Guid AgentGuid { get; set; }
+  
+  [Parameter, EditorRequired]
   public Guid InstanceGuid { get; set; }
 
   [Parameter]
@@ -39,7 +42,7 @@
       return;
     }
 
-    var result = await InstanceManager.SendCommandToInstance(loggedInUserGuid.Value, InstanceGuid, form.Command, CancellationToken);
+    var result = await InstanceManager.SendCommandToInstance(loggedInUserGuid.Value, AgentGuid, InstanceGuid, form.Command, CancellationToken);
     if (result.Is(SendCommandToInstanceResult.Success)) {
       form.Command = string.Empty;
       form.SubmitModel.StopSubmitting();

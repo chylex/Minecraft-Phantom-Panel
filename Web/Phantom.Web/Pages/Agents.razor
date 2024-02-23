@@ -18,42 +18,47 @@
   </HeaderRow>
   <ItemRow Context="agent">
     @{
+      var configuration = agent.Configuration;
       var usedInstances = agent.Stats?.RunningInstanceCount;
       var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
     }
     <Cell>
-      <p class="fw-semibold">@agent.Name</p>
-      <small class="font-monospace text-uppercase">@agent.Guid.ToString()</small>
+      <p class="fw-semibold">@configuration.AgentName</p>
+      <small class="font-monospace text-uppercase">@agent.AgentGuid.ToString()</small>
     </Cell>
     <Cell class="text-end">
-      <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@agent.MaxInstances">
-        @(usedInstances?.ToString() ?? "?") / @agent.MaxInstances.ToString()
+      <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@configuration.MaxInstances">
+        @(usedInstances?.ToString() ?? "?") / @configuration.MaxInstances.ToString()
       </ProgressBar>
     </Cell>
     <Cell class="text-end">
-      <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@agent.MaxMemory.InMegabytes">
-        @(usedMemory?.ToString() ?? "?") / @agent.MaxMemory.InMegabytes.ToString() MB
+      <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@configuration.MaxMemory.InMegabytes">
+        @(usedMemory?.ToString() ?? "?") / @configuration.MaxMemory.InMegabytes.ToString() MB
       </ProgressBar>
     </Cell>
     <Cell class="text-condensed">
-      Build: <span class="font-monospace">@agent.BuildVersion</span>
+      Build: <span class="font-monospace">@configuration.BuildVersion</span>
       <br>
-      Protocol: <span class="font-monospace">v@(agent.ProtocolVersion.ToString())</span>
+      Protocol: <span class="font-monospace">v@(configuration.ProtocolVersion.ToString())</span>
     </Cell>
-    @if (agent.IsOnline) {
-      <Cell class="fw-semibold text-center text-success">Online</Cell>
-      <Cell class="text-end">-</Cell>
-    }
-    else {
-      <Cell class="fw-semibold text-center">Offline</Cell>
-      <Cell class="text-end">
-      @if (agent.LastPing is {} lastPing) {
-          <TimeWithOffset Time="lastPing" />
-      }
-      else {
-        <text>N/A</text>
-      }
-      </Cell>
+    @switch (agent.ConnectionStatus) {
+      case AgentIsOnline:
+        <Cell class="fw-semibold text-center text-success">Online</Cell>
+        <Cell class="text-end">-</Cell>
+        break;
+      case AgentIsOffline:
+        <Cell class="fw-semibold text-center">Offline</Cell>
+        <Cell class="text-end">N/A</Cell>
+        break;
+      case AgentIsDisconnected status:
+        <Cell class="fw-semibold text-center">Offline</Cell>
+        <Cell class="text-end">
+          <TimeWithOffset Time="status.LastPingTime" />
+        </Cell>
+        break;
+      default:
+        <Cell class="fw-semibold text-center">N/A</Cell>
+        break;
     }
   </ItemRow>
   <NoItemsRow>
@@ -63,12 +68,12 @@
 
 @code {
 
-  private readonly TableData<AgentWithStats, Guid> agentTable = new();
+  private readonly TableData<Agent, Guid> agentTable = new();
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
-      var sortedAgents = agents.Sort(static (a1, a2) => a1.Name.CompareTo(a2.Name));
-      agentTable.UpdateFrom(sortedAgents, static agent => agent.Guid, static agent => agent, static (agent, _) => agent);
+      var sortedAgents = agents.Sort(static (a1, a2) => a1.Configuration.AgentName.CompareTo(a2.Configuration.AgentName));
+      agentTable.UpdateFrom(sortedAgents, static agent => agent.AgentGuid, static agent => agent, static (agent, _) => agent);
       InvokeAsync(StateHasChanged);
     });
   }

@@ -23,7 +23,7 @@ public sealed class InstanceManager {
 	public EventSubscribers<InstanceDictionary> InstancesChanged => instances.Subs;
 	
 	internal void RefreshInstances(ImmutableArray<Instance> newInstances) {
-		instances.SetTo(newInstances.ToImmutableDictionary(static instance => instance.Configuration.InstanceGuid));
+		instances.SetTo(newInstances.ToImmutableDictionary(static instance => instance.InstanceGuid));
 	}
 
 	public InstanceDictionary GetAll() {
@@ -34,23 +34,23 @@ public sealed class InstanceManager {
 		return instances.Value.GetValueOrDefault(instanceGuid);
 	}
 
-	public Task<InstanceActionResult<CreateOrUpdateInstanceResult>> CreateOrUpdateInstance(Guid loggedInUserGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
-		var message = new CreateOrUpdateInstanceMessage(loggedInUserGuid, configuration);
+	public Task<InstanceActionResult<CreateOrUpdateInstanceResult>> CreateOrUpdateInstance(Guid loggedInUserGuid, Guid instanceGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
+		var message = new CreateOrUpdateInstanceMessage(loggedInUserGuid, instanceGuid, configuration);
 		return controllerConnection.Send<CreateOrUpdateInstanceMessage, InstanceActionResult<CreateOrUpdateInstanceResult>>(message, cancellationToken);
 	}
 
-	public Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(Guid loggedInUserGuid, Guid instanceGuid, CancellationToken cancellationToken) {
-		var message = new LaunchInstanceMessage(loggedInUserGuid, instanceGuid);
+	public Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, CancellationToken cancellationToken) {
+		var message = new LaunchInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid);
 		return controllerConnection.Send<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(message, cancellationToken);
 	}
 
-	public Task<InstanceActionResult<StopInstanceResult>> StopInstance(Guid loggedInUserGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
-		var message = new StopInstanceMessage(loggedInUserGuid, instanceGuid, stopStrategy);
+	public Task<InstanceActionResult<StopInstanceResult>> StopInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
+		var message = new StopInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid, stopStrategy);
 		return controllerConnection.Send<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(message, cancellationToken);
 	}
 
-	public Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommandToInstance(Guid loggedInUserGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
-		var message = new SendCommandToInstanceMessage(loggedInUserGuid, instanceGuid, command);
+	public Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommandToInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
+		var message = new SendCommandToInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid, command);
 		return controllerConnection.Send<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(message, cancellationToken);
 	}
 }

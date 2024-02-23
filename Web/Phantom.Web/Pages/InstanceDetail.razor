@@ -41,10 +41,10 @@ else {
 
   <PermissionView Permission="Permission.ControlInstances">
     <div class="mb-3">
-      <InstanceCommandInput InstanceGuid="InstanceGuid" Disabled="@(!Instance.Status.CanSendCommand())" />
+      <InstanceCommandInput AgentGuid="Instance.Configuration.AgentGuid" InstanceGuid="InstanceGuid" Disabled="@(!Instance.Status.CanSendCommand())" />
     </div>
 
-    <InstanceStopDialog InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
+    <InstanceStopDialog AgentGuid="Instance.Configuration.AgentGuid" InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
   </PermissionView>
 }
 
@@ -79,7 +79,12 @@ else {
         return;
       }
 
-      var result = await InstanceManager.LaunchInstance(loggedInUserGuid.Value, InstanceGuid, CancellationToken);
+      if (Instance == null) {
+        lastError = "Instance not found.";
+        return;
+      }
+
+      var result = await InstanceManager.LaunchInstance(loggedInUserGuid.Value, Instance.Configuration.AgentGuid, InstanceGuid, CancellationToken);
       if (!result.Is(LaunchInstanceResult.LaunchInitiated)) {
         lastError = result.ToSentence(Messages.ToSentence);
       }

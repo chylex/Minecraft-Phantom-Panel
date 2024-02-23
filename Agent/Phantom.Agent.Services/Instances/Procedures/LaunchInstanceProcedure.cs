@@ -6,7 +6,7 @@ using Phantom.Common.Data.Instance;
 
 namespace Phantom.Agent.Services.Instances.Procedures;
 
-sealed record LaunchInstanceProcedure(InstanceConfiguration Configuration, IServerLauncher Launcher, bool IsRestarting = false) : IInstanceProcedure {
+sealed record LaunchInstanceProcedure(Guid InstanceGuid, InstanceConfiguration Configuration, IServerLauncher Launcher, bool IsRestarting = false) : IInstanceProcedure {
 	public async Task<IInstanceState?> Run(IInstanceContext context, CancellationToken cancellationToken) {
 		if (!IsRestarting && context.CurrentState is InstanceRunningState) {
 			return null;
@@ -30,7 +30,7 @@ sealed record LaunchInstanceProcedure(InstanceConfiguration Configuration, IServ
 		context.Logger.Information("Session starting...");
 		try {
 			InstanceProcess process = await DoLaunch(context, cancellationToken);
-			return new InstanceRunningState(Configuration, Launcher, process, context);
+			return new InstanceRunningState(InstanceGuid, Configuration, Launcher, process, context);
 		} catch (OperationCanceledException) {
 			context.SetStatus(InstanceStatus.NotRunning);
 		} catch (LaunchFailureException e) {

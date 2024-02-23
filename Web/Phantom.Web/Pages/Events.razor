@@ -61,8 +61,8 @@
 
     try {
       logItems = await EventLogManager.GetMostRecentItems(50, cancellationToken);
-      agentNamesByGuid = AgentManager.GetAll().ToImmutableDictionary(static kvp => kvp.Guid, static kvp => kvp.Name);
-      instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.Configuration.InstanceGuid, static instance => instance.Configuration.InstanceName);
+      agentNamesByGuid = AgentManager.GetAll().ToImmutableDictionary(static kvp => kvp.AgentGuid, static kvp => kvp.Configuration.AgentName);
+      instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.InstanceGuid, static instance => instance.Configuration.InstanceName);
     } finally {
       initializationCancellationTokenSource.Dispose();
     }

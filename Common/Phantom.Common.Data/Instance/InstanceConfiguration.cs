@@ -7,13 +7,12 @@ namespace Phantom.Common.Data.Instance;
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceConfiguration(
 	[property: MemoryPackOrder(0)] Guid AgentGuid,
-	[property: MemoryPackOrder(1)] Guid InstanceGuid,
-	[property: MemoryPackOrder(2)] string InstanceName,
-	[property: MemoryPackOrder(3)] ushort ServerPort,
-	[property: MemoryPackOrder(4)] ushort RconPort,
-	[property: MemoryPackOrder(5)] string MinecraftVersion,
-	[property: MemoryPackOrder(6)] MinecraftServerKind MinecraftServerKind,
-	[property: MemoryPackOrder(7)] RamAllocationUnits MemoryAllocation,
-	[property: MemoryPackOrder(8)] Guid JavaRuntimeGuid,
-	[property: MemoryPackOrder(9)] ImmutableArray<string> JvmArguments
+	[property: MemoryPackOrder(1)] string InstanceName,
+	[property: MemoryPackOrder(2)] ushort ServerPort,
+	[property: MemoryPackOrder(3)] ushort RconPort,
+	[property: MemoryPackOrder(4)] string MinecraftVersion,
+	[property: MemoryPackOrder(5)] MinecraftServerKind MinecraftServerKind,
+	[property: MemoryPackOrder(6)] RamAllocationUnits MemoryAllocation,
+	[property: MemoryPackOrder(7)] Guid JavaRuntimeGuid,
+	[property: MemoryPackOrder(8)] ImmutableArray<string> JvmArguments
 );

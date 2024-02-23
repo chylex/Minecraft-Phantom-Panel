@@ -6,6 +6,7 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <PackageReference Include="Akka" />
     <PackageReference Include="BCrypt.Net-Next.StrongName" />
   </ItemGroup>
   
@@ -14,6 +15,7 @@
     <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Messages.Agent\Phantom.Common.Messages.Agent.csproj" />
     <ProjectReference Include="..\..\Common\Phantom.Common.Messages.Web\Phantom.Common.Messages.Web.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Actor\Phantom.Utils.Actor.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Events\Phantom.Utils.Events.csproj" />
     <ProjectReference Include="..\Phantom.Controller.Database\Phantom.Controller.Database.csproj" />
     <ProjectReference Include="..\Phantom.Controller.Minecraft\Phantom.Controller.Minecraft.csproj" />

@@ -58,7 +58,7 @@
     try {
       logItems = await AuditLogManager.GetMostRecentItems(50, cancellationToken);
       userNamesByGuid = (await UserManager.GetAll(cancellationToken)).ToImmutableDictionary(static user => user.Guid, static user => user.Name);
-      instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.Configuration.InstanceGuid, static instance => instance.Configuration.InstanceName);
+      instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.InstanceGuid, static instance => instance.Configuration.InstanceName);
     } finally {
       initializationCancellationTokenSource.Dispose();
     }

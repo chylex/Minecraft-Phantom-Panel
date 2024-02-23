@@ -18,6 +18,7 @@ public sealed partial record InstanceActionResult<T>(
 	public string ToSentence(Func<T, string> concreteResultToSentence) {
 		return GeneralResult switch {
 			InstanceActionGeneralResult.None                 => concreteResultToSentence(ConcreteResult!),
+			InstanceActionGeneralResult.AgentDoesNotExist    => "Agent does not exist.",
 			InstanceActionGeneralResult.AgentShuttingDown    => "Agent is shutting down.",
 			InstanceActionGeneralResult.AgentIsNotResponding => "Agent is not responding.",
 			InstanceActionGeneralResult.InstanceDoesNotExist => "Instance does not exist.",

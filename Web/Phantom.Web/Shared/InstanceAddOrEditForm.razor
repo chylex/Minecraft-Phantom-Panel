@@ -8,9 +8,9 @@
 @using Phantom.Common.Data.Web.Minecraft
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Messages.Web.ToController
-@using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
+@using Phantom.Common.Data.Instance
 @using Phantom.Web.Services
 @using Phantom.Web.Services.Agents
 @using Phantom.Web.Services.Instances
@@ -26,20 +26,21 @@
   <div class="row">
     <div class="col-xl-7 mb-3">
       @{
-        static RenderFragment GetAgentOption(AgentWithStats agent) {
-          return @<option value="@agent.Guid">
-                   @agent.Name
+        static RenderFragment GetAgentOption(Agent agent) {
+          var configuration = agent.Configuration;
+          return @<option value="@agent.AgentGuid">
+                   @configuration.AgentName
                    &bullet;
-                   @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(agent.MaxInstances) @(agent.MaxInstances == 1 ? "Instance" : "Instances")
+                   @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(configuration.MaxInstances) @(configuration.MaxInstances == 1 ? "Instance" : "Instances")
                    &bullet;
-                   @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(agent.MaxMemory.InMegabytes) MB RAM
+                   @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(configuration.MaxMemory.InMegabytes) MB RAM
                  </option>;
         }
       }
-      @if (EditedInstanceConfiguration == null) {
+      @if (EditedInstance == null) {
         <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
           <option value="" selected>Select which agent will run the instance...</option>
-          @foreach (var agent in allAgentsByGuid.Values.Where(static agent => agent.IsOnline).OrderBy(static agent => agent.Name)) {
+          @foreach (var agent in allAgentsByGuid.Values.Where(static agent => agent.ConnectionStatus is AgentIsOnline).OrderBy(static agent => agent.Configuration.AgentName)) {
             @GetAgentOption(agent)
           }
         </FormSelectInput>
@@ -97,8 +98,8 @@
     </div>
 
     @{
-      string? allowedServerPorts = selectedAgent?.AllowedServerPorts?.ToString();
-      string? allowedRconPorts = selectedAgent?.AllowedRconPorts?.ToString();
+      string? allowedServerPorts = selectedAgent?.Configuration.AllowedServerPorts?.ToString();
+      string? allowedRconPorts = selectedAgent?.Configuration.AllowedRconPorts?.ToString();
     }
     <div class="col-sm-6 col-xl-2 mb-3">
       <FormNumberInput Id="instance-server-port" @bind-Value="form.ServerPort" min="0" max="65535">
@@ -141,7 +142,7 @@
             <text>RAM</text>
           }
           else {
-            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.MaxMemory.InMegabytes) MB</code></text>
+            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.Configuration.MaxMemory.InMegabytes) MB</code></text>
           }
         </LabelFragment>
       </FormNumberInput>
@@ -158,18 +159,18 @@
     </div>
   </div>
 
-  <FormButtonSubmit Label="@(EditedInstanceConfiguration == null ? "Create Instance" : "Edit Instance")" class="btn btn-primary" disabled="@(!IsSubmittable)" />
+  <FormButtonSubmit Label="@(EditedInstance == null ? "Create Instance" : "Edit Instance")" class="btn btn-primary" disabled="@(!IsSubmittable)" />
   <FormSubmitError />
 </Form>
 
 @code {
 
   [Parameter, EditorRequired]
-  public InstanceConfiguration? EditedInstanceConfiguration { get; init; }
-
+  public Instance? EditedInstance { get; init; }
+  
   private ConfigureInstanceFormModel form = null!;
 
-  private ImmutableDictionary<Guid, AgentWithStats> allAgentsByGuid = ImmutableDictionary<Guid, AgentWithStats>.Empty;
+  private ImmutableDictionary<Guid, Agent> allAgentsByGuid = ImmutableDictionary<Guid, Agent>.Empty;
   private ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> allAgentJavaRuntimes = ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>.Empty;
   
   private MinecraftVersionType minecraftVersionType = MinecraftVersionType.Release;
@@ -197,15 +198,15 @@
       }
     }
 
-    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out AgentWithStats? agent) {
+    private bool TryGetAgent(Guid? agentGuid, [NotNullWhen(true)] out Agent? agent) {
       return TryGet(page.allAgentsByGuid, agentGuid, out agent);
     }
 
-    public AgentWithStats? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agent) ? agent : null;
+    public Agent? SelectedAgent => TryGetAgent(SelectedAgentGuid, out var agent) ? agent : null;
 
     public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(page.allAgentJavaRuntimes, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
 
-    public ushort MaximumMemoryUnits => SelectedAgent?.MaxMemory.RawValue ?? 0;
+    public ushort MaximumMemoryUnits => SelectedAgent?.Configuration.MaxMemory.RawValue ?? 0;
     public ushort AvailableMemoryUnits => Math.Min((SelectedAgent?.AvailableMemory + editedInstanceRamAllocation)?.RawValue ?? MaximumMemoryUnits, MaximumMemoryUnits);
     private ushort selectedMemoryUnits = 4;
 
@@ -246,12 +247,12 @@
 
     public sealed class ServerPortMustBeAllowedAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int> {
       protected override string FieldName => nameof(ServerPort);
-      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.AllowedServerPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Configuration.AllowedServerPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustBeAllowedAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int> {
       protected override string FieldName => nameof(RconPort);
-      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.AllowedRconPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Configuration.AllowedRconPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustDifferFromServerPortAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int?> {
@@ -270,7 +271,7 @@
   }
 
   protected override void OnInitialized() {
-    form = new ConfigureInstanceFormModel(this, EditedInstanceConfiguration?.MemoryAllocation);
+    form = new ConfigureInstanceFormModel(this, EditedInstance?.Configuration.MemoryAllocation);
   }
 
   protected override async Task OnInitializedAsync() {
@@ -281,18 +282,19 @@
     allAgentJavaRuntimes = await agentJavaRuntimesTask;
     allMinecraftVersions = await minecraftVersionsTask;
 
-    if (EditedInstanceConfiguration != null) {
-      form.SelectedAgentGuid = EditedInstanceConfiguration.AgentGuid;
-      form.InstanceName = EditedInstanceConfiguration.InstanceName;
-      form.ServerPort = EditedInstanceConfiguration.ServerPort;
-      form.RconPort = EditedInstanceConfiguration.RconPort;
-      form.MinecraftVersion = EditedInstanceConfiguration.MinecraftVersion;
-      form.MinecraftServerKind = EditedInstanceConfiguration.MinecraftServerKind;
-      form.MemoryUnits = EditedInstanceConfiguration.MemoryAllocation.RawValue;
-      form.JavaRuntimeGuid = EditedInstanceConfiguration.JavaRuntimeGuid;
-      form.JvmArguments = JvmArgumentsHelper.Join(EditedInstanceConfiguration.JvmArguments);
+    if (EditedInstance != null) {
+      var configuration = EditedInstance.Configuration;
+      form.SelectedAgentGuid = configuration.AgentGuid;
+      form.InstanceName = configuration.InstanceName;
+      form.ServerPort = configuration.ServerPort;
+      form.RconPort = configuration.RconPort;
+      form.MinecraftVersion = configuration.MinecraftVersion;
+      form.MinecraftServerKind = configuration.MinecraftServerKind;
+      form.MemoryUnits = configuration.MemoryAllocation.RawValue;
+      form.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
+      form.JvmArguments = JvmArgumentsHelper.Join(configuration.JvmArguments);
       
-      minecraftVersionType = allMinecraftVersions.FirstOrDefault(version => version.Id == EditedInstanceConfiguration.MinecraftVersion)?.Type ?? minecraftVersionType;
+      minecraftVersionType = allMinecraftVersions.FirstOrDefault(version => version.Id == configuration.MinecraftVersion)?.Type ?? minecraftVersionType;
     }
 
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.MemoryUnits));
@@ -326,10 +328,10 @@
       form.SubmitModel.StopSubmitting("You do not have permission to edit instances.");
       return;
     }
-      
-    var instance = new InstanceConfiguration(
-      EditedInstanceConfiguration?.AgentGuid ?? selectedAgent.Guid,
-      EditedInstanceConfiguration?.InstanceGuid ?? Guid.NewGuid(),
+    
+    var instanceGuid = EditedInstance?.InstanceGuid ?? Guid.NewGuid();
+    var instanceConfiguration = new InstanceConfiguration(
+      EditedInstance?.Configuration.AgentGuid ?? selectedAgent.AgentGuid,
       form.InstanceName,
       (ushort) form.ServerPort,
       (ushort) form.RconPort,
@@ -340,9 +342,9 @@
       JvmArgumentsHelper.Split(form.JvmArguments)
     );
 
-    var result = await InstanceManager.CreateOrUpdateInstance(loggedInUserGuid.Value, instance, CancellationToken);
+    var result = await InstanceManager.CreateOrUpdateInstance(loggedInUserGuid.Value, instanceGuid, instanceConfiguration, CancellationToken);
     if (result.Is(CreateOrUpdateInstanceResult.Success)) {
-      await Navigation.NavigateTo("instances/" + instance.InstanceGuid);
+      await Navigation.NavigateTo("instances/" + instanceGuid);
     }
     else {
       form.SubmitModel.StopSubmitting(result.ToSentence(CreateOrUpdateInstanceResultExtensions.ToSentence));

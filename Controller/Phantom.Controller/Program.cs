@@ -51,26 +51,27 @@ try {
 		return 1;
 	}
 	
-	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
-	var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken);
-	
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
-	await controllerServices.Initialize();
+	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
+	
+	await using (var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken)) {
+		await controllerServices.Initialize();
 
-	static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
-		return new RpcConfiguration("Rpc:" + serviceName, host, port, connectionKey.Certificate);
-	}
+		static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
+			return new RpcConfiguration("Rpc:" + serviceName, host, port, connectionKey.Certificate);
+		}
 
-	var rpcTaskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Rpc"));
-	try {
-		await Task.WhenAll(
-			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.CreateAgentMessageListener, shutdownCancellationToken),
-			RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.CreateWebMessageListener, shutdownCancellationToken)
-		);
-	} finally {
-		await rpcTaskManager.Stop();
-		NetMQConfig.Cleanup();
+		var rpcTaskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Rpc"));
+		try {
+			await Task.WhenAll(
+				RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.CreateAgentMessageListener, shutdownCancellationToken),
+				RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.CreateWebMessageListener, shutdownCancellationToken)
+			);
+		} finally {
+			await rpcTaskManager.Stop();
+			NetMQConfig.Cleanup();
+		}
 	}
 
 	return 0;

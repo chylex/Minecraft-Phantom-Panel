@@ -12,6 +12,7 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 
 	internal bool IsStopping { get; set; }
 
+	private readonly Guid instanceGuid;
 	private readonly InstanceConfiguration configuration;
 	private readonly IServerLauncher launcher;
 	private readonly IInstanceContext context;
@@ -21,13 +22,14 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 
 	private bool isDisposed;
 
-	public InstanceRunningState(InstanceConfiguration configuration, IServerLauncher launcher, InstanceProcess process, IInstanceContext context) {
+	public InstanceRunningState(Guid instanceGuid, InstanceConfiguration configuration, IServerLauncher launcher, InstanceProcess process, IInstanceContext context) {
+		this.instanceGuid = instanceGuid;
 		this.configuration = configuration;
 		this.launcher = launcher;
 		this.context = context;
 		this.Process = process;
 
-		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.Services.TaskManager, configuration.InstanceGuid, context.ShortName);
+		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.Services.TaskManager, instanceGuid, context.ShortName);
 
 		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, process, context, configuration.ServerPort);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
@@ -64,7 +66,7 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 		else {
 			context.Logger.Information("Session ended unexpectedly, restarting...");
 			context.ReportEvent(InstanceEvent.Crashed);
-			context.EnqueueProcedure(new LaunchInstanceProcedure(configuration, launcher, IsRestarting: true));
+			context.EnqueueProcedure(new LaunchInstanceProcedure(instanceGuid, configuration, launcher, IsRestarting: true));
 		}
 	}
 

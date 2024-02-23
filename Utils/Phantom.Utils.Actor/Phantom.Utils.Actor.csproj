@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Akka" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Phantom.Utils.Logging\Phantom.Utils.Logging.csproj" />
+  </ItemGroup>
+
+</Project>

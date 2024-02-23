@@ -75,9 +75,8 @@ sealed class InstanceSessionManager : IAsyncDisposable {
 		});
 	}
 
-	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(InstanceConfiguration configuration, InstanceLaunchProperties launchProperties, bool launchNow, bool alwaysReportStatus) {
+	public async Task<InstanceActionResult<ConfigureInstanceResult>> Configure(Guid instanceGuid, InstanceConfiguration configuration, InstanceLaunchProperties launchProperties, bool launchNow, bool alwaysReportStatus) {
 		return await AcquireSemaphoreAndRun(async () => {
-			var instanceGuid = configuration.InstanceGuid;
 			var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
 			Directories.Create(instanceFolder, Chmod.URWX_GRX);
 
@@ -106,15 +105,15 @@ sealed class InstanceSessionManager : IAsyncDisposable {
 
 			if (instances.TryGetValue(instanceGuid, out var instance)) {
 				await instance.Reconfigure(configuration, launcher, shutdownCancellationToken);
-				Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
+				Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, instanceGuid);
 
 				if (alwaysReportStatus) {
 					instance.ReportLastStatus();
 				}
 			}
 			else {
-				instances[instanceGuid] = instance = new Instance(GetInstanceLoggerName(instanceGuid), instanceServices, configuration, launcher);
-				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, configuration.InstanceGuid);
+				instances[instanceGuid] = instance = new Instance(instanceGuid, GetInstanceLoggerName(instanceGuid), instanceServices, configuration, launcher);
+				Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, instanceGuid);
 
 				instance.ReportLastStatus();
 				instance.IsRunningChanged += OnInstanceIsRunningChanged;

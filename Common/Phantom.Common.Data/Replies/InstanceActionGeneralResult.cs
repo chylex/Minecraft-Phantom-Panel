@@ -2,6 +2,7 @@
 
 public enum InstanceActionGeneralResult : byte {
 	None,
+	AgentDoesNotExist,
 	AgentShuttingDown,
 	AgentIsNotResponding,
 	InstanceDoesNotExist

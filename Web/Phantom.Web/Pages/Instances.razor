@@ -16,7 +16,7 @@
   <a href="instances/create" class="btn btn-primary" role="button">New Instance</a>
 </PermissionView>
 
-<Table TItem="Instance" Items="instances" ItemUrl="@(static instance => "instances/" + instance.Configuration.InstanceGuid)">
+<Table TItem="Instance" Items="instances" ItemUrl="@(static instance => "instances/" + instance.InstanceGuid)">
   <HeaderRow>
     <Column Width="40%">Agent</Column>
     <Column Width="40%">Name</Column>
@@ -35,7 +35,7 @@
     </Cell>
     <Cell>
       <p class="fw-semibold">@configuration.InstanceName</p>
-      <small class="font-monospace text-uppercase">@configuration.InstanceGuid.ToString()</small>
+      <small class="font-monospace text-uppercase">@instance.InstanceGuid.ToString()</small>
     </Cell>
     <Cell>
       <InstanceStatusText Status="instance.Status" />
@@ -51,7 +51,7 @@
       <p class="font-monospace">@configuration.MemoryAllocation.InMegabytes.ToString() MB</p>
     </Cell>
     <Cell>
-      <a href="instances/@configuration.InstanceGuid.ToString()" class="btn btn-info btn-sm">Detail</a>
+      <a href="instances/@instance.InstanceGuid.ToString()" class="btn btn-info btn-sm">Detail</a>
     </Cell>
   </ItemRow>
   <NoItemsRow>
@@ -66,7 +66,7 @@
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
-      this.agentNamesByGuid = agents.ToImmutableDictionary(static agent => agent.Guid, static agent => agent.Name);
+      this.agentNamesByGuid = agents.ToImmutableDictionary(static agent => agent.AgentGuid, static agent => agent.Configuration.AgentName);
       InvokeAsync(StateHasChanged);
     });
 

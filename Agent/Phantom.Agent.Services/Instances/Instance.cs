@@ -17,6 +17,7 @@ sealed class Instance : IAsyncDisposable {
 	private IServerLauncher Launcher { get; set; }
 	private readonly SemaphoreSlim configurationSemaphore = new (1, 1);
 
+	private readonly Guid instanceGuid;
 	private readonly string shortName;
 	private readonly ILogger logger;
 
@@ -29,7 +30,8 @@ sealed class Instance : IAsyncDisposable {
 	
 	private readonly InstanceProcedureManager procedureManager;
 
-	public Instance(string shortName, InstanceServices services, InstanceConfiguration configuration, IServerLauncher launcher) {
+	public Instance(Guid instanceGuid, string shortName, InstanceServices services, InstanceConfiguration configuration, IServerLauncher launcher) {
+		this.instanceGuid = instanceGuid;
 		this.shortName = shortName;
 		this.logger = PhantomLogger.Create<Instance>(shortName);
 
@@ -44,16 +46,16 @@ sealed class Instance : IAsyncDisposable {
 	}
 
 	public void ReportLastStatus() {
-		Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, currentStatus));
+		Services.ControllerConnection.Send(new ReportInstanceStatusMessage(instanceGuid, currentStatus));
 	}
 
 	private void ReportAndSetStatus(IInstanceStatus status) {
 		currentStatus = status;
-		Services.ControllerConnection.Send(new ReportInstanceStatusMessage(Configuration.InstanceGuid, status));
+		Services.ControllerConnection.Send(new ReportInstanceStatusMessage(instanceGuid, status));
 	}
 
 	private void ReportEvent(IInstanceEvent instanceEvent) {
-		Services.ControllerConnection.Send(new ReportInstanceEventMessage(Guid.NewGuid(), DateTime.UtcNow, Configuration.InstanceGuid, instanceEvent));
+		Services.ControllerConnection.Send(new ReportInstanceEventMessage(Guid.NewGuid(), DateTime.UtcNow, instanceGuid, instanceEvent));
 	}
 	
 	internal void TransitionState(IInstanceState newState) {
@@ -99,7 +101,7 @@ sealed class Instance : IAsyncDisposable {
 		
 		await configurationSemaphore.WaitAsync(cancellationToken);
 		try {
-			procedure = new LaunchInstanceProcedure(Configuration, Launcher);
+			procedure = new LaunchInstanceProcedure(instanceGuid, Configuration, Launcher);
 		} finally {
 			configurationSemaphore.Release();
 		}

@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
+using Akka.Actor;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.AuditLog;
 using Phantom.Common.Data.Web.EventLog;
 using Phantom.Common.Data.Web.Instance;
@@ -17,93 +17,118 @@ using Phantom.Controller.Services.Agents;
 using Phantom.Controller.Services.Events;
 using Phantom.Controller.Services.Instances;
 using Phantom.Controller.Services.Users;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Runtime;
-using Phantom.Utils.Tasks;
 using Serilog;
+using Agent = Phantom.Common.Data.Web.Agent.Agent;
 
 namespace Phantom.Controller.Services.Rpc;
 
 public sealed class WebMessageListener : IMessageToControllerListener {
 	private static readonly ILogger Logger = PhantomLogger.Create<WebMessageListener>();
-	
+
+	private static int listenerSequenceId = 0;
+
+	private readonly ActorRef<ICommand> actor;
 	private readonly RpcConnectionToClient<IMessageToWebListener> connection;
 	private readonly AuthToken authToken;
+	private readonly ControllerState controllerState;
 	private readonly UserManager userManager;
 	private readonly RoleManager roleManager;
 	private readonly UserRoleManager userRoleManager;
 	private readonly UserLoginManager userLoginManager;
 	private readonly AuditLogManager auditLogManager;
 	private readonly AgentManager agentManager;
-	private readonly AgentJavaRuntimesManager agentJavaRuntimesManager;
-	private readonly InstanceManager instanceManager;
 	private readonly InstanceLogManager instanceLogManager;
 	private readonly MinecraftVersions minecraftVersions;
 	private readonly EventLogManager eventLogManager;
-	private readonly TaskManager taskManager;
 
 	internal WebMessageListener(
+		IActorRefFactory actorSystem,
 		RpcConnectionToClient<IMessageToWebListener> connection,
 		AuthToken authToken,
+		ControllerState controllerState,
 		UserManager userManager,
 		RoleManager roleManager,
 		UserRoleManager userRoleManager,
 		UserLoginManager userLoginManager,
 		AuditLogManager auditLogManager,
 		AgentManager agentManager,
-		AgentJavaRuntimesManager agentJavaRuntimesManager,
-		InstanceManager instanceManager,
 		InstanceLogManager instanceLogManager,
 		MinecraftVersions minecraftVersions,
-		EventLogManager eventLogManager,
-		TaskManager taskManager
+		EventLogManager eventLogManager
 	) {
+		this.actor = actorSystem.ActorOf(Actor.Factory(this), "Web-" + Interlocked.Increment(ref listenerSequenceId));
 		this.connection = connection;
 		this.authToken = authToken;
+		this.controllerState = controllerState;
 		this.userManager = userManager;
 		this.roleManager = roleManager;
 		this.userRoleManager = userRoleManager;
 		this.userLoginManager = userLoginManager;
 		this.auditLogManager = auditLogManager;
 		this.agentManager = agentManager;
-		this.agentJavaRuntimesManager = agentJavaRuntimesManager;
-		this.instanceManager = instanceManager;
 		this.instanceLogManager = instanceLogManager;
 		this.minecraftVersions = minecraftVersions;
 		this.eventLogManager = eventLogManager;
-		this.taskManager = taskManager;
 	}
 
-	private void OnConnectionReady() {
-		lock (this) {
-			agentManager.AgentsChanged.Subscribe(this, HandleAgentsChanged);
-			instanceManager.InstancesChanged.Subscribe(this, HandleInstancesChanged);
-			instanceLogManager.LogsReceived += HandleInstanceLogsReceived;
+	private sealed class Actor : ReceiveActor<ICommand> {
+		public static Props<ICommand> Factory(WebMessageListener listener) {
+			return Props<ICommand>.Create(() => new Actor(listener), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
+		}
+
+		private readonly WebMessageListener listener;
+
+		private Actor(WebMessageListener listener) {
+			this.listener = listener;
+
+			Receive<StartConnectionCommand>(StartConnection);
+			Receive<StopConnectionCommand>(StopConnection);
+			Receive<RefreshAgentsCommand>(RefreshAgents);
+			Receive<RefreshInstancesCommand>(RefreshInstances);
+		}
+
+		private void StartConnection(StartConnectionCommand command) {
+			listener.controllerState.AgentsByGuidReceiver.Register(SelfTyped, static state => new RefreshAgentsCommand(state));
+			listener.controllerState.InstancesByGuidReceiver.Register(SelfTyped, static state => new RefreshInstancesCommand(state));
+
+			listener.instanceLogManager.LogsReceived += HandleInstanceLogsReceived;
+		}
+
+		private void StopConnection(StopConnectionCommand command) {
+			listener.instanceLogManager.LogsReceived -= HandleInstanceLogsReceived;
+
+			listener.controllerState.AgentsByGuidReceiver.Unregister(SelfTyped);
+			listener.controllerState.InstancesByGuidReceiver.Unregister(SelfTyped);
+		}
+
+		private void RefreshAgents(RefreshAgentsCommand command) {
+			var message = new RefreshAgentsMessage(command.Agents.Values.ToImmutableArray());
+			listener.connection.Send(message);
+		}
+
+		private void RefreshInstances(RefreshInstancesCommand command) {
+			var message = new RefreshInstancesMessage(command.Instances.Values.ToImmutableArray());
+			listener.connection.Send(message);
+		}
+
+		private void HandleInstanceLogsReceived(object? sender, InstanceLogManager.Event e) {
+			listener.connection.Send(new InstanceOutputMessage(e.InstanceGuid, e.Lines));
 		}
 	}
 
-	private void OnConnectionClosed() {
-		lock (this) {
-			agentManager.AgentsChanged.Unsubscribe(this);
-			instanceManager.InstancesChanged.Unsubscribe(this);
-			instanceLogManager.LogsReceived -= HandleInstanceLogsReceived;
-		}
-	}
+	private interface ICommand {}
 
-	private void HandleAgentsChanged(ImmutableArray<Agent> agents) {
-		var message = new RefreshAgentsMessage(agents.Select(static agent => new AgentWithStats(agent.Guid, agent.Name, agent.ProtocolVersion, agent.BuildVersion, agent.MaxInstances, agent.MaxMemory, agent.AllowedServerPorts, agent.AllowedRconPorts, agent.Stats, agent.LastPing, agent.IsOnline)).ToImmutableArray());
-		taskManager.Run("Send agents to web", () => connection.Send(message));
-	}
+	private sealed record StartConnectionCommand : ICommand;
 
-	private void HandleInstancesChanged(ImmutableDictionary<Guid, Instance> instances) {
-		var message = new RefreshInstancesMessage(instances.Values.ToImmutableArray());
-		taskManager.Run("Send instances to web", () => connection.Send(message));
-	}
+	private sealed record StopConnectionCommand : ICommand;
 
-	private void HandleInstanceLogsReceived(object? sender, InstanceLogManager.Event e) {
-		taskManager.Run("Send instance logs to web", () => connection.Send(new InstanceOutputMessage(e.InstanceGuid, e.Lines)));
-	}
+	private sealed record RefreshAgentsCommand(ImmutableDictionary<Guid, Agent> Agents) : ICommand;
+
+	private sealed record RefreshInstancesCommand(ImmutableDictionary<Guid, Instance> Instances) : ICommand;
 
 	public async Task<NoReply> HandleRegisterWeb(RegisterWebMessage message) {
 		if (authToken.FixedTimeEquals(message.AuthToken)) {
@@ -118,7 +143,7 @@ public sealed class WebMessageListener : IMessageToControllerListener {
 		}
 
 		if (!connection.IsClosed) {
-			OnConnectionReady();
+			actor.Tell(new StartConnectionCommand());
 		}
 
 		return NoReply.Instance;
@@ -127,7 +152,7 @@ public sealed class WebMessageListener : IMessageToControllerListener {
 	public Task<NoReply> HandleUnregisterWeb(UnregisterWebMessage message) {
 		if (!connection.IsClosed) {
 			connection.Close();
-			OnConnectionClosed();
+			actor.Tell(new StopConnectionCommand());
 		}
 
 		return Task.FromResult(NoReply.Instance);
@@ -162,19 +187,19 @@ public sealed class WebMessageListener : IMessageToControllerListener {
 	}
 
 	public Task<InstanceActionResult<CreateOrUpdateInstanceResult>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
-		return instanceManager.CreateOrUpdateInstance(message.LoggedInUserGuid, message.Configuration);
+		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(message.Configuration.AgentGuid, new AgentActor.CreateOrUpdateInstanceCommand(message.LoggedInUserGuid, message.InstanceGuid, message.Configuration));
 	}
 
 	public Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {
-		return instanceManager.LaunchInstance(message.LoggedInUserGuid, message.InstanceGuid);
+		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(message.AgentGuid, new AgentActor.LaunchInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid));
 	}
 
 	public Task<InstanceActionResult<StopInstanceResult>> HandleStopInstance(StopInstanceMessage message) {
-		return instanceManager.StopInstance(message.LoggedInUserGuid, message.InstanceGuid, message.StopStrategy);
+		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(message.AgentGuid, new AgentActor.StopInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid, message.StopStrategy));
 	}
 
 	public Task<InstanceActionResult<SendCommandToInstanceResult>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
-		return instanceManager.SendCommand(message.LoggedInUserGuid, message.InstanceGuid, message.Command);
+		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(message.AgentGuid, new AgentActor.SendCommandToInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid, message.Command));
 	}
 
 	public Task<ImmutableArray<MinecraftVersion>> HandleGetMinecraftVersions(GetMinecraftVersionsMessage message) {
@@ -182,7 +207,7 @@ public sealed class WebMessageListener : IMessageToControllerListener {
 	}
 
 	public Task<ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>> HandleGetAgentJavaRuntimes(GetAgentJavaRuntimesMessage message) {
-		return Task.FromResult(agentJavaRuntimesManager.All);
+		return Task.FromResult(controllerState.AgentJavaRuntimesByGuid);
 	}
 
 	public Task<ImmutableArray<AuditLogItem>> HandleGetAuditLog(GetAuditLogMessage message) {

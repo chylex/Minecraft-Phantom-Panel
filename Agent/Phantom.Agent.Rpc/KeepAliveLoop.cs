@@ -21,9 +21,11 @@ sealed class KeepAliveLoop {
 
 	private async Task Run() {
 		var cancellationToken = cancellationTokenSource.Token;
-
-		Logger.Information("Started keep-alive loop.");
+		
 		try {
+			await connection.IsReady.WaitAsync(cancellationToken);
+			Logger.Information("Started keep-alive loop.");
+			
 			while (true) {
 				await Task.Delay(KeepAliveInterval, cancellationToken);
 				await connection.Send(new AgentIsAliveMessage()).WaitAsync(cancellationToken);

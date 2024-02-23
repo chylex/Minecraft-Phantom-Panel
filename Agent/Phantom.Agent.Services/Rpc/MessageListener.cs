@@ -27,19 +27,21 @@ public sealed class MessageListener : IMessageToAgentListener {
 	public async Task<NoReply> HandleRegisterAgentSuccess(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
 
-		void ShutdownAfterConfigurationFailed(InstanceConfiguration configuration) {
-			Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", configuration.InstanceName, configuration.InstanceGuid);
+		void ShutdownAfterConfigurationFailed(Guid instanceGuid, InstanceConfiguration configuration) {
+			Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", configuration.InstanceName, instanceGuid);
 			shutdownTokenSource.Cancel();
 		}
 		
 		foreach (var configureInstanceMessage in message.InitialInstanceConfigurations) {
 			var result = await HandleConfigureInstance(configureInstanceMessage, alwaysReportStatus: true);
 			if (!result.Is(ConfigureInstanceResult.Success)) {
-				ShutdownAfterConfigurationFailed(configureInstanceMessage.Configuration);
+				ShutdownAfterConfigurationFailed(configureInstanceMessage.InstanceGuid, configureInstanceMessage.Configuration);
 				return NoReply.Instance;
 			}
 		}
 
+		connection.SetIsReady();
+		
 		await connection.Send(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
 		await agent.InstanceSessionManager.RefreshAgentStatus();
 		
@@ -62,7 +64,7 @@ public sealed class MessageListener : IMessageToAgentListener {
 	}
 	
 	private Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message, bool alwaysReportStatus) {
-		return agent.InstanceSessionManager.Configure(message.Configuration, message.LaunchProperties, message.LaunchNow, alwaysReportStatus);
+		return agent.InstanceSessionManager.Configure(message.InstanceGuid, message.Configuration, message.LaunchProperties, message.LaunchNow, alwaysReportStatus);
 	}
 	
 	public async Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message) {

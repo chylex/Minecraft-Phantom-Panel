@@ -32,6 +32,9 @@
 @code {
 
   [Parameter, EditorRequired]
+  public Guid AgentGuid { get; init; }
+  
+  [Parameter, EditorRequired]
   public Guid InstanceGuid { get; init; }
 
   [Parameter, EditorRequired]
@@ -56,7 +59,7 @@
       return;
     }
 
-    var result = await InstanceManager.StopInstance(loggedInUserGuid.Value, InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds), CancellationToken);
+    var result = await InstanceManager.StopInstance(loggedInUserGuid.Value, AgentGuid, InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds), CancellationToken);
     if (result.Is(StopInstanceResult.StopInitiated)) {
       await Js.InvokeVoidAsync("closeModal", ModalId);
       form.SubmitModel.StopSubmitting();
