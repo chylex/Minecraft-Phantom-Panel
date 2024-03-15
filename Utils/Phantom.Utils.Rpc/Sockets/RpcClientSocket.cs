@@ -7,13 +7,13 @@ using Phantom.Utils.Rpc.Runtime;
 namespace Phantom.Utils.Rpc.Sockets;
 
 public static class RpcClientSocket {
-	public static RpcClientSocket<TClientListener, TServerListener, TReplyMessage> Connect<TClientListener, TServerListener, TReplyMessage, THelloMessage>(RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, THelloMessage helloMessage) where THelloMessage : IMessage<TServerListener, NoReply> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
-		return RpcClientSocket<TClientListener, TServerListener, TReplyMessage>.Connect(config, messageDefinitions, helloMessage);
+	public static RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage> Connect<TClientMessage, TServerMessage, TReplyMessage, THelloMessage>(RpcConfiguration config, IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions, THelloMessage helloMessage) where THelloMessage : TServerMessage where TReplyMessage : TClientMessage, TServerMessage {
+		return RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage>.Connect(config, messageDefinitions, helloMessage);
 	}
 }
 
-public sealed class RpcClientSocket<TClientListener, TServerListener, TReplyMessage> : RpcSocket<ClientSocket> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
-	internal static RpcClientSocket<TClientListener, TServerListener, TReplyMessage> Connect<THelloMessage>(RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, THelloMessage helloMessage) where THelloMessage : IMessage<TServerListener, NoReply> {
+public sealed class RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage> : RpcSocket<ClientSocket> where TReplyMessage : TClientMessage, TServerMessage {
+	internal static RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage> Connect<THelloMessage>(RpcConfiguration config, IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions, THelloMessage helloMessage) where THelloMessage : TServerMessage {
 		var socket = new ClientSocket();
 		var options = socket.Options;
 
@@ -29,14 +29,14 @@ public sealed class RpcClientSocket<TClientListener, TServerListener, TReplyMess
 		socket.Connect(url);
 		logger.Information("ZeroMQ client ready.");
 
-		return new RpcClientSocket<TClientListener, TServerListener, TReplyMessage>(socket, config, messageDefinitions);
+		return new RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage>(socket, config, messageDefinitions);
 	}
 
-	public RpcConnectionToServer<TServerListener> Connection { get; }
-	internal IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> MessageDefinitions { get; }
+	public RpcConnectionToServer<TServerMessage> Connection { get; }
+	internal IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> MessageDefinitions { get; }
 
-	private RpcClientSocket(ClientSocket socket, RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions) : base(socket, config) {
+	private RpcClientSocket(ClientSocket socket, RpcConfiguration config, IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions) : base(socket, config) {
 		MessageDefinitions = messageDefinitions;
-		Connection = new RpcConnectionToServer<TServerListener>(config.LoggerName, socket, messageDefinitions.ToServer, ReplyTracker);
+		Connection = new RpcConnectionToServer<TServerMessage>(socket, messageDefinitions.ToServer, ReplyTracker);
 	}
 }

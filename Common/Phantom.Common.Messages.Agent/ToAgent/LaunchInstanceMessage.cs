@@ -1,13 +1,10 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Replies;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Agent.ToAgent;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record LaunchInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid InstanceGuid
-) : IMessageToAgent<InstanceActionResult<LaunchInstanceResult>> {
-	public Task<InstanceActionResult<LaunchInstanceResult>> Accept(IMessageToAgentListener listener) {
-		return listener.HandleLaunchInstance(this);
-	}
-}
+) : IMessageToAgent, ICanReply<InstanceActionResult<LaunchInstanceResult>>;

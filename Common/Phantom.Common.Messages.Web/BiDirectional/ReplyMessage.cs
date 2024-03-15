@@ -7,12 +7,4 @@ namespace Phantom.Common.Messages.Web.BiDirectional;
 public sealed partial record ReplyMessage(
 	[property: MemoryPackOrder(0)] uint SequenceId,
 	[property: MemoryPackOrder(1)] byte[] SerializedReply
-) : IMessageToController, IMessageToWeb, IReply {
-	public Task<NoReply> Accept(IMessageToControllerListener listener) {
-		return listener.HandleReply(this);
-	}
-
-	public Task<NoReply> Accept(IMessageToWebListener listener) {
-		return listener.HandleReply(this);
-	}
-}
+) : IMessageToController, IMessageToWeb, IReply;

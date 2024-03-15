@@ -11,13 +11,13 @@ using Phantom.Utils.Actor;
 namespace Phantom.Controller.Services.Instances;
 
 sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
-	public readonly record struct Init(Instance Instance, ActorRef<AgentActor.ICommand> AgentActorRef, AgentConnection AgentConnection, IDbContextProvider DbProvider, CancellationToken CancellationToken);
+	public readonly record struct Init(Instance Instance, ActorRef<AgentActor.ICommand> AgentActor, AgentConnection AgentConnection, IDbContextProvider DbProvider, CancellationToken CancellationToken);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
 
-	private readonly ActorRef<AgentActor.ICommand> agentActorRef;
+	private readonly ActorRef<AgentActor.ICommand> agentActor;
 	private readonly AgentConnection agentConnection;
 	private readonly CancellationToken cancellationToken;
 
@@ -30,7 +30,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	private readonly ActorRef<InstanceDatabaseStorageActor.ICommand> databaseStorageActor;
 	
 	private InstanceActor(Init init) {
-		this.agentActorRef = init.AgentActorRef;
+		this.agentActor = init.AgentActor;
 		this.agentConnection = init.AgentConnection;
 		this.cancellationToken = init.CancellationToken;
 		
@@ -46,7 +46,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	}
 
 	private void NotifyInstanceUpdated() {
-		agentActorRef.Tell(new AgentActor.ReceiveInstanceDataCommand(new Instance(instanceGuid, configuration, status, launchAutomatically)));
+		agentActor.Tell(new AgentActor.ReceiveInstanceDataCommand(new Instance(instanceGuid, configuration, status, launchAutomatically)));
 	}
 
 	private void SetLaunchAutomatically(bool newValue) {
@@ -56,7 +56,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		}
 	}
 
-	private async Task<InstanceActionResult<TReply>> SendInstanceActionMessage<TMessage, TReply>(TMessage message) where TMessage : IMessageToAgent<InstanceActionResult<TReply>> {
+	private async Task<InstanceActionResult<TReply>> SendInstanceActionMessage<TMessage, TReply>(TMessage message) where TMessage : IMessageToAgent, ICanReply<InstanceActionResult<TReply>> {
 		var reply = await agentConnection.Send<TMessage, InstanceActionResult<TReply>>(message, TimeSpan.FromSeconds(10), cancellationToken);
 		return reply.DidNotReplyIfNull();
 	}

@@ -1,9 +1,6 @@
 ﻿namespace Phantom.Utils.Rpc.Message;
 
-public interface IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
-	MessageRegistry<TClientListener> ToClient { get; }
-	MessageRegistry<TServerListener> ToServer { get; }
-	
-	bool IsRegistrationMessage(Type messageType);
-	TReplyMessage CreateReplyMessage(uint sequenceId, byte[] serializedReply);
+public interface IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> : IReplyMessageFactory<TReplyMessage> where TReplyMessage : TClientMessage, TServerMessage {
+	MessageRegistry<TClientMessage> ToClient { get; }
+	MessageRegistry<TServerMessage> ToServer { get; }
 }

@@ -7,6 +7,7 @@ using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Sockets;
@@ -51,15 +52,19 @@ try {
 	
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 	
-	var rpcConfiguration = new RpcConfiguration("Rpc", controllerHost, controllerPort, controllerCertificate);
+	var rpcConfiguration = new RpcConfiguration("Agent", controllerHost, controllerPort, controllerCertificate);
 	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, AgentMessageRegistries.Definitions, new RegisterAgentMessage(agentToken, agentInfo));
 
 	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcSocket.Connection));
 	await agentServices.Initialize();
 
+	using var actorSystem = ActorSystemFactory.Create("Agent");
+	
+	var rpcMessageHandlerInit = new ControllerMessageHandlerActor.Init(rpcSocket.Connection, agentServices, shutdownCancellationTokenSource);
+	var rpcMessageHandlerActor = actorSystem.ActorOf(ControllerMessageHandlerActor.Factory(rpcMessageHandlerInit), "ControllerMessageHandler");
+	
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcMessageListener = new MessageListener(rpcSocket.Connection, agentServices, shutdownCancellationTokenSource);
-	var rpcTask = RpcClientRuntime.Launch(rpcSocket, rpcMessageListener, rpcDisconnectSemaphore, shutdownCancellationToken);
+	var rpcTask = RpcClientRuntime.Launch(rpcSocket, rpcMessageHandlerActor, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
 		await rpcTask.WaitAsync(shutdownCancellationToken);
 	} finally {

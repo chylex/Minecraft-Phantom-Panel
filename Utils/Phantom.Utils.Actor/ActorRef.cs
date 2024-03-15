@@ -28,4 +28,8 @@ public readonly struct ActorRef<TMessage> {
 	public Task<TReply> Request<TReply>(ICanReply<TReply> message, CancellationToken cancellationToken = default) {
 		return Request(message, timeout: null, cancellationToken);
 	}
+
+	public Task<bool> Stop(TimeSpan? timeout = null) {
+		return actorRef.GracefulStop(timeout ?? Timeout.InfiniteTimeSpan);
+	}
 }

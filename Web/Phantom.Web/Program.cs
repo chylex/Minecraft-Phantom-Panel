@@ -2,6 +2,7 @@
 using NetMQ;
 using Phantom.Common.Messages.Web;
 using Phantom.Common.Messages.Web.ToController;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
@@ -52,23 +53,25 @@ try {
 	var administratorToken = TokenGenerator.Create(60);
 	var applicationProperties = new ApplicationProperties(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken));
 	
-	var rpcConfiguration = new RpcConfiguration("Rpc", controllerHost, controllerPort, controllerCertificate);
+	var rpcConfiguration = new RpcConfiguration("Web", controllerHost, controllerPort, controllerCertificate);
 	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, WebMessageRegistries.Definitions, new RegisterWebMessage(webToken));
 
 	var webConfiguration = new WebLauncher.Configuration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, dataProtectionKeysPath, shutdownCancellationToken);
 	var taskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Web"));
 	var webApplication = WebLauncher.CreateApplication(webConfiguration, taskManager, applicationProperties, rpcSocket.Connection);
 
-	MessageListener messageListener;
+	using var actorSystem = ActorSystemFactory.Create("Web");
+	
+	ControllerMessageHandlerFactory messageHandlerFactory;
 	await using (var scope = webApplication.Services.CreateAsyncScope()) {
-		messageListener = scope.ServiceProvider.GetRequiredService<MessageListener>();
+		messageHandlerFactory = scope.ServiceProvider.GetRequiredService<ControllerMessageHandlerFactory>();
 	}
 
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcTask = RpcClientRuntime.Launch(rpcSocket, messageListener, rpcDisconnectSemaphore, shutdownCancellationToken);
+	var rpcTask = RpcClientRuntime.Launch(rpcSocket, messageHandlerFactory.Create(actorSystem), rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
 		PhantomLogger.Root.Information("Registering with the controller...");
-		if (await messageListener.RegisterSuccessWaiter.Task) {
+		if (await messageHandlerFactory.RegisterSuccessWaiter) {
 			PhantomLogger.Root.Information("Successfully registered with the controller.");
 		}
 		else {

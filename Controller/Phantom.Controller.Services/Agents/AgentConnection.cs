@@ -1,4 +1,5 @@
 ﻿using Phantom.Common.Messages.Agent;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime;
 using Serilog;
@@ -11,14 +12,14 @@ sealed class AgentConnection {
 	private readonly Guid agentGuid;
 	private string agentName;
 	
-	private RpcConnectionToClient<IMessageToAgentListener>? connection;
+	private RpcConnectionToClient<IMessageToAgent>? connection;
 	
 	public AgentConnection(Guid agentGuid, string agentName) {
 		this.agentName = agentName;
 		this.agentGuid = agentGuid;
 	}
 
-	public void UpdateConnection(RpcConnectionToClient<IMessageToAgentListener> newConnection, string newAgentName) {
+	public void UpdateConnection(RpcConnectionToClient<IMessageToAgent> newConnection, string newAgentName) {
 		lock (this) {
 			connection?.Close();
 			connection = newConnection;
@@ -26,7 +27,7 @@ sealed class AgentConnection {
 		}
 	}
 
-	public bool CloseIfSame(RpcConnectionToClient<IMessageToAgentListener> expected) {
+	public bool CloseIfSame(RpcConnectionToClient<IMessageToAgent> expected) {
 		lock (this) {
 			if (connection != null && connection.IsSame(expected)) {
 				connection.Close();
@@ -48,7 +49,7 @@ sealed class AgentConnection {
 		}
 	}
 
-	public Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToAgent<TReply> where TReply : class {
+	public Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToAgent, ICanReply<TReply> where TReply : class {
 		lock (this) {
 			if (connection == null) {
 				LogAgentOffline();

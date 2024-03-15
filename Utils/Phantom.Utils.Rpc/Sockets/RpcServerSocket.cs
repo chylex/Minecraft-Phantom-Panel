@@ -3,7 +3,7 @@ using Phantom.Utils.Logging;
 
 namespace Phantom.Utils.Rpc.Sockets; 
 
-public sealed class RpcServerSocket : RpcSocket<ServerSocket> {
+sealed class RpcServerSocket : RpcSocket<ServerSocket> {
 	public static RpcServerSocket Connect(RpcConfiguration config) {
 		var socket = new ServerSocket();
 		var options = socket.Options;

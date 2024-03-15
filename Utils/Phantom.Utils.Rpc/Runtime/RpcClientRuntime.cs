@@ -1,4 +1,5 @@
 ﻿using NetMQ.Sockets;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Sockets;
 using Serilog;
@@ -6,18 +7,18 @@ using Serilog.Events;
 
 namespace Phantom.Utils.Rpc.Runtime;
 
-public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyMessage> : RpcRuntime<ClientSocket> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
-	private readonly RpcConnectionToServer<TServerListener> connection;
-	private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
-	private readonly TClientListener messageListener;
+public abstract class RpcClientRuntime<TClientMessage, TServerMessage, TReplyMessage> : RpcRuntime<ClientSocket> where TReplyMessage : TClientMessage, TServerMessage {
+	private readonly RpcConnectionToServer<TServerMessage> connection;
+	private readonly IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions;
+	private readonly ActorRef<TClientMessage> handlerActor;
 
 	private readonly SemaphoreSlim disconnectSemaphore;
 	private readonly CancellationToken receiveCancellationToken;
 
-	protected RpcClientRuntime(RpcClientSocket<TClientListener, TServerListener, TReplyMessage> socket, TClientListener messageListener, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket) {
+	protected RpcClientRuntime(RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage> socket, ActorRef<TClientMessage> handlerActor, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket) {
 		this.connection = socket.Connection;
 		this.messageDefinitions = socket.MessageDefinitions;
-		this.messageListener = messageListener;
+		this.handlerActor = handlerActor;
 		this.disconnectSemaphore = disconnectSemaphore;
 		this.receiveCancellationToken = receiveCancellationToken;
 	}
@@ -26,8 +27,9 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 		return RunWithConnection(socket, connection);
 	}
 
-	protected virtual async Task RunWithConnection(ClientSocket socket, RpcConnectionToServer<TServerListener> connection) {
-		var handler = new Handler(LoggerName, connection, messageDefinitions, messageListener);
+	protected virtual async Task RunWithConnection(ClientSocket socket, RpcConnectionToServer<TServerMessage> connection) {
+		var replySender = new ReplySender<TServerMessage, TReplyMessage>(connection, messageDefinitions);
+		var messageHandler = new MessageHandler<TClientMessage>(LoggerName, handlerActor, replySender);
 
 		try {
 			while (!receiveCancellationToken.IsCancellationRequested) {
@@ -36,13 +38,13 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 				LogMessageType(RuntimeLogger, data);
 				
 				if (data.Length > 0) {
-					messageDefinitions.ToClient.Handle(data, handler);
+					messageDefinitions.ToClient.Handle(data, messageHandler);
 				}
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} finally {
-			await handler.StopReceiving();
+			await handlerActor.Stop();
 			RuntimeLogger.Debug("ZeroMQ client stopped receiving messages.");
 			
 			await disconnectSemaphore.WaitAsync(CancellationToken.None);
@@ -50,12 +52,6 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 	}
 
 	private protected sealed override async Task Disconnect(ClientSocket socket) {
-		try {
-			await connection.StopSending().WaitAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
-		} catch (TimeoutException) {
-			RuntimeLogger.Error("Timed out waiting for message sending queue.");
-		}
-
 		await SendDisconnectMessage(socket, RuntimeLogger);
 	}
 	
@@ -71,20 +67,6 @@ public abstract class RpcClientRuntime<TClientListener, TServerListener, TReplyM
 		}
 		else {
 			logger.Verbose("Received {Bytes} B message.", data.Length);
-		}
-	}
-
-	private sealed class Handler : MessageHandler<TClientListener> {
-		private readonly RpcConnectionToServer<TServerListener> connection;
-		private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
-		
-		public Handler(string loggerName, RpcConnectionToServer<TServerListener> connection, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, TClientListener listener) : base(loggerName, listener) {
-			this.connection = connection;
-			this.messageDefinitions = messageDefinitions;
-		}
-		
-		protected override Task SendReply(uint sequenceId, byte[] serializedReply) {
-			return connection.Send(messageDefinitions.CreateReplyMessage(sequenceId, serializedReply));
 		}
 	}
 }

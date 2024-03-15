@@ -1,34 +1,44 @@
 ﻿using System.Collections.Concurrent;
+using Akka.Actor;
 using NetMQ.Sockets;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Sockets;
-using Phantom.Utils.Tasks;
+using Serilog;
 using Serilog.Events;
 
 namespace Phantom.Utils.Rpc.Runtime;
 
 public static class RpcServerRuntime {
-	public static Task Launch<TClientListener, TServerListener, TReplyMessage>(RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory, CancellationToken cancellationToken) where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
-		return RpcServerRuntime<TClientListener, TServerListener, TReplyMessage>.Launch(config, messageDefinitions, listenerFactory, cancellationToken);
+	public static Task Launch<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>(
+		RpcConfiguration config,
+		IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions,
+		IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> registrationHandler,
+		IActorRefFactory actorSystem,
+		CancellationToken cancellationToken
+	) where TRegistrationMessage : TServerMessage where TReplyMessage : TClientMessage, TServerMessage {
+		return RpcServerRuntime<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>.Launch(config, messageDefinitions, registrationHandler, actorSystem, cancellationToken);
 	}
 }
 
-internal sealed class RpcServerRuntime<TClientListener, TServerListener, TReplyMessage> : RpcRuntime<ServerSocket> where TReplyMessage : IMessage<TClientListener, NoReply>, IMessage<TServerListener, NoReply> {
-	internal static Task Launch(RpcConfiguration config, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory, CancellationToken cancellationToken) {
+internal sealed class RpcServerRuntime<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage> : RpcRuntime<ServerSocket> where TRegistrationMessage : TServerMessage where TReplyMessage : TClientMessage, TServerMessage {
+	internal static Task Launch(RpcConfiguration config, IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions, IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> registrationHandler, IActorRefFactory actorSystem, CancellationToken cancellationToken) {
 		var socket = RpcServerSocket.Connect(config);
-		return new RpcServerRuntime<TClientListener, TServerListener, TReplyMessage>(socket, messageDefinitions, listenerFactory, cancellationToken).Launch();
+		return new RpcServerRuntime<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>(socket, messageDefinitions, registrationHandler, actorSystem, cancellationToken).Launch();
 	}
 
-	private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
-	private readonly Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory;
-	private readonly TaskManager taskManager;
+	private readonly string serviceName;
+	private readonly IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions;
+	private readonly IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> registrationHandler;
+	private readonly IActorRefFactory actorSystem;
 	private readonly CancellationToken cancellationToken;
 
-	private RpcServerRuntime(RpcServerSocket socket, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, Func<RpcConnectionToClient<TClientListener>, TServerListener> listenerFactory, CancellationToken cancellationToken) : base(socket) {
+	private RpcServerRuntime(RpcServerSocket socket, IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions, IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> registrationHandler, IActorRefFactory actorSystem, CancellationToken cancellationToken) : base(socket) {
+		this.serviceName = socket.Config.ServiceName;
 		this.messageDefinitions = messageDefinitions;
-		this.listenerFactory = listenerFactory;
-		this.taskManager = new TaskManager(PhantomLogger.Create<TaskManager>(socket.Config.LoggerName + ":Runtime"));
+		this.registrationHandler = registrationHandler;
+		this.actorSystem = actorSystem;
 		this.cancellationToken = cancellationToken;
 	}
 
@@ -56,31 +66,30 @@ internal sealed class RpcServerRuntime<TClientListener, TServerListener, TReplyM
 			}
 			
 			if (!clients.TryGetValue(routingId, out var client)) {
-				if (!messageDefinitions.IsRegistrationMessage(messageType)) {
+				if (messageType != typeof(TRegistrationMessage)) {
 					RuntimeLogger.Warning("Received {MessageType} ({Bytes} B) from unregistered client {RoutingId}.", messageType.Name, data.Length, routingId);
 					continue;
 				}
 				
 				var clientLoggerName = LoggerName + ":" + routingId;
-				var processingQueue = new RpcQueue(taskManager, "Process messages from " + routingId);
-				var connection = new RpcConnectionToClient<TClientListener>(clientLoggerName, socket, routingId, messageDefinitions.ToClient, ReplyTracker);
+				var clientActorName = "Rpc-" + serviceName + "-" + routingId;
 				
+				// TODO add pings and tear down connection after too much inactivity
+				var connection = new RpcConnectionToClient<TClientMessage>(socket, routingId, messageDefinitions.ToClient, ReplyTracker);
 				connection.Closed += OnConnectionClosed;
 
-				client = new Client(clientLoggerName, connection, processingQueue, messageDefinitions, listenerFactory(connection), taskManager);
+				client = new Client(clientLoggerName, clientActorName, connection, actorSystem, messageDefinitions, registrationHandler);
 				clients[routingId] = client;
-				client.EnqueueRegistrationMessage(messageType, data);
 			}
-			else {
-				client.Enqueue(messageType, data);
-			}
+			
+			client.Enqueue(messageType, data);
 		}
 
 		foreach (var client in clients.Values) {
 			client.Connection.Close();
 		}
-
-		return taskManager.Stop();
+		
+		return Task.CompletedTask;
 	}
 
 	private void LogUnknownMessage(uint routingId, ReadOnlyMemory<byte> data) {
@@ -91,66 +100,38 @@ internal sealed class RpcServerRuntime<TClientListener, TServerListener, TReplyM
 		return Task.CompletedTask;
 	}
 
-	private sealed class Client : MessageHandler<TServerListener> {
-		public RpcConnectionToClient<TClientListener> Connection { get; }
+	private sealed class Client {
+		public RpcConnectionToClient<TClientMessage> Connection { get; }
 		
-		private readonly RpcQueue processingQueue;
-		private readonly IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions;
-		private readonly TaskManager taskManager;
-		
-		public Client(string loggerName, RpcConnectionToClient<TClientListener> connection, RpcQueue processingQueue, IMessageDefinitions<TClientListener, TServerListener, TReplyMessage> messageDefinitions, TServerListener listener, TaskManager taskManager) : base(loggerName, listener) {
+		private readonly ILogger logger;
+		private readonly ActorRef<RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>.ReceiveMessageCommand> receiverActor;
+
+		public Client(string loggerName, string actorName, RpcConnectionToClient<TClientMessage> connection, IActorRefFactory actorSystem, IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions, IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> registrationHandler) {
 			this.Connection = connection;
 			this.Connection.Closed += OnConnectionClosed;
-			
-			this.processingQueue = processingQueue;
-			this.messageDefinitions = messageDefinitions;
-			this.taskManager = taskManager;
-		}
 
-		internal void EnqueueRegistrationMessage(Type messageType, ReadOnlyMemory<byte> data) {
-			LogMessageType(messageType, data);
-			processingQueue.Enqueue(() => Handle(data));
+			this.logger = PhantomLogger.Create(loggerName);
+
+			var receiverActorInit = new RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>.Init(loggerName, messageDefinitions, registrationHandler, Connection);
+			this.receiverActor = actorSystem.ActorOf(RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>.Factory(receiverActorInit), actorName + "-Receiver");
 		}
 		
 		internal void Enqueue(Type messageType, ReadOnlyMemory<byte> data) {
 			LogMessageType(messageType, data);
-			processingQueue.Enqueue(() => WaitForAuthorizationAndHandle(data));
+			receiverActor.Tell(new RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>.ReceiveMessageCommand(messageType, data));
 		}
 
 		private void LogMessageType(Type messageType, ReadOnlyMemory<byte> data) {
-			if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-				Logger.Verbose("Received {MessageType} ({Bytes} B).", messageType.Name, data.Length);
+			if (logger.IsEnabled(LogEventLevel.Verbose)) {
+				logger.Verbose("Received {MessageType} ({Bytes} B).", messageType.Name, data.Length);
 			}
-		}
-
-		private void Handle(ReadOnlyMemory<byte> data) {
-			messageDefinitions.ToServer.Handle(data, this);
-		}
-
-		private async Task WaitForAuthorizationAndHandle(ReadOnlyMemory<byte> data) {
-			if (await Connection.GetAuthorization()) {
-				Handle(data);
-			}
-			else {
-				Logger.Warning("Dropped message after failed registration.");
-			}
-		}
-
-		protected override Task SendReply(uint sequenceId, byte[] serializedReply) {
-			return Connection.Send(messageDefinitions.CreateReplyMessage(sequenceId, serializedReply));
 		}
 
 		private void OnConnectionClosed(object? sender, RpcClientConnectionClosedEventArgs e) {
 			Connection.Closed -= OnConnectionClosed;
 			
-			Logger.Debug("Closing connection...");
-			
-			taskManager.Run("Closing connection to " + e.RoutingId, async () => {
-				await StopReceiving();
-				await processingQueue.Stop();
-				await Connection.StopSending();
-				Logger.Debug("Connection closed.");
-			});
+			logger.Debug("Closing connection...");
+			receiverActor.Stop();
 		}
 	}
 }

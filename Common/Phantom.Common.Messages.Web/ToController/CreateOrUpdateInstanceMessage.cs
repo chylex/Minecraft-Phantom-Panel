@@ -2,6 +2,7 @@
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Web.ToController; 
 
@@ -10,8 +11,4 @@ public sealed partial record CreateOrUpdateInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid LoggedInUserGuid,
 	[property: MemoryPackOrder(1)] Guid InstanceGuid,
 	[property: MemoryPackOrder(2)] InstanceConfiguration Configuration
-) : IMessageToController<InstanceActionResult<CreateOrUpdateInstanceResult>> {
-	public Task<InstanceActionResult<CreateOrUpdateInstanceResult>> Accept(IMessageToControllerListener listener) {
-		return listener.HandleCreateOrUpdateInstance(this);
-	}
-}
+) : IMessageToController, ICanReply<InstanceActionResult<CreateOrUpdateInstanceResult>>;

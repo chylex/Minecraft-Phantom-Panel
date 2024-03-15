@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Replies;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Agent.ToAgent;
 
@@ -7,8 +8,4 @@ namespace Phantom.Common.Messages.Agent.ToAgent;
 public sealed partial record SendCommandToInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid InstanceGuid,
 	[property: MemoryPackOrder(1)] string Command
-) : IMessageToAgent<InstanceActionResult<SendCommandToInstanceResult>> {
-	public Task<InstanceActionResult<SendCommandToInstanceResult>> Accept(IMessageToAgentListener listener) {
-		return listener.HandleSendCommandToInstance(this);
-	}
-}
+) : IMessageToAgent, ICanReply<InstanceActionResult<SendCommandToInstanceResult>>;

@@ -18,7 +18,7 @@ static class MessageSerializer {
 	public static T Deserialize<T>(ReadOnlyMemory<byte> memory) {
 		return MemoryPackSerializer.Deserialize<T>(memory.Span) ?? throw new NullReferenceException();
 	}
-
+	
 	public static void WriteCode(IBufferWriter<byte> destination, ushort value) {
 		Span<byte> buffer = stackalloc byte[2];
 		BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);

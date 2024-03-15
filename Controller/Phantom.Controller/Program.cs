@@ -54,24 +54,23 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
 	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
-	
-	await using (var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken)) {
-		await controllerServices.Initialize();
 
-		static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
-			return new RpcConfiguration("Rpc:" + serviceName, host, port, connectionKey.Certificate);
-		}
+	using var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken);
+	await controllerServices.Initialize();
 
-		var rpcTaskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Rpc"));
-		try {
-			await Task.WhenAll(
-				RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.CreateAgentMessageListener, shutdownCancellationToken),
-				RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.CreateWebMessageListener, shutdownCancellationToken)
-			);
-		} finally {
-			await rpcTaskManager.Stop();
-			NetMQConfig.Cleanup();
-		}
+	static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
+		return new RpcConfiguration(serviceName, host, port, connectionKey.Certificate);
+	}
+
+	var rpcTaskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Rpc"));
+	try {
+		await Task.WhenAll(
+			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.AgentRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken),
+			RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.WebRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken)
+		);
+	} finally {
+		await rpcTaskManager.Stop();
+		NetMQConfig.Cleanup();
 	}
 
 	return 0;

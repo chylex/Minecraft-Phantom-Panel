@@ -8,10 +8,10 @@ using Phantom.Utils.Rpc.Message;
 namespace Phantom.Common.Messages.Agent;
 
 public static class AgentMessageRegistries {
-	public static MessageRegistry<IMessageToAgentListener> ToAgent { get; } = new (PhantomLogger.Create("MessageRegistry", nameof(ToAgent)));
-	public static MessageRegistry<IMessageToControllerListener> ToController { get; } = new (PhantomLogger.Create("MessageRegistry", nameof(ToController)));
+	public static MessageRegistry<IMessageToAgent> ToAgent { get; } = new (PhantomLogger.Create("MessageRegistry", nameof(ToAgent)));
+	public static MessageRegistry<IMessageToController> ToController { get; } = new (PhantomLogger.Create("MessageRegistry", nameof(ToController)));
 	
-	public static IMessageDefinitions<IMessageToAgentListener, IMessageToControllerListener, ReplyMessage> Definitions { get; } = new MessageDefinitions();
+	public static IMessageDefinitions<IMessageToAgent, IMessageToController, ReplyMessage> Definitions { get; } = new MessageDefinitions();
 
 	static AgentMessageRegistries() {
 		ToAgent.Add<RegisterAgentSuccessMessage>(0);
@@ -33,13 +33,9 @@ public static class AgentMessageRegistries {
 		ToController.Add<ReplyMessage>(127);
 	}
 
-	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToAgentListener, IMessageToControllerListener, ReplyMessage> {
-		public MessageRegistry<IMessageToAgentListener> ToClient => ToAgent;
-		public MessageRegistry<IMessageToControllerListener> ToServer => ToController;
-
-		public bool IsRegistrationMessage(Type messageType) {
-			return messageType == typeof(RegisterAgentMessage);
-		}
+	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToAgent, IMessageToController, ReplyMessage> {
+		public MessageRegistry<IMessageToAgent> ToClient => ToAgent;
+		public MessageRegistry<IMessageToController> ToServer => ToController;
 
 		public ReplyMessage CreateReplyMessage(uint sequenceId, byte[] serializedReply) {
 			return new ReplyMessage(sequenceId, serializedReply);

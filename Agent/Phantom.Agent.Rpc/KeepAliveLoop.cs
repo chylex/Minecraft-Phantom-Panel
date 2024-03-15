@@ -11,10 +11,10 @@ sealed class KeepAliveLoop {
 
 	private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(10);
 
-	private readonly RpcConnectionToServer<IMessageToControllerListener> connection;
+	private readonly RpcConnectionToServer<IMessageToController> connection;
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
 
-	public KeepAliveLoop(RpcConnectionToServer<IMessageToControllerListener> connection) {
+	public KeepAliveLoop(RpcConnectionToServer<IMessageToController> connection) {
 		this.connection = connection;
 		Task.Run(Run);
 	}

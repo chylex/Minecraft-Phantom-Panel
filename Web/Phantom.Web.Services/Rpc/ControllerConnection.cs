@@ -1,12 +1,13 @@
 ﻿using Phantom.Common.Messages.Web;
+using Phantom.Utils.Actor;
 using Phantom.Utils.Rpc.Runtime;
 
 namespace Phantom.Web.Services.Rpc;
 
 public sealed class ControllerConnection {
-	private readonly RpcConnectionToServer<IMessageToControllerListener> connection;
+	private readonly RpcConnectionToServer<IMessageToController> connection;
 	
-	public ControllerConnection(RpcConnectionToServer<IMessageToControllerListener> connection) {
+	public ControllerConnection(RpcConnectionToServer<IMessageToController> connection) {
 		this.connection = connection;
 	}
 
@@ -14,11 +15,11 @@ public sealed class ControllerConnection {
 		return connection.Send(message);
 	}
 
-	public Task<TReply> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken = default) where TMessage : IMessageToController<TReply> {
+	public Task<TReply> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken = default) where TMessage : IMessageToController, ICanReply<TReply> {
 		return connection.Send<TMessage, TReply>(message, waitForReplyTime, waitForReplyCancellationToken);
 	}
 	
-	public Task<TReply> Send<TMessage, TReply>(TMessage message, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToController<TReply> {
+	public Task<TReply> Send<TMessage, TReply>(TMessage message, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToController, ICanReply<TReply> {
 		return connection.Send<TMessage, TReply>(message, Timeout.InfiniteTimeSpan, waitForReplyCancellationToken);
 	}
 }

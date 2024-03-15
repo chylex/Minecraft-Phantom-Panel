@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
 using Phantom.Common.Data.Web.Users;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Web.ToController;
 
@@ -10,8 +11,4 @@ public sealed partial record ChangeUserRolesMessage(
 	[property: MemoryPackOrder(1)] Guid SubjectUserGuid,
 	[property: MemoryPackOrder(2)] ImmutableHashSet<Guid> AddToRoleGuids,
 	[property: MemoryPackOrder(3)] ImmutableHashSet<Guid> RemoveFromRoleGuids
-) : IMessageToController<ChangeUserRolesResult> {
-	public Task<ChangeUserRolesResult> Accept(IMessageToControllerListener listener) {
-		return listener.HandleChangeUserRoles(this);
-	}
-}
+) : IMessageToController, ICanReply<ChangeUserRolesResult>;

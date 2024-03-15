@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Web.Users;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Web.ToController;
 
@@ -7,8 +8,4 @@ namespace Phantom.Common.Messages.Web.ToController;
 public sealed partial record CreateOrUpdateAdministratorUserMessage(
 	[property: MemoryPackOrder(0)] string Username,
 	[property: MemoryPackOrder(1)] string Password
-) : IMessageToController<CreateOrUpdateAdministratorUserResult> {
-	public Task<CreateOrUpdateAdministratorUserResult> Accept(IMessageToControllerListener listener) {
-		return listener.HandleCreateOrUpdateAdministratorUser(this);
-	}
-}
+) : IMessageToController, ICanReply<CreateOrUpdateAdministratorUserResult>;

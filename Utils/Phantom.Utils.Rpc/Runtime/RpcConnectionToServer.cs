@@ -5,13 +5,13 @@ using Phantom.Utils.Tasks;
 
 namespace Phantom.Utils.Rpc.Runtime;
 
-public sealed class RpcConnectionToServer<TListener> : RpcConnection<TListener> {
+public sealed class RpcConnectionToServer<TMessageBase> : RpcConnection<TMessageBase> {
 	private readonly ClientSocket socket;
 	private readonly TaskCompletionSource isReady = AsyncTasks.CreateCompletionSource();
 
 	public Task IsReady => isReady.Task;
 	
-	internal RpcConnectionToServer(string loggerName, ClientSocket socket, MessageRegistry<TListener> messageRegistry, MessageReplyTracker replyTracker) : base(loggerName, messageRegistry, replyTracker) {
+	internal RpcConnectionToServer(ClientSocket socket, MessageRegistry<TMessageBase> messageRegistry, MessageReplyTracker replyTracker) : base(messageRegistry, replyTracker) {
 		this.socket = socket;
 	}
 

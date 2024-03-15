@@ -1,6 +1,7 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Agent.ToAgent;
 
@@ -10,8 +11,4 @@ public sealed partial record ConfigureInstanceMessage(
 	[property: MemoryPackOrder(1)] InstanceConfiguration Configuration,
 	[property: MemoryPackOrder(2)] InstanceLaunchProperties LaunchProperties,
 	[property: MemoryPackOrder(3)] bool LaunchNow = false
-) : IMessageToAgent<InstanceActionResult<ConfigureInstanceResult>> {
-	public Task<InstanceActionResult<ConfigureInstanceResult>> Accept(IMessageToAgentListener listener) {
-		return listener.HandleConfigureInstance(this);
-	}
-}
+) : IMessageToAgent, ICanReply<InstanceActionResult<ConfigureInstanceResult>>;

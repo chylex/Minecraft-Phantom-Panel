@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Web.Users;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Web.ToController;
 
@@ -8,8 +9,4 @@ public sealed partial record CreateUserMessage(
 	[property: MemoryPackOrder(0)] Guid LoggedInUserGuid,
 	[property: MemoryPackOrder(1)] string Username,
 	[property: MemoryPackOrder(2)] string Password
-) : IMessageToController<CreateUserResult> {
-	public Task<CreateUserResult> Accept(IMessageToControllerListener listener) {
-		return listener.HandleCreateUser(this);
-	}
-}
+) : IMessageToController, ICanReply<CreateUserResult>;

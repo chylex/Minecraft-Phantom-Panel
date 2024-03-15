@@ -18,7 +18,7 @@ namespace Phantom.Controller.Services.Agents;
 sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 	
-	private readonly ActorSystem actorSystem;
+	private readonly IActorRefFactory actorSystem;
 	private readonly AuthToken authToken;
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
@@ -28,7 +28,7 @@ sealed class AgentManager {
 	private readonly ConcurrentDictionary<Guid, ActorRef<AgentActor.ICommand>> agentsByGuid = new ();
 	private readonly Func<Guid, AgentConfiguration, ActorRef<AgentActor.ICommand>> addAgentActorFactory;
 	
-	public AgentManager(ActorSystem actorSystem, AuthToken authToken, ControllerState controllerState, MinecraftVersions minecraftVersions, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+	public AgentManager(IActorRefFactory actorSystem, AuthToken authToken, ControllerState controllerState, MinecraftVersions minecraftVersions, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
 		this.actorSystem = actorSystem;
 		this.authToken = authToken;
 		this.controllerState = controllerState;
@@ -58,15 +58,15 @@ sealed class AgentManager {
 		}
 	}
 
-	public async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, RpcConnectionToClient<IMessageToAgentListener> connection) {
+	public async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, RpcConnectionToClient<IMessageToAgent> connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
 			return false;
 		}
 		
 		var agentProperties = AgentConfiguration.From(agentInfo);
-		var agentActorRef = agentsByGuid.GetOrAdd(agentInfo.AgentGuid, addAgentActorFactory, agentProperties);
-		var configureInstanceMessages = await agentActorRef.Request(new AgentActor.RegisterCommand(agentProperties, connection), cancellationToken);
+		var agentActor = agentsByGuid.GetOrAdd(agentInfo.AgentGuid, addAgentActorFactory, agentProperties);
+		var configureInstanceMessages = await agentActor.Request(new AgentActor.RegisterCommand(agentProperties, connection), cancellationToken);
 		await connection.Send(new RegisterAgentSuccessMessage(configureInstanceMessages));
 		
 		return true;

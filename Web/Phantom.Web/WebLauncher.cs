@@ -13,7 +13,7 @@ static class WebLauncher {
 		public string HttpUrl => "http://" + Host + ":" + Port;
 	}
 	
-	internal static WebApplication CreateApplication(Configuration config, TaskManager taskManager, ApplicationProperties applicationProperties, RpcConnectionToServer<IMessageToControllerListener> controllerConnection) {
+	internal static WebApplication CreateApplication(Configuration config, TaskManager taskManager, ApplicationProperties applicationProperties, RpcConnectionToServer<IMessageToController> controllerConnection) {
 		var assembly = typeof(WebLauncher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = assembly.GetName().Name,

@@ -8,9 +8,9 @@ namespace Phantom.Agent.Rpc;
 public sealed class ControllerConnection {
 	private static readonly ILogger Logger = PhantomLogger.Create(nameof(ControllerConnection));
 
-	private readonly RpcConnectionToServer<IMessageToControllerListener> connection;
+	private readonly RpcConnectionToServer<IMessageToController> connection;
 	
-	public ControllerConnection(RpcConnectionToServer<IMessageToControllerListener> connection) {
+	public ControllerConnection(RpcConnectionToServer<IMessageToController> connection) {
 		this.connection = connection;
 		Logger.Information("Connection ready.");
 	}

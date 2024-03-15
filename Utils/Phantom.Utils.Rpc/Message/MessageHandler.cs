@@ -1,41 +1,35 @@
-﻿using Phantom.Utils.Logging;
+﻿using Phantom.Utils.Actor;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
 
-abstract class MessageHandler<TListener> {
-	protected ILogger Logger { get; }
+sealed class MessageHandler<TMessageBase> {
+	private readonly ILogger logger;
+	private readonly ActorRef<TMessageBase> handlerActor;
+	private readonly IReplySender replySender;
 	
-	private readonly TListener listener;
-	private readonly MessageQueues messageQueues;
+	public MessageHandler(string loggerName, ActorRef<TMessageBase> handlerActor, IReplySender replySender) {
+		this.logger = PhantomLogger.Create("MessageHandler", loggerName);
+		this.handlerActor = handlerActor;
+		this.replySender = replySender;
+	}
 
-	protected MessageHandler(string loggerName, TListener listener) {
-		this.Logger = PhantomLogger.Create("MessageHandler", loggerName);
-		this.listener = listener;
-		this.messageQueues = new MessageQueues(loggerName + ":Receive");
+	public void Tell(TMessageBase message) {
+		handlerActor.Tell(message);
 	}
 	
-	internal void Enqueue<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
-		messageQueues.Enqueue(message.QueueKey, () => TryHandle<TMessage, TReply>(sequenceId, message));
-	}
-
-	private async Task TryHandle<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : IMessage<TListener, TReply> {
-		TReply reply;
-		try {
-			reply = await message.Accept(listener);
-		} catch (Exception e) {
-			Logger.Error(e, "Failed to handle message {Type}.", message.GetType().Name);
-			return;
-		}
-		
-		if (reply is not NoReply) {
-			await SendReply(sequenceId, MessageSerializer.Serialize(reply));
-		}
-	}
-
-	protected abstract Task SendReply(uint sequenceId, byte[] serializedReply);
-
-	internal Task StopReceiving() {
-		return messageQueues.Stop();
+	public Task TellAndReply<TMessage, TReply>(TMessage message, uint sequenceId) where TMessage : ICanReply<TReply> {
+		return handlerActor.Request(message).ContinueWith(task => {
+			if (task.IsCompletedSuccessfully) {
+				return replySender.SendReply(sequenceId, MessageSerializer.Serialize(task.Result));
+			}
+			
+			if (task.IsFaulted) {
+				logger.Error(task.Exception, "Failed to handle message {Type}.", message.GetType().Name);
+			}
+			
+			return task;
+		}, TaskScheduler.Default);
 	}
 }

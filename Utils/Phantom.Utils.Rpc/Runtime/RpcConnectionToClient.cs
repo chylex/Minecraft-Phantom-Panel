@@ -4,29 +4,19 @@ using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Utils.Rpc.Runtime;
 
-public sealed class RpcConnectionToClient<TListener> : RpcConnection<TListener> {
+public sealed class RpcConnectionToClient<TMessageBase> : RpcConnection<TMessageBase> {
 	private readonly ServerSocket socket;
 	private readonly uint routingId;
-
-	private readonly TaskCompletionSource<bool> authorizationCompletionSource = new ();
 
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
 	public bool IsClosed { get; private set; }
 
-	internal RpcConnectionToClient(string loggerName, ServerSocket socket, uint routingId, MessageRegistry<TListener> messageRegistry, MessageReplyTracker replyTracker) : base(loggerName, messageRegistry, replyTracker) {
+	internal RpcConnectionToClient(ServerSocket socket, uint routingId, MessageRegistry<TMessageBase> messageRegistry, MessageReplyTracker replyTracker) : base(messageRegistry, replyTracker) {
 		this.socket = socket;
 		this.routingId = routingId;
 	}
 
-	internal Task<bool> GetAuthorization() {
-		return authorizationCompletionSource.Task;
-	}
-	
-	public void SetAuthorizationResult(bool isAuthorized) {
-		authorizationCompletionSource.SetResult(isAuthorized);
-	}
-
-	public bool IsSame(RpcConnectionToClient<TListener> other) {
+	public bool IsSame(RpcConnectionToClient<TMessageBase> other) {
 		return this.routingId == other.routingId && this.socket == other.socket;
 	}
 

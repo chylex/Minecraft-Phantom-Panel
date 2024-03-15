@@ -1,5 +1,6 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data.Web.Users;
+using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Web.ToController;
 
@@ -7,8 +8,4 @@ namespace Phantom.Common.Messages.Web.ToController;
 public sealed partial record DeleteUserMessage(
 	[property: MemoryPackOrder(0)] Guid LoggedInUserGuid,
 	[property: MemoryPackOrder(1)] Guid SubjectUserGuid
-) : IMessageToController<DeleteUserResult> {
-	public Task<DeleteUserResult> Accept(IMessageToControllerListener listener) {
-		return listener.HandleDeleteUser(this);
-	}
-}
+) : IMessageToController, ICanReply<DeleteUserResult>;

@@ -169,9 +169,9 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	
 	private sealed record InitializeCommand : ICommand;
 	
-	public sealed record RegisterCommand(AgentConfiguration Configuration, RpcConnectionToClient<IMessageToAgentListener> Connection) : ICommand, ICanReply<ImmutableArray<ConfigureInstanceMessage>>;
+	public sealed record RegisterCommand(AgentConfiguration Configuration, RpcConnectionToClient<IMessageToAgent> Connection) : ICommand, ICanReply<ImmutableArray<ConfigureInstanceMessage>>;
 	
-	public sealed record UnregisterCommand(RpcConnectionToClient<IMessageToAgentListener> Connection) : ICommand;
+	public sealed record UnregisterCommand(RpcConnectionToClient<IMessageToAgent> Connection) : ICommand;
 	
 	private sealed record RefreshConnectionStatusCommand : ICommand;
 	
