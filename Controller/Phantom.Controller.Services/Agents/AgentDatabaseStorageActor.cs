@@ -38,7 +38,7 @@ sealed class AgentDatabaseStorageActor : ReceiveActor<AgentDatabaseStorageActor.
 	private sealed record FlushChangesCommand : ICommand;
 
 	private void StoreAgentConfiguration(StoreAgentConfigurationCommand command) {
-		this.configurationToStore = command.Configuration;
+		configurationToStore = command.Configuration;
 		ScheduleFlush(TimeSpan.FromSeconds(2));
 	}
 
@@ -72,11 +72,9 @@ sealed class AgentDatabaseStorageActor : ReceiveActor<AgentDatabaseStorageActor.
 	}
 
 	private void ScheduleFlush(TimeSpan delay) {
-		if (hasScheduledFlush) {
-			return;
+		if (!hasScheduledFlush) {
+			hasScheduledFlush = true;
+			Context.System.Scheduler.ScheduleTellOnce(delay, Self, new FlushChangesCommand(), Self);
 		}
-
-		hasScheduledFlush = true;
-		Context.System.Scheduler.ScheduleTellOnce(delay, Self, new FlushChangesCommand(), Self);
 	}
 }

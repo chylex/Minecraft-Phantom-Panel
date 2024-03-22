@@ -12,9 +12,7 @@ using Phantom.Controller.Services.Instances;
 using Phantom.Controller.Services.Rpc;
 using Phantom.Controller.Services.Users;
 using Phantom.Utils.Actor;
-using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime;
-using Phantom.Utils.Tasks;
 using IMessageFromAgentToController = Phantom.Common.Messages.Agent.IMessageToController;
 using IMessageFromWebToController = Phantom.Common.Messages.Web.IMessageToController;
 
@@ -23,7 +21,6 @@ namespace Phantom.Controller.Services;
 public sealed class ControllerServices : IDisposable {
 	public ActorSystem ActorSystem { get; }
 	
-	private TaskManager TaskManager { get; }
 	private ControllerState ControllerState { get; }
 	private MinecraftVersions MinecraftVersions { get; }
 
@@ -51,7 +48,6 @@ public sealed class ControllerServices : IDisposable {
 		
 		this.ActorSystem = ActorSystemFactory.Create("Controller");
 
-		this.TaskManager = new TaskManager(PhantomLogger.Create<TaskManager, ControllerServices>());
 		this.ControllerState = new ControllerState();
 		this.MinecraftVersions = new MinecraftVersions();
 		
@@ -65,7 +61,7 @@ public sealed class ControllerServices : IDisposable {
 		this.UserRoleManager = new UserRoleManager(dbProvider);
 		this.UserLoginManager = new UserLoginManager(UserManager, PermissionManager);
 		this.AuditLogManager = new AuditLogManager(dbProvider);
-		this.EventLogManager = new EventLogManager(dbProvider, TaskManager, shutdownCancellationToken);
+		this.EventLogManager = new EventLogManager(ActorSystem, dbProvider, shutdownCancellationToken);
 		
 		this.AgentRegistrationHandler = new AgentRegistrationHandler(AgentManager, InstanceLogManager, EventLogManager);
 		this.WebRegistrationHandler = new WebRegistrationHandler(webAuthToken, ControllerState, InstanceLogManager, UserManager, RoleManager, UserRoleManager, UserLoginManager, AuditLogManager, AgentManager, MinecraftVersions, EventLogManager);
