@@ -57,16 +57,16 @@ static class Messages {
 			LaunchInstanceResult.InstanceAlreadyRunning   => "Instance is already running.",
 			LaunchInstanceResult.InstanceLimitExceeded    => "Agent does not have any more available instances.",
 			LaunchInstanceResult.MemoryLimitExceeded      => "Agent does not have enough available memory.",
+			LaunchInstanceResult.ServerPortNotAllowed     => "Server port not allowed.",
+			LaunchInstanceResult.ServerPortAlreadyInUse   => "Server port already in use.",
+			LaunchInstanceResult.RconPortNotAllowed       => "Rcon port not allowed.",
+			LaunchInstanceResult.RconPortAlreadyInUse     => "Rcon port already in use.",
 			_                                             => "Unknown error."
 		};
 	}
 
 	public static string ToSentence(this InstanceLaunchFailReason reason) {
 		return reason switch {
-			InstanceLaunchFailReason.ServerPortNotAllowed                   => "Server port not allowed.",
-			InstanceLaunchFailReason.ServerPortAlreadyInUse                 => "Server port already in use.",
-			InstanceLaunchFailReason.RconPortNotAllowed                     => "Rcon port not allowed.",
-			InstanceLaunchFailReason.RconPortAlreadyInUse                   => "Rcon port already in use.",
 			InstanceLaunchFailReason.JavaRuntimeNotFound                    => "Java runtime not found.",
 			InstanceLaunchFailReason.CouldNotDownloadMinecraftServer        => "Could not download Minecraft server.",
 			InstanceLaunchFailReason.CouldNotConfigureMinecraftServer       => "Could not configure Minecraft server.",
@@ -78,8 +78,9 @@ static class Messages {
 
 	public static string ToSentence(this SendCommandToInstanceResult reason) {
 		return reason switch {
-			SendCommandToInstanceResult.Success => "Command sent.",
-			_                                   => "Unknown error."
+			SendCommandToInstanceResult.Success            => "Command sent.",
+			SendCommandToInstanceResult.InstanceNotRunning => "Instance is not running.",
+			_                                              => "Unknown error."
 		};
 	}
 

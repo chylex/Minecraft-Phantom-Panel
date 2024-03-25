@@ -100,7 +100,7 @@ public sealed class UserRepository {
 
 		user.PasswordHash = UserPasswords.Hash(password);
 
-		return Result.Ok<SetUserPasswordError>();
+		return Result.Ok;
 	}
 
 	public void DeleteUser(UserEntity user) {

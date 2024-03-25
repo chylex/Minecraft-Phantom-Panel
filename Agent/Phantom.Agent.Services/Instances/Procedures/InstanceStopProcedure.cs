@@ -7,20 +7,14 @@ using Phantom.Common.Data.Minecraft;
 
 namespace Phantom.Agent.Services.Instances.Procedures;
 
-sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInstanceProcedure {
+static class InstanceStopProcedure {
 	private static readonly ushort[] Stops = { 60, 30, 10, 5, 4, 3, 2, 1, 0 };
 
-	public async Task<IInstanceState?> Run(IInstanceContext context, CancellationToken cancellationToken) {
-		if (context.CurrentState is not InstanceRunningState runningState) {
-			return null;
-		}
-
+	public static async Task<IInstanceState?> Run(InstanceContext context, MinecraftStopStrategy stopStrategy, InstanceRunningState runningState, Action<IInstanceStatus> reportStatus, CancellationToken cancellationToken) {
 		var process = runningState.Process;
-
 		runningState.IsStopping = true;
-		context.SetStatus(InstanceStatus.Stopping);
 
-		var seconds = StopStrategy.Seconds;
+		var seconds = stopStrategy.Seconds;
 		if (seconds > 0) {
 			try {
 				await CountDownWithAnnouncements(context, process, seconds, cancellationToken);
@@ -38,14 +32,14 @@ sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInsta
 			}
 		} finally {
 			context.Logger.Information("Session stopped.");
-			context.SetStatus(InstanceStatus.NotRunning);
+			reportStatus(InstanceStatus.NotRunning);
 			context.ReportEvent(InstanceEvent.Stopped);
 		}
 
 		return new InstanceNotRunningState();
 	}
 
-	private async Task CountDownWithAnnouncements(IInstanceContext context, InstanceProcess process, ushort seconds, CancellationToken cancellationToken) {
+	private static async Task CountDownWithAnnouncements(InstanceContext context, InstanceProcess process, ushort seconds, CancellationToken cancellationToken) {
 		context.Logger.Information("Session stopping in {Seconds} seconds.", seconds);
 
 		foreach (var stop in Stops) {
@@ -66,7 +60,7 @@ sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInsta
 		return MinecraftCommand.Say("Server shutting down in " + seconds + (seconds == 1 ? " second." : " seconds."));
 	}
 
-	private async Task DoStop(IInstanceContext context, InstanceProcess process) {
+	private static async Task DoStop(InstanceContext context, InstanceProcess process) {
 		context.Logger.Information("Sending stop command...");
 		await TrySendStopCommand(context, process);
 
@@ -74,7 +68,7 @@ sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInsta
 		await WaitForSessionToEnd(context, process);
 	}
 
-	private async Task TrySendStopCommand(IInstanceContext context, InstanceProcess process) {
+	private static async Task TrySendStopCommand(InstanceContext context, InstanceProcess process) {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		try {
 			await process.SendCommand(MinecraftCommand.Stop, timeout.Token);
@@ -87,7 +81,7 @@ sealed record StopInstanceProcedure(MinecraftStopStrategy StopStrategy) : IInsta
 		}
 	}
 
-	private async Task WaitForSessionToEnd(IInstanceContext context, InstanceProcess process) {
+	private static async Task WaitForSessionToEnd(InstanceContext context, InstanceProcess process) {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(55));
 		try {
 			await process.WaitForExit(timeout.Token);

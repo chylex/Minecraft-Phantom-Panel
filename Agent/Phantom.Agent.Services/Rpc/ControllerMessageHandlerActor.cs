@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data.Instance;
+﻿using Phantom.Agent.Services.Instances;
+using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.BiDirectional;
@@ -57,7 +58,7 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 		connection.SetIsReady();
 		
 		await connection.Send(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
-		await agent.InstanceSessionManager.RefreshAgentStatus();
+		agent.InstanceTicketManager.RefreshAgentStatus();
 	}
 
 	private void HandleRegisterAgentFailure(RegisterAgentFailureMessage message) {
@@ -74,7 +75,7 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 	}
 	
 	private Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message, bool alwaysReportStatus) {
-		return agent.InstanceSessionManager.Configure(message.InstanceGuid, message.Configuration, message.LaunchProperties, message.LaunchNow, alwaysReportStatus);
+		return agent.InstanceManager.Request(new InstanceManagerActor.ConfigureInstanceCommand(message.InstanceGuid, message.Configuration, message.LaunchProperties, message.LaunchNow, alwaysReportStatus));
 	}
 	
 	private async Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message) {
@@ -82,15 +83,15 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 	}
 
 	private async Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {
-		return await agent.InstanceSessionManager.Launch(message.InstanceGuid);
+		return await agent.InstanceManager.Request(new InstanceManagerActor.LaunchInstanceCommand(message.InstanceGuid));
 	}
 
 	private async Task<InstanceActionResult<StopInstanceResult>> HandleStopInstance(StopInstanceMessage message) {
-		return await agent.InstanceSessionManager.Stop(message.InstanceGuid, message.StopStrategy);
+		return await agent.InstanceManager.Request(new InstanceManagerActor.StopInstanceCommand(message.InstanceGuid, message.StopStrategy));
 	}
 
 	private async Task<InstanceActionResult<SendCommandToInstanceResult>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
-		return await agent.InstanceSessionManager.SendCommand(message.InstanceGuid, message.Command);
+		return await agent.InstanceManager.Request(new InstanceManagerActor.SendCommandToInstanceCommand(message.InstanceGuid, message.Command));
 	}
 
 	private void HandleReply(ReplyMessage message) {

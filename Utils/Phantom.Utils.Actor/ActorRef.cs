@@ -29,6 +29,10 @@ public readonly struct ActorRef<TMessage> {
 		return Request(message, timeout: null, cancellationToken);
 	}
 
+	public Task<bool> Stop(TMessage message, TimeSpan? timeout = null) {
+		return actorRef.GracefulStop(timeout ?? Timeout.InfiniteTimeSpan, message);
+	}
+	
 	public Task<bool> Stop(TimeSpan? timeout = null) {
 		return actorRef.GracefulStop(timeout ?? Timeout.InfiniteTimeSpan);
 	}
