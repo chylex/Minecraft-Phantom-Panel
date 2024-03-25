@@ -1,5 +1,6 @@
 ﻿using Phantom.Utils.Collections;
 using Phantom.Utils.Processes;
+using Phantom.Utils.Tasks;
 
 namespace Phantom.Agent.Minecraft.Instance;
 
@@ -13,6 +14,7 @@ public sealed class InstanceProcess : IDisposable {
 	public bool HasEnded { get; private set; }
 
 	private readonly Process process;
+	private readonly TaskCompletionSource processExited = AsyncTasks.CreateCompletionSource();
 
 	internal InstanceProcess(InstanceProperties instanceProperties, Process process) {
 		this.InstanceProperties = instanceProperties;
@@ -46,16 +48,15 @@ public sealed class InstanceProcess : IDisposable {
 		OutputEvent = null;
 		HasEnded = true;
 		Ended?.Invoke(this, EventArgs.Empty);
+		processExited.SetResult();
 	}
 
 	public void Kill() {
 		process.Kill(true);
 	}
 
-	public async Task WaitForExit(CancellationToken cancellationToken) {
-		if (!HasEnded) {
-			await process.WaitForExitAsync(cancellationToken);
-		}
+	public async Task WaitForExit(TimeSpan timeout) {
+		await processExited.Task.WaitAsync(timeout);
 	}
 
 	public void Dispose() {

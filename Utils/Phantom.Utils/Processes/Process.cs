@@ -37,8 +37,8 @@ public sealed class Process : IDisposable {
 
 		// https://github.com/dotnet/runtime/issues/81896
 		if (OperatingSystem.IsWindows()) {
-			Task.Factory.StartNew(ReadStandardOutputSynchronously, TaskCreationOptions.LongRunning);
-			Task.Factory.StartNew(ReadStandardErrorSynchronously, TaskCreationOptions.LongRunning);
+			Task.Factory.StartNew(ReadStandardOutputSynchronously, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+			Task.Factory.StartNew(ReadStandardErrorSynchronously, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 		}
 		else {
 			this.wrapped.BeginOutputReadLine();
@@ -79,7 +79,11 @@ public sealed class Process : IDisposable {
 	}
 
 	public Task WaitForExitAsync(CancellationToken cancellationToken) {
-		return wrapped.WaitForExitAsync(cancellationToken);
+		try {
+			return wrapped.WaitForExitAsync(cancellationToken);
+		} catch (InvalidOperationException) {
+			return Task.CompletedTask;
+		}
 	}
 
 	public void Kill(bool entireProcessTree = false) {

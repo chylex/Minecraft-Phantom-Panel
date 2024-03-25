@@ -90,7 +90,7 @@
   private async Task<Result<string>> CreateOrUpdateAdministrator() {
     var reply = await ControllerConnection.Send<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(new CreateOrUpdateAdministratorUserMessage(form.Username, form.Password), Timeout.InfiniteTimeSpan);
     return reply switch {
-           Success             => Result.Ok<string>(),
+           Success             => Result.Ok,
            CreationFailed fail => fail.Error.ToSentences("\n"),
            UpdatingFailed fail => fail.Error.ToSentences("\n"),
            AddingToRoleFailed  => "Could not assign administrator role to user.",

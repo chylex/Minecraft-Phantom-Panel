@@ -5,4 +5,4 @@ using Phantom.Utils.Tasks;
 
 namespace Phantom.Agent.Services.Instances;
 
-sealed record InstanceServices(ControllerConnection ControllerConnection, TaskManager TaskManager, PortManager PortManager, BackupManager BackupManager, LaunchServices LaunchServices);
+sealed record InstanceServices(ControllerConnection ControllerConnection, TaskManager TaskManager, BackupManager BackupManager, LaunchServices LaunchServices);

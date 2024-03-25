@@ -41,14 +41,16 @@ public abstract record Result<TError> {
 	public static implicit operator Result<TError>(TError error) {
 		return new Fail(error);
 	}
+
+	public static implicit operator Result<TError>(Result.OkType _) {
+		return new Ok();
+	}
 	
 	public static implicit operator bool(Result<TError> result) {
 		return result is Ok;
 	}
 	
 	public sealed record Ok : Result<TError> {
-		internal static Ok Instance { get; } = new ();
-		
 		public override TError Error {
 			get => throw new InvalidOperationException("Attempted to get error from Ok result.");
 			init {}
@@ -59,19 +61,7 @@ public abstract record Result<TError> {
 }
 
 public static class Result {
-	public static Result<TError> Ok<TError>() {
-		return Result<TError>.Ok.Instance;
-	}
-	
-	public static Result<TError> Fail<TError>(TError error) {
-		return new Result<TError>.Fail(error);
-	}
-	
-	public static Result<TValue, TError> Ok<TValue, TError>(TValue value) {
-		return new Result<TValue, TError>.Ok(value);
-	}
-	
-	public static Result<TValue, TError> Fail<TValue, TError>(TError error) {
-		return new Result<TValue, TError>.Fail(error);
-	}
+	public static OkType Ok { get; }  = new ();
+
+	public readonly record struct OkType;
 }

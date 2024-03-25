@@ -1,37 +1,39 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Services.Backups;
-using Phantom.Agent.Services.Instances.Procedures;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Replies;
 
-namespace Phantom.Agent.Services.Instances.States;
+namespace Phantom.Agent.Services.Instances.State;
 
-sealed class InstanceRunningState : IInstanceState, IDisposable {
+sealed class InstanceRunningState : IDisposable {
+	public InstanceTicketManager.Ticket Ticket { get; }
 	public InstanceProcess Process { get; }
 
 	internal bool IsStopping { get; set; }
 
-	private readonly Guid instanceGuid;
+	private readonly InstanceContext context;
 	private readonly InstanceConfiguration configuration;
 	private readonly IServerLauncher launcher;
-	private readonly IInstanceContext context;
+	private readonly CancellationToken cancellationToken;
 
 	private readonly InstanceLogSender logSender;
 	private readonly BackupScheduler backupScheduler;
 
 	private bool isDisposed;
 
-	public InstanceRunningState(Guid instanceGuid, InstanceConfiguration configuration, IServerLauncher launcher, InstanceProcess process, IInstanceContext context) {
-		this.instanceGuid = instanceGuid;
+	public InstanceRunningState(InstanceContext context, InstanceConfiguration configuration, IServerLauncher launcher, InstanceTicketManager.Ticket ticket, InstanceProcess process, CancellationToken cancellationToken) {
+		this.context = context;
 		this.configuration = configuration;
 		this.launcher = launcher;
-		this.context = context;
+		this.Ticket = ticket;
 		this.Process = process;
+		this.cancellationToken = cancellationToken;
 
-		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.Services.TaskManager, instanceGuid, context.ShortName);
+		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.Services.TaskManager, context.InstanceGuid, context.ShortName);
 
-		this.backupScheduler = new BackupScheduler(context.Services.TaskManager, context.Services.BackupManager, process, context, configuration.ServerPort);
+		this.backupScheduler = new BackupScheduler(context, process, configuration.ServerPort);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
 	}
 
@@ -41,7 +43,7 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 		if (Process.HasEnded) {
 			if (TryDispose()) {
 				context.Logger.Warning("Session ended immediately after it was started.");
-				context.EnqueueProcedure(new SetInstanceToNotRunningStateProcedure(InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)), immediate: true);
+				context.Actor.Tell(new InstanceActor.HandleProcessEndedCommand(InstanceStatus.Failed(InstanceLaunchFailReason.UnknownError)));
 			}
 		}
 		else {
@@ -60,13 +62,17 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 			return;
 		}
 
+		if (cancellationToken.IsCancellationRequested) {
+			return;
+		}
+		
 		if (IsStopping) {
-			context.EnqueueProcedure(new SetInstanceToNotRunningStateProcedure(InstanceStatus.NotRunning), immediate: true);
+			context.Actor.Tell(new InstanceActor.HandleProcessEndedCommand(InstanceStatus.NotRunning));
 		}
 		else {
 			context.Logger.Information("Session ended unexpectedly, restarting...");
 			context.ReportEvent(InstanceEvent.Crashed);
-			context.EnqueueProcedure(new LaunchInstanceProcedure(instanceGuid, configuration, launcher, IsRestarting: true));
+			context.Actor.Tell(new InstanceActor.LaunchInstanceCommand(configuration, launcher, Ticket, IsRestarting: true));
 		}
 	}
 
@@ -74,16 +80,16 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 		context.ReportEvent(new InstanceBackupCompletedEvent(e.Kind, e.Warnings));
 	}
 
-	public async Task<bool> SendCommand(string command, CancellationToken cancellationToken) {
+	public async Task<SendCommandToInstanceResult> SendCommand(string command, CancellationToken cancellationToken) {
 		try {
 			context.Logger.Information("Sending command: {Command}", command);
 			await Process.SendCommand(command, cancellationToken);
-			return true;
+			return SendCommandToInstanceResult.Success;
 		} catch (OperationCanceledException) {
-			return false;
+			return SendCommandToInstanceResult.UnknownError;
 		} catch (Exception e) {
 			context.Logger.Warning(e, "Caught exception while sending command.");
-			return false;
+			return SendCommandToInstanceResult.UnknownError;
 		}
 	}
 
@@ -100,7 +106,6 @@ sealed class InstanceRunningState : IInstanceState, IDisposable {
 		backupScheduler.Stop();
 		
 		Process.Dispose();
-		context.Services.PortManager.Release(configuration);
 		
 		return true;
 	}

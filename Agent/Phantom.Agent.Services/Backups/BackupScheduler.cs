@@ -1,7 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Services.Instances;
-using Phantom.Agent.Services.Instances.Procedures;
 using Phantom.Common.Data.Backups;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
@@ -16,8 +15,8 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private static readonly TimeSpan BackupFailureRetryDelay = TimeSpan.FromMinutes(5);
 
 	private readonly BackupManager backupManager;
+	private readonly InstanceContext context;
 	private readonly InstanceProcess process;
-	private readonly IInstanceContext context;
 	private readonly SemaphoreSlim backupSemaphore = new (1, 1);
 	private readonly int serverPort;
 	private readonly ServerStatusProtocol serverStatusProtocol;
@@ -25,10 +24,10 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted;
 
-	public BackupScheduler(TaskManager taskManager, BackupManager backupManager, InstanceProcess process, IInstanceContext context, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName), taskManager, "Backup scheduler for " + context.ShortName) {
-		this.backupManager = backupManager;
-		this.process = process;
+	public BackupScheduler(InstanceContext context, InstanceProcess process, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName), context.Services.TaskManager, "Backup scheduler for " + context.ShortName) {
+		this.backupManager = context.Services.BackupManager;
 		this.context = context;
+		this.process = process;
 		this.serverPort = serverPort;
 		this.serverStatusProtocol = new ServerStatusProtocol(context.ShortName);
 		Start();
@@ -60,9 +59,10 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 		}
 		
 		try {
-			var procedure = new BackupInstanceProcedure(backupManager);
-			context.EnqueueProcedure(procedure);
-			return await procedure.Result;
+			context.ActorCancellationToken.ThrowIfCancellationRequested();
+			return await context.Actor.Request(new InstanceActor.BackupInstanceCommand(backupManager), context.ActorCancellationToken);
+		} catch (OperationCanceledException) {
+			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
 		} finally {
 			backupSemaphore.Release();
 		}

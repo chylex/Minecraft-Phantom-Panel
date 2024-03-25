@@ -5,7 +5,7 @@ using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 
-namespace Phantom.Agent.Services.Instances;
+namespace Phantom.Agent.Services.Instances.State;
 
 sealed class InstanceLogSender : CancellableBackgroundTask {
 	private static readonly BoundedChannelOptions BufferOptions = new (capacity: 64) {

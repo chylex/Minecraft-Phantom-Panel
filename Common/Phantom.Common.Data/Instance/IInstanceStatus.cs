@@ -52,6 +52,18 @@ public static class InstanceStatus {
 	public static IInstanceStatus Invalid(string reason) => new InstanceIsInvalid(reason);
 	public static IInstanceStatus Downloading(byte progress) => new InstanceIsDownloading(progress);
 	public static IInstanceStatus Failed(InstanceLaunchFailReason reason) => new InstanceIsFailed(reason);
+
+	public static bool IsLaunching(this IInstanceStatus status) {
+		return status is InstanceIsDownloading or InstanceIsLaunching or InstanceIsRestarting;
+	}
+
+	public static bool IsRunning(this IInstanceStatus status) {
+		return status is InstanceIsRunning;
+	}
+	
+	public static bool IsStopping(this IInstanceStatus status) {
+		return status is InstanceIsStopping;
+	}
 	
 	public static bool CanLaunch(this IInstanceStatus status) {
 		return status is InstanceIsNotRunning or InstanceIsFailed;
