@@ -22,7 +22,7 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 	
 	private int droppedLinesSinceLastSend;
 
-	public InstanceLogSender(ControllerConnection controllerConnection, TaskManager taskManager, Guid instanceGuid, string loggerName) : base(PhantomLogger.Create<InstanceLogSender>(loggerName), taskManager, "Instance log sender for " + loggerName) {
+	public InstanceLogSender(ControllerConnection controllerConnection, Guid instanceGuid, string loggerName) : base(PhantomLogger.Create<InstanceLogSender>(loggerName)) {
 		this.controllerConnection = controllerConnection;
 		this.instanceGuid = instanceGuid;
 		this.outputChannel = Channel.CreateBounded<string>(BufferOptions, OnLineDropped);

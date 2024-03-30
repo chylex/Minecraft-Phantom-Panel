@@ -10,7 +10,6 @@ using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Runtime;
 using Phantom.Utils.Runtime;
-using Phantom.Utils.Tasks;
 
 var shutdownCancellationTokenSource = new CancellationTokenSource();
 var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
@@ -64,14 +63,12 @@ try {
 		return new RpcConfiguration(serviceName, host, port, connectionKey.Certificate);
 	}
 
-	var rpcTaskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Rpc"));
 	try {
 		await Task.WhenAll(
 			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.AgentRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken),
 			RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.WebRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken)
 		);
 	} finally {
-		await rpcTaskManager.Stop();
 		NetMQConfig.Cleanup();
 	}
 

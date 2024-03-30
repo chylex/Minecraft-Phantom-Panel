@@ -20,7 +20,7 @@ namespace Phantom.Agent.Services.Instances;
 sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManagerActor>();
 
-	public readonly record struct Init(ControllerConnection ControllerConnection, AgentFolders AgentFolders, AgentState AgentState, JavaRuntimeRepository JavaRuntimeRepository, InstanceTicketManager InstanceTicketManager, TaskManager TaskManager, BackupManager BackupManager);
+	public readonly record struct Init(ControllerConnection ControllerConnection, AgentFolders AgentFolders, AgentState AgentState, JavaRuntimeRepository JavaRuntimeRepository, InstanceTicketManager InstanceTicketManager, BackupManager BackupManager);
 
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceManagerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
@@ -47,7 +47,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		var minecraftServerExecutables = new MinecraftServerExecutables(init.AgentFolders.ServerExecutableFolderPath);
 		var launchServices = new LaunchServices(minecraftServerExecutables, init.JavaRuntimeRepository);
 
-		this.instanceServices = new InstanceServices(init.ControllerConnection, init.TaskManager, init.BackupManager, launchServices);
+		this.instanceServices = new InstanceServices(init.ControllerConnection, init.BackupManager, launchServices);
 		
 		ReceiveAndReply<ConfigureInstanceCommand, InstanceActionResult<ConfigureInstanceResult>>(ConfigureInstance);
 		ReceiveAndReply<LaunchInstanceCommand, InstanceActionResult<LaunchInstanceResult>>(LaunchInstance);

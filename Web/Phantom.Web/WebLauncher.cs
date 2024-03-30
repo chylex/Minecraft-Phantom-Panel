@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Phantom.Common.Messages.Web;
 using Phantom.Utils.Rpc.Runtime;
-using Phantom.Utils.Tasks;
 using Phantom.Web.Services;
 using Serilog;
 using ILogger = Serilog.ILogger;
@@ -13,7 +12,7 @@ static class WebLauncher {
 		public string HttpUrl => "http://" + Host + ":" + Port;
 	}
 	
-	internal static WebApplication CreateApplication(Configuration config, TaskManager taskManager, ApplicationProperties applicationProperties, RpcConnectionToServer<IMessageToController> controllerConnection) {
+	internal static WebApplication CreateApplication(Configuration config, ApplicationProperties applicationProperties, RpcConnectionToServer<IMessageToController> controllerConnection) {
 		var assembly = typeof(WebLauncher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = assembly.GetName().Name,
@@ -29,7 +28,6 @@ static class WebLauncher {
 			builder.WebHost.UseStaticWebAssets();
 		}
 
-		builder.Services.AddSingleton(taskManager);
 		builder.Services.AddSingleton(applicationProperties);
 		builder.Services.AddSingleton(controllerConnection);
 		builder.Services.AddPhantomServices();

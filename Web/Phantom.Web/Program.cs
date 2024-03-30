@@ -9,7 +9,6 @@ using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Sockets;
 using Phantom.Utils.Runtime;
-using Phantom.Utils.Tasks;
 using Phantom.Web;
 using Phantom.Web.Services;
 using Phantom.Web.Services.Rpc;
@@ -59,8 +58,7 @@ try {
 	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, WebMessageRegistries.Definitions, new RegisterWebMessage(webToken));
 
 	var webConfiguration = new WebLauncher.Configuration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, dataProtectionKeysPath, shutdownCancellationToken);
-	var taskManager = new TaskManager(PhantomLogger.Create<TaskManager>("Web"));
-	var webApplication = WebLauncher.CreateApplication(webConfiguration, taskManager, applicationProperties, rpcSocket.Connection);
+	var webApplication = WebLauncher.CreateApplication(webConfiguration, applicationProperties, rpcSocket.Connection);
 
 	using var actorSystem = ActorSystemFactory.Create("Web");
 	
@@ -88,7 +86,6 @@ try {
 		await WebLauncher.Launch(webConfiguration, webApplication);
 	} finally {
 		shutdownCancellationTokenSource.Cancel();
-		await taskManager.Stop();
 		
 		rpcDisconnectSemaphore.Release();
 		await rpcTask;

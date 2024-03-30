@@ -31,7 +31,7 @@ sealed class InstanceRunningState : IDisposable {
 		this.Process = process;
 		this.cancellationToken = cancellationToken;
 
-		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.Services.TaskManager, context.InstanceGuid, context.ShortName);
+		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.InstanceGuid, context.ShortName);
 
 		this.backupScheduler = new BackupScheduler(context, process, configuration.ServerPort);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;

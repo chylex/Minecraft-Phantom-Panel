@@ -8,19 +8,13 @@ public abstract class CancellableBackgroundTask {
 	protected ILogger Logger { get; }
 	protected CancellationToken CancellationToken { get; }
 
-	private readonly TaskManager taskManager;
-	private readonly string taskName;
-	
-	protected CancellableBackgroundTask(ILogger logger, TaskManager taskManager, string taskName) {
+	protected CancellableBackgroundTask(ILogger logger) {
 		this.Logger = logger;
 		this.CancellationToken = cancellationTokenSource.Token;
-		
-		this.taskManager = taskManager;
-		this.taskName = taskName;
 	}
 
 	protected void Start() {
-		taskManager.Run(taskName, Run);
+		Task.Run(Run, CancellationToken.None);
 	}
 
 	private async Task Run() {

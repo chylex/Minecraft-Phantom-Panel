@@ -24,7 +24,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted;
 
-	public BackupScheduler(InstanceContext context, InstanceProcess process, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName), context.Services.TaskManager, "Backup scheduler for " + context.ShortName) {
+	public BackupScheduler(InstanceContext context, InstanceProcess process, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName)) {
 		this.backupManager = context.Services.BackupManager;
 		this.context = context;
 		this.process = process;
