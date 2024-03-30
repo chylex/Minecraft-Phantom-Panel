@@ -69,6 +69,8 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		
 		ReceiveAsync<RegisterWebMessage>(HandleRegisterWeb);
 		Receive<UnregisterWebMessage>(HandleUnregisterWeb);
+		ReceiveAndReplyLater<LogInMessage, LogInSuccess?>(HandleLogIn);
+		Receive<LogOutMessage>(HandleLogOut);
 		ReceiveAndReplyLater<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(HandleCreateOrUpdateAdministratorUser);
 		ReceiveAndReplyLater<CreateUserMessage, CreateUserResult>(HandleCreateUser);
 		ReceiveAndReplyLater<GetUsersMessage, ImmutableArray<UserInfo>>(HandleGetUsers);
@@ -84,7 +86,6 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		ReceiveAndReply<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(HandleGetAgentJavaRuntimes);
 		ReceiveAndReplyLater<GetAuditLogMessage, ImmutableArray<AuditLogItem>>(HandleGetAuditLog);
 		ReceiveAndReplyLater<GetEventLogMessage, ImmutableArray<EventLogItem>>(HandleGetEventLog);
-		ReceiveAndReplyLater<LogInMessage, LogInSuccess?>(HandleLogIn);
 		Receive<ReplyMessage>(HandleReply);
 	}
 
@@ -96,6 +97,14 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		connection.Close();
 	}
 
+	private Task<LogInSuccess?> HandleLogIn(LogInMessage message) {
+		return userLoginManager.LogIn(message.Username, message.Password);
+	}
+
+	private void HandleLogOut(LogOutMessage message) {
+		_ = userLoginManager.LogOut(message.UserGuid, message.SessionToken);
+	}
+	
 	private Task<CreateOrUpdateAdministratorUserResult> HandleCreateOrUpdateAdministratorUser(CreateOrUpdateAdministratorUserMessage message) {
 		return userManager.CreateOrUpdateAdministrator(message.Username, message.Password);
 	}
@@ -154,10 +163,6 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 
 	private Task<ImmutableArray<EventLogItem>> HandleGetEventLog(GetEventLogMessage message) {
 		return eventLogManager.GetMostRecentItems(message.Count);
-	}
-
-	private Task<LogInSuccess?> HandleLogIn(LogInMessage message) {
-		return userLoginManager.LogIn(message.Username, message.Password);
 	}
 
 	private void HandleReply(ReplyMessage message) {

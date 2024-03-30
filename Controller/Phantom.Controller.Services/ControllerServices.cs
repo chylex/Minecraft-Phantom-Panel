@@ -59,7 +59,7 @@ public sealed class ControllerServices : IDisposable {
 		this.PermissionManager = new PermissionManager(dbProvider);
 
 		this.UserRoleManager = new UserRoleManager(dbProvider);
-		this.UserLoginManager = new UserLoginManager(UserManager, PermissionManager);
+		this.UserLoginManager = new UserLoginManager(UserManager, PermissionManager, dbProvider);
 		this.AuditLogManager = new AuditLogManager(dbProvider);
 		this.EventLogManager = new EventLogManager(ActorSystem, dbProvider, shutdownCancellationToken);
 		

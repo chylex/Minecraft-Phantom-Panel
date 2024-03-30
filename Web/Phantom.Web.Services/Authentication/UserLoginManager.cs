@@ -53,8 +53,8 @@ public sealed class UserLoginManager {
 
 	public async Task LogOut() {
 		var stored = await sessionBrowserStorage.Delete();
-		if (stored != null) {
-			sessionManager.Remove(stored.UserGuid, stored.Token);
+		if (stored != null && sessionManager.Remove(stored.UserGuid, stored.Token)) {
+			await controllerConnection.Send(new LogOutMessage(stored.UserGuid, stored.Token));
 		}
 
 		await navigation.NavigateTo(string.Empty);

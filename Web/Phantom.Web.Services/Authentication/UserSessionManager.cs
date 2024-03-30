@@ -23,9 +23,13 @@ public sealed class UserSessionManager {
 		return userSessions.TryGetValue(userGuid, out var sessions) && sessions.HasToken(token) ? sessions.UserInfo : null;
 	}
 
-	internal void Remove(Guid userGuid, ImmutableArray<byte> token) {
+	internal bool Remove(Guid userGuid, ImmutableArray<byte> token) {
 		if (userSessions.TryGetValue(userGuid, out var sessions)) {
 			sessions.RemoveToken(token);
+			return true;
+		}
+		else {
+			return false;
 		}
 	}
 }
