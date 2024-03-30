@@ -17,6 +17,8 @@ using Phantom.Web.Services.Rpc;
 var shutdownCancellationTokenSource = new CancellationTokenSource();
 var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 
+ProgramCulture.UseInvariantCulture();
+
 PosixSignals.RegisterCancellation(shutdownCancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel web...");
 });

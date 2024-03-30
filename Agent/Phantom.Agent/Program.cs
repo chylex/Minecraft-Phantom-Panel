@@ -18,11 +18,12 @@ const int ProtocolVersion = 1;
 var shutdownCancellationTokenSource = new CancellationTokenSource();
 var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 
+ProgramCulture.UseInvariantCulture();
+ThreadPool.SetMinThreads(workerThreads: 2, completionPortThreads: 1);
+
 PosixSignals.RegisterCancellation(shutdownCancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel agent...");
 });
-
-ThreadPool.SetMinThreads(workerThreads: 2, completionPortThreads: 1);
 
 try {
 	var fullVersion = AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly());

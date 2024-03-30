@@ -15,6 +15,8 @@ using Phantom.Utils.Tasks;
 var shutdownCancellationTokenSource = new CancellationTokenSource();
 var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
 
+ProgramCulture.UseInvariantCulture();
+
 PosixSignals.RegisterCancellation(shutdownCancellationTokenSource, static () => {
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel controller...");
 });
