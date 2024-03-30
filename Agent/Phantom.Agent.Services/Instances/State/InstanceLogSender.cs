@@ -8,7 +8,7 @@ using Phantom.Utils.Tasks;
 namespace Phantom.Agent.Services.Instances.State;
 
 sealed class InstanceLogSender : CancellableBackgroundTask {
-	private static readonly BoundedChannelOptions BufferOptions = new (capacity: 64) {
+	private static readonly BoundedChannelOptions BufferOptions = new (capacity: 100) {
 		SingleReader = true,
 		SingleWriter = true,
 		FullMode = BoundedChannelFullMode.DropNewest
