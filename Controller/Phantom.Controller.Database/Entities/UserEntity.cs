@@ -7,9 +7,9 @@ namespace Phantom.Controller.Database.Entities;
 [Table("Users", Schema = "identity")]
 public sealed class UserEntity {
 	[Key]
-	public Guid UserGuid { get; set; }
+	public Guid UserGuid { get; init; }
 
-	public string Name { get; set; }
+	public string Name { get; init; }
 	public string PasswordHash { get; set; }
 
 	public UserEntity(Guid userGuid, string name, string passwordHash) {

@@ -9,7 +9,7 @@ namespace Phantom.Controller.Database.Entities;
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public sealed class AgentEntity {
 	[Key]
-	public Guid AgentGuid { get; set; }
+	public Guid AgentGuid { get; init; }
 	
 	public string Name { get; set; }
 	public ushort ProtocolVersion { get; set; }

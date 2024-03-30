@@ -6,7 +6,7 @@ namespace Phantom.Controller.Database.Entities;
 [Table("Permissions", Schema = "identity")]
 public sealed class PermissionEntity {
 	[Key]
-	public string Id { get; set; }
+	public string Id { get; init; }
 
 	public PermissionEntity(string id) {
 		Id = id;

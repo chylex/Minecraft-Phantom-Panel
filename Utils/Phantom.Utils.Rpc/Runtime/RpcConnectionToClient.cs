@@ -9,7 +9,7 @@ public sealed class RpcConnectionToClient<TMessageBase> : RpcConnection<TMessage
 	private readonly uint routingId;
 
 	internal event EventHandler<RpcClientConnectionClosedEventArgs>? Closed;
-	public bool IsClosed { get; private set; }
+	private bool isClosed;
 
 	internal RpcConnectionToClient(ServerSocket socket, uint routingId, MessageRegistry<TMessageBase> messageRegistry, MessageReplyTracker replyTracker) : base(messageRegistry, replyTracker) {
 		this.socket = socket;
@@ -24,8 +24,8 @@ public sealed class RpcConnectionToClient<TMessageBase> : RpcConnection<TMessage
 		bool hasClosed = false;
 		
 		lock (this) {
-			if (!IsClosed) {
-				IsClosed = true;
+			if (!isClosed) {
+				isClosed = true;
 				hasClosed = true;
 			}
 		}

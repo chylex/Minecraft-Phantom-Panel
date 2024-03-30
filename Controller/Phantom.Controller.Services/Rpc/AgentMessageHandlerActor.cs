@@ -1,5 +1,4 @@
-﻿using Akka.Actor;
-using Phantom.Common.Data.Replies;
+﻿using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToAgent;
@@ -19,8 +18,6 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 		return Props<IMessageToController>.Create(() => new AgentMessageHandlerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
 
-	public IStash Stash { get; set; } = null!;
-	
 	private readonly Guid agentGuid;
 	private readonly RpcConnectionToClient<IMessageToAgent> connection;
 	private readonly AgentRegistrationHandler agentRegistrationHandler;

@@ -7,9 +7,9 @@ namespace Phantom.Controller.Database.Entities;
 [Table("Roles", Schema = "identity")]
 public sealed class RoleEntity {
 	[Key]
-	public Guid RoleGuid { get; set; }
+	public Guid RoleGuid { get; init; }
 
-	public string Name { get; set; }
+	public string Name { get; init; }
 
 	public RoleEntity(Guid roleGuid, string name) {
 		RoleGuid = roleGuid;

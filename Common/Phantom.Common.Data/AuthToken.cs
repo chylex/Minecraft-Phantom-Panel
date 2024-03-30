@@ -14,9 +14,7 @@ public sealed partial class AuthToken {
 	private readonly byte[] bytes;
 
 	internal AuthToken(byte[]? bytes) {
-		if (bytes == null) {
-			throw new ArgumentNullException(nameof(bytes));
-		}
+		ArgumentNullException.ThrowIfNull(bytes);
 
 		if (bytes.Length != Length) {
 			throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid token length: " + bytes.Length + ". Token length must be exactly " + Length + " bytes.");

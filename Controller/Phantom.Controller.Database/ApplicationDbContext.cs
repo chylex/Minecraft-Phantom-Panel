@@ -13,18 +13,18 @@ namespace Phantom.Controller.Database;
 
 [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public class ApplicationDbContext : DbContext {
-	public DbSet<UserEntity> Users { get; set; } = null!;
-	public DbSet<RoleEntity> Roles { get; set; } = null!;
-	public DbSet<PermissionEntity> Permissions { get; set; } = null!;
+	public DbSet<UserEntity> Users { get; init; } = null!;
+	public DbSet<RoleEntity> Roles { get; init; } = null!;
+	public DbSet<PermissionEntity> Permissions { get; init; } = null!;
 	
-	public DbSet<UserRoleEntity> UserRoles { get; set; } = null!;
-	public DbSet<UserPermissionEntity> UserPermissions { get; set; } = null!;
-	public DbSet<RolePermissionEntity> RolePermissions { get; set; } = null!;
+	public DbSet<UserRoleEntity> UserRoles { get; init; } = null!;
+	public DbSet<UserPermissionEntity> UserPermissions { get; init; } = null!;
+	public DbSet<RolePermissionEntity> RolePermissions { get; init; } = null!;
 	
-	public DbSet<AgentEntity> Agents { get; set; } = null!;
-	public DbSet<InstanceEntity> Instances { get; set; } = null!;
-	public DbSet<AuditLogEntity> AuditLog { get; set; } = null!;
-	public DbSet<EventLogEntity> EventLog { get; set; } = null!;
+	public DbSet<AgentEntity> Agents { get; init; } = null!;
+	public DbSet<InstanceEntity> Instances { get; init; } = null!;
+	public DbSet<AuditLogEntity> AuditLog { get; init; } = null!;
+	public DbSet<EventLogEntity> EventLog { get; init; } = null!;
 
 	public AgentEntityUpsert AgentUpsert { get; }
 	public InstanceEntityUpsert InstanceUpsert { get; }

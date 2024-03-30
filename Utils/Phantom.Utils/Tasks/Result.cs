@@ -1,4 +1,6 @@
-﻿namespace Phantom.Utils.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Phantom.Utils.Tasks;
 
 public abstract record Result<TValue, TError> {
 	private Result() {}
@@ -42,7 +44,7 @@ public abstract record Result<TError> {
 		return new Fail(error);
 	}
 
-	public static implicit operator Result<TError>(Result.OkType _) {
+	public static implicit operator Result<TError>([SuppressMessage("ReSharper", "UnusedParameter.Global")] Result.OkType _) {
 		return new Ok();
 	}
 	

@@ -11,14 +11,14 @@ namespace Phantom.Controller.Database.Entities;
 [SuppressMessage("ReSharper", "ClassWithVirtualMembersNeverInherited.Global")]
 public sealed class EventLogEntity : IDisposable {
 	[Key]
-	public Guid EventGuid { get; set; }
+	public Guid EventGuid { get; init; }
 
-	public DateTime UtcTime { get; set; } // Note: Converting to UTC is not best practice, but for historical records it's good enough.
-	public Guid? AgentGuid { get; set; }
-	public EventLogEventType EventType { get; set; }
-	public EventLogSubjectType SubjectType { get; set; }
-	public string SubjectId { get; set; }
-	public JsonDocument? Data { get; set; }
+	public DateTime UtcTime { get; init; } // Note: Converting to UTC is not best practice, but for historical records it's good enough.
+	public Guid? AgentGuid { get; init; }
+	public EventLogEventType EventType { get; init; }
+	public EventLogSubjectType SubjectType { get; init; }
+	public string SubjectId { get; init; }
+	public JsonDocument? Data { get; init; }
 	
 	[SuppressMessage("ReSharper", "UnusedMember.Global")]
 	internal EventLogEntity() {

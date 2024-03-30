@@ -12,7 +12,7 @@ public class EnvironmentVariablesTests {
 	private readonly HashSet<string> createdVariables = new ();
 
 	private static void Discard<T>(T value) {
-		var _ = value;
+		_ = value;
 	}
 
 	private string CreateVariable(string value) {

@@ -11,7 +11,7 @@ namespace Phantom.Controller.Database.Entities;
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public sealed class InstanceEntity {
 	[Key]
-	public Guid InstanceGuid { get; set; }
+	public Guid InstanceGuid { get; init; }
 
 	public Guid AgentGuid { get; set; }
 
