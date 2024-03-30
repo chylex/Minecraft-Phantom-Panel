@@ -75,6 +75,8 @@ static class InstanceStopProcedure {
 			// Ignore.
 		} catch (ObjectDisposedException e) when (e.ObjectName == typeof(Process).FullName && process.HasEnded) {
 			// Ignore.
+		} catch (IOException e) when (e.HResult == -2147024664 /* The pipe is being closed */) {
+			// Ignore.
 		} catch (Exception e) {
 			context.Logger.Warning(e, "Caught exception while sending stop command.");
 		}
