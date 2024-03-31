@@ -54,9 +54,8 @@ sealed class UserManager {
 				}
 			}
 			else {
-				var result = userRepository.SetUserPassword(user, password);
-				if (!result) {
-					return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.UpdatingFailed(result.Error);
+				if (userRepository.SetUserPassword(user, password).TryGetError(out var error)) {
+					return new Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults.UpdatingFailed(error);
 				}
 
 				auditLogWriter.AdministratorUserModified(user);

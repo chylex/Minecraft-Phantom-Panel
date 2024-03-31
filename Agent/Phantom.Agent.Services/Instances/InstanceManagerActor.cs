@@ -12,7 +12,6 @@ using Phantom.Common.Data.Replies;
 using Phantom.Utils.Actor;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Tasks;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -140,8 +139,8 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		}
 		
 		var ticket = instanceTicketManager.Reserve(instanceInfo.Configuration);
-		if (ticket is Result<InstanceTicketManager.Ticket, LaunchInstanceResult>.Fail fail) {
-			return InstanceActionResult.Concrete(fail.Error);
+		if (!ticket) {
+			return InstanceActionResult.Concrete(ticket.Error);
 		}
 
 		if (agentState.InstancesByGuid.TryGetValue(instanceGuid, out var instance)) {

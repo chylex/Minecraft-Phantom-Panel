@@ -1,14 +1,14 @@
 ﻿@page "/setup"
-@using Phantom.Utils.Tasks
+@using Phantom.Common.Data
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults
+@using Phantom.Common.Messages.Web.ToController
+@using Phantom.Utils.Cryptography
 @using Phantom.Web.Services
 @using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Rpc
 @using System.ComponentModel.DataAnnotations
-@using Phantom.Utils.Cryptography
 @using System.Security.Cryptography
-@using Phantom.Common.Messages.Web.ToController
-@using Phantom.Common.Data.Web.Users
-@using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults
 @attribute [AllowAnonymous]
 @inject ApplicationProperties ApplicationProperties
 @inject UserLoginManager LoginManager
@@ -65,8 +65,9 @@
       return;
     }
 
-    if (await CreateOrUpdateAdministrator() is Result<string>.Fail fail) {
-      form.SubmitModel.StopSubmitting(fail.Error);
+    var createOrUpdateAdministratorResult = await CreateOrUpdateAdministrator();
+    if (createOrUpdateAdministratorResult.TryGetError(out var error)) {
+      form.SubmitModel.StopSubmitting(error);
       return;
     }
 

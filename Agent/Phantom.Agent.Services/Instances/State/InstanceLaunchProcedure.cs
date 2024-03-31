@@ -1,8 +1,8 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
-using Phantom.Utils.Tasks;
 
 namespace Phantom.Agent.Services.Instances.State;
 
