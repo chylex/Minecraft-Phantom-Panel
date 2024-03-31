@@ -1,8 +1,7 @@
-﻿@using Phantom.Web.Services
-@using Phantom.Web.Services.Authorization
+﻿@using Phantom.Web.Services.Authentication
+@using Phantom.Web.Services
 @using Phantom.Common.Data.Web.Users
 @inject ApplicationProperties ApplicationProperties
-@inject PermissionManager PermissionManager
 
 <div class="navbar navbar-dark">
   <div class="container-fluid">
@@ -24,7 +23,7 @@
         <NavMenuItem Label="Login" Icon="account-login" Href="login" />
       </NotAuthorized>
       <Authorized>
-        @{ var permissions = PermissionManager.GetPermissions(context.User); }
+        @{ var permissions = context.GetPermissions(); }
         
         @if (permissions.Check(Permission.ViewInstances)) {
           <NavMenuItem Label="Instances" Icon="folder" Href="instances" />

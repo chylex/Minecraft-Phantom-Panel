@@ -1,16 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Phantom.Web.Services.Authentication;
 
 namespace Phantom.Web.Services.Authorization;
 
 sealed class PermissionBasedPolicyHandler : AuthorizationHandler<PermissionBasedPolicyRequirement> {
-	private readonly PermissionManager permissionManager;
-
-	public PermissionBasedPolicyHandler(PermissionManager permissionManager) {
-		this.permissionManager = permissionManager;
-	}
-
 	protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionBasedPolicyRequirement requirement) {
-		if (permissionManager.CheckPermission(context.User, requirement.Permission)) {
+		if (context.User.CheckPermission(requirement.Permission)) {
 			context.Succeed(requirement);
 		}
 		else {

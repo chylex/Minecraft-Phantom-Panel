@@ -10,14 +10,12 @@ public sealed class UserLoginManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserLoginManager>();
 
 	private readonly Navigation navigation;
-	private readonly UserSessionManager sessionManager;
 	private readonly UserSessionBrowserStorage sessionBrowserStorage;
 	private readonly CustomAuthenticationStateProvider authenticationStateProvider;
 	private readonly ControllerConnection controllerConnection;
 
-	public UserLoginManager(Navigation navigation, UserSessionManager sessionManager, UserSessionBrowserStorage sessionBrowserStorage, CustomAuthenticationStateProvider authenticationStateProvider, ControllerConnection controllerConnection) {
+	public UserLoginManager(Navigation navigation, UserSessionBrowserStorage sessionBrowserStorage, CustomAuthenticationStateProvider authenticationStateProvider, ControllerConnection controllerConnection) {
 		this.navigation = navigation;
-		this.sessionManager = sessionManager;
 		this.sessionBrowserStorage = sessionBrowserStorage;
 		this.authenticationStateProvider = authenticationStateProvider;
 		this.controllerConnection = controllerConnection;
@@ -38,13 +36,9 @@ public sealed class UserLoginManager {
 
 		Logger.Information("Successfully logged in {Username}.", username);
 
-		var userGuid = success.UserGuid;
-		var userInfo = new UserInfo(userGuid, username, success.Permissions);
-		var token = success.Token;
+		var userInfo = success.UserInfo;
 
-		await sessionBrowserStorage.Store(userGuid, token);
-		sessionManager.Add(userInfo, token);
-		
+		await sessionBrowserStorage.Store(userInfo.Guid, success.Token);
 		authenticationStateProvider.SetLoadedSession(userInfo);
 		await navigation.NavigateTo(returnUrl ?? string.Empty);
 		
@@ -53,7 +47,7 @@ public sealed class UserLoginManager {
 
 	public async Task LogOut() {
 		var stored = await sessionBrowserStorage.Delete();
-		if (stored != null && sessionManager.Remove(stored.UserGuid, stored.Token)) {
+		if (stored != null) {
 			await controllerConnection.Send(new LogOutMessage(stored.UserGuid, stored.Token));
 		}
 

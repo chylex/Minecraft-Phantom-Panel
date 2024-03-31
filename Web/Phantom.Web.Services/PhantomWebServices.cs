@@ -22,7 +22,6 @@ public static class PhantomWebServices {
 		services.AddSingleton<EventLogManager>();
 		
 		services.AddSingleton<UserManager>();
-		services.AddSingleton<UserSessionManager>();
 		services.AddSingleton<AuditLogManager>();
 		services.AddScoped<UserLoginManager>();
 		services.AddScoped<UserSessionBrowserStorage>();
@@ -34,7 +33,6 @@ public static class PhantomWebServices {
 		services.AddScoped<AuthenticationStateProvider>(static services => services.GetRequiredService<CustomAuthenticationStateProvider>());
 		
 		services.AddAuthorization(ConfigureAuthorization);
-		services.AddSingleton<PermissionManager>();
 		services.AddScoped<IAuthorizationHandler, PermissionBasedPolicyHandler>();
 	}
 	

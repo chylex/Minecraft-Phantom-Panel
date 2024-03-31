@@ -1,9 +1,10 @@
 ﻿@page "/users"
 @attribute [Authorize(Permission.ViewUsersPolicy)]
 @using System.Collections.Immutable
-@using Phantom.Common.Data.Web.Users
-@using Phantom.Web.Services.Users
+@using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Authorization
+@using Phantom.Web.Services.Users
+@using Phantom.Common.Data.Web.Users
 @inherits Phantom.Web.Components.PhantomComponent
 @inject UserManager UserManager
 @inject RoleManager RoleManager
@@ -17,7 +18,7 @@
 
 <AuthorizeView>
   <Authorized>
-    @{ var canEdit = PermissionManager.CheckPermission(context.User, Permission.EditUsers); }
+    @{ var canEdit = context.CheckPermission(Permission.EditUsers); }
     <Table TItem="UserInfo" Items="allUsers">
       <HeaderRow>
         <Column>Username</Column>

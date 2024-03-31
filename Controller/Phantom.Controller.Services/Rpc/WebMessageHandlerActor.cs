@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -71,6 +72,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		Receive<UnregisterWebMessage>(HandleUnregisterWeb);
 		ReceiveAndReplyLater<LogInMessage, LogInSuccess?>(HandleLogIn);
 		Receive<LogOutMessage>(HandleLogOut);
+		ReceiveAndReply<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(GetAuthenticatedUser);
 		ReceiveAndReplyLater<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(HandleCreateOrUpdateAdministratorUser);
 		ReceiveAndReplyLater<CreateUserMessage, CreateUserResult>(HandleCreateUser);
 		ReceiveAndReplyLater<GetUsersMessage, ImmutableArray<UserInfo>>(HandleGetUsers);
@@ -104,7 +106,11 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	private void HandleLogOut(LogOutMessage message) {
 		_ = userLoginManager.LogOut(message.UserGuid, message.SessionToken);
 	}
-	
+
+	private Optional<AuthenticatedUserInfo> GetAuthenticatedUser(GetAuthenticatedUser message) {
+		return userLoginManager.GetAuthenticatedUser(message.UserGuid, message.SessionToken);
+	}
+    
 	private Task<CreateOrUpdateAdministratorUserResult> HandleCreateOrUpdateAdministratorUser(CreateOrUpdateAdministratorUserMessage message) {
 		return userManager.CreateOrUpdateAdministrator(message.Username, message.Password);
 	}

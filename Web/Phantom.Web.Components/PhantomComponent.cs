@@ -2,9 +2,8 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Utils.Logging;
-using Phantom.Web.Services.Authorization;
+using Phantom.Web.Services.Authentication;
 using ILogger = Serilog.ILogger;
-using UserInfo = Phantom.Web.Services.Authentication.UserInfo;
 
 namespace Phantom.Web.Components;
 
@@ -14,21 +13,18 @@ public abstract class PhantomComponent : ComponentBase, IDisposable {
 	[CascadingParameter]
 	public Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
 
-	[Inject]
-	public PermissionManager PermissionManager { get; set; } = null!;
-
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
 
 	protected CancellationToken CancellationToken => cancellationTokenSource.Token;
 
 	protected async Task<Guid?> GetUserGuid() {
 		var authenticationState = await AuthenticationStateTask;
-		return UserInfo.TryGetGuid(authenticationState.User);
+		return authenticationState.TryGetGuid();
 	}
 
 	protected async Task<bool> CheckPermission(Permission permission) {
 		var authenticationState = await AuthenticationStateTask;
-		return PermissionManager.CheckPermission(authenticationState.User, permission);
+		return authenticationState.CheckPermission(permission);
 	}
 
 	protected void InvokeAsyncChecked(Func<Task> task) {
