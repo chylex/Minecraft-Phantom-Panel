@@ -97,6 +97,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		IServerLauncher launcher = configuration.MinecraftServerKind switch {
 			MinecraftServerKind.Vanilla => new VanillaLauncher(properties),
 			MinecraftServerKind.Fabric  => new FabricLauncher(properties),
+			MinecraftServerKind.Forge   => new ForgeLauncher(properties),
 			_                           => InvalidLauncher.Instance,
 		};
 		

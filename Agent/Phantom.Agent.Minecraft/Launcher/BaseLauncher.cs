@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.ObjectModel;
+using System.Text;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Minecraft.Server;
@@ -11,7 +12,7 @@ public abstract class BaseLauncher : IServerLauncher {
 	private readonly InstanceProperties instanceProperties;
 	
 	protected string MinecraftVersion => instanceProperties.ServerVersion;
-	
+	protected string InstanceFolder => instanceProperties.InstanceFolder;
 	private protected BaseLauncher(InstanceProperties instanceProperties) {
 		this.instanceProperties = instanceProperties;
 	}
@@ -51,17 +52,14 @@ public abstract class BaseLauncher : IServerLauncher {
 		
 		var processConfigurator = new ProcessConfigurator {
 			FileName = javaRuntimeExecutable.ExecutablePath,
-			WorkingDirectory = instanceProperties.InstanceFolder,
+			WorkingDirectory = InstanceFolder,
 			RedirectInput = true,
 			UseShellExecute = false,
 		};
 		
 		var processArguments = processConfigurator.ArgumentList;
 		PrepareJvmArguments(serverJar).Build(processArguments);
-		processArguments.Add("-jar");
-		processArguments.Add(serverJar.FilePath);
-		processArguments.Add("nogui");
-		
+		PrepareJavaProcessArguments(processArguments, serverJar.FilePath);
 		var process = processConfigurator.CreateProcess();
 		var instanceProcess = new InstanceProcess(instanceProperties, process);
 		
@@ -98,7 +96,12 @@ public abstract class BaseLauncher : IServerLauncher {
 	}
 	
 	private protected virtual void CustomizeJvmArguments(JvmArgumentBuilder arguments) {}
-	
+
+	protected virtual void PrepareJavaProcessArguments(Collection<string> processArguments, string serverJarFilePath) {
+		processArguments.Add("-jar");
+		processArguments.Add(serverJarFilePath);
+		processArguments.Add("nogui");
+	}
 	private protected virtual Task<ServerJarInfo> PrepareServerJar(ILogger logger, string serverJarPath, CancellationToken cancellationToken) {
 		return Task.FromResult(new ServerJarInfo(serverJarPath));
 	}
