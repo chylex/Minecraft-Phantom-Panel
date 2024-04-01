@@ -32,18 +32,18 @@ sealed partial class BackupServerCommandDispatcher : IDisposable {
 
 	public async Task DisableAutomaticSaving() {
 		await process.SendCommand(MinecraftCommand.SaveOff, cancellationToken);
-		await automaticSavingDisabled.Task.WaitAsync(cancellationToken);
+		await automaticSavingDisabled.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 	}
 
 	public async Task SaveAllChunks() {
 		// TODO Try if not flushing and waiting a few seconds before flushing reduces lag.
 		await process.SendCommand(MinecraftCommand.SaveAll(flush: true), cancellationToken);
-		await savedTheGame.Task.WaitAsync(cancellationToken);
+		await savedTheGame.Task.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
 	}
 
 	public async Task EnableAutomaticSaving() {
 		await process.SendCommand(MinecraftCommand.SaveOn, cancellationToken);
-		await automaticSavingEnabled.Task.WaitAsync(cancellationToken);
+		await automaticSavingEnabled.Task.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
 	}
 
 	private void OnOutput(object? sender, string? line) {

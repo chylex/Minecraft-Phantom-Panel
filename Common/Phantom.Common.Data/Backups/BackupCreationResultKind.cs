@@ -1,15 +1,16 @@
 ﻿namespace Phantom.Common.Data.Backups;
 
 public enum BackupCreationResultKind : byte {
-	UnknownError,
-	Success,
-	InstanceNotRunning,
-	BackupCancelled,
-	BackupAlreadyRunning,
-	BackupFileAlreadyExists,
-	CouldNotCreateBackupFolder,
-	CouldNotCopyWorldToTemporaryFolder,
-	CouldNotCreateWorldArchive
+	UnknownError = 0,
+	Success = 1,
+	InstanceNotRunning = 2,
+	BackupTimedOut = 3,
+	BackupCancelled = 4,
+	BackupAlreadyRunning = 5,
+	BackupFileAlreadyExists = 6,
+	CouldNotCreateBackupFolder = 7,
+	CouldNotCopyWorldToTemporaryFolder = 8,
+	CouldNotCreateWorldArchive = 9
 }
 
 public static class BackupCreationResultSummaryExtensions {

@@ -67,6 +67,10 @@ sealed class BackupManager : IDisposable {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
 				return null;
+			} catch (TimeoutException) {
+				resultBuilder.Kind = BackupCreationResultKind.BackupTimedOut;
+				logger.Warning("Backup creation timed out.");
+				return null;
 			} catch (Exception e) {
 				resultBuilder.Kind = BackupCreationResultKind.UnknownError;
 				logger.Error(e, "Caught exception while creating an instance backup.");
@@ -76,6 +80,9 @@ sealed class BackupManager : IDisposable {
 					await dispatcher.EnableAutomaticSaving();
 				} catch (OperationCanceledException) {
 					// Ignore.
+				} catch (TimeoutException) {
+					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotRestoreAutomaticSaving;
+					logger.Warning("Timed out waiting for automatic saving to be re-enabled.");
 				} catch (Exception e) {
 					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotRestoreAutomaticSaving;
 					logger.Error(e, "Caught exception while enabling automatic saving after creating an instance backup.");
@@ -120,6 +127,7 @@ sealed class BackupManager : IDisposable {
 				BackupCreationResultKind.Success                            => "Backup created successfully.",
 				BackupCreationResultKind.InstanceNotRunning                 => "Instance is not running.",
 				BackupCreationResultKind.BackupCancelled                    => "Backup cancelled.",
+				BackupCreationResultKind.BackupTimedOut                     => "Backup timed out.",
 				BackupCreationResultKind.BackupAlreadyRunning               => "A backup is already being created.",
 				BackupCreationResultKind.BackupFileAlreadyExists            => "Backup with the same name already exists.",
 				BackupCreationResultKind.CouldNotCreateBackupFolder         => "Could not create backup folder.",
