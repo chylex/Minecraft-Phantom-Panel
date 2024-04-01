@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data.Replies;
+﻿using Phantom.Common.Data;
+using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Common.Messages.Agent.ToController;
@@ -16,10 +17,10 @@ public static class AgentMessageRegistries {
 	static AgentMessageRegistries() {
 		ToAgent.Add<RegisterAgentSuccessMessage>(0);
 		ToAgent.Add<RegisterAgentFailureMessage>(1);
-		ToAgent.Add<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(2);
-		ToAgent.Add<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(3);
-		ToAgent.Add<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(4);
-		ToAgent.Add<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(5);
+		ToAgent.Add<ConfigureInstanceMessage, Result<ConfigureInstanceResult, InstanceActionFailure>>(2);
+		ToAgent.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(3);
+		ToAgent.Add<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(4);
+		ToAgent.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(5);
 		ToAgent.Add<ReplyMessage>(127);
 		
 		ToController.Add<RegisterAgentMessage>(0);

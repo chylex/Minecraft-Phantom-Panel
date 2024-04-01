@@ -83,12 +83,7 @@ sealed class AgentManager {
 		}
 	}
 
-	public async Task<InstanceActionResult<TReply>> DoInstanceAction<TCommand, TReply>(Guid agentGuid, TCommand command) where TCommand : class, AgentActor.ICommand, ICanReply<InstanceActionResult<TReply>> {
-		if (agentsByGuid.TryGetValue(agentGuid, out var agent)) {
-			return await agent.Request(command, cancellationToken);
-		}
-		else {
-			return InstanceActionResult.General<TReply>(InstanceActionGeneralResult.AgentDoesNotExist);
-		}
+	public async Task<Result<TReply, InstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Guid agentGuid, TCommand command) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
+		return agentsByGuid.TryGetValue(agentGuid, out var agent) ? await agent.Request(command, cancellationToken) : InstanceActionFailure.AgentDoesNotExist;
 	}
 }

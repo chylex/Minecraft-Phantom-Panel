@@ -1,4 +1,5 @@
 ﻿using Phantom.Agent.Services.Instances;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent;
@@ -32,10 +33,10 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 		
 		ReceiveAsync<RegisterAgentSuccessMessage>(HandleRegisterAgentSuccess);
 		Receive<RegisterAgentFailureMessage>(HandleRegisterAgentFailure);
-		ReceiveAndReplyLater<ConfigureInstanceMessage, InstanceActionResult<ConfigureInstanceResult>>(HandleConfigureInstance);
-		ReceiveAndReplyLater<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(HandleLaunchInstance);
-		ReceiveAndReplyLater<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(HandleStopInstance);
-		ReceiveAndReplyLater<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(HandleSendCommandToInstance);
+		ReceiveAndReplyLater<ConfigureInstanceMessage, Result<ConfigureInstanceResult, InstanceActionFailure>>(HandleConfigureInstance);
+		ReceiveAndReplyLater<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(HandleLaunchInstance);
+		ReceiveAndReplyLater<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(HandleStopInstance);
+		ReceiveAndReplyLater<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(HandleSendCommandToInstance);
 		Receive<ReplyMessage>(HandleReply);
 	}
 
@@ -74,23 +75,23 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 		Environment.Exit(1);
 	}
 	
-	private Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message, bool alwaysReportStatus) {
+	private Task<Result<ConfigureInstanceResult, InstanceActionFailure>> HandleConfigureInstance(ConfigureInstanceMessage message, bool alwaysReportStatus) {
 		return agent.InstanceManager.Request(new InstanceManagerActor.ConfigureInstanceCommand(message.InstanceGuid, message.Configuration, message.LaunchProperties, message.LaunchNow, alwaysReportStatus));
 	}
 	
-	private async Task<InstanceActionResult<ConfigureInstanceResult>> HandleConfigureInstance(ConfigureInstanceMessage message) {
+	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> HandleConfigureInstance(ConfigureInstanceMessage message) {
 		return await HandleConfigureInstance(message, alwaysReportStatus: false);
 	}
 
-	private async Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {
+	private async Task<Result<LaunchInstanceResult, InstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
 		return await agent.InstanceManager.Request(new InstanceManagerActor.LaunchInstanceCommand(message.InstanceGuid));
 	}
 
-	private async Task<InstanceActionResult<StopInstanceResult>> HandleStopInstance(StopInstanceMessage message) {
+	private async Task<Result<StopInstanceResult, InstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
 		return await agent.InstanceManager.Request(new InstanceManagerActor.StopInstanceCommand(message.InstanceGuid, message.StopStrategy));
 	}
 
-	private async Task<InstanceActionResult<SendCommandToInstanceResult>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
+	private async Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
 		return await agent.InstanceManager.Request(new InstanceManagerActor.SendCommandToInstanceCommand(message.InstanceGuid, message.Command));
 	}
 

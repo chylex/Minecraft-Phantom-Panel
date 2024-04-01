@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data.Instance;
+﻿using Phantom.Common.Data;
+using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
@@ -39,10 +40,10 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		this.databaseStorageActor = Context.ActorOf(InstanceDatabaseStorageActor.Factory(new InstanceDatabaseStorageActor.Init(instanceGuid, init.DbProvider, init.CancellationToken)), "DatabaseStorage");
 
 		Receive<SetStatusCommand>(SetStatus);
-		ReceiveAsyncAndReply<ConfigureInstanceCommand, InstanceActionResult<ConfigureInstanceResult>>(ConfigureInstance);
-		ReceiveAsyncAndReply<LaunchInstanceCommand, InstanceActionResult<LaunchInstanceResult>>(LaunchInstance);
-		ReceiveAsyncAndReply<StopInstanceCommand, InstanceActionResult<StopInstanceResult>>(StopInstance);
-		ReceiveAsyncAndReply<SendCommandToInstanceCommand, InstanceActionResult<SendCommandToInstanceResult>>(SendMinecraftCommand);
+		ReceiveAsyncAndReply<ConfigureInstanceCommand, Result<ConfigureInstanceResult, InstanceActionFailure>>(ConfigureInstance);
+		ReceiveAsyncAndReply<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
+		ReceiveAsyncAndReply<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
+		ReceiveAsyncAndReply<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendMinecraftCommand);
 	}
 
 	private void NotifyInstanceUpdated() {
@@ -56,29 +57,29 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		}
 	}
 
-	private async Task<InstanceActionResult<TReply>> SendInstanceActionMessage<TMessage, TReply>(TMessage message) where TMessage : IMessageToAgent, ICanReply<InstanceActionResult<TReply>> {
-		var reply = await agentConnection.Send<TMessage, InstanceActionResult<TReply>>(message, TimeSpan.FromSeconds(10), cancellationToken);
-		return reply.DidNotReplyIfNull();
+	private async Task<Result<TReply, InstanceActionFailure>> SendInstanceActionMessage<TMessage, TReply>(TMessage message) where TMessage : IMessageToAgent, ICanReply<Result<TReply, InstanceActionFailure>> {
+		var reply = await agentConnection.Send<TMessage, Result<TReply, InstanceActionFailure>>(message, TimeSpan.FromSeconds(10), cancellationToken);
+		return reply ?? InstanceActionFailure.AgentIsNotResponding;
 	}
 
 	public interface ICommand {}
 
 	public sealed record SetStatusCommand(IInstanceStatus Status) : ICommand;
 
-	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool IsCreatingInstance) : ICommand, ICanReply<InstanceActionResult<ConfigureInstanceResult>>;
+	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 
-	public sealed record LaunchInstanceCommand(Guid AuditLogUserGuid) : ICommand, ICanReply<InstanceActionResult<LaunchInstanceResult>>;
+	public sealed record LaunchInstanceCommand(Guid AuditLogUserGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<InstanceActionResult<StopInstanceResult>>;
+	public sealed record StopInstanceCommand(Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record SendCommandToInstanceCommand(Guid AuditLogUserGuid, string Command) : ICommand, ICanReply<InstanceActionResult<SendCommandToInstanceResult>>;
+	public sealed record SendCommandToInstanceCommand(Guid AuditLogUserGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 
 	private void SetStatus(SetStatusCommand command) {
 		status = command.Status;
 		NotifyInstanceUpdated();
 	}
 
-	private async Task<InstanceActionResult<ConfigureInstanceResult>> ConfigureInstance(ConfigureInstanceCommand command) {
+	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> ConfigureInstance(ConfigureInstanceCommand command) {
 		var message = new ConfigureInstanceMessage(command.InstanceGuid, command.Configuration, command.LaunchProperties);
 		var result = await SendInstanceActionMessage<ConfigureInstanceMessage, ConfigureInstanceResult>(message);
 		
@@ -98,7 +99,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		return result;
 	}
 
-	private async Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(LaunchInstanceCommand command) {
+	private async Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {
 		var message = new LaunchInstanceMessage(instanceGuid);
 		var result = await SendInstanceActionMessage<LaunchInstanceMessage, LaunchInstanceResult>(message);
 		
@@ -110,7 +111,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		return result;
 	}
 
-	private async Task<InstanceActionResult<StopInstanceResult>> StopInstance(StopInstanceCommand command) {
+	private async Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
 		var message = new StopInstanceMessage(instanceGuid, command.StopStrategy);
 		var result = await SendInstanceActionMessage<StopInstanceMessage, StopInstanceResult>(message);
 		
@@ -122,7 +123,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		return result;
 	}
 
-	private async Task<InstanceActionResult<SendCommandToInstanceResult>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
+	private async Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
 		var message = new SendCommandToInstanceMessage(instanceGuid, command.Command);
 		var result = await SendInstanceActionMessage<SendCommandToInstanceMessage, SendCommandToInstanceResult>(message);
 		

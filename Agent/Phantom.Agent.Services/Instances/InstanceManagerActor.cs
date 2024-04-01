@@ -6,6 +6,7 @@ using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Backups;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -48,10 +49,10 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 
 		this.instanceServices = new InstanceServices(init.ControllerConnection, init.BackupManager, launchServices);
 		
-		ReceiveAndReply<ConfigureInstanceCommand, InstanceActionResult<ConfigureInstanceResult>>(ConfigureInstance);
-		ReceiveAndReply<LaunchInstanceCommand, InstanceActionResult<LaunchInstanceResult>>(LaunchInstance);
-		ReceiveAndReply<StopInstanceCommand, InstanceActionResult<StopInstanceResult>>(StopInstance);
-		ReceiveAsyncAndReply<SendCommandToInstanceCommand, InstanceActionResult<SendCommandToInstanceResult>>(SendCommandToInstance);
+		ReceiveAndReply<ConfigureInstanceCommand, Result<ConfigureInstanceResult, InstanceActionFailure>>(ConfigureInstance);
+		ReceiveAndReply<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
+		ReceiveAndReply<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
+		ReceiveAsyncAndReply<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendCommandToInstance);
 		ReceiveAsync<ShutdownCommand>(Shutdown);
 	}
 
@@ -64,17 +65,17 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 	
 	public interface ICommand {}
 	
-	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool LaunchNow, bool AlwaysReportStatus) : ICommand, ICanReply<InstanceActionResult<ConfigureInstanceResult>>;
+	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool LaunchNow, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record LaunchInstanceCommand(Guid InstanceGuid) : ICommand, ICanReply<InstanceActionResult<LaunchInstanceResult>>;
+	public sealed record LaunchInstanceCommand(Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<InstanceActionResult<StopInstanceResult>>;
+	public sealed record StopInstanceCommand(Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record SendCommandToInstanceCommand(Guid InstanceGuid, string Command) : ICommand, ICanReply<InstanceActionResult<SendCommandToInstanceResult>>;
+	public sealed record SendCommandToInstanceCommand(Guid InstanceGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record ShutdownCommand : ICommand;
 
-	private InstanceActionResult<ConfigureInstanceResult> ConfigureInstance(ConfigureInstanceCommand command) {
+	private Result<ConfigureInstanceResult, InstanceActionFailure> ConfigureInstance(ConfigureInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		var configuration = command.Configuration;
 
@@ -129,64 +130,64 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			LaunchInstance(new LaunchInstanceCommand(instanceGuid));
 		}
 
-		return InstanceActionResult.Concrete(ConfigureInstanceResult.Success);
+		return ConfigureInstanceResult.Success;
 	}
 
-	private InstanceActionResult<LaunchInstanceResult> LaunchInstance(LaunchInstanceCommand command) {
+	private Result<LaunchInstanceResult, InstanceActionFailure> LaunchInstance(LaunchInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		if (!instances.TryGetValue(instanceGuid, out var instanceInfo)) {
-			return InstanceActionResult.General<LaunchInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
+			return InstanceActionFailure.InstanceDoesNotExist;
 		}
 		
 		var ticket = instanceTicketManager.Reserve(instanceInfo.Configuration);
 		if (!ticket) {
-			return InstanceActionResult.Concrete(ticket.Error);
+			return ticket.Error;
 		}
 
 		if (agentState.InstancesByGuid.TryGetValue(instanceGuid, out var instance)) {
 			var status = instance.Status;
 			if (status.IsRunning()) {
-				return InstanceActionResult.Concrete(LaunchInstanceResult.InstanceAlreadyRunning);
+				return LaunchInstanceResult.InstanceAlreadyRunning;
 			}
 			else if (status.IsLaunching()) {
-				return InstanceActionResult.Concrete(LaunchInstanceResult.InstanceAlreadyLaunching);
+				return LaunchInstanceResult.InstanceAlreadyLaunching;
 			}
 		}
 		
 		instanceInfo.Actor.Tell(new InstanceActor.LaunchInstanceCommand(instanceInfo.Configuration, instanceInfo.Launcher, ticket.Value, IsRestarting: false));
-		return InstanceActionResult.Concrete(LaunchInstanceResult.LaunchInitiated);
+		return LaunchInstanceResult.LaunchInitiated;
 	}
 
-	private InstanceActionResult<StopInstanceResult> StopInstance(StopInstanceCommand command) {
+	private Result<StopInstanceResult, InstanceActionFailure> StopInstance(StopInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		if (!instances.TryGetValue(instanceGuid, out var instanceInfo)) {
-			return InstanceActionResult.General<StopInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
+			return InstanceActionFailure.InstanceDoesNotExist;
 		}
         
 		if (agentState.InstancesByGuid.TryGetValue(instanceGuid, out var instance)) {
 			var status = instance.Status;
 			if (status.IsStopping()) {
-				return InstanceActionResult.Concrete(StopInstanceResult.InstanceAlreadyStopping);
+				return StopInstanceResult.InstanceAlreadyStopping;
 			}
 			else if (!status.CanStop()) {
-				return InstanceActionResult.Concrete(StopInstanceResult.InstanceAlreadyStopped);
+				return StopInstanceResult.InstanceAlreadyStopped;
 			}
 		}
 			
 		instanceInfo.Actor.Tell(new InstanceActor.StopInstanceCommand(command.StopStrategy));
-		return InstanceActionResult.Concrete(StopInstanceResult.StopInitiated);
+		return StopInstanceResult.StopInitiated;
 	}
 
-	private async Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommandToInstance(SendCommandToInstanceCommand command) {
+	private async Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendCommandToInstance(SendCommandToInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		if (!instances.TryGetValue(instanceGuid, out var instanceInfo)) {
-			return InstanceActionResult.General<SendCommandToInstanceResult>(InstanceActionGeneralResult.InstanceDoesNotExist);
+			return InstanceActionFailure.InstanceDoesNotExist;
 		}
 
 		try {
-			return InstanceActionResult.Concrete(await instanceInfo.Actor.Request(new InstanceActor.SendCommandToInstanceCommand(command.Command), shutdownCancellationToken));
+			return await instanceInfo.Actor.Request(new InstanceActor.SendCommandToInstanceCommand(command.Command), shutdownCancellationToken);
 		} catch (OperationCanceledException) {
-			return InstanceActionResult.General<SendCommandToInstanceResult>(InstanceActionGeneralResult.AgentShuttingDown);
+			return InstanceActionFailure.AgentShuttingDown;
 		}
 	}
 

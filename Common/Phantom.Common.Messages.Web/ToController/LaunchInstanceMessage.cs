@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Replies;
 using Phantom.Utils.Actor;
 
@@ -9,4 +10,4 @@ public sealed partial record LaunchInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid LoggedInUserGuid,
 	[property: MemoryPackOrder(1)] Guid AgentGuid,
 	[property: MemoryPackOrder(2)] Guid InstanceGuid
-) : IMessageToController, ICanReply<InstanceActionResult<LaunchInstanceResult>>;
+) : IMessageToController, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;

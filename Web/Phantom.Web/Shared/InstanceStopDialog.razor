@@ -65,7 +65,7 @@
       form.SubmitModel.StopSubmitting();
     }
     else {
-      form.SubmitModel.StopSubmitting(result.ToSentence(Messages.ToSentence));
+      form.SubmitModel.StopSubmitting(result.Map(Messages.ToSentence, InstanceActionFailureExtensions.ToSentence));
     }
   }
 

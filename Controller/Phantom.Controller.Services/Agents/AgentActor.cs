@@ -92,11 +92,11 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		Receive<NotifyIsAliveCommand>(NotifyIsAlive);
 		Receive<UpdateStatsCommand>(UpdateStats);
 		Receive<UpdateJavaRuntimesCommand>(UpdateJavaRuntimes);
-		ReceiveAndReplyLater<CreateOrUpdateInstanceCommand, InstanceActionResult<CreateOrUpdateInstanceResult>>(CreateOrUpdateInstance);
+		ReceiveAndReplyLater<CreateOrUpdateInstanceCommand, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstance);
 		Receive<UpdateInstanceStatusCommand>(UpdateInstanceStatus);
-		ReceiveAndReplyLater<LaunchInstanceCommand, InstanceActionResult<LaunchInstanceResult>>(LaunchInstance);
-		ReceiveAndReplyLater<StopInstanceCommand, InstanceActionResult<StopInstanceResult>>(StopInstance);
-		ReceiveAndReplyLater<SendCommandToInstanceCommand, InstanceActionResult<SendCommandToInstanceResult>>(SendMinecraftCommand);
+		ReceiveAndReplyLater<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
+		ReceiveAndReplyLater<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
+		ReceiveAndReplyLater<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendMinecraftCommand);
 		Receive<ReceiveInstanceDataCommand>(ReceiveInstanceData);
 	}
 
@@ -144,13 +144,13 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		}
 	}
 
-	private Task<InstanceActionResult<TReply>> RequestInstance<TCommand, TReply>(Guid instanceGuid, TCommand command) where TCommand : InstanceActor.ICommand, ICanReply<InstanceActionResult<TReply>> {
+	private Task<Result<TReply, InstanceActionFailure>> RequestInstance<TCommand, TReply>(Guid instanceGuid, TCommand command) where TCommand : InstanceActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
 		if (instanceActorByGuid.TryGetValue(instanceGuid, out var instance)) {
 			return instance.Request(command, cancellationToken);
 		}
 		else {
 			Logger.Warning("Could not deliver command {CommandType} to instance {InstanceGuid}, instance not found.", command.GetType().Name, instanceGuid);
-			return Task.FromResult(InstanceActionResult.General<TReply>(InstanceActionGeneralResult.InstanceDoesNotExist));
+			return Task.FromResult<Result<TReply, InstanceActionFailure>>(InstanceActionFailure.InstanceDoesNotExist);
 		}
 	}
 
@@ -181,15 +181,15 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	
 	public sealed record UpdateJavaRuntimesCommand(ImmutableArray<TaggedJavaRuntime> JavaRuntimes) : ICommand;
 	
-	public sealed record CreateOrUpdateInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration) : ICommand, ICanReply<InstanceActionResult<CreateOrUpdateInstanceResult>>;
+	public sealed record CreateOrUpdateInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration) : ICommand, ICanReply<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record UpdateInstanceStatusCommand(Guid InstanceGuid, IInstanceStatus Status) : ICommand;
 
-	public sealed record LaunchInstanceCommand(Guid InstanceGuid, Guid AuditLogUserGuid) : ICommand, ICanReply<InstanceActionResult<LaunchInstanceResult>>;
+	public sealed record LaunchInstanceCommand(Guid InstanceGuid, Guid AuditLogUserGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(Guid InstanceGuid, Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<InstanceActionResult<StopInstanceResult>>;
+	public sealed record StopInstanceCommand(Guid InstanceGuid, Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record SendCommandToInstanceCommand(Guid InstanceGuid, Guid AuditLogUserGuid, string Command) : ICommand, ICanReply<InstanceActionResult<SendCommandToInstanceResult>>;
+	public sealed record SendCommandToInstanceCommand(Guid InstanceGuid, Guid AuditLogUserGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record ReceiveInstanceDataCommand(Instance Instance) : ICommand, IJumpAhead;
 
@@ -270,15 +270,15 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		controllerState.UpdateAgentJavaRuntimes(agentGuid, javaRuntimes);
 	}
 	
-	private Task<InstanceActionResult<CreateOrUpdateInstanceResult>> CreateOrUpdateInstance(CreateOrUpdateInstanceCommand command) {
+	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance(CreateOrUpdateInstanceCommand command) {
 		var instanceConfiguration = command.Configuration;
 
 		if (string.IsNullOrWhiteSpace(instanceConfiguration.InstanceName)) {
-			return Task.FromResult(InstanceActionResult.Concrete(CreateOrUpdateInstanceResult.InstanceNameMustNotBeEmpty));
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceNameMustNotBeEmpty);
 		}
 		
 		if (instanceConfiguration.MemoryAllocation <= RamAllocationUnits.Zero) {
-			return Task.FromResult(InstanceActionResult.Concrete(CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero));
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero);
 		}
 		
 		return minecraftVersions.GetServerExecutableInfo(instanceConfiguration.MinecraftVersion, cancellationToken)
@@ -286,9 +286,9 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		                        .Unwrap();
 	}
 
-	private Task<InstanceActionResult<CreateOrUpdateInstanceResult>> CreateOrUpdateInstance1(FileDownloadInfo? serverExecutableInfo, CreateOrUpdateInstanceCommand command) {
+	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance1(FileDownloadInfo? serverExecutableInfo, CreateOrUpdateInstanceCommand command) {
 		if (serverExecutableInfo == null) {
-			return Task.FromResult(InstanceActionResult.Concrete(CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound));
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound);
 		}
 		
 		var instanceConfiguration = command.Configuration;
@@ -304,7 +304,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		                       .ContinueOnActor(CreateOrUpdateInstance2, configureInstanceCommand);
 	}
 	
-	private InstanceActionResult<CreateOrUpdateInstanceResult> CreateOrUpdateInstance2(InstanceActionResult<ConfigureInstanceResult> result, InstanceActor.ConfigureInstanceCommand command) {
+	private Result<CreateOrUpdateInstanceResult, InstanceActionFailure> CreateOrUpdateInstance2(Result<ConfigureInstanceResult, InstanceActionFailure> result, InstanceActor.ConfigureInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		var instanceName = command.Configuration.InstanceName;
 		var isCreating = command.IsCreatingInstance;
@@ -312,33 +312,35 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		if (result.Is(ConfigureInstanceResult.Success)) {
 			string action = isCreating ? "Added" : "Edited";
 			string relation = isCreating ? "to agent" : "in agent";
+			
 			Logger.Information(action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) " + relation + " \"{AgentName}\".", instanceName, instanceGuid, configuration.AgentName);
+			
+			return CreateOrUpdateInstanceResult.Success;
 		}
 		else {
 			string action = isCreating ? "adding" : "editing";
 			string relation = isCreating ? "to agent" : "in agent";
-			Logger.Information("Failed " + action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) " + relation + " \"{AgentName}\". {ErrorMessage}", instanceName, instanceGuid, configuration.AgentName, result.ToSentence(ConfigureInstanceResultExtensions.ToSentence));
+			string reason = result.Map(ConfigureInstanceResultExtensions.ToSentence, InstanceActionFailureExtensions.ToSentence);
+			
+			Logger.Information("Failed " + action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) " + relation + " \"{AgentName}\". {ErrorMessage}", instanceName, instanceGuid, configuration.AgentName, reason);
+			
+			return CreateOrUpdateInstanceResult.UnknownError;
 		}
-		
-		return result.Map(static result => result switch {
-			ConfigureInstanceResult.Success => CreateOrUpdateInstanceResult.Success,
-			_                               => CreateOrUpdateInstanceResult.UnknownError
-		});
 	}
 	
 	private void UpdateInstanceStatus(UpdateInstanceStatusCommand command) {
 		TellInstance(command.InstanceGuid, new InstanceActor.SetStatusCommand(command.Status));
 	}
 
-	private Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(LaunchInstanceCommand command) {
+	private Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {
 		return RequestInstance<InstanceActor.LaunchInstanceCommand, LaunchInstanceResult>(command.InstanceGuid, new InstanceActor.LaunchInstanceCommand(command.AuditLogUserGuid));
 	}
 
-	private Task<InstanceActionResult<StopInstanceResult>> StopInstance(StopInstanceCommand command) {
+	private Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
 		return RequestInstance<InstanceActor.StopInstanceCommand, StopInstanceResult>(command.InstanceGuid, new InstanceActor.StopInstanceCommand(command.AuditLogUserGuid, command.StopStrategy));
 	}
 
-	private Task<InstanceActionResult<SendCommandToInstanceResult>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
+	private Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
 		return RequestInstance<InstanceActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(command.InstanceGuid, new InstanceActor.SendCommandToInstanceCommand(command.AuditLogUserGuid, command.Command));
 	}
 

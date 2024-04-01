@@ -34,10 +34,10 @@ public static class WebMessageRegistries {
 		ToController.Add<GetRolesMessage, ImmutableArray<RoleInfo>>(9);
 		ToController.Add<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>(10);
 		ToController.Add<ChangeUserRolesMessage, ChangeUserRolesResult>(11);
-		ToController.Add<CreateOrUpdateInstanceMessage, InstanceActionResult<CreateOrUpdateInstanceResult>>(12);
-		ToController.Add<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(13);
-		ToController.Add<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(14);
-		ToController.Add<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(15);
+		ToController.Add<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(12);
+		ToController.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(13);
+		ToController.Add<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(14);
+		ToController.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(15);
 		ToController.Add<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(16);
 		ToController.Add<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(17);
 		ToController.Add<GetAuditLogMessage, ImmutableArray<AuditLogItem>>(18);

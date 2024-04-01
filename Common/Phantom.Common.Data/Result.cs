@@ -29,6 +29,14 @@ public sealed partial class Result<TValue, TError> {
 		this.error = error;
 	}
 
+	public bool Is(TValue expectedValue) {
+		return hasValue && EqualityComparer<TValue>.Default.Equals(value, expectedValue);
+	}
+
+	public TOutput Map<TOutput>(Func<TValue, TOutput> valueConverter, Func<TError, TOutput> errorConverter) {
+		return hasValue ? valueConverter(value!) : errorConverter(error!);
+	}
+
 	public static implicit operator Result<TValue, TError>(TValue value) {
 		return new Result<TValue, TError>(hasValue: true, value, default);
 	}

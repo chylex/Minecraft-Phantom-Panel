@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Replies;
 using Phantom.Utils.Actor;
 
@@ -10,4 +11,4 @@ public sealed partial record SendCommandToInstanceMessage(
 	[property: MemoryPackOrder(1)] Guid AgentGuid,
 	[property: MemoryPackOrder(2)] Guid InstanceGuid,
 	[property: MemoryPackOrder(3)] string Command
-) : IMessageToController, ICanReply<InstanceActionResult<SendCommandToInstanceResult>>;
+) : IMessageToController, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;

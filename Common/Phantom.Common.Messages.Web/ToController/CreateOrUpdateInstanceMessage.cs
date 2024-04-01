@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
@@ -11,4 +12,4 @@ public sealed partial record CreateOrUpdateInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid LoggedInUserGuid,
 	[property: MemoryPackOrder(1)] Guid InstanceGuid,
 	[property: MemoryPackOrder(2)] InstanceConfiguration Configuration
-) : IMessageToController, ICanReply<InstanceActionResult<CreateOrUpdateInstanceResult>>;
+) : IMessageToController, ICanReply<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>;

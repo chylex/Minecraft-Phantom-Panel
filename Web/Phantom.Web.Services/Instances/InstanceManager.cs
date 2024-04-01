@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -34,23 +35,23 @@ public sealed class InstanceManager {
 		return instances.Value.GetValueOrDefault(instanceGuid);
 	}
 
-	public Task<InstanceActionResult<CreateOrUpdateInstanceResult>> CreateOrUpdateInstance(Guid loggedInUserGuid, Guid instanceGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
+	public Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance(Guid loggedInUserGuid, Guid instanceGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
 		var message = new CreateOrUpdateInstanceMessage(loggedInUserGuid, instanceGuid, configuration);
-		return controllerConnection.Send<CreateOrUpdateInstanceMessage, InstanceActionResult<CreateOrUpdateInstanceResult>>(message, cancellationToken);
+		return controllerConnection.Send<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(message, cancellationToken);
 	}
 
-	public Task<InstanceActionResult<LaunchInstanceResult>> LaunchInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, CancellationToken cancellationToken) {
+	public Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, CancellationToken cancellationToken) {
 		var message = new LaunchInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid);
-		return controllerConnection.Send<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(message, cancellationToken);
+		return controllerConnection.Send<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(message, cancellationToken);
 	}
 
-	public Task<InstanceActionResult<StopInstanceResult>> StopInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
+	public Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
 		var message = new StopInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid, stopStrategy);
-		return controllerConnection.Send<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(message, cancellationToken);
+		return controllerConnection.Send<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(message, cancellationToken);
 	}
 
-	public Task<InstanceActionResult<SendCommandToInstanceResult>> SendCommandToInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
+	public Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendCommandToInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
 		var message = new SendCommandToInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid, command);
-		return controllerConnection.Send<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(message, cancellationToken);
+		return controllerConnection.Send<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(message, cancellationToken);
 	}
 }

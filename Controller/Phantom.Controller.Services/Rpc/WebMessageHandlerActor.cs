@@ -80,10 +80,10 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		ReceiveAndReplyLater<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>(HandleGetUserRoles);
 		ReceiveAndReplyLater<ChangeUserRolesMessage, ChangeUserRolesResult>(HandleChangeUserRoles);
 		ReceiveAndReplyLater<DeleteUserMessage, DeleteUserResult>(HandleDeleteUser);
-		ReceiveAndReplyLater<CreateOrUpdateInstanceMessage, InstanceActionResult<CreateOrUpdateInstanceResult>>(HandleCreateOrUpdateInstance);
-		ReceiveAndReplyLater<LaunchInstanceMessage, InstanceActionResult<LaunchInstanceResult>>(HandleLaunchInstance);
-		ReceiveAndReplyLater<StopInstanceMessage, InstanceActionResult<StopInstanceResult>>(HandleStopInstance);
-		ReceiveAndReplyLater<SendCommandToInstanceMessage, InstanceActionResult<SendCommandToInstanceResult>>(HandleSendCommandToInstance);
+		ReceiveAndReplyLater<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(HandleCreateOrUpdateInstance);
+		ReceiveAndReplyLater<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(HandleLaunchInstance);
+		ReceiveAndReplyLater<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(HandleStopInstance);
+		ReceiveAndReplyLater<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(HandleSendCommandToInstance);
 		ReceiveAndReplyLater<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(HandleGetMinecraftVersions); 
 		ReceiveAndReply<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(HandleGetAgentJavaRuntimes);
 		ReceiveAndReplyLater<GetAuditLogMessage, ImmutableArray<AuditLogItem>>(HandleGetAuditLog);
@@ -139,19 +139,19 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		return userManager.DeleteByGuid(message.LoggedInUserGuid, message.SubjectUserGuid);
 	}
 
-	private Task<InstanceActionResult<CreateOrUpdateInstanceResult>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
+	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(message.Configuration.AgentGuid, new AgentActor.CreateOrUpdateInstanceCommand(message.LoggedInUserGuid, message.InstanceGuid, message.Configuration));
 	}
 
-	private Task<InstanceActionResult<LaunchInstanceResult>> HandleLaunchInstance(LaunchInstanceMessage message) {
+	private Task<Result<LaunchInstanceResult, InstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(message.AgentGuid, new AgentActor.LaunchInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid));
 	}
 
-	private Task<InstanceActionResult<StopInstanceResult>> HandleStopInstance(StopInstanceMessage message) {
+	private Task<Result<StopInstanceResult, InstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(message.AgentGuid, new AgentActor.StopInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid, message.StopStrategy));
 	}
 
-	private Task<InstanceActionResult<SendCommandToInstanceResult>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
+	private Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(message.AgentGuid, new AgentActor.SendCommandToInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid, message.Command));
 	}
 

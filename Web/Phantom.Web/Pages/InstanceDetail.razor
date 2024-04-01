@@ -86,7 +86,7 @@ else {
 
       var result = await InstanceManager.LaunchInstance(loggedInUserGuid.Value, Instance.Configuration.AgentGuid, InstanceGuid, CancellationToken);
       if (!result.Is(LaunchInstanceResult.LaunchInitiated)) {
-        lastError = result.ToSentence(Messages.ToSentence);
+        lastError = result.Map(Messages.ToSentence, InstanceActionFailureExtensions.ToSentence);
       }
     } finally {
       isLaunchingInstance = false;
