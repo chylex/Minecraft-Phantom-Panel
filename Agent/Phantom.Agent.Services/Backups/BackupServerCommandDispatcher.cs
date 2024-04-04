@@ -7,7 +7,7 @@ using Serilog;
 namespace Phantom.Agent.Services.Backups;
 
 sealed partial class BackupServerCommandDispatcher : IDisposable {
-	[GeneratedRegex(@"^\[(?:.*?)\] \[Server thread/INFO\]: (.*?)$", RegexOptions.NonBacktracking)]
+	[GeneratedRegex(@"^\[(?:.*?)\] \[Server thread/INFO\](?:.*?): (.*?)$", RegexOptions.NonBacktracking)]
 	private static partial Regex ServerThreadInfoRegex();
 
 	private readonly ILogger logger;
