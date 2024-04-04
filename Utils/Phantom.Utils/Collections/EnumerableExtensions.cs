@@ -12,6 +12,27 @@ public static class EnumerableExtensions {
 
 		return builder.ToImmutable();
 	}
+
+	public static async Task<ImmutableArray<TSource>> ToImmutableArrayCatchingExceptionsAsync<TSource>(this IAsyncEnumerable<TSource> source, Action<Exception> onException, CancellationToken cancellationToken = default) {
+		var builder = ImmutableArray.CreateBuilder<TSource>();
+		
+		await using (var enumerator = source.GetAsyncEnumerator(cancellationToken)) {
+			while (true) {
+				try {
+					if (!await enumerator.MoveNextAsync()) {
+						break;
+					}
+				} catch (Exception e) {
+					onException(e);
+					continue;
+				}
+
+				builder.Add(enumerator.Current);
+			}
+		}
+
+		return builder.ToImmutable();
+	}
 	
 	public static async Task<ImmutableHashSet<TSource>> ToImmutableSetAsync<TSource>(this IAsyncEnumerable<TSource> source, CancellationToken cancellationToken = default) {
 		var builder = ImmutableHashSet.CreateBuilder<TSource>();

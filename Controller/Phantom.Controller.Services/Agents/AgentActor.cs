@@ -13,11 +13,13 @@ using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Instances;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Actor.Mailbox;
 using Phantom.Utils.Actor.Tasks;
+using Phantom.Utils.Collections;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime;
 using Serilog;
@@ -194,21 +196,29 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	public sealed record ReceiveInstanceDataCommand(Instance Instance) : ICommand, IJumpAhead;
 
 	private async Task Initialize(InitializeCommand command) {
-		await using var ctx = dbProvider.Eager();
-		await foreach (var entity in ctx.Instances.Where(instance => instance.AgentGuid == agentGuid).AsAsyncEnumerable().WithCancellation(cancellationToken)) {
+		ImmutableArray<InstanceEntity> instanceEntities;
+		await using (var ctx = dbProvider.Eager()) {
+			instanceEntities = await ctx.Instances.Where(instance => instance.AgentGuid == agentGuid).AsAsyncEnumerable().ToImmutableArrayCatchingExceptionsAsync(OnException, cancellationToken);
+		}
+
+		static void OnException(Exception e) {
+			Logger.Error(e, "Could not load instance from database.");
+		}
+
+		foreach (var instanceEntity in instanceEntities) {
 			var instanceConfiguration = new InstanceConfiguration(
-				entity.AgentGuid,
-				entity.InstanceName,
-				entity.ServerPort,
-				entity.RconPort,
-				entity.MinecraftVersion,
-				entity.MinecraftServerKind,
-				entity.MemoryAllocation,
-				entity.JavaRuntimeGuid,
-				JvmArgumentsHelper.Split(entity.JvmArguments)
+				instanceEntity.AgentGuid,
+				instanceEntity.InstanceName,
+				instanceEntity.ServerPort,
+				instanceEntity.RconPort,
+				instanceEntity.MinecraftVersion,
+				instanceEntity.MinecraftServerKind,
+				instanceEntity.MemoryAllocation,
+				instanceEntity.JavaRuntimeGuid,
+				JvmArgumentsHelper.Split(instanceEntity.JvmArguments)
 			);
 
-			CreateNewInstance(Instance.Offline(entity.InstanceGuid, instanceConfiguration, entity.LaunchAutomatically));
+			CreateNewInstance(Instance.Offline(instanceEntity.InstanceGuid, instanceConfiguration, instanceEntity.LaunchAutomatically));
 		}
 	}
 
