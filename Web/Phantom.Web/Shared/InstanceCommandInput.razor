@@ -51,6 +51,7 @@
       form.SubmitModel.StopSubmitting(result.Map(Messages.ToSentence, InstanceActionFailureExtensions.ToSentence));
     }
 
+    StateHasChanged();
     await commandInputElement.FocusAsync(preventScroll: true);
   }
 
