@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 using Phantom.Agent.Minecraft.Command;
 using Phantom.Agent.Minecraft.Instance;
 using Phantom.Utils.Tasks;
@@ -7,8 +8,26 @@ using Serilog;
 namespace Phantom.Agent.Services.Backups;
 
 sealed partial class BackupServerCommandDispatcher : IDisposable {
-	[GeneratedRegex(@"^\[(?:.*?)\] \[Server thread/INFO\](?:.*?): (.*?)$", RegexOptions.NonBacktracking)]
+	[GeneratedRegex(@"^(?:(?:\[.*?\] \[Server thread/INFO\].*?:)|(?:[\d-]+? [\d:]+? \[INFO\])) (.*?)$", RegexOptions.NonBacktracking)]
 	private static partial Regex ServerThreadInfoRegex();
+	
+	private static readonly ImmutableHashSet<string> AutomaticSavingDisabledMessages = ImmutableHashSet.Create(
+		"Automatic saving is now disabled",
+		"Turned off world auto-saving",
+		"CONSOLE: Disabling level saving.."
+	);
+	
+	private static readonly ImmutableHashSet<string> SavedTheGameMessages = ImmutableHashSet.Create(
+		"Saved the game",
+		"Saved the world",
+		"CONSOLE: Save complete."
+	);
+	
+	private static readonly ImmutableHashSet<string> AutomaticSavingEnabledMessages = ImmutableHashSet.Create(
+		"Automatic saving is now enabled",
+		"Turned on world auto-saving",
+		"CONSOLE: Enabling level saving.."
+	);
 
 	private readonly ILogger logger;
 	private readonly InstanceProcess process;
@@ -59,19 +78,19 @@ sealed partial class BackupServerCommandDispatcher : IDisposable {
 		string info = match.Groups[1].Value;
 
 		if (!automaticSavingDisabled.Task.IsCompleted) {
-			if (info == "Automatic saving is now disabled") {
+			if (AutomaticSavingDisabledMessages.Contains(info)) {
 				logger.Debug("Detected that automatic saving is disabled.");
 				automaticSavingDisabled.SetResult();
 			}
 		}
 		else if (!savedTheGame.Task.IsCompleted) {
-			if (info == "Saved the game") {
+			if (SavedTheGameMessages.Contains(info)) {
 				logger.Debug("Detected that the game is saved.");
 				savedTheGame.SetResult();
 			}
 		}
 		else if (!automaticSavingEnabled.Task.IsCompleted) {
-			if (info == "Automatic saving is now enabled") {
+			if (AutomaticSavingEnabledMessages.Contains(info)) {
 				logger.Debug("Detected that automatic saving is enabled.");
 				automaticSavingEnabled.SetResult();
 			}
