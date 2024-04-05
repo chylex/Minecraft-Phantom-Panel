@@ -28,6 +28,11 @@
     <span class="fw-semibold text-success">Running</span>
     break;
 
+  case InstanceIsBackingUp:
+    <div class="spinner-border" role="status"></div>
+    <span class="fw-semibold">&nbsp;Backing Up</span>
+    break;
+  
   case InstanceIsRestarting:
     <div class="spinner-border" role="status"></div>
     <span class="fw-semibold">&nbsp;Restarting</span>
@@ -40,6 +45,10 @@
 
   case InstanceIsFailed failed:
     <span class="fw-semibold text-danger">Failed <sup title="@failed.Reason.ToSentence()">[?]</sup></span>
+    break;
+    
+  default:
+    <span class="fw-semibold">Unknown</span>
     break;
 }
 </nobr>

@@ -135,7 +135,12 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
 		}
 		else {
-			return await command.BackupManager.CreateBackup(context.ShortName, runningState.Process, shutdownCancellationToken);
+			SetAndReportStatus(InstanceStatus.BackingUp);
+			try {
+				return await command.BackupManager.CreateBackup(context.ShortName, runningState.Process, shutdownCancellationToken);
+			} finally {
+				SetAndReportStatus(InstanceStatus.Running);
+			}
 		}
 	}
 

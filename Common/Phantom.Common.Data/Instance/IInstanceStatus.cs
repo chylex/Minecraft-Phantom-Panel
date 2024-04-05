@@ -9,9 +9,10 @@ namespace Phantom.Common.Data.Instance;
 [MemoryPackUnion(3, typeof(InstanceIsDownloading))]
 [MemoryPackUnion(4, typeof(InstanceIsLaunching))]
 [MemoryPackUnion(5, typeof(InstanceIsRunning))]
-[MemoryPackUnion(6, typeof(InstanceIsRestarting))]
-[MemoryPackUnion(7, typeof(InstanceIsStopping))]
-[MemoryPackUnion(8, typeof(InstanceIsFailed))]
+[MemoryPackUnion(6, typeof(InstanceIsBackingUp))]
+[MemoryPackUnion(7, typeof(InstanceIsRestarting))]
+[MemoryPackUnion(8, typeof(InstanceIsStopping))]
+[MemoryPackUnion(9, typeof(InstanceIsFailed))]
 public partial interface IInstanceStatus {}
 
 [MemoryPackable(GenerateType.VersionTolerant)]
@@ -33,6 +34,9 @@ public sealed partial record InstanceIsLaunching : IInstanceStatus;
 public sealed partial record InstanceIsRunning : IInstanceStatus;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
+public sealed partial record InstanceIsBackingUp : IInstanceStatus;
+
+[MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsRestarting : IInstanceStatus;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
@@ -46,6 +50,7 @@ public static class InstanceStatus {
 	public static readonly IInstanceStatus NotRunning = new InstanceIsNotRunning();
 	public static readonly IInstanceStatus Launching = new InstanceIsLaunching();
 	public static readonly IInstanceStatus Running = new InstanceIsRunning();
+	public static readonly IInstanceStatus BackingUp = new InstanceIsBackingUp();
 	public static readonly IInstanceStatus Restarting = new InstanceIsRestarting();
 	public static readonly IInstanceStatus Stopping = new InstanceIsStopping();
 	
@@ -58,7 +63,7 @@ public static class InstanceStatus {
 	}
 
 	public static bool IsRunning(this IInstanceStatus status) {
-		return status is InstanceIsRunning;
+		return status is InstanceIsRunning or InstanceIsBackingUp;
 	}
 	
 	public static bool IsStopping(this IInstanceStatus status) {
@@ -70,10 +75,10 @@ public static class InstanceStatus {
 	}
 
 	public static bool CanStop(this IInstanceStatus status) {
-		return status is InstanceIsDownloading or InstanceIsLaunching or InstanceIsRunning;
+		return status.IsRunning() || status.IsLaunching();
 	}
 
 	public static bool CanSendCommand(this IInstanceStatus status) {
-		return status is InstanceIsRunning;
+		return status.IsRunning();
 	}
 }
