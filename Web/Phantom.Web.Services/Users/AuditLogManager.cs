@@ -1,6 +1,9 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Web.AuditLog;
+using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Web.ToController;
+using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Rpc;
 
 namespace Phantom.Web.Services.Users; 
@@ -12,8 +15,13 @@ public sealed class AuditLogManager {
 		this.controllerConnection = controllerConnection;
 	}
 
-	public Task<ImmutableArray<AuditLogItem>> GetMostRecentItems(int count, CancellationToken cancellationToken) {
-		var message = new GetAuditLogMessage(count);
-		return controllerConnection.Send<GetAuditLogMessage, ImmutableArray<AuditLogItem>>(message, cancellationToken);
+	public async Task<Result<ImmutableArray<AuditLogItem>, UserActionFailure>> GetMostRecentItems(AuthenticatedUser? authenticatedUser, int count, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ViewAudit)) {
+			var message = new GetAuditLogMessage(authenticatedUser.Token, count);
+			return await controllerConnection.Send<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>(message, cancellationToken);
+		}
+		else {
+			return UserActionFailure.NotAuthorized;
+		}
 	}
 }

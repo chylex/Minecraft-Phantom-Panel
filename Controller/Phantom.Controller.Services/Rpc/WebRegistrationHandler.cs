@@ -7,6 +7,7 @@ using Phantom.Controller.Services.Agents;
 using Phantom.Controller.Services.Events;
 using Phantom.Controller.Services.Instances;
 using Phantom.Controller.Services.Users;
+using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime;

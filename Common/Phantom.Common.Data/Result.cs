@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using MemoryPack;
+using Phantom.Utils.Result;
 
 namespace Phantom.Common.Data;
 
@@ -33,8 +34,16 @@ public sealed partial class Result<TValue, TError> {
 		return hasValue && EqualityComparer<TValue>.Default.Equals(value, expectedValue);
 	}
 
-	public TOutput Map<TOutput>(Func<TValue, TOutput> valueConverter, Func<TError, TOutput> errorConverter) {
+	public TOutput Into<TOutput>(Func<TValue, TOutput> valueConverter, Func<TError, TOutput> errorConverter) {
 		return hasValue ? valueConverter(value!) : errorConverter(error!);
+	}
+
+	public Result<TValue, TNewError> MapError<TNewError>(Func<TError, TNewError> errorConverter) {
+		return hasValue ? value! : errorConverter(error!);
+	}
+
+	public Utils.Result.Result Variant() {
+		return hasValue ? new Ok<TValue>(Value) : new Err<TError>(Error);
 	}
 
 	public static implicit operator Result<TValue, TError>(TValue value) {

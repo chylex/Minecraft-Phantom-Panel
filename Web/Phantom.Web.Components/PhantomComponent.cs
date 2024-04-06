@@ -17,11 +17,11 @@ public abstract class PhantomComponent : ComponentBase, IDisposable {
 
 	protected CancellationToken CancellationToken => cancellationTokenSource.Token;
 
-	protected async Task<Guid?> GetUserGuid() {
+	protected async Task<AuthenticatedUser?> GetAuthenticatedUser() {
 		var authenticationState = await AuthenticationStateTask;
-		return authenticationState.TryGetGuid();
+		return authenticationState.GetAuthenticatedUser();
 	}
-
+	
 	protected async Task<bool> CheckPermission(Permission permission) {
 		var authenticationState = await AuthenticationStateTask;
 		return authenticationState.CheckPermission(permission);

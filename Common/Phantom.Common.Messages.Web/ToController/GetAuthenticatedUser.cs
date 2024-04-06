@@ -9,5 +9,5 @@ namespace Phantom.Common.Messages.Web.ToController;
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record GetAuthenticatedUser(
 	[property: MemoryPackOrder(0)] Guid UserGuid,
-	[property: MemoryPackOrder(1)] ImmutableArray<byte> SessionToken
+	[property: MemoryPackOrder(1)] ImmutableArray<byte> AuthToken
 ) : IMessageToController, ICanReply<Optional<AuthenticatedUserInfo>>;

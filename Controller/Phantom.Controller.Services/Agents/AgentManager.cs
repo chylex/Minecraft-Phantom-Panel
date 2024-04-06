@@ -4,10 +4,12 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Agent;
+using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
 using Phantom.Controller.Minecraft;
+using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime;
@@ -22,17 +24,19 @@ sealed class AgentManager {
 	private readonly AuthToken authToken;
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
+	private readonly UserLoginManager userLoginManager;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
 	private readonly ConcurrentDictionary<Guid, ActorRef<AgentActor.ICommand>> agentsByGuid = new ();
 	private readonly Func<Guid, AgentConfiguration, ActorRef<AgentActor.ICommand>> addAgentActorFactory;
 	
-	public AgentManager(IActorRefFactory actorSystem, AuthToken authToken, ControllerState controllerState, MinecraftVersions minecraftVersions, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+	public AgentManager(IActorRefFactory actorSystem, AuthToken authToken, ControllerState controllerState, MinecraftVersions minecraftVersions, UserLoginManager userLoginManager, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
 		this.actorSystem = actorSystem;
 		this.authToken = authToken;
 		this.controllerState = controllerState;
 		this.minecraftVersions = minecraftVersions;
+		this.userLoginManager = userLoginManager;
 		this.dbProvider = dbProvider;
 		this.cancellationToken = cancellationToken;
 		
@@ -40,7 +44,7 @@ sealed class AgentManager {
 	}
 
 	private ActorRef<AgentActor.ICommand> CreateAgentActor(Guid agentGuid, AgentConfiguration agentConfiguration) {
-		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, dbProvider, cancellationToken);
+		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, userLoginManager, dbProvider, cancellationToken);
 		var name = "Agent:" + agentGuid;
 		return actorSystem.ActorOf(AgentActor.Factory(init), name);
 	}
@@ -83,7 +87,7 @@ sealed class AgentManager {
 		}
 	}
 
-	public async Task<Result<TReply, InstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Guid agentGuid, TCommand command) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
-		return agentsByGuid.TryGetValue(agentGuid, out var agent) ? await agent.Request(command, cancellationToken) : InstanceActionFailure.AgentDoesNotExist;
+	public async Task<Result<TReply, UserInstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Guid agentGuid, TCommand command) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, UserInstanceActionFailure>> {
+		return agentsByGuid.TryGetValue(agentGuid, out var agent) ? await agent.Request(command, cancellationToken) : (UserInstanceActionFailure) InstanceActionFailure.AgentDoesNotExist;
 	}
 }

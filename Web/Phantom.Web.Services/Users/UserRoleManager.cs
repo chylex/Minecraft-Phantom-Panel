@@ -1,6 +1,8 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Web.ToController;
+using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Rpc;
 
 namespace Phantom.Web.Services.Users;
@@ -20,7 +22,12 @@ public sealed class UserRoleManager {
 		return (await GetUserRoles(ImmutableHashSet.Create(userGuid), cancellationToken)).GetValueOrDefault(userGuid, ImmutableArray<Guid>.Empty);
 	}
 
-	public Task<ChangeUserRolesResult> ChangeUserRoles(Guid loggedInUserGuid, Guid subjectUserGuid, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids, CancellationToken cancellationToken) {
-		return controllerConnection.Send<ChangeUserRolesMessage, ChangeUserRolesResult>(new ChangeUserRolesMessage(loggedInUserGuid, subjectUserGuid, addToRoleGuids, removeFromRoleGuids), cancellationToken);
+	public async Task<Result<ChangeUserRolesResult, UserActionFailure>> ChangeUserRoles(AuthenticatedUser? authenticatedUser, Guid subjectUserGuid, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.EditUsers)) {
+			return await controllerConnection.Send<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>(new ChangeUserRolesMessage(authenticatedUser.Token, subjectUserGuid, addToRoleGuids, removeFromRoleGuids), cancellationToken);
+		}
+		else {
+			return UserActionFailure.NotAuthorized;
+		}
 	}
 }

@@ -1,6 +1,7 @@
-﻿@using Phantom.Web.Services.Instances
+﻿@using Phantom.Common.Data.Replies
 @using Phantom.Common.Data.Web.Users
-@using Phantom.Common.Data.Replies
+@using Phantom.Utils.Result
+@using Phantom.Web.Services.Instances
 @inherits Phantom.Web.Components.PhantomComponent
 @inject InstanceManager InstanceManager
 
@@ -18,7 +19,7 @@
 
   [Parameter, EditorRequired]
   public Guid AgentGuid { get; set; }
-  
+
   [Parameter, EditorRequired]
   public Guid InstanceGuid { get; set; }
 
@@ -36,19 +37,29 @@
   private async Task ExecuteCommand(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    var loggedInUserGuid = await GetUserGuid();
-    if (loggedInUserGuid == null || !await CheckPermission(Permission.ControlInstances)) {
-      form.SubmitModel.StopSubmitting("You do not have permission to execute commands.");
-      return;
-    }
+    var result = await InstanceManager.SendCommandToInstance(await GetAuthenticatedUser(), AgentGuid, InstanceGuid, form.Command, CancellationToken);
 
-    var result = await InstanceManager.SendCommandToInstance(loggedInUserGuid.Value, AgentGuid, InstanceGuid, form.Command, CancellationToken);
-    if (result.Is(SendCommandToInstanceResult.Success)) {
-      form.Command = string.Empty;
-      form.SubmitModel.StopSubmitting();
-    }
-    else {
-      form.SubmitModel.StopSubmitting(result.Map(Messages.ToSentence, InstanceActionFailureExtensions.ToSentence));
+    switch (result.Variant()) {
+      case Ok<SendCommandToInstanceResult>(SendCommandToInstanceResult.Success):
+        form.Command = string.Empty;
+        form.SubmitModel.StopSubmitting();
+        break;
+
+      case Ok<SendCommandToInstanceResult>(var sendCommandToInstanceResult):
+        form.SubmitModel.StopSubmitting(sendCommandToInstanceResult.ToSentence());
+        break;
+
+      case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+        form.SubmitModel.StopSubmitting(failure.ToSentence());
+        break;
+
+      case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+        form.SubmitModel.StopSubmitting("You do not have permission to send commands to this instance.");
+        break;
+
+      default:
+        form.SubmitModel.StopSubmitting("Unknown error.");
+        break;
     }
 
     StateHasChanged();

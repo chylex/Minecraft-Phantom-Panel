@@ -13,6 +13,11 @@
 
 <h1>Event Log</h1>
 
+@if (loadError is {} error) {
+  <p>@error</p>
+  return;
+}
+
 <Table TItem="EventLogItem" Items="logItems">
   <HeaderRow>
     <Column Class="text-end" MinWidth="200px">Time</Column>
@@ -50,21 +55,25 @@
 
 @code {
 
-  private CancellationTokenSource? initializationCancellationTokenSource;
   private ImmutableArray<EventLogItem>? logItems;
+  private string? loadError;
+  
   private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
-    initializationCancellationTokenSource = new CancellationTokenSource();
-    var cancellationToken = initializationCancellationTokenSource.Token;
-
-    try {
-      logItems = await EventLogManager.GetMostRecentItems(50, cancellationToken);
+    var result = await EventLogManager.GetMostRecentItems(await GetAuthenticatedUser(), 50, CancellationToken);
+    if (result) {
+      logItems = result.Value;
       agentNamesByGuid = AgentManager.GetAll().ToImmutableDictionary(static kvp => kvp.AgentGuid, static kvp => kvp.Configuration.AgentName);
       instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.InstanceGuid, static instance => instance.Configuration.InstanceName);
-    } finally {
-      initializationCancellationTokenSource.Dispose();
+    }
+    else {
+      logItems = ImmutableArray<EventLogItem>.Empty;
+      loadError = result.Error switch {
+        UserActionFailure.NotAuthorized => "You do not have permission to view the event log.",
+        _                               => "Unknown error."
+      };
     }
   }
 
@@ -77,12 +86,6 @@
       EventLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
       _                            => null
     };
-  }
-
-  protected override void OnDisposed() {
-    try {
-      initializationCancellationTokenSource?.Cancel();
-    } catch (ObjectDisposedException) {}
   }
 
 }

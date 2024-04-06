@@ -1,5 +1,6 @@
 ﻿@using System.Collections.Immutable
 @using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Users
 @inherits UserEditDialogBase
 @inject RoleManager RoleManager
@@ -36,8 +37,8 @@
     this.items = allRoles.Select(role => new RoleItem(role, currentRoleGuids.Contains(role.Guid))).ToList();
   }
 
-  protected override async Task DoEdit(Guid loggedInUserGuid, UserInfo user) {
-    var currentRoleGuids = await UserRoleManager.GetUserRoles(user.Guid, CancellationToken);
+  protected override async Task<UserActionFailure?> DoEdit(AuthenticatedUser? authenticatedUser, UserInfo editedUser) {
+    var currentRoleGuids = await UserRoleManager.GetUserRoles(editedUser.Guid, CancellationToken);
     var addToRoleGuids = ImmutableHashSet.CreateBuilder<Guid>();
     var removeFromRoleGuids = ImmutableHashSet.CreateBuilder<Guid>();
 
@@ -56,18 +57,21 @@
       }
     }
     
-    await DoChangeUserRoles(user, loggedInUserGuid, addToRoleGuids.ToImmutable(), removeFromRoleGuids.ToImmutable());
+    return await DoChangeUserRoles(authenticatedUser, editedUser, addToRoleGuids.ToImmutable(), removeFromRoleGuids.ToImmutable());
   }
 
-  private async Task DoChangeUserRoles(UserInfo user, Guid loggedInUserGuid, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids) {
-    var result = await UserRoleManager.ChangeUserRoles(loggedInUserGuid, user.Guid, addToRoleGuids, removeFromRoleGuids, CancellationToken);
+  private async Task<UserActionFailure?> DoChangeUserRoles(AuthenticatedUser? authenticatedUser, UserInfo editedUser, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids) {
+    var result = await UserRoleManager.ChangeUserRoles(authenticatedUser, editedUser.Guid, addToRoleGuids, removeFromRoleGuids, CancellationToken);
+    if (!result) {
+      return result.Error;
+    }
     
-    var failedToAdd = addToRoleGuids.Except(result.AddedToRoleGuids);
-    var failedToRemove = removeFromRoleGuids.Except(result.RemovedFromRoleGuids);
+    var failedToAdd = addToRoleGuids.Except(result.Value.AddedToRoleGuids);
+    var failedToRemove = removeFromRoleGuids.Except(result.Value.RemovedFromRoleGuids);
     
     if (failedToAdd.IsEmpty && failedToRemove.IsEmpty) {
       await OnEditSuccess();
-      return;
+      return null;
     }
     
     var errors = new List<string>();
@@ -81,6 +85,7 @@
     }
     
     OnEditFailure(string.Join("\n", errors));
+    return null;
   }
 
   private string GetRoleName(Guid roleGuid) {

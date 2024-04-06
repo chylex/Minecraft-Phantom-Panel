@@ -11,6 +11,7 @@ using Phantom.Controller.Services.Events;
 using Phantom.Controller.Services.Instances;
 using Phantom.Controller.Services.Rpc;
 using Phantom.Controller.Services.Users;
+using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Rpc.Runtime;
 using IMessageFromAgentToController = Phantom.Common.Messages.Agent.IMessageToController;
@@ -24,17 +25,18 @@ public sealed class ControllerServices : IDisposable {
 	private ControllerState ControllerState { get; }
 	private MinecraftVersions MinecraftVersions { get; }
 
-	private AgentManager AgentManager { get; }
-	private InstanceLogManager InstanceLogManager { get; }
-	private EventLogManager EventLogManager { get; }
-
+	private AuthenticatedUserCache AuthenticatedUserCache { get; }
 	private UserManager UserManager { get; }
 	private RoleManager RoleManager { get; }
-	private PermissionManager PermissionManager { get; }
-
 	private UserRoleManager UserRoleManager { get; }
 	private UserLoginManager UserLoginManager { get; }
+	private PermissionManager PermissionManager { get; }
+
+	private AgentManager AgentManager { get; }
+	private InstanceLogManager InstanceLogManager { get; }
+	
 	private AuditLogManager AuditLogManager { get; }
+	private EventLogManager EventLogManager { get; }
 
 	public IRegistrationHandler<IMessageToAgent, IMessageFromAgentToController, RegisterAgentMessage> AgentRegistrationHandler { get; }
 	public IRegistrationHandler<IMessageToWeb, IMessageFromWebToController, RegisterWebMessage> WebRegistrationHandler { get; }
@@ -51,15 +53,16 @@ public sealed class ControllerServices : IDisposable {
 		this.ControllerState = new ControllerState();
 		this.MinecraftVersions = new MinecraftVersions();
 		
-		this.AgentManager = new AgentManager(ActorSystem, agentAuthToken, ControllerState, MinecraftVersions, dbProvider, cancellationToken);
+		this.AuthenticatedUserCache = new AuthenticatedUserCache();
+		this.UserManager = new UserManager(AuthenticatedUserCache, dbProvider);
+		this.RoleManager = new RoleManager(dbProvider);
+		this.UserRoleManager = new UserRoleManager(AuthenticatedUserCache, dbProvider);
+		this.UserLoginManager = new UserLoginManager(AuthenticatedUserCache, UserManager, dbProvider);
+		this.PermissionManager = new PermissionManager(dbProvider);
+		
+		this.AgentManager = new AgentManager(ActorSystem, agentAuthToken, ControllerState, MinecraftVersions, UserLoginManager, dbProvider, cancellationToken);
 		this.InstanceLogManager = new InstanceLogManager();
 		
-		this.UserManager = new UserManager(dbProvider);
-		this.RoleManager = new RoleManager(dbProvider);
-		this.PermissionManager = new PermissionManager(dbProvider);
-
-		this.UserRoleManager = new UserRoleManager(dbProvider);
-		this.UserLoginManager = new UserLoginManager(UserManager, PermissionManager, dbProvider);
 		this.AuditLogManager = new AuditLogManager(dbProvider);
 		this.EventLogManager = new EventLogManager(ActorSystem, dbProvider, shutdownCancellationToken);
 		

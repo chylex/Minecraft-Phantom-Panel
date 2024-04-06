@@ -22,9 +22,10 @@ public sealed class CustomAuthenticationStateProvider : ServerAuthenticationStat
 		if (!isLoaded) {
 			var stored = await sessionBrowserStorage.Get();
 			if (stored != null) {
-				var session = await controllerConnection.Send<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(new GetAuthenticatedUser(stored.UserGuid, stored.Token), TimeSpan.FromSeconds(30));
+				var authToken = stored.Token;
+				var session = await controllerConnection.Send<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(new GetAuthenticatedUser(stored.UserGuid, authToken), TimeSpan.FromSeconds(30));
 				if (session.Value is {} userInfo) {
-					SetLoadedSession(userInfo);
+					SetLoadedSession(new AuthenticatedUser(userInfo, authToken));
 				}
 			}
 		}
@@ -32,9 +33,9 @@ public sealed class CustomAuthenticationStateProvider : ServerAuthenticationStat
 		return await base.GetAuthenticationStateAsync();
 	}
 
-	internal void SetLoadedSession(AuthenticatedUserInfo user) {
+	internal void SetLoadedSession(AuthenticatedUser authenticatedUser) {
 		isLoaded = true;
-		SetAuthenticationState(Task.FromResult(new AuthenticationState(new CustomClaimsPrincipal(user))));
+		SetAuthenticationState(Task.FromResult(new AuthenticationState(new CustomClaimsPrincipal(authenticatedUser))));
 	}
 
 	internal void SetUnloadedSession() {

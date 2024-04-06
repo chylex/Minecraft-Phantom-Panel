@@ -1,4 +1,5 @@
 ﻿@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Users
 @inherits UserEditDialogBase
 @inject UserManager UserManager
@@ -17,8 +18,13 @@
 
 @code {
 
-  protected override async Task DoEdit(Guid loggedInUserGuid, UserInfo user) {
-    switch (await UserManager.DeleteByGuid(loggedInUserGuid, user.Guid, CancellationToken)) {
+  protected override async Task<UserActionFailure?> DoEdit(AuthenticatedUser? authenticatedUser, UserInfo editedUser) {
+    var result = await UserManager.DeleteByGuid(authenticatedUser, editedUser.Guid, CancellationToken);
+    if (!result) {
+      return result.Error;
+    }
+    
+    switch (result.Value) {
       case DeleteUserResult.Deleted:
       case DeleteUserResult.NotFound:
         await OnEditSuccess();
@@ -28,6 +34,8 @@
         OnEditFailure("Could not delete user.");
         break;
     }
+    
+    return null;
   }
 
 }

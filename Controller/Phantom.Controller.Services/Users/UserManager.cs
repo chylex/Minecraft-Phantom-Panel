@@ -1,8 +1,10 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Database.Repositories;
+using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Logging;
 using Serilog;
 
@@ -11,9 +13,11 @@ namespace Phantom.Controller.Services.Users;
 sealed class UserManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserManager>();
 
+	private readonly AuthenticatedUserCache authenticatedUserCache;
 	private readonly IDbContextProvider dbProvider;
 
-	public UserManager(IDbContextProvider dbProvider) {
+	public UserManager(AuthenticatedUserCache authenticatedUserCache, IDbContextProvider dbProvider) {
+		this.authenticatedUserCache = authenticatedUserCache;
 		this.dbProvider = dbProvider;
 	}
 
@@ -85,10 +89,14 @@ sealed class UserManager {
 		}
 	}
 
-	public async Task<CreateUserResult> Create(Guid loggedInUserGuid, string username, string password) {
+	public async Task<Result<CreateUserResult, UserActionFailure>> Create(LoggedInUser loggedInUser, string username, string password) {
+		if (!loggedInUser.CheckPermission(Permission.EditUsers)) {
+			return UserActionFailure.NotAuthorized;
+		}
+		
 		await using var db = dbProvider.Lazy();
 		var userRepository = new UserRepository(db);
-		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUserGuid);
+		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUser.Guid);
 
 		try {
 			var result = await userRepository.CreateUser(username, password);
@@ -109,7 +117,11 @@ sealed class UserManager {
 		}
 	}
 	
-	public async Task<DeleteUserResult> DeleteByGuid(Guid loggedInUserGuid, Guid userGuid) {
+	public async Task<Result<DeleteUserResult, UserActionFailure>> DeleteByGuid(LoggedInUser loggedInUser, Guid userGuid) {
+		if (!loggedInUser.CheckPermission(Permission.EditUsers)) {
+			return UserActionFailure.NotAuthorized;
+		}
+		
 		await using var db = dbProvider.Lazy();
 		var userRepository = new UserRepository(db);
 
@@ -118,11 +130,16 @@ sealed class UserManager {
 			return DeleteUserResult.NotFound;
 		}
 
-		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUserGuid);
+		authenticatedUserCache.Remove(userGuid);
+		
+		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUser.Guid);
 		try {
 			userRepository.DeleteUser(user);
 			auditLogWriter.UserDeleted(user);
 			await db.Ctx.SaveChangesAsync();
+			
+			// In case the user logged in during deletion.
+			authenticatedUserCache.Remove(userGuid);
 
 			Logger.Information("Deleted user \"{Username}\" (GUID {Guid}).", user.Name, user.UserGuid);
 			return DeleteUserResult.Deleted;

@@ -15,6 +15,7 @@ using Phantom.Controller.Services.Agents;
 using Phantom.Controller.Services.Events;
 using Phantom.Controller.Services.Instances;
 using Phantom.Controller.Services.Users;
+using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Rpc.Runtime;
 
@@ -67,27 +68,27 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 
 		var senderActorInit = new WebMessageDataUpdateSenderActor.Init(connection, controllerState, init.InstanceLogManager);
 		Context.ActorOf(WebMessageDataUpdateSenderActor.Factory(senderActorInit), "DataUpdateSender");
-		
+
 		ReceiveAsync<RegisterWebMessage>(HandleRegisterWeb);
 		Receive<UnregisterWebMessage>(HandleUnregisterWeb);
 		ReceiveAndReplyLater<LogInMessage, LogInSuccess?>(HandleLogIn);
 		Receive<LogOutMessage>(HandleLogOut);
 		ReceiveAndReply<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(GetAuthenticatedUser);
 		ReceiveAndReplyLater<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(HandleCreateOrUpdateAdministratorUser);
-		ReceiveAndReplyLater<CreateUserMessage, CreateUserResult>(HandleCreateUser);
+		ReceiveAndReplyLater<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>(HandleCreateUser);
 		ReceiveAndReplyLater<GetUsersMessage, ImmutableArray<UserInfo>>(HandleGetUsers);
 		ReceiveAndReplyLater<GetRolesMessage, ImmutableArray<RoleInfo>>(HandleGetRoles);
 		ReceiveAndReplyLater<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>(HandleGetUserRoles);
-		ReceiveAndReplyLater<ChangeUserRolesMessage, ChangeUserRolesResult>(HandleChangeUserRoles);
-		ReceiveAndReplyLater<DeleteUserMessage, DeleteUserResult>(HandleDeleteUser);
-		ReceiveAndReplyLater<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(HandleCreateOrUpdateInstance);
-		ReceiveAndReplyLater<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(HandleLaunchInstance);
-		ReceiveAndReplyLater<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(HandleStopInstance);
-		ReceiveAndReplyLater<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(HandleSendCommandToInstance);
-		ReceiveAndReplyLater<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(HandleGetMinecraftVersions); 
+		ReceiveAndReplyLater<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>(HandleChangeUserRoles);
+		ReceiveAndReplyLater<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>(HandleDeleteUser);
+		ReceiveAndReplyLater<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(HandleCreateOrUpdateInstance);
+		ReceiveAndReplyLater<LaunchInstanceMessage, Result<LaunchInstanceResult, UserInstanceActionFailure>>(HandleLaunchInstance);
+		ReceiveAndReplyLater<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>(HandleStopInstance);
+		ReceiveAndReplyLater<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>(HandleSendCommandToInstance);
+		ReceiveAndReplyLater<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(HandleGetMinecraftVersions);
 		ReceiveAndReply<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(HandleGetAgentJavaRuntimes);
-		ReceiveAndReplyLater<GetAuditLogMessage, ImmutableArray<AuditLogItem>>(HandleGetAuditLog);
-		ReceiveAndReplyLater<GetEventLogMessage, ImmutableArray<EventLogItem>>(HandleGetEventLog);
+		ReceiveAndReplyLater<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>(HandleGetAuditLog);
+		ReceiveAndReplyLater<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>(HandleGetEventLog);
 		Receive<ReplyMessage>(HandleReply);
 	}
 
@@ -108,15 +109,15 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	}
 
 	private Optional<AuthenticatedUserInfo> GetAuthenticatedUser(GetAuthenticatedUser message) {
-		return userLoginManager.GetAuthenticatedUser(message.UserGuid, message.SessionToken);
+		return userLoginManager.GetAuthenticatedUser(message.UserGuid, message.AuthToken);
 	}
-    
+
 	private Task<CreateOrUpdateAdministratorUserResult> HandleCreateOrUpdateAdministratorUser(CreateOrUpdateAdministratorUserMessage message) {
 		return userManager.CreateOrUpdateAdministrator(message.Username, message.Password);
 	}
 
-	private Task<CreateUserResult> HandleCreateUser(CreateUserMessage message) {
-		return userManager.Create(message.LoggedInUserGuid, message.Username, message.Password);
+	private Task<Result<CreateUserResult, UserActionFailure>> HandleCreateUser(CreateUserMessage message) {
+		return userManager.Create(userLoginManager.GetLoggedInUser(message.AuthToken), message.Username, message.Password);
 	}
 
 	private Task<ImmutableArray<UserInfo>> HandleGetUsers(GetUsersMessage message) {
@@ -131,28 +132,28 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		return userRoleManager.GetUserRoles(message.UserGuids);
 	}
 
-	private Task<ChangeUserRolesResult> HandleChangeUserRoles(ChangeUserRolesMessage message) {
-		return userRoleManager.ChangeUserRoles(message.LoggedInUserGuid, message.SubjectUserGuid, message.AddToRoleGuids, message.RemoveFromRoleGuids);
+	private Task<Result<ChangeUserRolesResult, UserActionFailure>> HandleChangeUserRoles(ChangeUserRolesMessage message) {
+		return userRoleManager.ChangeUserRoles(userLoginManager.GetLoggedInUser(message.AuthToken), message.SubjectUserGuid, message.AddToRoleGuids, message.RemoveFromRoleGuids);
 	}
 
-	private Task<DeleteUserResult> HandleDeleteUser(DeleteUserMessage message) {
-		return userManager.DeleteByGuid(message.LoggedInUserGuid, message.SubjectUserGuid);
+	private Task<Result<DeleteUserResult, UserActionFailure>> HandleDeleteUser(DeleteUserMessage message) {
+		return userManager.DeleteByGuid(userLoginManager.GetLoggedInUser(message.AuthToken), message.SubjectUserGuid);
 	}
 
-	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(message.Configuration.AgentGuid, new AgentActor.CreateOrUpdateInstanceCommand(message.LoggedInUserGuid, message.InstanceGuid, message.Configuration));
+	private Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
+		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(message.Configuration.AgentGuid, new AgentActor.CreateOrUpdateInstanceCommand(message.AuthToken, message.InstanceGuid, message.Configuration));
 	}
 
-	private Task<Result<LaunchInstanceResult, InstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(message.AgentGuid, new AgentActor.LaunchInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid));
+	private Task<Result<LaunchInstanceResult, UserInstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
+		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(message.AgentGuid, new AgentActor.LaunchInstanceCommand(message.AuthToken, message.InstanceGuid));
 	}
 
-	private Task<Result<StopInstanceResult, InstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(message.AgentGuid, new AgentActor.StopInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid, message.StopStrategy));
+	private Task<Result<StopInstanceResult, UserInstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
+		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(message.AgentGuid, new AgentActor.StopInstanceCommand(message.AuthToken, message.InstanceGuid, message.StopStrategy));
 	}
 
-	private Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(message.AgentGuid, new AgentActor.SendCommandToInstanceCommand(message.InstanceGuid, message.LoggedInUserGuid, message.Command));
+	private Task<Result<SendCommandToInstanceResult, UserInstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
+		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(message.AgentGuid, new AgentActor.SendCommandToInstanceCommand(message.AuthToken, message.InstanceGuid, message.Command));
 	}
 
 	private Task<ImmutableArray<MinecraftVersion>> HandleGetMinecraftVersions(GetMinecraftVersionsMessage message) {
@@ -163,12 +164,12 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		return controllerState.AgentJavaRuntimesByGuid;
 	}
 
-	private Task<ImmutableArray<AuditLogItem>> HandleGetAuditLog(GetAuditLogMessage message) {
-		return auditLogManager.GetMostRecentItems(message.Count);
+	private Task<Result<ImmutableArray<AuditLogItem>, UserActionFailure>> HandleGetAuditLog(GetAuditLogMessage message) {
+		return auditLogManager.GetMostRecentItems(userLoginManager.GetLoggedInUser(message.AuthToken), message.Count);
 	}
 
-	private Task<ImmutableArray<EventLogItem>> HandleGetEventLog(GetEventLogMessage message) {
-		return eventLogManager.GetMostRecentItems(message.Count);
+	private Task<Result<ImmutableArray<EventLogItem>, UserActionFailure>> HandleGetEventLog(GetEventLogMessage message) {
+		return eventLogManager.GetMostRecentItems(userLoginManager.GetLoggedInUser(message.AuthToken), message.Count);
 	}
 
 	private void HandleReply(ReplyMessage message) {

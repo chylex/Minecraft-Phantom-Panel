@@ -1,9 +1,10 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
-@using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Replies
 @using Phantom.Common.Data.Web.Instance
 @using Phantom.Common.Data.Web.Users
+@using Phantom.Utils.Result
+@using Phantom.Common.Data.Instance
 @using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Authorization
 @inherits Phantom.Web.Components.PhantomComponent
@@ -12,41 +13,41 @@
 @if (Instance == null) {
   <h1>Instance Not Found</h1>
   <p>Return to <a href="instances">all instances</a>.</p>
+  return;
 }
-else {
-  <div class="d-flex flex-row align-items-center gap-3 mb-3">
-    <h1 class="mb-0">Instance: @Instance.Configuration.InstanceName</h1>
-    <span class="fs-4 text-muted">//</span>
-    <div class="mt-2">
-      <InstanceStatusText Status="Instance.Status" />
-    </div>
-  </div>
-  <div class="d-flex flex-row align-items-center gap-2">
-    <PermissionView Permission="Permission.ControlInstances">
-      <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
-      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#stop-instance" disabled="@(!Instance.Status.CanStop())">Stop...</button>
-      <span><!-- extra spacing --></span>
-    </PermissionView>
-    <PermissionView Permission="Permission.CreateInstances">
-      <a href="instances/@InstanceGuid/edit" class="btn btn-warning ms-auto">Edit Configuration</a>
-    </PermissionView>
-  </div>
-  @if (lastError != null) {
-    <p class="text-danger mt-2">@lastError</p>
-  }
 
-  <PermissionView Permission="Permission.ViewInstanceLogs">
-    <InstanceLog InstanceGuid="InstanceGuid" />
-  </PermissionView>
-
+<div class="d-flex flex-row align-items-center gap-3 mb-3">
+  <h1 class="mb-0">Instance: @Instance.Configuration.InstanceName</h1>
+  <span class="fs-4 text-muted">//</span>
+  <div class="mt-2">
+    <InstanceStatusText Status="Instance.Status" />
+  </div>
+</div>
+<div class="d-flex flex-row align-items-center gap-2">
   <PermissionView Permission="Permission.ControlInstances">
-    <div class="mb-3">
-      <InstanceCommandInput AgentGuid="Instance.Configuration.AgentGuid" InstanceGuid="InstanceGuid" Disabled="@(!Instance.Status.CanSendCommand())" />
-    </div>
-
-    <InstanceStopDialog AgentGuid="Instance.Configuration.AgentGuid" InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
+    <button type="button" class="btn btn-success" @onclick="LaunchInstance" disabled="@(isLaunchingInstance || !Instance.Status.CanLaunch())">Launch</button>
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#stop-instance" disabled="@(!Instance.Status.CanStop())">Stop...</button>
+    <span><!-- extra spacing --></span>
   </PermissionView>
+  <PermissionView Permission="Permission.CreateInstances">
+    <a href="instances/@InstanceGuid/edit" class="btn btn-warning ms-auto">Edit Configuration</a>
+  </PermissionView>
+</div>
+@if (lastError != null) {
+  <p class="text-danger mt-2">@lastError</p>
 }
+
+<PermissionView Permission="Permission.ViewInstanceLogs">
+  <InstanceLog InstanceGuid="InstanceGuid" />
+</PermissionView>
+
+<PermissionView Permission="Permission.ControlInstances">
+  <div class="mb-3">
+    <InstanceCommandInput AgentGuid="Instance.Configuration.AgentGuid" InstanceGuid="InstanceGuid" Disabled="@(!Instance.Status.CanSendCommand())" />
+  </div>
+
+  <InstanceStopDialog AgentGuid="Instance.Configuration.AgentGuid" InstanceGuid="InstanceGuid" ModalId="stop-instance" Disabled="@(!Instance.Status.CanStop())" />
+</PermissionView>
 
 @code {
 
@@ -73,20 +74,32 @@ else {
     lastError = null;
 
     try {
-      var loggedInUserGuid = await GetUserGuid();
-      if (loggedInUserGuid == null || !await CheckPermission(Permission.ControlInstances)) {
-        lastError = "You do not have permission to launch instances.";
-        return;
-      }
-
       if (Instance == null) {
         lastError = "Instance not found.";
         return;
       }
 
-      var result = await InstanceManager.LaunchInstance(loggedInUserGuid.Value, Instance.Configuration.AgentGuid, InstanceGuid, CancellationToken);
-      if (!result.Is(LaunchInstanceResult.LaunchInitiated)) {
-        lastError = result.Map(Messages.ToSentence, InstanceActionFailureExtensions.ToSentence);
+      var result = await InstanceManager.LaunchInstance(await GetAuthenticatedUser(), Instance.Configuration.AgentGuid, InstanceGuid, CancellationToken);
+
+      switch (result.Variant()) {
+        case Ok<LaunchInstanceResult>(LaunchInstanceResult.LaunchInitiated):
+          break;
+
+        case Ok<LaunchInstanceResult>(var launchInstanceResult):
+          lastError = launchInstanceResult.ToSentence();
+          break;
+
+        case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+          lastError = failure.ToSentence();
+          break;
+
+        case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+          lastError = "You do not have permission to launch this instance.";
+          break;
+
+        default:
+          lastError = "Unknown error.";
+          break;
       }
     } finally {
       isLaunchingInstance = false;

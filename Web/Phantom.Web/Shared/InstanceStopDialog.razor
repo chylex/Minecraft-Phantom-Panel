@@ -1,8 +1,9 @@
-﻿@using Phantom.Web.Services.Instances
-@using System.ComponentModel.DataAnnotations
+﻿@using Phantom.Common.Data.Replies
 @using Phantom.Common.Data.Web.Users
+@using Phantom.Utils.Result
+@using Phantom.Web.Services.Instances
+@using System.ComponentModel.DataAnnotations
 @using Phantom.Common.Data.Minecraft
-@using Phantom.Common.Data.Replies
 @inherits Phantom.Web.Components.PhantomComponent
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
@@ -33,7 +34,7 @@
 
   [Parameter, EditorRequired]
   public Guid AgentGuid { get; init; }
-  
+
   [Parameter, EditorRequired]
   public Guid InstanceGuid { get; init; }
 
@@ -53,19 +54,29 @@
   private async Task StopInstance(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    var loggedInUserGuid = await GetUserGuid();
-    if (loggedInUserGuid == null || !await CheckPermission(Permission.ControlInstances)) {
-      form.SubmitModel.StopSubmitting("You do not have permission to stop instances.");
-      return;
-    }
+    var result = await InstanceManager.StopInstance(await GetAuthenticatedUser(), AgentGuid, InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds), CancellationToken);
 
-    var result = await InstanceManager.StopInstance(loggedInUserGuid.Value, AgentGuid, InstanceGuid, new MinecraftStopStrategy(form.StopInSeconds), CancellationToken);
-    if (result.Is(StopInstanceResult.StopInitiated)) {
-      await Js.InvokeVoidAsync("closeModal", ModalId);
-      form.SubmitModel.StopSubmitting();
-    }
-    else {
-      form.SubmitModel.StopSubmitting(result.Map(Messages.ToSentence, InstanceActionFailureExtensions.ToSentence));
+    switch (result.Variant()) {
+      case Ok<StopInstanceResult>(StopInstanceResult.StopInitiated):
+        await Js.InvokeVoidAsync("closeModal", ModalId);
+        form.SubmitModel.StopSubmitting();
+        break;
+
+      case Ok<StopInstanceResult>(var stopInstanceResult):
+        form.SubmitModel.StopSubmitting(stopInstanceResult.ToSentence());
+        break;
+
+      case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+        form.SubmitModel.StopSubmitting(failure.ToSentence());
+        break;
+
+      case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+        form.SubmitModel.StopSubmitting("You do not have permission to stop this instance.");
+        break;
+
+      default:
+        form.SubmitModel.StopSubmitting("Unknown error.");
+        break;
     }
   }
 

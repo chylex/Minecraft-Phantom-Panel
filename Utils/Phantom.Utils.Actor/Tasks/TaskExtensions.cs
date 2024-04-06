@@ -17,6 +17,10 @@ public static class TaskExtensions {
 		return task.ContinueOnActor(result => mapper(result, arg));
 	}
 	
+	public static Task<TResult> ContinueOnActor<TSource, TArg1, TArg2, TResult>(this Task<TSource> task, Func<TSource, TArg1, TArg2, TResult> mapper, TArg1 arg1, TArg2 arg2) {
+		return task.ContinueOnActor(result => mapper(result, arg1, arg2));
+	}
+	
 	private static Task<TResult> MapResult<TSource, TResult>(Task<TSource> task, Func<TSource, TResult> mapper, TaskCompletionSource<TResult> completionSource) {
 		if (task.IsFaulted) {
 			completionSource.SetException(task.Exception.InnerExceptions);

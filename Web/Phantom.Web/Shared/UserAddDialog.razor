@@ -1,5 +1,6 @@
 ﻿@using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Data.Web.Users.CreateUserResults
+@using Phantom.Utils.Result
 @using Phantom.Web.Services.Users
 @using System.ComponentModel.DataAnnotations
 @inherits Phantom.Web.Components.PhantomComponent
@@ -39,7 +40,7 @@
   [Parameter]
   public EventCallback<UserInfo> UserAdded { get; set; }
 
-  private readonly AddUserFormModel form = new();
+  private readonly AddUserFormModel form = new ();
 
   private sealed class AddUserFormModel : FormModel {
     [Required]
@@ -52,21 +53,21 @@
   private async Task AddUser(EditContext context) {
     await form.SubmitModel.StartSubmitting();
 
-    var loggedInUserGuid = await GetUserGuid();
-    if (loggedInUserGuid == null || !await CheckPermission(Permission.EditUsers)) {
-      form.SubmitModel.StopSubmitting("You do not have permission to add users.");
-      return;
-    }
+    var result = await UserManager.Create(await GetAuthenticatedUser(), form.Username, form.Password, CancellationToken);
 
-    switch (await UserManager.Create(loggedInUserGuid.Value, form.Username, form.Password, CancellationToken)) {
-      case Success success:
+    switch (result.Variant()) {
+      case Ok<CreateUserResult>(Success success):
         await UserAdded.InvokeAsync(success.User);
         await Js.InvokeVoidAsync("closeModal", ModalId);
         form.SubmitModel.StopSubmitting();
         break;
 
-      case CreationFailed fail:
+      case Ok<CreateUserResult>(CreationFailed fail):
         form.SubmitModel.StopSubmitting(fail.Error.ToSentences("\n"));
+        break;
+
+      case Err<UserActionFailure>(UserActionFailure.NotAuthorized):
+        form.SubmitModel.StopSubmitting("You do not have permission to add users.");
         break;
 
       default:

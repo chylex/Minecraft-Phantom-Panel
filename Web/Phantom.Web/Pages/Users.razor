@@ -60,7 +60,7 @@
 
 @code {
 
-  private Guid? me = Guid.Empty;
+  private Guid? me = null;
   private ImmutableArray<UserInfo>? allUsers;
   private ImmutableDictionary<Guid, RoleInfo> allRolesByGuid = ImmutableDictionary<Guid, RoleInfo>.Empty;
   private readonly Dictionary<Guid, string> userGuidToRoleDescription = new ();
@@ -71,7 +71,7 @@
   private UserDeleteDialog userDeleteDialog = null!;
 
   protected override async Task OnInitializedAsync() {
-    me = await GetUserGuid();
+    me = (await GetAuthenticatedUser())?.Info.Guid;
 
     allUsers = (await UserManager.GetAll(CancellationToken)).Sort(static (a, b) => a.Name.CompareTo(b.Name));
     allRolesByGuid = (await RoleManager.GetAll(CancellationToken)).ToImmutableDictionary(static role => role.Guid, static role => role);

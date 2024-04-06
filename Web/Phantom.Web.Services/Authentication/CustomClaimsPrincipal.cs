@@ -4,10 +4,10 @@ using Phantom.Common.Data.Web.Users;
 namespace Phantom.Web.Services.Authentication;
 
 sealed class CustomClaimsPrincipal : ClaimsPrincipal {
-	internal AuthenticatedUserInfo UserInfo { get; }
+	internal AuthenticatedUser User { get; }
 
-	internal CustomClaimsPrincipal(AuthenticatedUserInfo userInfo) : base(GetIdentity(userInfo)) {
-		UserInfo = userInfo;
+	internal CustomClaimsPrincipal(AuthenticatedUser user) : base(GetIdentity(user.Info)) {
+		User = user;
 	}
 
 	private static ClaimsIdentity GetIdentity(AuthenticatedUserInfo userInfo) {

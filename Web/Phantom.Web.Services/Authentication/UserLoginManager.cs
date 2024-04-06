@@ -37,9 +37,10 @@ public sealed class UserLoginManager {
 		Logger.Information("Successfully logged in {Username}.", username);
 
 		var userInfo = success.UserInfo;
-
-		await sessionBrowserStorage.Store(userInfo.Guid, success.Token);
-		authenticationStateProvider.SetLoadedSession(userInfo);
+		var authToken = success.AuthToken;
+		
+		await sessionBrowserStorage.Store(userInfo.Guid, authToken);
+		authenticationStateProvider.SetLoadedSession(new AuthenticatedUser(userInfo, authToken));
 		await navigation.NavigateTo(returnUrl ?? string.Empty);
 		
 		return true;

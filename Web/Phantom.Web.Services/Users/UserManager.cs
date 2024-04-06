@@ -1,6 +1,8 @@
 ﻿using System.Collections.Immutable;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Web.ToController;
+using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Rpc;
 
 namespace Phantom.Web.Services.Users;
@@ -16,11 +18,21 @@ public sealed class UserManager {
 		return controllerConnection.Send<GetUsersMessage, ImmutableArray<UserInfo>>(new GetUsersMessage(), cancellationToken);
 	}
 
-	public Task<CreateUserResult> Create(Guid loggedInUserGuid, string username, string password, CancellationToken cancellationToken) {
-		return controllerConnection.Send<CreateUserMessage, CreateUserResult>(new CreateUserMessage(loggedInUserGuid, username, password), cancellationToken);
+	public async Task<Result<CreateUserResult, UserActionFailure>> Create(AuthenticatedUser? authenticatedUser, string username, string password, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.EditUsers)) {
+			return await controllerConnection.Send<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>(new CreateUserMessage(authenticatedUser.Token, username, password), cancellationToken);
+		}
+		else {
+			return UserActionFailure.NotAuthorized;
+		}
 	}
 	
-	public Task<DeleteUserResult> DeleteByGuid(Guid loggedInUserGuid, Guid userGuid, CancellationToken cancellationToken) {
-		return controllerConnection.Send<DeleteUserMessage, DeleteUserResult>(new DeleteUserMessage(loggedInUserGuid, userGuid), cancellationToken);
+	public async Task<Result<DeleteUserResult, UserActionFailure>> DeleteByGuid(AuthenticatedUser? authenticatedUser, Guid userGuid, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.EditUsers)) {
+			return await controllerConnection.Send<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>(new DeleteUserMessage(authenticatedUser.Token, userGuid), cancellationToken);
+		}
+		else {
+			return UserActionFailure.NotAuthorized;
+		}
 	}
 }

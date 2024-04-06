@@ -4,9 +4,11 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
+using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Web.ToController;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;
+using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Rpc;
 
 namespace Phantom.Web.Services.Instances;
@@ -35,23 +37,43 @@ public sealed class InstanceManager {
 		return instances.Value.GetValueOrDefault(instanceGuid);
 	}
 
-	public Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance(Guid loggedInUserGuid, Guid instanceGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
-		var message = new CreateOrUpdateInstanceMessage(loggedInUserGuid, instanceGuid, configuration);
-		return controllerConnection.Send<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(message, cancellationToken);
+	public async Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> CreateOrUpdateInstance(AuthenticatedUser? authenticatedUser, Guid instanceGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.CreateInstances)) {
+			var message = new CreateOrUpdateInstanceMessage(authenticatedUser.Token, instanceGuid, configuration);
+			return await controllerConnection.Send<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
+		}
+		else {
+			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
+		}
 	}
 
-	public Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, CancellationToken cancellationToken) {
-		var message = new LaunchInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid);
-		return controllerConnection.Send<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(message, cancellationToken);
+	public async Task<Result<LaunchInstanceResult, UserInstanceActionFailure>> LaunchInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ControlInstances)) {
+			var message = new LaunchInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid);
+			return await controllerConnection.Send<LaunchInstanceMessage, Result<LaunchInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
+		}
+		else {
+			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
+		}
 	}
 
-	public Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
-		var message = new StopInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid, stopStrategy);
-		return controllerConnection.Send<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(message, cancellationToken);
+	public async Task<Result<StopInstanceResult, UserInstanceActionFailure>> StopInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ControlInstances)) {
+			var message = new StopInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid, stopStrategy);
+			return await controllerConnection.Send<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
+		}
+		else {
+			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
+		}
 	}
 
-	public Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendCommandToInstance(Guid loggedInUserGuid, Guid agentGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
-		var message = new SendCommandToInstanceMessage(loggedInUserGuid, agentGuid, instanceGuid, command);
-		return controllerConnection.Send<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(message, cancellationToken);
+	public async Task<Result<SendCommandToInstanceResult, UserInstanceActionFailure>> SendCommandToInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
+		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ControlInstances)) {
+			var message = new SendCommandToInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid, command);
+			return await controllerConnection.Send<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
+		}
+		else {
+			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
+		}
 	}
 }

@@ -2,13 +2,14 @@
 @using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
-@using Phantom.Common.Data.Minecraft
-@using Phantom.Common.Data.Replies
-@using Phantom.Common.Data.Web.Agent
 @using Phantom.Common.Data.Web.Instance
 @using Phantom.Common.Data.Web.Minecraft
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Messages.Web.ToController
+@using Phantom.Utils.Result
+@using Phantom.Common.Data.Replies
+@using Phantom.Common.Data.Web.Agent
+@using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Data.Java
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Instance
@@ -29,13 +30,14 @@
       @{
         static RenderFragment GetAgentOption(Agent agent) {
           var configuration = agent.Configuration;
-          return @<option value="@agent.AgentGuid">
-                   @configuration.AgentName
-                   &bullet;
-                   @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(configuration.MaxInstances) @(configuration.MaxInstances == 1 ? "Instance" : "Instances")
-                   &bullet;
-                   @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(configuration.MaxMemory.InMegabytes) MB RAM
-                 </option>;
+          return
+            @<option value="@agent.AgentGuid">
+              @configuration.AgentName
+              &bullet;
+              @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(configuration.MaxInstances) @(configuration.MaxInstances == 1 ? "Instance" : "Instances")
+              &bullet;
+              @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(configuration.MaxMemory.InMegabytes) MB RAM
+            </option>;
         }
       }
       @if (EditedInstance == null) {
@@ -168,12 +170,12 @@
 
   [Parameter, EditorRequired]
   public Instance? EditedInstance { get; init; }
-  
+
   private ConfigureInstanceFormModel form = null!;
 
   private ImmutableDictionary<Guid, Agent> allAgentsByGuid = ImmutableDictionary<Guid, Agent>.Empty;
   private ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> allAgentJavaRuntimes = ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>.Empty;
-  
+
   private MinecraftVersionType minecraftVersionType = MinecraftVersionType.Release;
   private ImmutableArray<MinecraftVersion> allMinecraftVersions = ImmutableArray<MinecraftVersion>.Empty;
   private ImmutableArray<MinecraftVersion> availableMinecraftVersions = ImmutableArray<MinecraftVersion>.Empty;
@@ -278,7 +280,7 @@
   protected override async Task OnInitializedAsync() {
     var agentJavaRuntimesTask = ControllerConnection.Send<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(new GetAgentJavaRuntimesMessage(), TimeSpan.FromSeconds(30));
     var minecraftVersionsTask = ControllerConnection.Send<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(new GetMinecraftVersionsMessage(), TimeSpan.FromSeconds(30));
-    
+
     allAgentsByGuid = AgentManager.ToDictionaryByGuid();
     allAgentJavaRuntimes = await agentJavaRuntimesTask;
     allMinecraftVersions = await minecraftVersionsTask;
@@ -294,7 +296,7 @@
       form.MemoryUnits = configuration.MemoryAllocation.RawValue;
       form.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
       form.JvmArguments = JvmArgumentsHelper.Join(configuration.JvmArguments);
-      
+
       minecraftVersionType = allMinecraftVersions.FirstOrDefault(version => version.Id == configuration.MinecraftVersion)?.Type ?? minecraftVersionType;
     }
 
@@ -303,7 +305,7 @@
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.ServerPort));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.SelectedAgentGuid), revalidated: nameof(ConfigureInstanceFormModel.RconPort));
     form.EditContext.RevalidateWhenFieldChanges(tracked: nameof(ConfigureInstanceFormModel.ServerPort), revalidated: nameof(ConfigureInstanceFormModel.RconPort));
-    
+
     SetMinecraftVersionType(minecraftVersionType);
   }
 
@@ -324,12 +326,6 @@
 
     await form.SubmitModel.StartSubmitting();
 
-    var loggedInUserGuid = await GetUserGuid();
-    if (loggedInUserGuid == null || !await CheckPermission(Permission.CreateInstances)) {
-      form.SubmitModel.StopSubmitting("You do not have permission to edit instances.");
-      return;
-    }
-    
     var instanceGuid = EditedInstance?.InstanceGuid ?? Guid.NewGuid();
     var instanceConfiguration = new InstanceConfiguration(
       EditedInstance?.Configuration.AgentGuid ?? selectedAgent.AgentGuid,
@@ -343,12 +339,28 @@
       JvmArgumentsHelper.Split(form.JvmArguments)
     );
 
-    var result = await InstanceManager.CreateOrUpdateInstance(loggedInUserGuid.Value, instanceGuid, instanceConfiguration, CancellationToken);
-    if (result.Is(CreateOrUpdateInstanceResult.Success)) {
-      await Navigation.NavigateTo("instances/" + instanceGuid);
-    }
-    else {
-      form.SubmitModel.StopSubmitting(result.Map(CreateOrUpdateInstanceResultExtensions.ToSentence, InstanceActionFailureExtensions.ToSentence));
+    var result = await InstanceManager.CreateOrUpdateInstance(await GetAuthenticatedUser(), instanceGuid, instanceConfiguration, CancellationToken);
+
+    switch (result.Variant()) {
+      case Ok<CreateOrUpdateInstanceResult>(CreateOrUpdateInstanceResult.Success):
+        await Navigation.NavigateTo("instances/" + instanceGuid);
+        break;
+
+      case Ok<CreateOrUpdateInstanceResult>(var createOrUpdateInstanceResult):
+        form.SubmitModel.StopSubmitting(createOrUpdateInstanceResult.ToSentence());
+        break;
+
+      case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+        form.SubmitModel.StopSubmitting(failure.ToSentence());
+        break;
+
+      case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+        form.SubmitModel.StopSubmitting("You do not have permission to create or edit instances.");
+        break;
+
+      default:
+        form.SubmitModel.StopSubmitting("Unknown error.");
+        break;
     }
   }
 

@@ -5,12 +5,17 @@
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Web.Services.Users
 @using Phantom.Web.Services.Instances
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject AuditLogManager AuditLogManager
 @inject InstanceManager InstanceManager
 @inject UserManager UserManager
 
 <h1>Audit Log</h1>
+
+@if (loadError is {} error) {
+  <p>@error</p>
+  return;
+}
 
 <Table TItem="AuditLogItem" Items="logItems">
   <HeaderRow>
@@ -46,21 +51,25 @@
 
 @code {
 
-  private CancellationTokenSource? initializationCancellationTokenSource;
   private ImmutableArray<AuditLogItem>? logItems;
+  private string? loadError;
+  
   private ImmutableDictionary<Guid, string>? userNamesByGuid;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
-    initializationCancellationTokenSource = new CancellationTokenSource();
-    var cancellationToken = initializationCancellationTokenSource.Token;
-
-    try {
-      logItems = await AuditLogManager.GetMostRecentItems(50, cancellationToken);
-      userNamesByGuid = (await UserManager.GetAll(cancellationToken)).ToImmutableDictionary(static user => user.Guid, static user => user.Name);
+    var result = await AuditLogManager.GetMostRecentItems(await GetAuthenticatedUser(), 50, CancellationToken);
+    if (result) {
+      logItems = result.Value;
+      userNamesByGuid = (await UserManager.GetAll(CancellationToken)).ToImmutableDictionary(static user => user.Guid, static user => user.Name);
       instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.InstanceGuid, static instance => instance.Configuration.InstanceName);
-    } finally {
-      initializationCancellationTokenSource.Dispose();
+    }
+    else {
+      logItems = ImmutableArray<AuditLogItem>.Empty;
+      loadError = result.Error switch {
+        UserActionFailure.NotAuthorized => "You do not have permission to view the audit log.",
+        _                               => "Unknown error."
+      };
     }
   }
 
@@ -70,12 +79,6 @@
       AuditLogSubjectType.User     => userNamesByGuid != null && userNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
       _                            => null
     };
-  }
-
-  protected override void OnDisposed() {
-    try {
-      initializationCancellationTokenSource?.Cancel();
-    } catch (ObjectDisposedException) {}
   }
 
 }
