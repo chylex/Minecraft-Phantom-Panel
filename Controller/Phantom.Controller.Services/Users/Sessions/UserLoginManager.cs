@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Security.Cryptography;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Repositories;
@@ -29,7 +30,7 @@ sealed class UserLoginManager {
 		return sessionBuckets[token[0]];
 	}
 
-	public async Task<LogInSuccess?> LogIn(string username, string password) {
+	public async Task<Optional<LogInSuccess>> LogIn(string username, string password) {
 		Guid userGuid;
 		AuthenticatedUserInfo? authenticatedUserInfo;
 		
@@ -38,12 +39,12 @@ sealed class UserLoginManager {
 
 			var user = await userRepository.GetByName(username);
 			if (user == null || !UserPasswords.Verify(password, user.PasswordHash)) {
-				return null;
+				return default;
 			}
 
 			authenticatedUserInfo = await authenticatedUserCache.Update(user, db);
 			if (authenticatedUserInfo == null) {
-				return null;
+				return default;
 			}
 
 			userGuid = user.UserGuid;

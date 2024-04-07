@@ -24,7 +24,7 @@ public static class WebMessageRegistries {
 	static WebMessageRegistries() {
 		ToController.Add<RegisterWebMessage>(0);
 		ToController.Add<UnregisterWebMessage>(1);
-		ToController.Add<LogInMessage, LogInSuccess?>(2);
+		ToController.Add<LogInMessage, Optional<LogInSuccess>>(2);
 		ToController.Add<LogOutMessage>(3);
 		ToController.Add<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(4);
 		ToController.Add<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(5);

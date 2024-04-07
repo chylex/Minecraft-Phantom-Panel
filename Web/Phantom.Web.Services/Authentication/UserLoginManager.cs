@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data.Web.Users;
+﻿using Phantom.Common.Data;
+using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Web.ToController;
 using Phantom.Utils.Logging;
 using Phantom.Web.Services.Rpc;
@@ -22,23 +23,20 @@ public sealed class UserLoginManager {
 	}
 
 	public async Task<bool> LogIn(string username, string password, string? returnUrl = null) {
-		LogInSuccess? success;
+		Optional<LogInSuccess> result;
 		try {
-			success = await controllerConnection.Send<LogInMessage, LogInSuccess?>(new LogInMessage(username, password), TimeSpan.FromSeconds(30));
+			result = await controllerConnection.Send<LogInMessage, Optional<LogInSuccess>>(new LogInMessage(username, password), TimeSpan.FromSeconds(30));
 		} catch (Exception e) {
 			Logger.Error(e, "Could not log in {Username}.", username);
 			return false;
 		}
 
-		if (success == null) {
+		if (result.Value is not var (userInfo, authToken)) {
 			return false;
 		}
 
 		Logger.Information("Successfully logged in {Username}.", username);
 
-		var userInfo = success.UserInfo;
-		var authToken = success.AuthToken;
-		
 		authenticationStateProvider.SetUnloadedSession();
 		await sessionBrowserStorage.Store(userInfo.Guid, authToken);
 		await authenticationStateProvider.GetAuthenticationStateAsync();

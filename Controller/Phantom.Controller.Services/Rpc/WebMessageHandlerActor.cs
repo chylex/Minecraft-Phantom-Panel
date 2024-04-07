@@ -71,7 +71,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 
 		ReceiveAsync<RegisterWebMessage>(HandleRegisterWeb);
 		Receive<UnregisterWebMessage>(HandleUnregisterWeb);
-		ReceiveAndReplyLater<LogInMessage, LogInSuccess?>(HandleLogIn);
+		ReceiveAndReplyLater<LogInMessage, Optional<LogInSuccess>>(HandleLogIn);
 		Receive<LogOutMessage>(HandleLogOut);
 		ReceiveAndReply<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(GetAuthenticatedUser);
 		ReceiveAndReplyLater<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(HandleCreateOrUpdateAdministratorUser);
@@ -100,7 +100,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		connection.Close();
 	}
 
-	private Task<LogInSuccess?> HandleLogIn(LogInMessage message) {
+	private Task<Optional<LogInSuccess>> HandleLogIn(LogInMessage message) {
 		return userLoginManager.LogIn(message.Username, message.Password);
 	}
 

@@ -1,4 +1,5 @@
 ﻿using MemoryPack;
+using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Utils.Actor;
 
@@ -8,4 +9,4 @@ namespace Phantom.Common.Messages.Web.ToController;
 public sealed partial record LogInMessage(
 	[property: MemoryPackOrder(0)] string Username,
 	[property: MemoryPackOrder(1)] string Password
-) : IMessageToController, ICanReply<LogInSuccess?>;
+) : IMessageToController, ICanReply<Optional<LogInSuccess>>;
