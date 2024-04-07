@@ -54,9 +54,9 @@ public sealed class ControllerServices : IDisposable {
 		this.MinecraftVersions = new MinecraftVersions();
 		
 		this.AuthenticatedUserCache = new AuthenticatedUserCache();
-		this.UserManager = new UserManager(AuthenticatedUserCache, dbProvider);
+		this.UserManager = new UserManager(AuthenticatedUserCache, ControllerState, dbProvider);
 		this.RoleManager = new RoleManager(dbProvider);
-		this.UserRoleManager = new UserRoleManager(AuthenticatedUserCache, dbProvider);
+		this.UserRoleManager = new UserRoleManager(AuthenticatedUserCache, ControllerState, dbProvider);
 		this.UserLoginManager = new UserLoginManager(AuthenticatedUserCache, UserManager, dbProvider);
 		this.PermissionManager = new PermissionManager(dbProvider);
 		

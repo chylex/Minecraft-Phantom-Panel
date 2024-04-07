@@ -19,6 +19,8 @@ sealed class ControllerState {
 	public ObservableState<ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>.Receiver AgentJavaRuntimesByGuidReceiver => agentJavaRuntimesByGuid.ReceiverSide;
 	public ObservableState<ImmutableDictionary<Guid, Instance>>.Receiver InstancesByGuidReceiver => instancesByGuid.ReceiverSide;
 	
+	public event EventHandler<Guid>? UserUpdatedOrDeleted;
+
 	public void UpdateAgent(Agent agent) {
 		agentsByGuid.PublisherSide.Publish(static (agentsByGuid, agent) => agentsByGuid.SetItem(agent.AgentGuid, agent), agent);
 	}
@@ -29,5 +31,9 @@ sealed class ControllerState {
 
 	public void UpdateInstance(Instance instance) {
 		instancesByGuid.PublisherSide.Publish(static (instancesByGuid, instance) => instancesByGuid.SetItem(instance.InstanceGuid, instance), instance);
+	}
+
+	public void UpdateOrDeleteUser(Guid userGuid) {
+		UserUpdatedOrDeleted?.Invoke(null, userGuid);
 	}
 }

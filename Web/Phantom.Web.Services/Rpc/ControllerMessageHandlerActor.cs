@@ -4,12 +4,20 @@ using Phantom.Common.Messages.Web.ToWeb;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Rpc.Runtime;
 using Phantom.Web.Services.Agents;
+using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Instances;
 
 namespace Phantom.Web.Services.Rpc; 
 
 sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToWeb> {
-	public readonly record struct Init(RpcConnectionToServer<IMessageToController> Connection, AgentManager AgentManager, InstanceManager InstanceManager, InstanceLogManager InstanceLogManager, TaskCompletionSource<bool> RegisterSuccessWaiter);
+	public readonly record struct Init(
+		RpcConnectionToServer<IMessageToController> Connection,
+		AgentManager AgentManager,
+		InstanceManager InstanceManager,
+		InstanceLogManager InstanceLogManager,
+		UserSessionRefreshManager UserSessionRefreshManager,
+		TaskCompletionSource<bool> RegisterSuccessWaiter
+	);
 	
 	public static Props<IMessageToWeb> Factory(Init init) {
 		return Props<IMessageToWeb>.Create(() => new ControllerMessageHandlerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
@@ -19,6 +27,7 @@ sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToWeb> {
 	private readonly AgentManager agentManager;
 	private readonly InstanceManager instanceManager;
 	private readonly InstanceLogManager instanceLogManager;
+	private readonly UserSessionRefreshManager userSessionRefreshManager;
 	private readonly TaskCompletionSource<bool> registerSuccessWaiter;
 	
 	private ControllerMessageHandlerActor(Init init) {
@@ -26,12 +35,14 @@ sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToWeb> {
 		this.agentManager = init.AgentManager;
 		this.instanceManager = init.InstanceManager;
 		this.instanceLogManager = init.InstanceLogManager;
+		this.userSessionRefreshManager = init.UserSessionRefreshManager;
 		this.registerSuccessWaiter = init.RegisterSuccessWaiter;
 		
 		Receive<RegisterWebResultMessage>(HandleRegisterWebResult);
 		Receive<RefreshAgentsMessage>(HandleRefreshAgents);
 		Receive<RefreshInstancesMessage>(HandleRefreshInstances);
 		Receive<InstanceOutputMessage>(HandleInstanceOutput);
+		Receive<RefreshUserSessionMessage>(HandleRefreshUserSession);
 		Receive<ReplyMessage>(HandleReply);
 	}
 
@@ -49,6 +60,10 @@ sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToWeb> {
 
 	private void HandleInstanceOutput(InstanceOutputMessage message) {
 		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
+	}
+
+	private void HandleRefreshUserSession(RefreshUserSessionMessage message) {
+		userSessionRefreshManager.RefreshUser(message.UserGuid);
 	}
 
 	private void HandleReply(ReplyMessage message) {

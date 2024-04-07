@@ -13,10 +13,12 @@ sealed class UserRoleManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserRoleManager>();
 
 	private readonly AuthenticatedUserCache authenticatedUserCache;
+	private readonly ControllerState controllerState;
 	private readonly IDbContextProvider dbProvider;
 	
-	public UserRoleManager(AuthenticatedUserCache authenticatedUserCache, IDbContextProvider dbProvider) {
+	public UserRoleManager(AuthenticatedUserCache authenticatedUserCache, ControllerState controllerState, IDbContextProvider dbProvider) {
 		this.authenticatedUserCache = authenticatedUserCache;
+		this.controllerState = controllerState;
 		this.dbProvider = dbProvider;
 	}
 
@@ -49,7 +51,7 @@ sealed class UserRoleManager {
 		
 		var removedFromRoleGuids = ImmutableHashSet.CreateBuilder<Guid>();
 		var removedFromRoleNames = new List<string>();
-        
+
 		try {
 			foreach (var roleGuid in addToRoleGuids) {
 				if (rolesByGuid.TryGetValue(roleGuid, out var role)) {
@@ -71,6 +73,7 @@ sealed class UserRoleManager {
 			await db.Ctx.SaveChangesAsync();
 			
 			await authenticatedUserCache.Update(user, db);
+			controllerState.UpdateOrDeleteUser(user.UserGuid);
 			
 			Logger.Information("Changed roles for user \"{Username}\" (GUID {Guid}).", user.Name, user.UserGuid);
 			return new ChangeUserRolesResult(addedToRoleGuids.ToImmutable(), removedFromRoleGuids.ToImmutable());

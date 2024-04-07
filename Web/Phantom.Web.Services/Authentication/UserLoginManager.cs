@@ -39,8 +39,9 @@ public sealed class UserLoginManager {
 		var userInfo = success.UserInfo;
 		var authToken = success.AuthToken;
 		
+		authenticationStateProvider.SetUnloadedSession();
 		await sessionBrowserStorage.Store(userInfo.Guid, authToken);
-		authenticationStateProvider.SetLoadedSession(new AuthenticatedUser(userInfo, authToken));
+		await authenticationStateProvider.GetAuthenticationStateAsync();
 		await navigation.NavigateTo(returnUrl ?? string.Empty);
 		
 		return true;

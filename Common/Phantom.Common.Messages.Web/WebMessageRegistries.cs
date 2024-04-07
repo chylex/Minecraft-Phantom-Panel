@@ -48,6 +48,7 @@ public static class WebMessageRegistries {
 		ToWeb.Add<RefreshAgentsMessage>(1);
 		ToWeb.Add<RefreshInstancesMessage>(2);
 		ToWeb.Add<InstanceOutputMessage>(3);
+		ToWeb.Add<RefreshUserSessionMessage>(4);
 		ToWeb.Add<ReplyMessage>(127);
 	}
 

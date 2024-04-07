@@ -14,10 +14,12 @@ sealed class UserManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserManager>();
 
 	private readonly AuthenticatedUserCache authenticatedUserCache;
+	private readonly ControllerState controllerState;
 	private readonly IDbContextProvider dbProvider;
 
-	public UserManager(AuthenticatedUserCache authenticatedUserCache, IDbContextProvider dbProvider) {
+	public UserManager(AuthenticatedUserCache authenticatedUserCache, ControllerState controllerState, IDbContextProvider dbProvider) {
 		this.authenticatedUserCache = authenticatedUserCache;
+		this.controllerState = controllerState;
 		this.dbProvider = dbProvider;
 	}
 
@@ -140,6 +142,7 @@ sealed class UserManager {
 			
 			// In case the user logged in during deletion.
 			authenticatedUserCache.Remove(userGuid);
+			controllerState.UpdateOrDeleteUser(userGuid);
 
 			Logger.Information("Deleted user \"{Username}\" (GUID {Guid}).", user.Name, user.UserGuid);
 			return DeleteUserResult.Deleted;

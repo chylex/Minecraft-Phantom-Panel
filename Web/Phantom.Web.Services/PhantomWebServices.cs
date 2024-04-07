@@ -23,6 +23,7 @@ public static class PhantomWebServices {
 		
 		services.AddSingleton<UserManager>();
 		services.AddSingleton<AuditLogManager>();
+		services.AddSingleton<UserSessionRefreshManager>();
 		services.AddScoped<UserLoginManager>();
 		services.AddScoped<UserSessionBrowserStorage>();
 		
