@@ -1,12 +1,18 @@
 ﻿@page "/"
-@attribute [AllowAnonymous]
+@inherits Phantom.Web.Components.PhantomComponent
 
-<h1>Hello, world!</h1>
+<h1>Home</h1>
 
-Welcome to your new app.
+@if (username != null) {
+   <p>Welcome back, @username!</p>
+}
 
-<AuthorizeView>
-  <Authorized>
-    You are logged in as @context.User.Identity!.Name.
-  </Authorized>
-</AuthorizeView>
+@code {
+
+  private string? username = null;
+  
+  protected override async Task OnInitializedAsync() {
+    username = (await GetAuthenticatedUser())?.Info.Name;
+  }
+
+}

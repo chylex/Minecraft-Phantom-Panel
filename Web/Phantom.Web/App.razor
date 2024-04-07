@@ -11,7 +11,7 @@
             <p role="alert">You do not have permission to visit this page.</p>
           }
           else {
-            Navigation.NavigateTo("login" + QueryString.Create("return", Navigation.CreateReturnUrl()), forceLoad: true);
+            _ = Navigation.NavigateTo("login" + QueryString.Create("return", Navigation.CreateReturnUrl()), forceLoad: true);
           }
         </NotAuthorized>
       </AuthorizeRouteView>

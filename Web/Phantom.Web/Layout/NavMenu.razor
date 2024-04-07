@@ -17,13 +17,14 @@
 
 <div class="navbar-menu @NavMenuCssClass" @onclick="ToggleNavMenu">
   <nav>
-    <NavMenuItem Label="Home" Icon="home" Match="NavLinkMatch.All" />
     <AuthorizeView>
       <NotAuthorized>
         <NavMenuItem Label="Login" Icon="account-login" Href="login" />
       </NotAuthorized>
       <Authorized>
         @{ var permissions = context.GetPermissions(); }
+        
+        <NavMenuItem Label="Home" Icon="home" Match="NavLinkMatch.All" />
         
         @if (permissions.Check(Permission.ViewInstances)) {
           <NavMenuItem Label="Instances" Icon="folder" Href="instances" />
