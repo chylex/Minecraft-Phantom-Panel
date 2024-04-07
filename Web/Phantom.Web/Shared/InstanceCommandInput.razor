@@ -6,7 +6,7 @@
 @inject InstanceManager InstanceManager
 
 <Form Model="form" OnSubmit="ExecuteCommand">
-  <label for="command-input" class="form-label">Instance Name</label>
+  <label for="command-input" class="form-label">Execute Command</label>
   <div class="input-group flex-nowrap">
     <span class="input-group-text" style="padding-top: 0.3rem;">/</span>
     <input id="command-input" class="form-control" type="text" placeholder="command" @bind="form.Command" @bind:event="oninput" disabled="@(Disabled || form.SubmitModel.IsSubmitting)" @ref="commandInputElement" />
