@@ -7,8 +7,14 @@
 @using Phantom.Common.Data.Instance
 @using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Authorization
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject InstanceManager InstanceManager
+
+@if (isLoading) {
+  <h1>Instance</h1>
+  <p>Loading...</p>
+  return;
+}
 
 @if (Instance == null) {
   <h1>Instance Not Found</h1>
@@ -54,19 +60,25 @@
   [Parameter]
   public Guid InstanceGuid { get; init; }
 
+  private Instance? Instance { get; set; }
+  private bool isLoading = true;
+
   private string? lastError = null;
   private bool isLaunchingInstance = false;
 
-  private Instance? Instance { get; set; }
+  protected override async Task OnInitializedAsync() {
+    Instance = InstanceManager.GetByGuid(await GetAuthenticatedUser(), InstanceGuid);
+    isLoading = false;
 
-  protected override void OnInitialized() {
-    InstanceManager.InstancesChanged.Subscribe(this, instances => {
-      var newInstance = instances.TryGetValue(InstanceGuid, out var instance) ? instance : null;
-      if (newInstance != Instance) {
-        Instance = newInstance;
-        InvokeAsync(StateHasChanged);
-      }
-    });
+    if (Instance != null) {
+      InstanceManager.InstancesChanged.Subscribe(this, instances => {
+        var newInstance = instances.TryGetValue(InstanceGuid, out var instance) ? instance : null;
+        if (newInstance != Instance) {
+          Instance = newInstance;
+          InvokeAsync(StateHasChanged);
+        }
+      });
+    }
   }
 
   private async Task LaunchInstance() {

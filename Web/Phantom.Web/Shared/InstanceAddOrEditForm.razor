@@ -278,10 +278,11 @@
   }
 
   protected override async Task OnInitializedAsync() {
+    var authenticatedUser = await GetAuthenticatedUser();
     var agentJavaRuntimesTask = ControllerConnection.Send<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(new GetAgentJavaRuntimesMessage(), TimeSpan.FromSeconds(30));
     var minecraftVersionsTask = ControllerConnection.Send<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(new GetMinecraftVersionsMessage(), TimeSpan.FromSeconds(30));
 
-    allAgentsByGuid = AgentManager.ToDictionaryByGuid();
+    allAgentsByGuid = AgentManager.ToDictionaryByGuid(authenticatedUser);
     allAgentJavaRuntimes = await agentJavaRuntimesTask;
     allMinecraftVersions = await minecraftVersionsTask;
 

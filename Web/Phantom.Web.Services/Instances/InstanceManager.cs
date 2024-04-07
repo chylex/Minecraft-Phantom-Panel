@@ -33,12 +33,17 @@ public sealed class InstanceManager {
 		return instances.Value;
 	}
 
-	public Instance? GetByGuid(Guid instanceGuid) {
-		return instances.Value.GetValueOrDefault(instanceGuid);
+	public Instance? GetByGuid(AuthenticatedUser? authenticatedUser, Guid instanceGuid) {
+		if (authenticatedUser == null) {
+			return null;
+		}
+		
+		var instance = instances.Value.GetValueOrDefault(instanceGuid);
+		return instance != null && authenticatedUser.Info.HasAccessToAgent(instance.Configuration.AgentGuid) ? instance : null;
 	}
 
 	public async Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> CreateOrUpdateInstance(AuthenticatedUser? authenticatedUser, Guid instanceGuid, InstanceConfiguration configuration, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.CreateInstances)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.CreateInstances)) {
 			var message = new CreateOrUpdateInstanceMessage(authenticatedUser.Token, instanceGuid, configuration);
 			return await controllerConnection.Send<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
 		}
@@ -48,7 +53,7 @@ public sealed class InstanceManager {
 	}
 
 	public async Task<Result<LaunchInstanceResult, UserInstanceActionFailure>> LaunchInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ControlInstances)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ControlInstances)) {
 			var message = new LaunchInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid);
 			return await controllerConnection.Send<LaunchInstanceMessage, Result<LaunchInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
 		}
@@ -58,7 +63,7 @@ public sealed class InstanceManager {
 	}
 
 	public async Task<Result<StopInstanceResult, UserInstanceActionFailure>> StopInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ControlInstances)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ControlInstances)) {
 			var message = new StopInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid, stopStrategy);
 			return await controllerConnection.Send<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
 		}
@@ -68,7 +73,7 @@ public sealed class InstanceManager {
 	}
 
 	public async Task<Result<SendCommandToInstanceResult, UserInstanceActionFailure>> SendCommandToInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, string command, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ControlInstances)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ControlInstances)) {
 			var message = new SendCommandToInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid, command);
 			return await controllerConnection.Send<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
 		}

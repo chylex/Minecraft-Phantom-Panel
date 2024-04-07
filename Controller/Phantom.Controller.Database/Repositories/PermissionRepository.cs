@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Collections.Immutable;
+using Microsoft.EntityFrameworkCore;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Controller.Database.Entities;
 using Phantom.Utils.Collections;
@@ -22,5 +23,13 @@ public sealed class PermissionRepository {
 		                        .Join(db.Ctx.RolePermissions, static ur => ur.RoleGuid, static rp => rp.RoleGuid, static (ur, rp) => rp.PermissionId);
 
 		return new PermissionSet(await userPermissions.Union(rolePermissions).AsAsyncEnumerable().ToImmutableSetAsync());
+	}
+
+	public Task<ImmutableHashSet<Guid>> GetManagedAgentGuids(UserEntity user) {
+		return db.Ctx.UserAgentAccess
+		         .Where(ua => ua.UserGuid == user.UserGuid)
+		         .Select(static ua => ua.AgentGuid)
+		         .AsAsyncEnumerable()
+		         .ToImmutableSetAsync();
 	}
 }

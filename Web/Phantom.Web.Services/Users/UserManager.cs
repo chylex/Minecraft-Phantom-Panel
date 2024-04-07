@@ -19,7 +19,7 @@ public sealed class UserManager {
 	}
 
 	public async Task<Result<CreateUserResult, UserActionFailure>> Create(AuthenticatedUser? authenticatedUser, string username, string password, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.EditUsers)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.EditUsers)) {
 			return await controllerConnection.Send<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>(new CreateUserMessage(authenticatedUser.Token, username, password), cancellationToken);
 		}
 		else {
@@ -28,7 +28,7 @@ public sealed class UserManager {
 	}
 	
 	public async Task<Result<DeleteUserResult, UserActionFailure>> DeleteByGuid(AuthenticatedUser? authenticatedUser, Guid userGuid, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.EditUsers)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.EditUsers)) {
 			return await controllerConnection.Send<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>(new DeleteUserMessage(authenticatedUser.Token, userGuid), cancellationToken);
 		}
 		else {

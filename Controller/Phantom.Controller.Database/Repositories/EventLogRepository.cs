@@ -17,11 +17,12 @@ public sealed class EventLogRepository {
 		db.Ctx.EventLog.Add(new EventLogEntity(eventGuid, utcTime, agentGuid, eventType, subjectId, extra));
 	}
 	
-	public Task<ImmutableArray<EventLogItem>> GetMostRecentItems(int count, CancellationToken cancellationToken) {
+	public Task<ImmutableArray<EventLogItem>> GetMostRecentItems(ImmutableHashSet<Guid> agentGuids, int count, CancellationToken cancellationToken) {
 		return db.Ctx
 		         .EventLog
 		         .AsQueryable()
 		         .OrderByDescending(static entity => entity.UtcTime)
+		         .Where(entity => entity.AgentGuid == null || agentGuids.Contains(entity.AgentGuid.Value))
 		         .Take(count)
 		         .AsAsyncEnumerable()
 		         .Select(static entity => new EventLogItem(entity.UtcTime, entity.AgentGuid, entity.EventType, entity.SubjectType, entity.SubjectId, entity.Data?.RootElement.ToString()))

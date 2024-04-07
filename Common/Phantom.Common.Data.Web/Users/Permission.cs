@@ -14,6 +14,9 @@ public sealed record Permission(string Id, Permission? Parent) {
 		return Register(id, this);
 	}
 
+	public const string ManageAllAgentsPolicy = "Agents.ManageAll";
+	public static readonly Permission ManageAllAgents = Register(ManageAllAgentsPolicy);
+	
 	public const string ViewInstancesPolicy = "Instances.View";
 	public static readonly Permission ViewInstances = Register(ViewInstancesPolicy);
 	

@@ -64,7 +64,7 @@ public sealed class ControllerServices : IDisposable {
 		this.InstanceLogManager = new InstanceLogManager();
 		
 		this.AuditLogManager = new AuditLogManager(dbProvider);
-		this.EventLogManager = new EventLogManager(ActorSystem, dbProvider, shutdownCancellationToken);
+		this.EventLogManager = new EventLogManager(ControllerState, ActorSystem, dbProvider, shutdownCancellationToken);
 		
 		this.AgentRegistrationHandler = new AgentRegistrationHandler(AgentManager, InstanceLogManager, EventLogManager);
 		this.WebRegistrationHandler = new WebRegistrationHandler(webAuthToken, ControllerState, InstanceLogManager, UserManager, RoleManager, UserRoleManager, UserLoginManager, AuditLogManager, AgentManager, MinecraftVersions, EventLogManager);

@@ -6,14 +6,20 @@
 @inherits PhantomComponent
 @inject InstanceManager InstanceManager
 
+@if (isLoading) {
+  <h1>Edit Instance</h1>
+  <p>Loading...</p>
+  return;
+}
+
 @if (Instance == null) {
   <h1>Instance Not Found</h1>
   <p>Return to <a href="instances">all instances</a>.</p>
+  return;
 }
-else {
-  <h1>Edit Instance: @Instance.Configuration.InstanceName</h1>
-  <InstanceAddOrEditForm EditedInstance="Instance" />
-}
+
+<h1>Edit Instance: @Instance.Configuration.InstanceName</h1>
+<InstanceAddOrEditForm EditedInstance="Instance" />
 
 @code {
 
@@ -21,9 +27,11 @@ else {
   public Guid InstanceGuid { get; init; }
 
   private Instance? Instance { get; set; }
+  private bool isLoading = true;
 
-  protected override void OnInitialized() {
-    Instance = InstanceManager.GetByGuid(InstanceGuid);
+  protected override async Task OnInitializedAsync() {
+    Instance = InstanceManager.GetByGuid(await GetAuthenticatedUser(), InstanceGuid);
+    isLoading = false;
   }
 
 }

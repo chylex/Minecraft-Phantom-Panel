@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
@@ -44,7 +45,7 @@ sealed class AgentManager {
 	}
 
 	private ActorRef<AgentActor.ICommand> CreateAgentActor(Guid agentGuid, AgentConfiguration agentConfiguration) {
-		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, userLoginManager, dbProvider, cancellationToken);
+		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, dbProvider, cancellationToken);
 		var name = "Agent:" + agentGuid;
 		return actorSystem.ActorOf(AgentActor.Factory(init), name);
 	}
@@ -87,7 +88,18 @@ sealed class AgentManager {
 		}
 	}
 
-	public async Task<Result<TReply, UserInstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Guid agentGuid, TCommand command) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, UserInstanceActionFailure>> {
-		return agentsByGuid.TryGetValue(agentGuid, out var agent) ? await agent.Request(command, cancellationToken) : (UserInstanceActionFailure) InstanceActionFailure.AgentDoesNotExist;
+	public async Task<Result<TReply, UserInstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Permission requiredPermission, ImmutableArray<byte> authToken, Guid agentGuid, Func<Guid, TCommand> commandFactoryFromLoggedInUserGuid) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
+		var loggedInUser = userLoginManager.GetLoggedInUser(authToken);
+		if (!loggedInUser.HasAccessToAgent(agentGuid) || !loggedInUser.CheckPermission(requiredPermission)) {
+			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
+		}
+		
+		if (!agentsByGuid.TryGetValue(agentGuid, out var agent)) {
+			return (UserInstanceActionFailure) InstanceActionFailure.AgentDoesNotExist;
+		}
+		
+		var command = commandFactoryFromLoggedInUserGuid(loggedInUser.Guid!.Value);
+		var result = await agent.Request(command, cancellationToken);
+		return result.MapError(static error => (UserInstanceActionFailure) error);
 	}
 }

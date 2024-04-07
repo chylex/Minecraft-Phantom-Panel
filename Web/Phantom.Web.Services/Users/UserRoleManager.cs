@@ -23,7 +23,7 @@ public sealed class UserRoleManager {
 	}
 
 	public async Task<Result<ChangeUserRolesResult, UserActionFailure>> ChangeUserRoles(AuthenticatedUser? authenticatedUser, Guid subjectUserGuid, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.EditUsers)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.EditUsers)) {
 			return await controllerConnection.Send<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>(new ChangeUserRolesMessage(authenticatedUser.Token, subjectUserGuid, addToRoleGuids, removeFromRoleGuids), cancellationToken);
 		}
 		else {

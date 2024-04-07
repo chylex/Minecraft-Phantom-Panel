@@ -2,6 +2,7 @@
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Utils.Events;
 using Phantom.Utils.Logging;
+using Phantom.Web.Services.Authentication;
 
 namespace Phantom.Web.Services.Agents; 
 
@@ -18,7 +19,13 @@ public sealed class AgentManager {
 		return agents.Value;
 	}
 	
-	public ImmutableDictionary<Guid, Agent> ToDictionaryByGuid() {
-		return agents.Value.ToImmutableDictionary(static agent => agent.AgentGuid);
+	public ImmutableDictionary<Guid, Agent> ToDictionaryByGuid(AuthenticatedUser? authenticatedUser) {
+		if (authenticatedUser == null) {
+			return ImmutableDictionary<Guid, Agent>.Empty;
+		}
+		
+		return agents.Value
+		             .Where(agent => authenticatedUser.Info.HasAccessToAgent(agent.AgentGuid))
+		             .ToImmutableDictionary(static agent => agent.AgentGuid);
 	}
 }

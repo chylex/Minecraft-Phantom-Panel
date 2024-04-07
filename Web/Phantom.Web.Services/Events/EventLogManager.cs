@@ -16,7 +16,7 @@ public sealed class EventLogManager {
 	}
 
 	public async Task<Result<ImmutableArray<EventLogItem>, UserActionFailure>> GetMostRecentItems(AuthenticatedUser? authenticatedUser, int count, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ViewEvents)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ViewEvents)) {
 			var message = new GetEventLogMessage(authenticatedUser.Token, count);
 			return await controllerConnection.Send<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>(message, cancellationToken);
 		}

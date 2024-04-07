@@ -20,7 +20,8 @@ public class ApplicationDbContext : DbContext {
 	public DbSet<UserRoleEntity> UserRoles { get; init; } = null!;
 	public DbSet<UserPermissionEntity> UserPermissions { get; init; } = null!;
 	public DbSet<RolePermissionEntity> RolePermissions { get; init; } = null!;
-	
+	public DbSet<UserAgentAccessEntity> UserAgentAccess { get; init; } = null!;
+
 	public DbSet<AgentEntity> Agents { get; init; } = null!;
 	public DbSet<InstanceEntity> Instances { get; init; } = null!;
 	public DbSet<AuditLogEntity> AuditLog { get; init; } = null!;
@@ -61,6 +62,12 @@ public class ApplicationDbContext : DbContext {
 			b.HasKey(static e => new { RoleId = e.RoleGuid, e.PermissionId });
 			b.HasOne<RoleEntity>().WithMany().HasForeignKey(static e => e.RoleGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
 			b.HasOne<PermissionEntity>().WithMany().HasForeignKey(static e => e.PermissionId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+		});
+		
+		builder.Entity<UserAgentAccessEntity>(static b => {
+			b.HasKey(static e => new { UserId = e.UserGuid, AgentId = e.AgentGuid });
+			b.HasOne<UserEntity>().WithMany().HasForeignKey(static e => e.UserGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
+			b.HasOne<AgentEntity>().WithMany().HasForeignKey(static e => e.AgentGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
 		});
 	}
 

@@ -69,9 +69,18 @@
       this.agentNamesByGuid = agents.ToImmutableDictionary(static agent => agent.AgentGuid, static agent => agent.Configuration.AgentName);
       InvokeAsync(StateHasChanged);
     });
+  }
+
+  protected override async Task OnInitializedAsync() {
+    var authenticatedUser = await GetAuthenticatedUser();
+    if (authenticatedUser == null) {
+      instances = ImmutableArray<Instance>.Empty;
+      return;
+    }
 
     InstanceManager.InstancesChanged.Subscribe(this, instances => {
       this.instances = instances.Values
+                                .Where(instance => authenticatedUser.Info.HasAccessToAgent(instance.Configuration.AgentGuid))
                                 .OrderBy(instance => agentNamesByGuid.TryGetValue(instance.Configuration.AgentGuid, out var agentName) ? agentName : string.Empty)
                                 .ThenBy(static instance => instance.Configuration.InstanceName)
                                 .ToImmutableArray();

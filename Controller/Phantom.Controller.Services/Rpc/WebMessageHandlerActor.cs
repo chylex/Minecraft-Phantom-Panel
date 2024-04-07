@@ -141,19 +141,39 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	}
 
 	private Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(message.Configuration.AgentGuid, new AgentActor.CreateOrUpdateInstanceCommand(message.AuthToken, message.InstanceGuid, message.Configuration));
+		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(
+			Permission.CreateInstances,
+			message.AuthToken,
+			message.Configuration.AgentGuid,
+			loggedInUserGuid => new AgentActor.CreateOrUpdateInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.Configuration)
+		);
 	}
 
 	private Task<Result<LaunchInstanceResult, UserInstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(message.AgentGuid, new AgentActor.LaunchInstanceCommand(message.AuthToken, message.InstanceGuid));
+		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(
+			Permission.ControlInstances,
+			message.AuthToken,
+			message.AgentGuid,
+			loggedInUserGuid => new AgentActor.LaunchInstanceCommand(loggedInUserGuid, message.InstanceGuid)
+		);
 	}
 
 	private Task<Result<StopInstanceResult, UserInstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(message.AgentGuid, new AgentActor.StopInstanceCommand(message.AuthToken, message.InstanceGuid, message.StopStrategy));
+		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(
+			Permission.ControlInstances,
+			message.AuthToken,
+			message.AgentGuid,
+			loggedInUserGuid => new AgentActor.StopInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.StopStrategy)
+		);
 	}
 
 	private Task<Result<SendCommandToInstanceResult, UserInstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
-		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(message.AgentGuid, new AgentActor.SendCommandToInstanceCommand(message.AuthToken, message.InstanceGuid, message.Command));
+		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(
+			Permission.ControlInstances,
+			message.AuthToken,
+			message.AgentGuid,
+			loggedInUserGuid => new AgentActor.SendCommandToInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.Command)
+		);
 	}
 
 	private Task<ImmutableArray<MinecraftVersion>> HandleGetMinecraftVersions(GetMinecraftVersionsMessage message) {

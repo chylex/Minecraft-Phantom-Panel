@@ -16,7 +16,7 @@ public sealed class AuditLogManager {
 	}
 
 	public async Task<Result<ImmutableArray<AuditLogItem>, UserActionFailure>> GetMostRecentItems(AuthenticatedUser? authenticatedUser, int count, CancellationToken cancellationToken) {
-		if (authenticatedUser != null && authenticatedUser.CheckPermission(Permission.ViewAudit)) {
+		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ViewAudit)) {
 			var message = new GetAuditLogMessage(authenticatedUser.Token, count);
 			return await controllerConnection.Send<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>(message, cancellationToken);
 		}

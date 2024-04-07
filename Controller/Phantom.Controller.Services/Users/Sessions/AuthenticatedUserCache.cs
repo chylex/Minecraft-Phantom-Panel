@@ -14,9 +14,12 @@ sealed class AuthenticatedUserCache {
 	}
 
 	public async Task<AuthenticatedUserInfo?> Update(UserEntity user, ILazyDbContext db) {
+		var permissionRepository = new PermissionRepository(db);
+		var userPermissions = await permissionRepository.GetAllUserPermissions(user);
+		var userManagedAgentGuids = await permissionRepository.GetManagedAgentGuids(user);
+		
 		var userGuid = user.UserGuid;
-		var userPermissions = await new PermissionRepository(db).GetAllUserPermissions(user);
-		var userInfo = new AuthenticatedUserInfo(userGuid, user.Name, userPermissions);
+		var userInfo = new AuthenticatedUserInfo(userGuid, user.Name, userPermissions, userManagedAgentGuids);
 		return authenticatedUsersByGuid[userGuid] = userInfo;
 	}
 	

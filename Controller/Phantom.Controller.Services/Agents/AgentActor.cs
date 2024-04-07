@@ -10,14 +10,12 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Data.Web.Minecraft;
-using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Instances;
-using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Actor.Mailbox;
 using Phantom.Utils.Actor.Tasks;
@@ -34,7 +32,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
 	private static readonly TimeSpan DisconnectionThreshold = TimeSpan.FromSeconds(12);
 
-	public readonly record struct Init(Guid AgentGuid, AgentConfiguration AgentConfiguration, ControllerState ControllerState, MinecraftVersions MinecraftVersions, UserLoginManager UserLoginManager, IDbContextProvider DbProvider, CancellationToken CancellationToken);
+	public readonly record struct Init(Guid AgentGuid, AgentConfiguration AgentConfiguration, ControllerState ControllerState, MinecraftVersions MinecraftVersions, IDbContextProvider DbProvider, CancellationToken CancellationToken);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new AgentActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume, MailboxType = UnboundedJumpAheadMailbox.Name });
@@ -42,7 +40,6 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
-	private readonly UserLoginManager userLoginManager;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
@@ -79,7 +76,6 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	private AgentActor(Init init) {
 		this.controllerState = init.ControllerState;
 		this.minecraftVersions = init.MinecraftVersions;
-		this.userLoginManager = init.UserLoginManager;
 		this.dbProvider = init.DbProvider;
 		this.cancellationToken = init.CancellationToken;
 		
@@ -98,11 +94,11 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		Receive<NotifyIsAliveCommand>(NotifyIsAlive);
 		Receive<UpdateStatsCommand>(UpdateStats);
 		Receive<UpdateJavaRuntimesCommand>(UpdateJavaRuntimes);
-		ReceiveAndReplyLater<CreateOrUpdateInstanceCommand, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(CreateOrUpdateInstance);
+		ReceiveAndReplyLater<CreateOrUpdateInstanceCommand, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstance);
 		Receive<UpdateInstanceStatusCommand>(UpdateInstanceStatus);
-		ReceiveAndReplyLater<LaunchInstanceCommand, Result<LaunchInstanceResult, UserInstanceActionFailure>>(LaunchInstance);
-		ReceiveAndReplyLater<StopInstanceCommand, Result<StopInstanceResult, UserInstanceActionFailure>>(StopInstance);
-		ReceiveAndReplyLater<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>(SendMinecraftCommand);
+		ReceiveAndReplyLater<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
+		ReceiveAndReplyLater<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
+		ReceiveAndReplyLater<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendMinecraftCommand);
 		Receive<ReceiveInstanceDataCommand>(ReceiveInstanceData);
 	}
 
@@ -150,21 +146,13 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		}
 	}
 
-	private async Task<Result<TReply, UserInstanceActionFailure>> RequestInstance<TCommand, TReply>(ImmutableArray<byte> authToken, Guid instanceGuid, Func<Guid, TCommand> commandFactoryFromLoggedInUserGuid) where TCommand : InstanceActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
-		var loggedInUser = userLoginManager.GetLoggedInUser(authToken);
-		if (!loggedInUser.CheckPermission(Permission.ControlInstances)) {
-			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
-		}
-		
-		var command = commandFactoryFromLoggedInUserGuid(loggedInUser.Guid!.Value);
-		
+	private async Task<Result<TReply, InstanceActionFailure>> RequestInstance<TCommand, TReply>(Guid instanceGuid, TCommand command) where TCommand : InstanceActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
 		if (instanceActorByGuid.TryGetValue(instanceGuid, out var instance)) {
-			var result = await instance.Request(command, cancellationToken);
-			return result.MapError(static error => (UserInstanceActionFailure) error);
+			return await instance.Request(command, cancellationToken);
 		}
 		else {
 			Logger.Warning("Could not deliver command {CommandType} to instance {InstanceGuid}, instance not found.", command.GetType().Name, instanceGuid);
-			return (UserInstanceActionFailure) InstanceActionFailure.InstanceDoesNotExist;
+			return InstanceActionFailure.InstanceDoesNotExist;
 		}
 	}
 
@@ -195,15 +183,15 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	
 	public sealed record UpdateJavaRuntimesCommand(ImmutableArray<TaggedJavaRuntime> JavaRuntimes) : ICommand;
 	
-	public sealed record CreateOrUpdateInstanceCommand(ImmutableArray<byte> AuthToken, Guid InstanceGuid, InstanceConfiguration Configuration) : ICommand, ICanReply<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>;
+	public sealed record CreateOrUpdateInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration) : ICommand, ICanReply<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record UpdateInstanceStatusCommand(Guid InstanceGuid, IInstanceStatus Status) : ICommand;
 
-	public sealed record LaunchInstanceCommand(ImmutableArray<byte> AuthToken, Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, UserInstanceActionFailure>>;
+	public sealed record LaunchInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(ImmutableArray<byte> AuthToken, Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, UserInstanceActionFailure>>;
+	public sealed record StopInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record SendCommandToInstanceCommand(ImmutableArray<byte> AuthToken, Guid InstanceGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, UserInstanceActionFailure>>;
+	public sealed record SendCommandToInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record ReceiveInstanceDataCommand(Instance Instance) : ICommand, IJumpAhead;
 
@@ -292,30 +280,25 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		controllerState.UpdateAgentJavaRuntimes(agentGuid, javaRuntimes);
 	}
 	
-	private Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> CreateOrUpdateInstance(CreateOrUpdateInstanceCommand command) {
-		var loggedInUser = userLoginManager.GetLoggedInUser(command.AuthToken);
-		if (!loggedInUser.CheckPermission(Permission.CreateInstances)) {
-			return Task.FromResult<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>((UserInstanceActionFailure) UserActionFailure.NotAuthorized);
-		}
-		
+	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance(CreateOrUpdateInstanceCommand command) {
 		var instanceConfiguration = command.Configuration;
 
 		if (string.IsNullOrWhiteSpace(instanceConfiguration.InstanceName)) {
-			return Task.FromResult<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceNameMustNotBeEmpty);
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceNameMustNotBeEmpty);
 		}
 		
 		if (instanceConfiguration.MemoryAllocation <= RamAllocationUnits.Zero) {
-			return Task.FromResult<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero);
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero);
 		}
 		
 		return minecraftVersions.GetServerExecutableInfo(instanceConfiguration.MinecraftVersion, cancellationToken)
-		                        .ContinueOnActor(CreateOrUpdateInstance1, loggedInUser.Guid!.Value, command)
+		                        .ContinueOnActor(CreateOrUpdateInstance1, command)
 		                        .Unwrap();
 	}
 
-	private Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> CreateOrUpdateInstance1(FileDownloadInfo? serverExecutableInfo, Guid loggedInUserGuid, CreateOrUpdateInstanceCommand command) {
+	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance1(FileDownloadInfo? serverExecutableInfo, CreateOrUpdateInstanceCommand command) {
 		if (serverExecutableInfo == null) {
-			return Task.FromResult<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound);
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound);
 		}
 		
 		var instanceConfiguration = command.Configuration;
@@ -325,13 +308,13 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			instanceActorRef = CreateNewInstance(Instance.Offline(command.InstanceGuid, instanceConfiguration));
 		}
 		
-		var configureInstanceCommand = new InstanceActor.ConfigureInstanceCommand(loggedInUserGuid, command.InstanceGuid, instanceConfiguration, new InstanceLaunchProperties(serverExecutableInfo), isCreatingInstance);
+		var configureInstanceCommand = new InstanceActor.ConfigureInstanceCommand(command.LoggedInUserGuid, command.InstanceGuid, instanceConfiguration, new InstanceLaunchProperties(serverExecutableInfo), isCreatingInstance);
 		
 		return instanceActorRef.Request(configureInstanceCommand, cancellationToken)
 		                       .ContinueOnActor(CreateOrUpdateInstance2, configureInstanceCommand);
 	}
 	
-	private Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure> CreateOrUpdateInstance2(Result<ConfigureInstanceResult, InstanceActionFailure> result, InstanceActor.ConfigureInstanceCommand command) {
+	private Result<CreateOrUpdateInstanceResult, InstanceActionFailure> CreateOrUpdateInstance2(Result<ConfigureInstanceResult, InstanceActionFailure> result, InstanceActor.ConfigureInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		var instanceName = command.Configuration.InstanceName;
 		var isCreating = command.IsCreatingInstance;
@@ -359,16 +342,16 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		TellInstance(command.InstanceGuid, new InstanceActor.SetStatusCommand(command.Status));
 	}
 
-	private Task<Result<LaunchInstanceResult, UserInstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {
-		return RequestInstance<InstanceActor.LaunchInstanceCommand, LaunchInstanceResult>(command.AuthToken, command.InstanceGuid, static loggedInUserGuid => new InstanceActor.LaunchInstanceCommand(loggedInUserGuid));
+	private Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {
+		return RequestInstance<InstanceActor.LaunchInstanceCommand, LaunchInstanceResult>(command.InstanceGuid, new InstanceActor.LaunchInstanceCommand(command.LoggedInUserGuid));
 	}
 
-	private Task<Result<StopInstanceResult, UserInstanceActionFailure>> StopInstance(StopInstanceCommand command) {
-		return RequestInstance<InstanceActor.StopInstanceCommand, StopInstanceResult>(command.AuthToken, command.InstanceGuid, loggedInUserGuid => new InstanceActor.StopInstanceCommand(loggedInUserGuid, command.StopStrategy));
+	private Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
+		return RequestInstance<InstanceActor.StopInstanceCommand, StopInstanceResult>(command.InstanceGuid, new InstanceActor.StopInstanceCommand(command.LoggedInUserGuid, command.StopStrategy));
 	}
 
-	private Task<Result<SendCommandToInstanceResult, UserInstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
-		return RequestInstance<InstanceActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(command.AuthToken, command.InstanceGuid, loggedInUserGuid => new InstanceActor.SendCommandToInstanceCommand(loggedInUserGuid, command.Command));
+	private Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
+		return RequestInstance<InstanceActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(command.InstanceGuid, new InstanceActor.SendCommandToInstanceCommand(command.LoggedInUserGuid, command.Command));
 	}
 
 	private void ReceiveInstanceData(ReceiveInstanceDataCommand command) {

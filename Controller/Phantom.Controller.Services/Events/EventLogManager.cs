@@ -11,11 +11,13 @@ using Phantom.Utils.Actor;
 namespace Phantom.Controller.Services.Events; 
 
 sealed partial class EventLogManager {
+	private readonly ControllerState controllerState;
 	private readonly ActorRef<EventLogDatabaseStorageActor.ICommand> databaseStorageActor;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 
-	public EventLogManager(IActorRefFactory actorSystem, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+	public EventLogManager(ControllerState controllerState, IActorRefFactory actorSystem, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+		this.controllerState = controllerState;
 		this.databaseStorageActor = actorSystem.ActorOf(EventLogDatabaseStorageActor.Factory(new EventLogDatabaseStorageActor.Init(dbProvider, cancellationToken)), "EventLogDatabaseStorage");
 		this.dbProvider = dbProvider;
 		this.cancellationToken = cancellationToken;
@@ -30,7 +32,9 @@ sealed partial class EventLogManager {
 			return UserActionFailure.NotAuthorized;
 		}
 		
+		var accessibleAgentGuids = loggedInUser.FilterAccessibleAgentGuids(controllerState.AgentsByGuid.Keys.ToImmutableHashSet());
+		
 		await using var db = dbProvider.Lazy();
-		return await new EventLogRepository(db).GetMostRecentItems(count, cancellationToken);
+		return await new EventLogRepository(db).GetMostRecentItems(accessibleAgentGuids, count, cancellationToken);
 	}
 }
