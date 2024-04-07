@@ -1,6 +1,6 @@
 ﻿@using Phantom.Web.Components.Utils
 @if (messageLines.Length > 0) {
-  <div class="form-submit-errors text-danger">
+  <div class="form-submit-errors text-danger" role="alert">
     @for (int i = 0; i < messageLines.Length; i++) {
       @messageLines[i]
       if (i < messageLines.Length - 1) {
