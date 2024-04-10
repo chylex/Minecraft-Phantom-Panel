@@ -19,6 +19,7 @@ sealed class InstanceRunningState : IDisposable {
 	private readonly CancellationToken cancellationToken;
 
 	private readonly InstanceLogSender logSender;
+	private readonly InstancePlayerCountTracker playerCountTracker;
 	private readonly BackupScheduler backupScheduler;
 
 	private bool isDisposed;
@@ -32,8 +33,9 @@ sealed class InstanceRunningState : IDisposable {
 		this.cancellationToken = cancellationToken;
 
 		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.InstanceGuid, context.ShortName);
+		this.playerCountTracker = new InstancePlayerCountTracker(context, process, configuration.ServerPort);
 
-		this.backupScheduler = new BackupScheduler(context, process, configuration.ServerPort);
+		this.backupScheduler = new BackupScheduler(context, playerCountTracker);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
 	}
 
@@ -93,6 +95,11 @@ sealed class InstanceRunningState : IDisposable {
 		}
 	}
 
+	public void OnStopInitiated() {
+		backupScheduler.Stop();
+		playerCountTracker.Stop();
+	}
+	
 	private bool TryDispose() {
 		lock (this) {
 			if (isDisposed) {
@@ -102,8 +109,8 @@ sealed class InstanceRunningState : IDisposable {
 			isDisposed = true;
 		}
 
+		OnStopInitiated();
 		logSender.Stop();
-		backupScheduler.Stop();
 		
 		Process.Dispose();
 		

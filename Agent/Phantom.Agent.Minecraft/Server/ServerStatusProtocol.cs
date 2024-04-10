@@ -3,28 +3,11 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Phantom.Utils.Logging;
-using Serilog;
 
 namespace Phantom.Agent.Minecraft.Server;
 
-public sealed class ServerStatusProtocol {
-	private readonly ILogger logger;
-
-	public ServerStatusProtocol(string loggerName) {
-		this.logger = PhantomLogger.Create<ServerStatusProtocol>(loggerName);
-	}
-
-	public async Task<int?> GetOnlinePlayerCount(int serverPort, CancellationToken cancellationToken) {
-		try {
-			return await GetOnlinePlayerCountOrThrow(serverPort, cancellationToken);
-		} catch (Exception e) {
-			logger.Error(e, "Caught exception while checking if players are online.");
-			return null;
-		}
-	}
-
-	private async Task<int?> GetOnlinePlayerCountOrThrow(int serverPort, CancellationToken cancellationToken) {
+public static class ServerStatusProtocol {
+	public static async Task<int> GetOnlinePlayerCount(ushort serverPort, CancellationToken cancellationToken) {
 		using var tcpClient = new TcpClient();
 		await tcpClient.ConnectAsync(IPAddress.Loopback, serverPort, cancellationToken);
 		var tcpStream = tcpClient.GetStream();
@@ -33,24 +16,22 @@ public sealed class ServerStatusProtocol {
 		tcpStream.WriteByte(0xFE);
 		await tcpStream.FlushAsync(cancellationToken);
 
-		short? messageLength = await ReadStreamHeader(tcpStream, cancellationToken);
-		return messageLength == null ? null : await ReadOnlinePlayerCount(tcpStream, messageLength.Value * 2, cancellationToken);
+		short messageLength = await ReadStreamHeader(tcpStream, cancellationToken);
+		return await ReadOnlinePlayerCount(tcpStream, messageLength * 2, cancellationToken);
 	}
 
-	private async Task<short?> ReadStreamHeader(NetworkStream tcpStream, CancellationToken cancellationToken) {
+	private static async Task<short> ReadStreamHeader(NetworkStream tcpStream, CancellationToken cancellationToken) {
 		var headerBuffer = ArrayPool<byte>.Shared.Rent(3);
 		try {
 			await tcpStream.ReadExactlyAsync(headerBuffer, 0, 3, cancellationToken);
 
 			if (headerBuffer[0] != 0xFF) {
-				logger.Error("Unexpected first byte in response from server: {FirstByte}.", headerBuffer[0]);
-				return null;
+				throw new ProtocolException("Unexpected first byte in response from server: " + headerBuffer[0]);
 			}
 
 			short messageLength = BinaryPrimitives.ReadInt16BigEndian(headerBuffer.AsSpan(1));
 			if (messageLength <= 0) {
-				logger.Error("Unexpected message length in response from server: {MessageLength}.", messageLength);
-				return null;
+				throw new ProtocolException("Unexpected message length in response from server: " + messageLength);
 			}
 			
 			return messageLength;
@@ -59,7 +40,7 @@ public sealed class ServerStatusProtocol {
 		}
 	}
 
-	private async Task<int?> ReadOnlinePlayerCount(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
+	private static async Task<int> ReadOnlinePlayerCount(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
 		var messageBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
 		try {
 			await tcpStream.ReadExactlyAsync(messageBuffer, 0, messageLength, cancellationToken);
@@ -74,20 +55,21 @@ public sealed class ServerStatusProtocol {
 			int separator2 = Array.LastIndexOf(messageBuffer, SeparatorSecondByte);
 			int separator1 = separator2 == -1 ? -1 : Array.LastIndexOf(messageBuffer, SeparatorSecondByte, separator2 - 1);
 			if (!IsValidSeparator(messageBuffer, separator1) || !IsValidSeparator(messageBuffer, separator2)) {
-				logger.Error("Could not find message separators in response from server.");
-				return null;
+				throw new ProtocolException("Could not find message separators in response from server.");
 			}
 
 			string onlinePlayerCountStr = Encoding.BigEndianUnicode.GetString(messageBuffer.AsSpan((separator1 + 1)..(separator2 - 1)));
 			if (!int.TryParse(onlinePlayerCountStr, out int onlinePlayerCount)) {
-				logger.Error("Could not parse online player count in response from server: {OnlinePlayerCount}.", onlinePlayerCountStr);
-				return null;
+				throw new ProtocolException("Could not parse online player count in response from server: " + onlinePlayerCountStr);
 			}
 			
-			logger.Debug("Detected {OnlinePlayerCount} online player(s).", onlinePlayerCount);
 			return onlinePlayerCount;
 		} finally {
 			ArrayPool<byte>.Shared.Return(messageBuffer);
 		}
+	}
+	
+	public sealed class ProtocolException : Exception {
+		internal ProtocolException(string message) : base(message) {}
 	}
 }

@@ -25,6 +25,8 @@ static class InstanceStopProcedure {
 
 		try {
 			// Too late to cancel the stop procedure now.
+			runningState.OnStopInitiated();
+			
 			if (!process.HasEnded) {
 				context.Logger.Information("Session stopping now.");
 				await DoStop(context, process);

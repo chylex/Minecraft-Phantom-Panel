@@ -1,10 +1,8 @@
-﻿using Phantom.Agent.Minecraft.Instance;
-using Phantom.Agent.Minecraft.Server;
-using Phantom.Agent.Services.Instances;
+﻿using Phantom.Agent.Services.Instances;
+using Phantom.Agent.Services.Instances.State;
 using Phantom.Common.Data.Backups;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
-using Phantom.Utils.Threading;
 
 namespace Phantom.Agent.Services.Backups;
 
@@ -16,27 +14,23 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 
 	private readonly BackupManager backupManager;
 	private readonly InstanceContext context;
-	private readonly InstanceProcess process;
 	private readonly SemaphoreSlim backupSemaphore = new (1, 1);
-	private readonly int serverPort;
-	private readonly ServerStatusProtocol serverStatusProtocol;
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
+	private readonly InstancePlayerCountTracker playerCountTracker;
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted;
 
-	public BackupScheduler(InstanceContext context, InstanceProcess process, int serverPort) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName)) {
+	public BackupScheduler(InstanceContext context, InstancePlayerCountTracker playerCountTracker) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName)) {
 		this.backupManager = context.Services.BackupManager;
 		this.context = context;
-		this.process = process;
-		this.serverPort = serverPort;
-		this.serverStatusProtocol = new ServerStatusProtocol(context.ShortName);
+		this.playerCountTracker = playerCountTracker;
 		Start();
 	}
 
 	protected override async Task RunTask() {
 		await Task.Delay(InitialDelay, CancellationToken);
 		Logger.Information("Starting a new backup after server launched.");
-			
+		
 		while (!CancellationToken.IsCancellationRequested) {
 			var result = await CreateBackup();
 			BackupCompleted?.Invoke(this, result);
@@ -69,43 +63,18 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	}
 
 	private async Task WaitForOnlinePlayers() {
-		bool needsToLogOfflinePlayersMessage = true;
-		
-		process.AddOutputListener(ServerOutputListener, maxLinesToReadFromHistory: 0);
-		try {
-			while (!CancellationToken.IsCancellationRequested) {
-				serverOutputWhileWaitingForOnlinePlayers.Reset();
-				
-				var onlinePlayerCount = await serverStatusProtocol.GetOnlinePlayerCount(serverPort, CancellationToken);
-				if (onlinePlayerCount == null) {
-					Logger.Warning("Could not detect whether any players are online, starting a new backup.");
-					break;
-				}
-
-				if (onlinePlayerCount > 0) {
-					Logger.Information("Players are online, starting a new backup.");
-					break;
-				}
-
-				if (needsToLogOfflinePlayersMessage) {
-					needsToLogOfflinePlayersMessage = false;
-					Logger.Information("No players are online, waiting for someone to join before starting a new backup.");
-				}
-
-				await Task.Delay(TimeSpan.FromSeconds(10), CancellationToken);
-				
-				Logger.Debug("Waiting for server output before checking for online players again...");
-				await serverOutputWhileWaitingForOnlinePlayers.WaitHandle.WaitOneAsync(CancellationToken);
-			}
-		} finally {
-			process.RemoveOutputListener(ServerOutputListener);
+		var task = playerCountTracker.WaitForOnlinePlayers(CancellationToken);
+		if (!task.IsCompleted) {
+			Logger.Information("Waiting for someone to join before starting a new backup.");
 		}
-	}
-
-	private void ServerOutputListener(object? sender, string line) {
-		if (!serverOutputWhileWaitingForOnlinePlayers.IsSet) {
-			serverOutputWhileWaitingForOnlinePlayers.Set();
-			Logger.Debug("Detected server output, signalling to check for online players again.");
+		
+		try {
+			await task;
+			Logger.Information("Players are online, starting a new backup.");
+		} catch (OperationCanceledException) {
+			throw;
+		} catch (Exception) {
+			Logger.Warning("Could not detect whether any players are online, starting a new backup.");
 		}
 	}
 
