@@ -18,4 +18,5 @@ static class MinecraftServerProperties {
 	public static readonly MinecraftServerProperty<ushort> ServerPort = new UnsignedShort("server-port");
 	public static readonly MinecraftServerProperty<ushort> RconPort = new UnsignedShort("rcon.port");
 	public static readonly MinecraftServerProperty<bool> EnableRcon = new Boolean("enable-rcon");
+	public static readonly MinecraftServerProperty<bool> SyncChunkWrites = new Boolean("sync-chunk-writes");
 }

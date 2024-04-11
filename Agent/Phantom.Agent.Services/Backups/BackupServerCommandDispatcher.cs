@@ -55,7 +55,6 @@ sealed partial class BackupServerCommandDispatcher : IDisposable {
 	}
 
 	public async Task SaveAllChunks() {
-		// TODO Try if not flushing and waiting a few seconds before flushing reduces lag.
 		await process.SendCommand(MinecraftCommand.SaveAll(flush: true), cancellationToken);
 		await savedTheGame.Task.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
 	}
