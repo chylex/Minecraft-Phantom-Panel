@@ -85,7 +85,7 @@ static class InstanceStopProcedure {
 	private static async Task WaitForSessionToEnd(InstanceContext context, InstanceProcess process) {
 		try {
 			await process.WaitForExit(TimeSpan.FromSeconds(55));
-		} catch (OperationCanceledException) {
+		} catch (TimeoutException) {
 			try {
 				context.Logger.Warning("Waiting timed out, killing session...");
 				process.Kill();
