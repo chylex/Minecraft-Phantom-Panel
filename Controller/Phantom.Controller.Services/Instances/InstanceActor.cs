@@ -26,6 +26,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	private InstanceConfiguration configuration;
 	private IInstanceStatus status;
+	private InstancePlayerCounts? playerCounts;
 	private bool launchAutomatically;
 
 	private readonly ActorRef<InstanceDatabaseStorageActor.ICommand> databaseStorageActor;
@@ -35,11 +36,12 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		this.agentConnection = init.AgentConnection;
 		this.cancellationToken = init.CancellationToken;
 		
-		(this.instanceGuid, this.configuration, this.status, this.launchAutomatically) = init.Instance;
+		(this.instanceGuid, this.configuration, this.status, this.playerCounts, this.launchAutomatically) = init.Instance;
 
 		this.databaseStorageActor = Context.ActorOf(InstanceDatabaseStorageActor.Factory(new InstanceDatabaseStorageActor.Init(instanceGuid, init.DbProvider, init.CancellationToken)), "DatabaseStorage");
 
 		Receive<SetStatusCommand>(SetStatus);
+		Receive<SetPlayerCountsCommand>(SetPlayerCounts);
 		ReceiveAsyncAndReply<ConfigureInstanceCommand, Result<ConfigureInstanceResult, InstanceActionFailure>>(ConfigureInstance);
 		ReceiveAsyncAndReply<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
 		ReceiveAsyncAndReply<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
@@ -47,7 +49,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	}
 
 	private void NotifyInstanceUpdated() {
-		agentActor.Tell(new AgentActor.ReceiveInstanceDataCommand(new Instance(instanceGuid, configuration, status, launchAutomatically)));
+		agentActor.Tell(new AgentActor.ReceiveInstanceDataCommand(new Instance(instanceGuid, configuration, status, playerCounts, launchAutomatically)));
 	}
 
 	private void SetLaunchAutomatically(bool newValue) {
@@ -65,6 +67,8 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	public interface ICommand {}
 
 	public sealed record SetStatusCommand(IInstanceStatus Status) : ICommand;
+	
+	public sealed record SetPlayerCountsCommand(InstancePlayerCounts? PlayerCounts) : ICommand;
 
 	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 
@@ -76,6 +80,16 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 
 	private void SetStatus(SetStatusCommand command) {
 		status = command.Status;
+		
+		if (!status.IsRunning() && status != InstanceStatus.Offline /* Guard against temporary disconnects */) {
+			playerCounts = null;
+		}
+		
+		NotifyInstanceUpdated();
+	}
+	
+	private void SetPlayerCounts(SetPlayerCountsCommand command) {
+		playerCounts = command.PlayerCounts;
 		NotifyInstanceUpdated();
 	}
 

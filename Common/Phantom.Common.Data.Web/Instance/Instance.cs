@@ -8,9 +8,10 @@ public sealed partial record Instance(
 	[property: MemoryPackOrder(0)] Guid InstanceGuid,
 	[property: MemoryPackOrder(1)] InstanceConfiguration Configuration,
 	[property: MemoryPackOrder(2)] IInstanceStatus Status,
-	[property: MemoryPackOrder(3)] bool LaunchAutomatically
+	[property: MemoryPackOrder(3)] InstancePlayerCounts? PlayerCounts,
+	[property: MemoryPackOrder(4)] bool LaunchAutomatically
 ) {
 	public static Instance Offline(Guid instanceGuid, InstanceConfiguration configuration, bool launchAutomatically = false) {
-		return new Instance(instanceGuid, configuration, InstanceStatus.Offline, launchAutomatically);
+		return new Instance(instanceGuid, configuration, InstanceStatus.Offline, PlayerCounts: null, launchAutomatically);
 	}
 }

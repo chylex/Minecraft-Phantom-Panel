@@ -21,6 +21,7 @@
     <Column Width="40%">Agent</Column>
     <Column Width="40%">Name</Column>
     <Column MinWidth="215px">Status</Column>
+    <Column Class="text-center" MinWidth="120px">Players</Column>
     <Column Width="20%">Version</Column>
     <Column Class="text-center" MinWidth="110px">Server Port</Column>
     <Column Class="text-center" MinWidth="110px">Rcon Port</Column>
@@ -39,6 +40,14 @@
     </Cell>
     <Cell>
       <InstanceStatusText Status="instance.Status" />
+    </Cell>
+    <Cell class="text-center">
+      @if (instance.PlayerCounts is var (online, maximum)) {
+	      <p class="font-monospace">@online.ToString() / @maximum.ToString()</p>
+      }
+      else {
+	      <p class="font-monospace">-</p>
+      }
     </Cell>
     <Cell>@configuration.MinecraftServerKind @configuration.MinecraftVersion</Cell>
     <Cell class="text-center">

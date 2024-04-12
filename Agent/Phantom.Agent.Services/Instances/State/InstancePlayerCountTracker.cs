@@ -1,5 +1,8 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Server;
+using Phantom.Agent.Rpc;
+using Phantom.Common.Data.Instance;
+using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 using Phantom.Utils.Threading;
@@ -7,32 +10,35 @@ using Phantom.Utils.Threading;
 namespace Phantom.Agent.Services.Instances.State;
 
 sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
-	private readonly InstanceProcess process;
+	private readonly ControllerConnection controllerConnection;
+	private readonly Guid instanceGuid;
 	private readonly ushort serverPort;
+	private readonly InstanceProcess process;
 
 	private readonly TaskCompletionSource firstDetection = AsyncTasks.CreateCompletionSource();
 	private readonly ManualResetEventSlim serverOutputEvent = new ();
 
-	private int? onlinePlayerCount;
+	private InstancePlayerCounts? playerCounts;
 
-	public int? OnlinePlayerCount {
+	public InstancePlayerCounts? PlayerCounts {
 		get {
 			lock (this) {
-				return onlinePlayerCount;
+				return playerCounts;
 			}
 		}
 		private set {
 			EventHandler<int?>? onlinePlayerCountChanged;
 			lock (this) {
-				if (onlinePlayerCount == value) {
+				if (playerCounts == value) {
 					return;
 				}
 				
-				onlinePlayerCount = value;
+				playerCounts = value;
 				onlinePlayerCountChanged = OnlinePlayerCountChanged;
 			}
 
-			onlinePlayerCountChanged?.Invoke(this, value);
+			onlinePlayerCountChanged?.Invoke(this, value?.Online);
+			controllerConnection.Send(new ReportInstancePlayerCountsMessage(instanceGuid, value));
 		}
 	}
 
@@ -41,6 +47,8 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	private bool isDisposed = false;
 
 	public InstancePlayerCountTracker(InstanceContext context, InstanceProcess process, ushort serverPort) : base(PhantomLogger.Create<InstancePlayerCountTracker>(context.ShortName)) {
+		this.controllerConnection = context.Services.ControllerConnection;
+		this.instanceGuid = context.InstanceGuid;
 		this.process = process;
 		this.serverPort = serverPort;
 		Start();
@@ -56,7 +64,7 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 		while (!CancellationToken.IsCancellationRequested) {
 			serverOutputEvent.Reset();
 
-			OnlinePlayerCount = await TryGetOnlinePlayerCount();
+			PlayerCounts = await TryGetPlayerCounts();
 			
 			if (!firstDetection.Task.IsCompleted) {
 				firstDetection.SetResult();
@@ -68,11 +76,11 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 		}
 	}
 
-	private async Task<int?> TryGetOnlinePlayerCount() {
+	private async Task<InstancePlayerCounts?> TryGetPlayerCounts() {
 		try {
-			var (online, maximum) = await ServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
-			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", online, maximum);
-			return online;
+			var result = await ServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
+			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", result.Online, result.Maximum);
+			return result;
 		} catch (ServerStatusProtocol.ProtocolException e) {
 			Logger.Error(e.Message);
 			return null;
@@ -88,11 +96,11 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 		var onlinePlayersDetected = AsyncTasks.CreateCompletionSource();
 
 		lock (this) {
-			if (onlinePlayerCount == null) {
-				throw new InvalidOperationException();
-			}
-			else if (onlinePlayerCount > 0) {
+			if (playerCounts is { Online: > 0 }) {
 				return;
+			}
+			else if (playerCounts == null) {
+				throw new InvalidOperationException();
 			}
 
 			OnlinePlayerCountChanged += OnOnlinePlayerCountChanged;
@@ -123,7 +131,7 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	protected override void Dispose() {
 		lock (this) {
 			isDisposed = true;
-			onlinePlayerCount = null;
+			playerCounts = null;
 		}
 
 		process.RemoveOutputListener(OnOutput);

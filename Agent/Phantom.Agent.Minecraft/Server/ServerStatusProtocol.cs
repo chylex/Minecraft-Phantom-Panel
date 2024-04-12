@@ -3,13 +3,12 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Phantom.Common.Data.Instance;
 
 namespace Phantom.Agent.Minecraft.Server;
 
 public static class ServerStatusProtocol {
-	public readonly record struct PlayerCounts(int Online, int Maximum);
-	
-	public static async Task<PlayerCounts> GetPlayerCounts(ushort serverPort, CancellationToken cancellationToken) {
+	public static async Task<InstancePlayerCounts> GetPlayerCounts(ushort serverPort, CancellationToken cancellationToken) {
 		using var tcpClient = new TcpClient();
 		await tcpClient.ConnectAsync(IPAddress.Loopback, serverPort, cancellationToken);
 		var tcpStream = tcpClient.GetStream();
@@ -42,7 +41,7 @@ public static class ServerStatusProtocol {
 		}
 	}
 
-	private static async Task<PlayerCounts> ReadPlayerCounts(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
+	private static async Task<InstancePlayerCounts> ReadPlayerCounts(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
 		var messageBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
 		try {
 			await tcpStream.ReadExactlyAsync(messageBuffer, 0, messageLength, cancellationToken);
@@ -57,7 +56,7 @@ public static class ServerStatusProtocol {
 	/// </summary>
 	private static readonly byte[] Separator = { 0x00, 0xA7 };
 	
-	private static PlayerCounts ReadPlayerCountsFromResponse(ReadOnlySpan<byte> messageBuffer) {
+	private static InstancePlayerCounts ReadPlayerCountsFromResponse(ReadOnlySpan<byte> messageBuffer) {
 		int lastSeparator = messageBuffer.LastIndexOf(Separator);
 		int middleSeparator = messageBuffer[..lastSeparator].LastIndexOf(Separator);
 		
@@ -71,7 +70,7 @@ public static class ServerStatusProtocol {
 		// Player counts are integers, whose maximum string length is 10 characters.
 		Span<char> integerStringBuffer = stackalloc char[10];
 		
-		return new PlayerCounts(
+		return new InstancePlayerCounts(
 			DecodeAndParsePlayerCount(onlinePlayerCountBuffer, integerStringBuffer, "online"),
 			DecodeAndParsePlayerCount(maximumPlayerCountBuffer, integerStringBuffer, "maximum")
 		);

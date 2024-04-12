@@ -96,6 +96,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		Receive<UpdateJavaRuntimesCommand>(UpdateJavaRuntimes);
 		ReceiveAndReplyLater<CreateOrUpdateInstanceCommand, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstance);
 		Receive<UpdateInstanceStatusCommand>(UpdateInstanceStatus);
+		Receive<UpdateInstancePlayerCountsCommand>(UpdateInstancePlayerCounts);
 		ReceiveAndReplyLater<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
 		ReceiveAndReplyLater<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
 		ReceiveAndReplyLater<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendMinecraftCommand);
@@ -159,7 +160,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	private async Task<ImmutableArray<ConfigureInstanceMessage>> PrepareInitialConfigurationMessages() {
 		var configurationMessages = ImmutableArray.CreateBuilder<ConfigureInstanceMessage>();
 		
-		foreach (var (instanceGuid, instanceConfiguration, _, launchAutomatically) in instanceDataByGuid.Values.ToImmutableArray()) {
+		foreach (var (instanceGuid, instanceConfiguration, _, _, launchAutomatically) in instanceDataByGuid.Values.ToImmutableArray()) {
 			var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(instanceConfiguration.MinecraftVersion, cancellationToken);
 			configurationMessages.Add(new ConfigureInstanceMessage(instanceGuid, instanceConfiguration, new InstanceLaunchProperties(serverExecutableInfo), launchAutomatically));
 		}
@@ -186,6 +187,8 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	public sealed record CreateOrUpdateInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration) : ICommand, ICanReply<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record UpdateInstanceStatusCommand(Guid InstanceGuid, IInstanceStatus Status) : ICommand;
+	
+	public sealed record UpdateInstancePlayerCountsCommand(Guid InstanceGuid, InstancePlayerCounts? PlayerCounts) : ICommand;
 
 	public sealed record LaunchInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
@@ -340,6 +343,10 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	
 	private void UpdateInstanceStatus(UpdateInstanceStatusCommand command) {
 		TellInstance(command.InstanceGuid, new InstanceActor.SetStatusCommand(command.Status));
+	}
+	
+	private void UpdateInstancePlayerCounts(UpdateInstancePlayerCountsCommand command) {
+		TellInstance(command.InstanceGuid, new InstanceActor.SetPlayerCountsCommand(command.PlayerCounts));
 	}
 
 	private Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {

@@ -39,6 +39,7 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 		Receive<AdvertiseJavaRuntimesMessage>(HandleAdvertiseJavaRuntimes);
 		Receive<ReportAgentStatusMessage>(HandleReportAgentStatus);
 		Receive<ReportInstanceStatusMessage>(HandleReportInstanceStatus);
+		Receive<ReportInstancePlayerCountsMessage>(HandleReportInstancePlayerCounts);
 		Receive<ReportInstanceEventMessage>(HandleReportInstanceEvent);
 		Receive<InstanceOutputMessage>(HandleInstanceOutput);
 		Receive<ReplyMessage>(HandleReply);
@@ -72,6 +73,10 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 
 	private void HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateInstanceStatusCommand(message.InstanceGuid, message.InstanceStatus));
+	}
+
+	private void HandleReportInstancePlayerCounts(ReportInstancePlayerCountsMessage message) {
+		agentManager.TellAgent(agentGuid, new AgentActor.UpdateInstancePlayerCountsCommand(message.InstanceGuid, message.PlayerCounts));
 	}
 
 	private void HandleReportInstanceEvent(ReportInstanceEventMessage message) {

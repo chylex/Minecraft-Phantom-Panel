@@ -31,6 +31,7 @@ public static class AgentMessageRegistries {
 		ToController.Add<InstanceOutputMessage>(5);
 		ToController.Add<ReportAgentStatusMessage>(6);
 		ToController.Add<ReportInstanceEventMessage>(7);
+		ToController.Add<ReportInstancePlayerCountsMessage>(8);
 		ToController.Add<ReplyMessage>(127);
 	}
 
