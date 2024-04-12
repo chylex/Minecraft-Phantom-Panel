@@ -7,7 +7,9 @@ using System.Text;
 namespace Phantom.Agent.Minecraft.Server;
 
 public static class ServerStatusProtocol {
-	public static async Task<int> GetOnlinePlayerCount(ushort serverPort, CancellationToken cancellationToken) {
+	public readonly record struct PlayerCounts(int Online, int Maximum);
+	
+	public static async Task<PlayerCounts> GetPlayerCounts(ushort serverPort, CancellationToken cancellationToken) {
 		using var tcpClient = new TcpClient();
 		await tcpClient.ConnectAsync(IPAddress.Loopback, serverPort, cancellationToken);
 		var tcpStream = tcpClient.GetStream();
@@ -17,7 +19,7 @@ public static class ServerStatusProtocol {
 		await tcpStream.FlushAsync(cancellationToken);
 
 		short messageLength = await ReadStreamHeader(tcpStream, cancellationToken);
-		return await ReadOnlinePlayerCount(tcpStream, messageLength * 2, cancellationToken);
+		return await ReadPlayerCounts(tcpStream, messageLength * 2, cancellationToken);
 	}
 
 	private static async Task<short> ReadStreamHeader(NetworkStream tcpStream, CancellationToken cancellationToken) {
@@ -40,33 +42,51 @@ public static class ServerStatusProtocol {
 		}
 	}
 
-	private static async Task<int> ReadOnlinePlayerCount(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
+	private static async Task<PlayerCounts> ReadPlayerCounts(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
 		var messageBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
 		try {
 			await tcpStream.ReadExactlyAsync(messageBuffer, 0, messageLength, cancellationToken);
-
-			// Valid response separator encoded in UTF-16BE is 0x00 0xA7 (§).
-			const byte SeparatorSecondByte = 0xA7;
-			
-			static bool IsValidSeparator(ReadOnlySpan<byte> buffer, int index) {
-				return index > 0 && buffer[index - 1] == 0x00;
-			}
-			
-			int separator2 = Array.LastIndexOf(messageBuffer, SeparatorSecondByte);
-			int separator1 = separator2 == -1 ? -1 : Array.LastIndexOf(messageBuffer, SeparatorSecondByte, separator2 - 1);
-			if (!IsValidSeparator(messageBuffer, separator1) || !IsValidSeparator(messageBuffer, separator2)) {
-				throw new ProtocolException("Could not find message separators in response from server.");
-			}
-
-			string onlinePlayerCountStr = Encoding.BigEndianUnicode.GetString(messageBuffer.AsSpan((separator1 + 1)..(separator2 - 1)));
-			if (!int.TryParse(onlinePlayerCountStr, out int onlinePlayerCount)) {
-				throw new ProtocolException("Could not parse online player count in response from server: " + onlinePlayerCountStr);
-			}
-			
-			return onlinePlayerCount;
+			return ReadPlayerCountsFromResponse(messageBuffer.AsSpan(0, messageLength));
 		} finally {
 			ArrayPool<byte>.Shared.Return(messageBuffer);
 		}
+	}
+	
+	/// <summary>
+	/// Legacy query protocol uses the paragraph symbol (§) as separator encoded in UTF-16BE.
+	/// </summary>
+	private static readonly byte[] Separator = { 0x00, 0xA7 };
+	
+	private static PlayerCounts ReadPlayerCountsFromResponse(ReadOnlySpan<byte> messageBuffer) {
+		int lastSeparator = messageBuffer.LastIndexOf(Separator);
+		int middleSeparator = messageBuffer[..lastSeparator].LastIndexOf(Separator);
+		
+		if (lastSeparator == -1 || middleSeparator == -1) {
+			throw new ProtocolException("Could not find message separators in response from server.");
+		}
+
+		var onlinePlayerCountBuffer = messageBuffer[(middleSeparator + Separator.Length)..lastSeparator];
+		var maximumPlayerCountBuffer = messageBuffer[(lastSeparator + Separator.Length)..];
+		
+		// Player counts are integers, whose maximum string length is 10 characters.
+		Span<char> integerStringBuffer = stackalloc char[10];
+		
+		return new PlayerCounts(
+			DecodeAndParsePlayerCount(onlinePlayerCountBuffer, integerStringBuffer, "online"),
+			DecodeAndParsePlayerCount(maximumPlayerCountBuffer, integerStringBuffer, "maximum")
+		);
+	}
+	
+	private static int DecodeAndParsePlayerCount(ReadOnlySpan<byte> inputBuffer, Span<char> tempCharBuffer, string countType) {
+		if (!Encoding.BigEndianUnicode.TryGetChars(inputBuffer, tempCharBuffer, out int charCount)) {
+			throw new ProtocolException("Could not decode " + countType + " player count in response from server.");
+		}
+		
+		if (!int.TryParse(tempCharBuffer, out int playerCount)) {
+			throw new ProtocolException("Could not parse " + countType + " player count in response from server: " + tempCharBuffer[..charCount].ToString());
+		}
+		
+		return playerCount;
 	}
 	
 	public sealed class ProtocolException : Exception {

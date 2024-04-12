@@ -70,9 +70,9 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 
 	private async Task<int?> TryGetOnlinePlayerCount() {
 		try {
-			int newOnlinePlayerCount = await ServerStatusProtocol.GetOnlinePlayerCount(serverPort, CancellationToken);
-			Logger.Debug("Detected {OnlinePlayerCount} online player(s).", newOnlinePlayerCount);
-			return newOnlinePlayerCount;
+			var (online, maximum) = await ServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
+			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", online, maximum);
+			return online;
 		} catch (ServerStatusProtocol.ProtocolException e) {
 			Logger.Error(e.Message);
 			return null;
