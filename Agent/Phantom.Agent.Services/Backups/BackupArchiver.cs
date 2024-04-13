@@ -25,7 +25,7 @@ sealed class BackupArchiver {
 	}
 
 	private bool IsFolderSkipped(ImmutableList<string> relativePath) {
-		return relativePath is ["cache" or "crash-reports" or "debug" or "libraries" or "logs" or "mods" or "versions"];
+		return relativePath is ["cache" or "crash-reports" or "debug" or "libraries" or "logs" or "mods" or "servermods" or "versions"];
 	}
 	
 	[SuppressMessage("ReSharper", "ConvertIfStatementToReturnStatement")]
