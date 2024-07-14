@@ -27,7 +27,7 @@ WORKDIR /data
 COPY --from=eclipse-temurin:8-jre  /opt/java/openjdk /opt/java/8
 COPY --from=eclipse-temurin:16-jdk /opt/java/openjdk /opt/java/16
 COPY --from=eclipse-temurin:17-jre /opt/java/openjdk /opt/java/17
-COPY --from=eclipse-temurin:20-jre /opt/java/openjdk /opt/java/20
+COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/21
 
 ARG DEBIAN_FRONTEND=noninteractive
 
