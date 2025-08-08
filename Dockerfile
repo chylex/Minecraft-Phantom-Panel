@@ -1,7 +1,7 @@
 # +---------------+
 # | Prepare build |
 # +---------------+
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/sdk:8.0 AS phantom-builder
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/nightly/sdk:9.0 AS phantom-builder
 ARG TARGETARCH
 
 ADD . /app
@@ -19,7 +19,7 @@ RUN find .artifacts/publish/*/* -maxdepth 0 -execdir mv '{}' 'release' \;
 # +---------------------+
 # | Phantom Agent image |
 # +---------------------+
-FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0 AS phantom-agent
+FROM mcr.microsoft.com/dotnet/nightly/runtime:9.0 AS phantom-agent
 
 RUN mkdir /data && chmod 777 /data
 WORKDIR /data
@@ -46,7 +46,7 @@ ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]
 # +--------------------------+
 # | Phantom Controller image |
 # +--------------------------+
-FROM mcr.microsoft.com/dotnet/nightly/runtime:8.0 AS phantom-controller
+FROM mcr.microsoft.com/dotnet/nightly/runtime:9.0 AS phantom-controller
 
 RUN mkdir /data && chmod 777 /data
 WORKDIR /data
@@ -59,7 +59,7 @@ ENTRYPOINT ["dotnet", "/app/Phantom.Controller.dll"]
 # +-------------------+
 # | Phantom Web image |
 # +-------------------+
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0 AS phantom-web
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:9.0 AS phantom-web
 
 RUN mkdir /data && chmod 777 /data
 WORKDIR /data
