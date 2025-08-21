@@ -8,14 +8,14 @@ namespace Phantom.Controller.Database.Entities;
 public sealed class RoleEntity {
 	[Key]
 	public Guid RoleGuid { get; init; }
-
+	
 	public string Name { get; init; }
-
+	
 	public RoleEntity(Guid roleGuid, string name) {
 		RoleGuid = roleGuid;
 		Name = name;
 	}
-
+	
 	public RoleInfo ToRoleInfo() {
 		return new RoleInfo(RoleGuid, Name);
 	}

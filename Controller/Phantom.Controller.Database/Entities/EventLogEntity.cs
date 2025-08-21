@@ -12,7 +12,7 @@ namespace Phantom.Controller.Database.Entities;
 public sealed class EventLogEntity : IDisposable {
 	[Key]
 	public Guid EventGuid { get; init; }
-
+	
 	public DateTime UtcTime { get; init; } // Note: Converting to UTC is not best practice, but for historical records it's good enough.
 	public Guid? AgentGuid { get; init; }
 	public EventLogEventType EventType { get; init; }
@@ -24,7 +24,7 @@ public sealed class EventLogEntity : IDisposable {
 	internal EventLogEntity() {
 		SubjectId = string.Empty;
 	}
-
+	
 	public EventLogEntity(Guid eventGuid, DateTime utcTime, Guid? agentGuid, EventLogEventType eventType, string subjectId, Dictionary<string, object?>? data) {
 		EventGuid = eventGuid;
 		UtcTime = utcTime;
@@ -34,7 +34,7 @@ public sealed class EventLogEntity : IDisposable {
 		SubjectId = subjectId;
 		Data = data == null ? null : JsonSerializer.SerializeToDocument(data);
 	}
-
+	
 	public void Dispose() {
 		Data?.Dispose();
 	}

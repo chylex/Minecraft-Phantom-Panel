@@ -6,7 +6,7 @@ using Phantom.Common.Messages.Web.ToController;
 using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Rpc;
 
-namespace Phantom.Web.Services.Users; 
+namespace Phantom.Web.Services.Users;
 
 public sealed class AuditLogManager {
 	private readonly ControllerConnection controllerConnection;
@@ -14,7 +14,7 @@ public sealed class AuditLogManager {
 	public AuditLogManager(ControllerConnection controllerConnection) {
 		this.controllerConnection = controllerConnection;
 	}
-
+	
 	public async Task<Result<ImmutableArray<AuditLogItem>, UserActionFailure>> GetMostRecentItems(AuthenticatedUser? authenticatedUser, int count, CancellationToken cancellationToken) {
 		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ViewAudit)) {
 			var message = new GetAuditLogMessage(authenticatedUser.Token, count);

@@ -18,7 +18,7 @@ sealed class AgentConnection {
 		this.agentName = agentName;
 		this.agentGuid = agentGuid;
 	}
-
+	
 	public void UpdateConnection(RpcConnectionToClient<IMessageToAgent> newConnection, string newAgentName) {
 		lock (this) {
 			connection?.Close();
@@ -26,7 +26,7 @@ sealed class AgentConnection {
 			agentName = newAgentName;
 		}
 	}
-
+	
 	public bool CloseIfSame(RpcConnectionToClient<IMessageToAgent> expected) {
 		lock (this) {
 			if (connection != null && connection.IsSame(expected)) {
@@ -37,7 +37,7 @@ sealed class AgentConnection {
 		
 		return false;
 	}
-
+	
 	public Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
 		lock (this) {
 			if (connection == null) {
@@ -48,18 +48,18 @@ sealed class AgentConnection {
 			return connection.Send(message);
 		}
 	}
-
+	
 	public Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToAgent, ICanReply<TReply> where TReply : class {
 		lock (this) {
 			if (connection == null) {
 				LogAgentOffline();
 				return Task.FromResult<TReply?>(default);
 			}
-
+			
 			return connection.Send<TMessage, TReply>(message, waitForReplyTime, waitForReplyCancellationToken)!;
 		}
 	}
-
+	
 	private void LogAgentOffline() {
 		Logger.Error("Could not send message to offline agent \"{Name}\" (GUID {Guid}).", agentName, agentGuid);
 	}

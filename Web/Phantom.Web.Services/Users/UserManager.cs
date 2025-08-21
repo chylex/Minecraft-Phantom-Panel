@@ -13,11 +13,11 @@ public sealed class UserManager {
 	public UserManager(ControllerConnection controllerConnection) {
 		this.controllerConnection = controllerConnection;
 	}
-
+	
 	public Task<ImmutableArray<UserInfo>> GetAll(CancellationToken cancellationToken) {
 		return controllerConnection.Send<GetUsersMessage, ImmutableArray<UserInfo>>(new GetUsersMessage(), cancellationToken);
 	}
-
+	
 	public async Task<Result<CreateUserResult, UserActionFailure>> Create(AuthenticatedUser? authenticatedUser, string username, string password, CancellationToken cancellationToken) {
 		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.EditUsers)) {
 			return await controllerConnection.Send<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>(new CreateUserMessage(authenticatedUser.Token, username, password), cancellationToken);

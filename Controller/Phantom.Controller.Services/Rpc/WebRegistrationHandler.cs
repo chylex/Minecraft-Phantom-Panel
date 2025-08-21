@@ -17,7 +17,7 @@ namespace Phantom.Controller.Services.Rpc;
 
 sealed class WebRegistrationHandler : IRegistrationHandler<IMessageToWeb, IMessageToController, RegisterWebMessage> {
 	private static readonly ILogger Logger = PhantomLogger.Create<WebRegistrationHandler>();
-
+	
 	private readonly AuthToken webAuthToken;
 	private readonly ControllerState controllerState;
 	private readonly InstanceLogManager instanceLogManager;
@@ -43,11 +43,11 @@ sealed class WebRegistrationHandler : IRegistrationHandler<IMessageToWeb, IMessa
 		this.eventLogManager = eventLogManager;
 		this.instanceLogManager = instanceLogManager;
 	}
-
+	
 	async Task<Props<IMessageToController>?> IRegistrationHandler<IMessageToWeb, IMessageToController, RegisterWebMessage>.TryRegister(RpcConnectionToClient<IMessageToWeb> connection, RegisterWebMessage message) {
 		return await TryRegisterImpl(connection, message) ? CreateMessageHandlerActorProps(connection) : null;
 	}
-
+	
 	public async Task<bool> TryRegisterImpl(RpcConnectionToClient<IMessageToWeb> connection, RegisterWebMessage message) {
 		if (webAuthToken.FixedTimeEquals(message.AuthToken)) {
 			Logger.Information("Web authorized successfully.");

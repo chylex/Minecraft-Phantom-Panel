@@ -27,12 +27,12 @@
 @code {
 
   private ImmutableDictionary<Guid, RoleInfo> allRolesByGuid = ImmutableDictionary<Guid, RoleInfo>.Empty;
-  private List<RoleItem> items = new();
+  private List<RoleItem> items = new ();
 
   protected override async Task BeforeShown(UserInfo user) {
     var allRoles = await RoleManager.GetAll(CancellationToken);
     this.allRolesByGuid = allRoles.ToImmutableDictionary(static role => role.Guid, static role => role);
-    
+
     var currentRoleGuids = await UserRoleManager.GetUserRoles(user.Guid, CancellationToken);
     this.items = allRoles.Select(role => new RoleItem(role, currentRoleGuids.Contains(role.Guid))).ToList();
   }
@@ -56,7 +56,7 @@
         removeFromRoleGuids.Add(roleGuid);
       }
     }
-    
+
     return await DoChangeUserRoles(authenticatedUser, editedUser, addToRoleGuids.ToImmutable(), removeFromRoleGuids.ToImmutable());
   }
 
@@ -65,25 +65,25 @@
     if (!result) {
       return result.Error;
     }
-    
+
     var failedToAdd = addToRoleGuids.Except(result.Value.AddedToRoleGuids);
     var failedToRemove = removeFromRoleGuids.Except(result.Value.RemovedFromRoleGuids);
-    
+
     if (failedToAdd.IsEmpty && failedToRemove.IsEmpty) {
       await OnEditSuccess();
       return null;
     }
-    
+
     var errors = new List<string>();
-    
+
     foreach (var roleGuid in failedToAdd) {
-        errors.Add("Could not add role: " + GetRoleName(roleGuid));
+      errors.Add("Could not add role: " + GetRoleName(roleGuid));
     }
-    
+
     foreach (var roleGuid in failedToRemove) {
-        errors.Add("Could not remove role: " + GetRoleName(roleGuid));
+      errors.Add("Could not remove role: " + GetRoleName(roleGuid));
     }
-    
+
     OnEditFailure(string.Join("\n", errors));
     return null;
   }

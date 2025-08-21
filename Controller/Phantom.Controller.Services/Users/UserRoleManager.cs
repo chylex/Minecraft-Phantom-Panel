@@ -7,11 +7,11 @@ using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Logging;
 using Serilog;
 
-namespace Phantom.Controller.Services.Users; 
+namespace Phantom.Controller.Services.Users;
 
 sealed class UserRoleManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserRoleManager>();
-
+	
 	private readonly AuthenticatedUserCache authenticatedUserCache;
 	private readonly ControllerState controllerState;
 	private readonly IDbContextProvider dbProvider;
@@ -21,12 +21,12 @@ sealed class UserRoleManager {
 		this.controllerState = controllerState;
 		this.dbProvider = dbProvider;
 	}
-
+	
 	public async Task<ImmutableDictionary<Guid, ImmutableArray<Guid>>> GetUserRoles(ImmutableHashSet<Guid> userGuids) {
 		await using var db = dbProvider.Lazy();
 		return await new UserRoleRepository(db).GetRoleGuidsByUserGuid(userGuids);
 	}
-
+	
 	public async Task<Result<ChangeUserRolesResult, UserActionFailure>> ChangeUserRoles(LoggedInUser loggedInUser, Guid subjectUserGuid, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids) {
 		if (!loggedInUser.CheckPermission(Permission.EditUsers)) {
 			return UserActionFailure.NotAuthorized;
@@ -39,7 +39,7 @@ sealed class UserRoleManager {
 		if (user == null) {
 			return new ChangeUserRolesResult(ImmutableHashSet<Guid>.Empty, ImmutableHashSet<Guid>.Empty);
 		}
-
+		
 		var roleRepository = new RoleRepository(db);
 		var userRoleRepository = new UserRoleRepository(db);
 		var auditLogWriter = new AuditLogRepository(db).Writer(loggedInUser.Guid);
@@ -51,7 +51,7 @@ sealed class UserRoleManager {
 		
 		var removedFromRoleGuids = ImmutableHashSet.CreateBuilder<Guid>();
 		var removedFromRoleNames = new List<string>();
-
+		
 		try {
 			foreach (var roleGuid in addToRoleGuids) {
 				if (rolesByGuid.TryGetValue(roleGuid, out var role)) {
@@ -68,7 +68,7 @@ sealed class UserRoleManager {
 					removedFromRoleNames.Add(role.Name);
 				}
 			}
-
+			
 			auditLogWriter.UserRolesChanged(user, addedToRoleNames, removedFromRoleNames);
 			await db.Ctx.SaveChangesAsync();
 			

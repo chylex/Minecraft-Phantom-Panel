@@ -20,7 +20,7 @@ public sealed partial record AgentIsOnline : IAgentConnectionStatus;
 public static class AgentConnectionStatus {
 	public static readonly IAgentConnectionStatus Offline = new AgentIsOffline();
 	public static readonly IAgentConnectionStatus Online = new AgentIsOnline();
-
+	
 	public static IAgentConnectionStatus Disconnected(DateTimeOffset lastPingTime) {
 		return new AgentIsDisconnected(lastPingTime);
 	}

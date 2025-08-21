@@ -2,7 +2,7 @@
 using MemoryPack;
 using Phantom.Common.Data.Web.Agent;
 
-namespace Phantom.Common.Messages.Web.ToWeb; 
+namespace Phantom.Common.Messages.Web.ToWeb;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record RefreshAgentsMessage(

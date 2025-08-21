@@ -9,7 +9,7 @@ public sealed class JavaRuntimeRepository {
 	private readonly Dictionary<string, Guid> guidsByPath = new ();
 	private readonly Dictionary<Guid, JavaRuntimeExecutable> runtimesByGuid = new ();
 	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
-
+	
 	public ImmutableArray<TaggedJavaRuntime> All {
 		get {
 			rwLock.EnterReadLock();
@@ -20,20 +20,20 @@ public sealed class JavaRuntimeRepository {
 			}
 		}
 	}
-
+	
 	public void Include(JavaRuntimeExecutable runtime) {
 		rwLock.EnterWriteLock();
 		try {
 			if (!guidsByPath.TryGetValue(runtime.ExecutablePath, out var guid)) {
 				guidsByPath[runtime.ExecutablePath] = guid = GenerateStableGuid(runtime.ExecutablePath);
 			}
-
+			
 			runtimesByGuid[guid] = runtime;
 		} finally {
 			rwLock.ExitWriteLock();
 		}
 	}
-
+	
 	public bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
 		rwLock.EnterReadLock();
 		try {
@@ -42,7 +42,7 @@ public sealed class JavaRuntimeRepository {
 			rwLock.ExitReadLock();
 		}
 	}
-
+	
 	private static Guid GenerateStableGuid(string executablePath) {
 		Random rand = new Random(StableHashCode.ForString(executablePath));
 		Span<byte> bytes = stackalloc byte[16];

@@ -17,7 +17,7 @@
   public RenderFragment? ChildContent { get; set; }
 
   private string style = string.Empty;
-  
+
   protected override void OnParametersSet() {
     List<string> styles = new (2);
 
@@ -28,8 +28,8 @@
     if (Width != null) {
       styles.Add("width: " + Width);
     }
-    
+
     style = string.Join(';', styles);
   }
-  
+
 }

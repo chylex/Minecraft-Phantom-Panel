@@ -15,7 +15,7 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new EventLogDatabaseStorageActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
-
+	
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
@@ -29,25 +29,25 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 		Receive<StoreEventCommand>(StoreEvent);
 		ReceiveAsync<FlushChangesCommand>(FlushChanges);
 	}
-
+	
 	public interface ICommand {}
-
+	
 	public sealed record StoreEventCommand(Guid EventGuid, DateTime UtcTime, Guid? AgentGuid, EventLogEventType EventType, string SubjectId, Dictionary<string, object?>? Extra = null) : ICommand;
 	
 	private sealed record FlushChangesCommand : ICommand;
-
+	
 	private void StoreEvent(StoreEventCommand command) {
 		pendingCommands.AddLast(command);
 		ScheduleFlush(TimeSpan.FromMilliseconds(500));
 	}
-
+	
 	private async Task FlushChanges(FlushChangesCommand command) {
 		hasScheduledFlush = false;
 		
 		if (pendingCommands.Count == 0) {
 			return;
 		}
-
+		
 		try {
 			await using var db = dbProvider.Lazy();
 			var eventLogRepository = new EventLogRepository(db);
@@ -67,7 +67,7 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 		
 		pendingCommands.Clear();
 	}
-
+	
 	private void ScheduleFlush(TimeSpan delay) {
 		if (!hasScheduledFlush) {
 			hasScheduledFlush = true;

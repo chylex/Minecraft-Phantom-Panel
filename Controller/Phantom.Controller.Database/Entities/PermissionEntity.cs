@@ -7,7 +7,7 @@ namespace Phantom.Controller.Database.Entities;
 public sealed class PermissionEntity {
 	[Key]
 	public string Id { get; init; }
-
+	
 	public PermissionEntity(string id) {
 		Id = id;
 	}

@@ -57,11 +57,11 @@ public static class InstanceStatus {
 	public static IInstanceStatus Invalid(string reason) => new InstanceIsInvalid(reason);
 	public static IInstanceStatus Downloading(byte progress) => new InstanceIsDownloading(progress);
 	public static IInstanceStatus Failed(InstanceLaunchFailReason reason) => new InstanceIsFailed(reason);
-
+	
 	public static bool IsLaunching(this IInstanceStatus status) {
 		return status is InstanceIsDownloading or InstanceIsLaunching or InstanceIsRestarting;
 	}
-
+	
 	public static bool IsRunning(this IInstanceStatus status) {
 		return status is InstanceIsRunning or InstanceIsBackingUp;
 	}
@@ -73,11 +73,11 @@ public static class InstanceStatus {
 	public static bool CanLaunch(this IInstanceStatus status) {
 		return status is InstanceIsNotRunning or InstanceIsFailed;
 	}
-
+	
 	public static bool CanStop(this IInstanceStatus status) {
 		return status.IsRunning() || status.IsLaunching();
 	}
-
+	
 	public static bool CanSendCommand(this IInstanceStatus status) {
 		return status.IsRunning();
 	}

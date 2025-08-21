@@ -9,7 +9,7 @@ public static class Paths {
 			return path;
 		}
 	}
-
+	
 	public static string NormalizeSlashes(string path) {
 		return path.Replace('\\', '/');
 	}

@@ -23,7 +23,7 @@ sealed class BackupArchiver {
 		this.instanceProperties = instanceProperties;
 		this.cancellationToken = cancellationToken;
 	}
-
+	
 	private bool IsFolderSkipped(ImmutableList<string> relativePath) {
 		return relativePath is ["cache" or "crash-reports" or "debug" or "libraries" or "logs" or "mods" or "versions"];
 	}
@@ -35,7 +35,7 @@ sealed class BackupArchiver {
 		if (relativePath.Count == 2 && name == "session.lock") {
 			return true;
 		}
-
+		
 		var extension = Path.GetExtension(name);
 		if (extension is ".jar" or ".zip") {
 			return true;
@@ -43,7 +43,7 @@ sealed class BackupArchiver {
 		
 		return false;
 	}
-
+	
 	public async Task<string?> ArchiveWorld(BackupCreationResult.Builder resultBuilder) {
 		string guid = instanceProperties.InstanceGuid.ToString();
 		string currentDateTime = DateTime.Now.ToString("yyyyMMdd-HHmmss");
@@ -63,7 +63,7 @@ sealed class BackupArchiver {
 			logger.Error(e, "Could not create backup folder: {Folder}", backupFolderPath);
 			return null;
 		}
-
+		
 		string temporaryFolderPath = Path.Combine(temporaryBasePath, guid + "_" + currentDateTime);
 		if (!await CopyWorldAndCreateTarArchive(temporaryFolderPath, backupFilePath, resultBuilder)) {
 			return null;
@@ -72,19 +72,19 @@ sealed class BackupArchiver {
 		logger.Debug("Created world backup: {FilePath}", backupFilePath);
 		return backupFilePath;
 	}
-
+	
 	private async Task<bool> CopyWorldAndCreateTarArchive(string temporaryFolderPath, string backupFilePath, BackupCreationResult.Builder resultBuilder) {
 		try {
 			if (!await CopyWorldToTemporaryFolder(temporaryFolderPath)) {
 				resultBuilder.Kind = BackupCreationResultKind.CouldNotCopyWorldToTemporaryFolder;
 				return false;
 			}
-
+			
 			if (!await CreateTarArchive(temporaryFolderPath, backupFilePath)) {
 				resultBuilder.Kind = BackupCreationResultKind.CouldNotCreateWorldArchive;
 				return false;
 			}
-
+			
 			return true;
 		} finally {
 			try {
@@ -95,7 +95,7 @@ sealed class BackupArchiver {
 			}
 		}
 	}
-
+	
 	private async Task<bool> CopyWorldToTemporaryFolder(string temporaryFolderPath) {
 		try {
 			await CopyDirectory(new DirectoryInfo(instanceProperties.InstanceFolder), temporaryFolderPath, ImmutableList<string>.Empty);
@@ -105,7 +105,7 @@ sealed class BackupArchiver {
 			return false;
 		}
 	}
-
+	
 	private async Task<bool> CreateTarArchive(string sourceFolderPath, string backupFilePath) {
 		try {
 			await TarFile.CreateFromDirectoryAsync(sourceFolderPath, backupFilePath, false, cancellationToken);
@@ -116,7 +116,7 @@ sealed class BackupArchiver {
 			return false;
 		}
 	}
-
+	
 	private void DeleteBrokenArchiveFile(string filePath) {
 		if (File.Exists(filePath)) {
 			try {
@@ -126,10 +126,10 @@ sealed class BackupArchiver {
 			}
 		}
 	}
-
+	
 	private async Task CopyDirectory(DirectoryInfo sourceFolder, string destinationFolderPath, ImmutableList<string> relativePath) {
 		cancellationToken.ThrowIfCancellationRequested();
-
+		
 		bool needsToCreateFolder = true;
 		
 		foreach (FileInfo file in sourceFolder.EnumerateFiles()) {
@@ -138,15 +138,15 @@ sealed class BackupArchiver {
 				logger.Debug("Skipping file: {File}", string.Join('/', filePath));
 				continue;
 			}
-
+			
 			if (needsToCreateFolder) {
 				needsToCreateFolder = false;
 				Directories.Create(destinationFolderPath, Chmod.URWX);
 			}
-
+			
 			await CopyFileWithRetries(file, destinationFolderPath);
 		}
-
+		
 		foreach (DirectoryInfo directory in sourceFolder.EnumerateDirectories()) {
 			var folderPath = relativePath.Add(directory.Name);
 			if (IsFolderSkipped(folderPath)) {
@@ -157,7 +157,7 @@ sealed class BackupArchiver {
 			await CopyDirectory(directory, Path.Join(destinationFolderPath, directory.Name), folderPath);
 		}
 	}
-
+	
 	private async Task CopyFileWithRetries(FileInfo sourceFile, string destinationFolderPath) {
 		var destinationFilePath = Path.Combine(destinationFolderPath, sourceFile.Name);
 		

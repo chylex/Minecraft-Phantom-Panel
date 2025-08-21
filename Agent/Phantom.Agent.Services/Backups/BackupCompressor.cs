@@ -19,27 +19,27 @@ static class BackupCompressor {
 		}
 		
 		var destinationFilePath = sourceFilePath + ".zst";
-
+		
 		if (!await TryCompressFile(sourceFilePath, destinationFilePath, cancellationToken)) {
 			try {
 				File.Delete(destinationFilePath);
 			} catch (Exception e) {
 				Logger.Error(e, "Could not delete compresed archive after unsuccessful compression: {Path}", destinationFilePath);
 			}
-
+			
 			return null;
 		}
-
+		
 		return destinationFilePath;
 	}
-
+	
 	private static async Task<bool> TryCompressFile(string sourceFilePath, string destinationFilePath, CancellationToken cancellationToken) {
 		var workingDirectory = Path.GetDirectoryName(sourceFilePath);
 		if (string.IsNullOrEmpty(workingDirectory)) {
 			Logger.Error("Invalid destination path: {Path}", destinationFilePath);
 			return false;
 		}
-
+		
 		var launcher = new ProcessConfigurator {
 			FileName = "zstd",
 			WorkingDirectory = workingDirectory,
@@ -53,13 +53,13 @@ static class BackupCompressor {
 				"--", sourceFilePath
 			}
 		};
-
+		
 		static void OnZstdOutput(object? sender, Process.Output output) {
 			if (!string.IsNullOrWhiteSpace(output.Line)) {
 				ZstdLogger.Debug("[Output] {Line}", output.Line);
 			}
 		}
-
+		
 		var process = new OneShotProcess(ZstdLogger, launcher);
 		process.OutputReceived += OnZstdOutput;
 		return await process.Run(cancellationToken);

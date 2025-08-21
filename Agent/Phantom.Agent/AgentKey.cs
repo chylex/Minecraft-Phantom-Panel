@@ -9,7 +9,7 @@ namespace Phantom.Agent;
 
 static class AgentKey {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(AgentKey));
-
+	
 	public static Task<(NetMQCertificate, AuthToken)?> Load(string? agentKeyToken, string? agentKeyFilePath) {
 		if (agentKeyFilePath != null) {
 			return LoadFromFile(agentKeyFilePath);
@@ -21,13 +21,13 @@ static class AgentKey {
 			throw new InvalidOperationException();
 		}
 	}
-
+	
 	private static async Task<(NetMQCertificate, AuthToken)?> LoadFromFile(string agentKeyFilePath) {
 		if (!File.Exists(agentKeyFilePath)) {
 			Logger.Fatal("Missing agent key file: {AgentKeyFilePath}", agentKeyFilePath);
 			return null;
 		}
-
+		
 		try {
 			Files.RequireMaximumFileSize(agentKeyFilePath, 64);
 			return LoadFromBytes(await File.ReadAllBytesAsync(agentKeyFilePath));
@@ -40,7 +40,7 @@ static class AgentKey {
 			return null;
 		}
 	}
-
+	
 	private static (NetMQCertificate, AuthToken)? LoadFromToken(string agentKey) {
 		try {
 			return LoadFromBytes(TokenGenerator.DecodeBytes(agentKey));
@@ -49,7 +49,7 @@ static class AgentKey {
 			return null;
 		}
 	}
-
+	
 	private static (NetMQCertificate, AuthToken)? LoadFromBytes(byte[] agentKey) {
 		var (publicKey, agentToken) = ConnectionCommonKey.FromBytes(agentKey);
 		var controllerCertificate = NetMQCertificate.FromPublicKey(publicKey);

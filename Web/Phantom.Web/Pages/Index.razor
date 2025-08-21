@@ -1,16 +1,16 @@
 ﻿@page "/"
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 
 <h1>Home</h1>
 
 @if (username != null) {
-   <p>Welcome back, @username!</p>
+  <p>Welcome back, @username!</p>
 }
 
 @code {
 
   private string? username = null;
-  
+
   protected override async Task OnInitializedAsync() {
     username = (await GetAuthenticatedUser())?.Info.Name;
   }

@@ -9,11 +9,11 @@ public sealed class Navigation {
 	public static Func<IServiceProvider, Navigation> Create(string basePath) {
 		return provider => new Navigation(basePath, provider.GetRequiredService<NavigationManager>());
 	}
-
+	
 	public string BasePath { get; }
 	
 	private readonly NavigationManager navigationManager;
-
+	
 	private Navigation(string basePath, NavigationManager navigationManager) {
 		this.BasePath = basePath;
 		this.navigationManager = navigationManager;
@@ -26,7 +26,7 @@ public sealed class Navigation {
 		value = query.Get(key);
 		return value != null;
 	}
-
+	
 	public string CreateReturnUrl() {
 		return navigationManager.ToBaseRelativePath(navigationManager.Uri).TrimEnd('/');
 	}
@@ -42,9 +42,9 @@ public sealed class Navigation {
 		} finally {
 			navigationManager.LocationChanged -= NavigationManagerOnLocationChanged;
 		}
-
+		
 		return;
-
+		
 		void NavigationManagerOnLocationChanged(object? sender, LocationChangedEventArgs e) {
 			if (Uri.TryCreate(e.Location, UriKind.Absolute, out var uri) && uri.AbsolutePath == newPath) {
 				navigationTaskSource.SetResult();

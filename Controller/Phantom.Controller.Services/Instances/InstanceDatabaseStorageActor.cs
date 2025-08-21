@@ -14,15 +14,15 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceDatabaseStorageActor>();
 	
 	public readonly record struct Init(Guid InstanceGuid, IDbContextProvider DbProvider, CancellationToken CancellationToken);
-
+	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceDatabaseStorageActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
-
+	
 	private readonly Guid instanceGuid;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
-
+	
 	private InstanceDatabaseStorageActor(Init init) {
 		this.instanceGuid = init.InstanceGuid;
 		this.dbProvider = init.DbProvider;
@@ -33,13 +33,13 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 		ReceiveAsync<StoreInstanceStoppedCommand>(StoreInstanceStopped);
 		ReceiveAsync<StoreInstanceCommandSentCommand>(StoreInstanceCommandSent);
 	}
-
+	
 	private ValueTask<InstanceEntity?> FindInstanceEntity(ILazyDbContext db) {
 		return db.Ctx.Instances.FindAsync(new object[] { instanceGuid }, cancellationToken);
 	}
-
+	
 	public interface ICommand {}
-
+	
 	public sealed record StoreInstanceConfigurationCommand(Guid AuditLogUserGuid, bool IsCreatingInstance, InstanceConfiguration Configuration) : ICommand;
 	
 	public sealed record StoreInstanceLaunchedCommand(Guid AuditLogUserGuid) : ICommand;
@@ -47,10 +47,10 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 	public sealed record StoreInstanceStoppedCommand(Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand;
 	
 	public sealed record StoreInstanceCommandSentCommand(Guid AuditLogUserGuid, string Command) : ICommand;
-
+	
 	private async Task StoreInstanceConfiguration(StoreInstanceConfigurationCommand command) {
 		var configuration = command.Configuration;
-
+		
 		await using (var db = dbProvider.Lazy()) {
 			InstanceEntity entity = db.Ctx.InstanceUpsert.Fetch(instanceGuid);
 			entity.AgentGuid = configuration.AgentGuid;
@@ -62,7 +62,7 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 			entity.MemoryAllocation = configuration.MemoryAllocation;
 			entity.JavaRuntimeGuid = configuration.JavaRuntimeGuid;
 			entity.JvmArguments = JvmArgumentsHelper.Join(configuration.JvmArguments);
-
+			
 			var auditLogWriter = new AuditLogRepository(db).Writer(command.AuditLogUserGuid);
 			if (command.IsCreatingInstance) {
 				auditLogWriter.InstanceCreated(instanceGuid);
@@ -70,13 +70,13 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 			else {
 				auditLogWriter.InstanceEdited(instanceGuid);
 			}
-
+			
 			await db.Ctx.SaveChangesAsync(cancellationToken);
 		}
-
+		
 		Logger.Information("Stored instance \"{InstanceName}\" (GUID {InstanceGuid}) in database.", configuration.InstanceName, instanceGuid);
 	}
-
+	
 	private async Task StoreInstanceLaunched(StoreInstanceLaunchedCommand command) {
 		await using var db = dbProvider.Lazy();
 		
@@ -104,7 +104,7 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 		
 		await db.Ctx.SaveChangesAsync(cancellationToken);
 	}
-
+	
 	private async Task StoreInstanceCommandSent(StoreInstanceCommandSentCommand command) {
 		await using var db = dbProvider.Lazy();
 		

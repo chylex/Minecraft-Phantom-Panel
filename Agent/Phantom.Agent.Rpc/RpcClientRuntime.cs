@@ -14,9 +14,9 @@ public sealed class RpcClientRuntime : RpcClientRuntime<IMessageToAgent, IMessag
 	public static Task Launch(RpcClientSocket<IMessageToAgent, IMessageToController, ReplyMessage> socket, ActorRef<IMessageToAgent> handlerActorRef, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) {
 		return new RpcClientRuntime(socket, handlerActorRef, disconnectSemaphore, receiveCancellationToken).Launch();
 	}
-
+	
 	private RpcClientRuntime(RpcClientSocket<IMessageToAgent, IMessageToController, ReplyMessage> socket, ActorRef<IMessageToAgent> handlerActor, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket, handlerActor, disconnectSemaphore, receiveCancellationToken) {}
-
+	
 	protected override async Task RunWithConnection(ClientSocket socket, RpcConnectionToServer<IMessageToController> connection) {
 		var keepAliveLoop = new KeepAliveLoop(connection);
 		try {
@@ -25,7 +25,7 @@ public sealed class RpcClientRuntime : RpcClientRuntime<IMessageToAgent, IMessag
 			keepAliveLoop.Cancel();
 		}
 	}
-
+	
 	protected override async Task SendDisconnectMessage(ClientSocket socket, ILogger logger) {
 		var unregisterMessageBytes = AgentMessageRegistries.ToController.Write(new UnregisterAgentMessage()).ToArray();
 		try {

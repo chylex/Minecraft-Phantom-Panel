@@ -3,8 +3,8 @@
 @using System.Collections.Immutable
 @using Phantom.Common.Data.Web.AuditLog
 @using Phantom.Common.Data.Web.Users
-@using Phantom.Web.Services.Users
 @using Phantom.Web.Services.Instances
+@using Phantom.Web.Services.Users
 @inherits PhantomComponent
 @inject AuditLogManager AuditLogManager
 @inject InstanceManager InstanceManager
@@ -53,7 +53,7 @@
 
   private ImmutableArray<AuditLogItem>? logItems;
   private string? loadError;
-  
+
   private ImmutableDictionary<Guid, string>? userNamesByGuid;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 

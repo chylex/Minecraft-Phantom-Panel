@@ -15,7 +15,7 @@ namespace Phantom.Agent.Services.Rpc;
 
 public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent> {
 	private static ILogger Logger { get; } = PhantomLogger.Create<ControllerMessageHandlerActor>();
-
+	
 	public readonly record struct Init(RpcConnectionToServer<IMessageToController> Connection, AgentServices Agent, CancellationTokenSource ShutdownTokenSource);
 	
 	public static Props<IMessageToAgent> Factory(Init init) {
@@ -25,7 +25,7 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 	private readonly RpcConnectionToServer<IMessageToController> connection;
 	private readonly AgentServices agent;
 	private readonly CancellationTokenSource shutdownTokenSource;
-
+	
 	private ControllerMessageHandlerActor(Init init) {
 		this.connection = init.Connection;
 		this.agent = init.Agent;
@@ -39,10 +39,10 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 		ReceiveAndReplyLater<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(HandleSendCommandToInstance);
 		Receive<ReplyMessage>(HandleReply);
 	}
-
+	
 	private async Task HandleRegisterAgentSuccess(RegisterAgentSuccessMessage message) {
 		Logger.Information("Agent authentication successful.");
-
+		
 		void ShutdownAfterConfigurationFailed(Guid instanceGuid, InstanceConfiguration configuration) {
 			Logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", configuration.InstanceName, instanceGuid);
 			shutdownTokenSource.Cancel();
@@ -55,20 +55,20 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 				return;
 			}
 		}
-
+		
 		connection.SetIsReady();
 		
 		await connection.Send(new AdvertiseJavaRuntimesMessage(agent.JavaRuntimeRepository.All));
 		agent.InstanceTicketManager.RefreshAgentStatus();
 	}
-
+	
 	private void HandleRegisterAgentFailure(RegisterAgentFailureMessage message) {
 		string errorMessage = message.FailureKind switch {
 			RegisterAgentFailure.ConnectionAlreadyHasAnAgent => "This connection already has an associated agent.",
 			RegisterAgentFailure.InvalidToken                => "Invalid token.",
 			_                                                => "Unknown error " + (byte) message.FailureKind + "."
 		};
-
+		
 		Logger.Fatal("Agent authentication failed: {Error}", errorMessage);
 		
 		PhantomLogger.Dispose();
@@ -82,19 +82,19 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> HandleConfigureInstance(ConfigureInstanceMessage message) {
 		return await HandleConfigureInstance(message, alwaysReportStatus: false);
 	}
-
+	
 	private async Task<Result<LaunchInstanceResult, InstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
 		return await agent.InstanceManager.Request(new InstanceManagerActor.LaunchInstanceCommand(message.InstanceGuid));
 	}
-
+	
 	private async Task<Result<StopInstanceResult, InstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
 		return await agent.InstanceManager.Request(new InstanceManagerActor.StopInstanceCommand(message.InstanceGuid, message.StopStrategy));
 	}
-
+	
 	private async Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
 		return await agent.InstanceManager.Request(new InstanceManagerActor.SendCommandToInstanceCommand(message.InstanceGuid, message.Command));
 	}
-
+	
 	private void HandleReply(ReplyMessage message) {
 		connection.Receive(message);
 	}

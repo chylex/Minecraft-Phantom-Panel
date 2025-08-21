@@ -10,9 +10,9 @@ namespace Phantom.Web.Layout;
 [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
 public class ErrorModel : PageModel {
 	public string? RequestId { get; set; }
-
+	
 	public ErrorModel(ILogger<ErrorModel> logger) {}
-
+	
 	public void OnGet() {
 		RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
 	}

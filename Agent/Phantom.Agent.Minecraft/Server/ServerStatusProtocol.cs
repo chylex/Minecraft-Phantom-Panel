@@ -16,20 +16,20 @@ public static class ServerStatusProtocol {
 		// https://wiki.vg/Server_List_Ping
 		tcpStream.WriteByte(0xFE);
 		await tcpStream.FlushAsync(cancellationToken);
-
+		
 		short messageLength = await ReadStreamHeader(tcpStream, cancellationToken);
 		return await ReadPlayerCounts(tcpStream, messageLength * 2, cancellationToken);
 	}
-
+	
 	private static async Task<short> ReadStreamHeader(NetworkStream tcpStream, CancellationToken cancellationToken) {
 		var headerBuffer = ArrayPool<byte>.Shared.Rent(3);
 		try {
 			await tcpStream.ReadExactlyAsync(headerBuffer, 0, 3, cancellationToken);
-
+			
 			if (headerBuffer[0] != 0xFF) {
 				throw new ProtocolException("Unexpected first byte in response from server: " + headerBuffer[0]);
 			}
-
+			
 			short messageLength = BinaryPrimitives.ReadInt16BigEndian(headerBuffer.AsSpan(1));
 			if (messageLength <= 0) {
 				throw new ProtocolException("Unexpected message length in response from server: " + messageLength);
@@ -40,7 +40,7 @@ public static class ServerStatusProtocol {
 			ArrayPool<byte>.Shared.Return(headerBuffer);
 		}
 	}
-
+	
 	private static async Task<InstancePlayerCounts> ReadPlayerCounts(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
 		var messageBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
 		try {
@@ -63,7 +63,7 @@ public static class ServerStatusProtocol {
 		if (lastSeparator == -1 || middleSeparator == -1) {
 			throw new ProtocolException("Could not find message separators in response from server.");
 		}
-
+		
 		var onlinePlayerCountBuffer = messageBuffer[(middleSeparator + Separator.Length)..lastSeparator];
 		var maximumPlayerCountBuffer = messageBuffer[(lastSeparator + Separator.Length)..];
 		

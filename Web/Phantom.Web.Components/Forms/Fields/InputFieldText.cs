@@ -10,22 +10,22 @@ namespace Phantom.Web.Components.Forms.Fields;
 public sealed class InputFieldText : InputBase<string?>, ICustomFormField {
 	[Parameter]
 	public FormTextInputType Type { get; set; }
-
+	
 	[Parameter]
 	public EventCallback<ChangeEventArgs> OnChange { get; set; }
-
+	
 	[Parameter]
 	public EventCallback<FocusEventArgs> OnBlur { get; set; }
-
+	
 	[Parameter]
 	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
-
+	
 	public bool TwoWayValueBinding { get; set; } = true;
-
+	
 	public void SetStringValue(string? value) {
 		CurrentValueAsString = value;
 	}
-
+	
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
 		if (Type == FormTextInputType.Textarea) {
 			builder.OpenElement(0, "textarea");
@@ -36,15 +36,15 @@ public sealed class InputFieldText : InputBase<string?>, ICustomFormField {
 			builder.AddMultipleAttributes(1, AdditionalAttributes);
 			builder.AddAttribute(2, "type", Type.GetHtmlInputType());
 		}
-
+		
 		if (!string.IsNullOrEmpty(CssClass)) {
 			builder.AddAttribute(3, "class", CssClass);
 		}
-
+		
 		if (TwoWayValueBinding) {
 			builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValue));
 		}
-
+		
 		builder.AddAttribute(5, "onchange", OnChange);
 		builder.AddAttribute(6, "oninput", OnChange);
 		builder.AddAttribute(7, "onblur", OnBlur);

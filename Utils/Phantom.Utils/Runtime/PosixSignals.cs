@@ -11,7 +11,7 @@ public static class PosixSignals {
 		PosixSignalRegistration.Create(PosixSignal.SIGQUIT, handlePosixSignal);
 		Console.CancelKeyPress += cancellationCallback.HandleConsoleCancel;
 	}
-
+	
 	private sealed class CancellationCallback {
 		private readonly CancellationTokenSource cancellationTokenSource;
 		private readonly Action? callback;
@@ -20,17 +20,17 @@ public static class PosixSignals {
 			this.cancellationTokenSource = cancellationTokenSource;
 			this.callback = callback;
 		}
-
+		
 		public void HandlePosixSignal(PosixSignalContext context) {
 			context.Cancel = true;
 			Run();
 		}
-
+		
 		public void HandleConsoleCancel(object? sender, ConsoleCancelEventArgs e) {
 			e.Cancel = true;
 			Run();
 		}
-
+		
 		private void Run() {
 			lock (this) {
 				if (!cancellationTokenSource.IsCancellationRequested) {

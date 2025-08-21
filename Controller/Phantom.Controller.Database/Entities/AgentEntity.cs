@@ -16,7 +16,7 @@ public sealed class AgentEntity {
 	public string BuildVersion { get; set; }
 	public ushort MaxInstances { get; set; }
 	public RamAllocationUnits MaxMemory { get; set; }
-
+	
 	internal AgentEntity(Guid agentGuid) {
 		AgentGuid = agentGuid;
 		Name = null!;

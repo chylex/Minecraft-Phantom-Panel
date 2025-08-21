@@ -9,10 +9,10 @@ public static class EnumerableExtensions {
 		await foreach (var element in source.WithCancellation(cancellationToken)) {
 			builder.Add(element);
 		}
-
+		
 		return builder.ToImmutable();
 	}
-
+	
 	public static async Task<ImmutableArray<TSource>> ToImmutableArrayCatchingExceptionsAsync<TSource>(this IAsyncEnumerable<TSource> source, Action<Exception> onException, CancellationToken cancellationToken = default) {
 		var builder = ImmutableArray.CreateBuilder<TSource>();
 		
@@ -26,11 +26,11 @@ public static class EnumerableExtensions {
 					onException(e);
 					continue;
 				}
-
+				
 				builder.Add(enumerator.Current);
 			}
 		}
-
+		
 		return builder.ToImmutable();
 	}
 	
@@ -40,7 +40,7 @@ public static class EnumerableExtensions {
 		await foreach (var element in source.WithCancellation(cancellationToken)) {
 			builder.Add(element);
 		}
-
+		
 		return builder.ToImmutable();
 	}
 	
@@ -50,7 +50,7 @@ public static class EnumerableExtensions {
 		await foreach (var element in source.WithCancellation(cancellationToken)) {
 			builder.Add(keySelector(element), valueSelector(element));
 		}
-
+		
 		return builder.ToImmutable();
 	}
 }

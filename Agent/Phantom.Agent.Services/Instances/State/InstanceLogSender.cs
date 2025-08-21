@@ -15,13 +15,13 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 	};
 	
 	private static readonly TimeSpan SendDelay = TimeSpan.FromMilliseconds(200);
-
+	
 	private readonly ControllerConnection controllerConnection;
 	private readonly Guid instanceGuid;
 	private readonly Channel<string> outputChannel;
 	
 	private int droppedLinesSinceLastSend;
-
+	
 	public InstanceLogSender(ControllerConnection controllerConnection, Guid instanceGuid, string loggerName) : base(PhantomLogger.Create<InstanceLogSender>(loggerName)) {
 		this.controllerConnection = controllerConnection;
 		this.instanceGuid = instanceGuid;
@@ -41,11 +41,11 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 		} catch (OperationCanceledException) {
 			// Ignore.
 		}
-
+		
 		// Flush remaining lines.
 		SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
 	}
-
+	
 	private ImmutableArray<string> ReadLinesFromChannel(ChannelReader<string> reader, ImmutableArray<string>.Builder builder) {
 		builder.Clear();
 		
@@ -60,22 +60,22 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 		
 		return builder.ToImmutable();
 	}
-
+	
 	private void SendOutputToServer(ImmutableArray<string> lines) {
 		if (!lines.IsEmpty) {
 			controllerConnection.Send(new InstanceOutputMessage(instanceGuid, lines));
 		}
 	}
-
+	
 	private void OnLineDropped(string line) {
 		Logger.Warning("Buffer is full, dropped line: {Line}", line);
 		Interlocked.Increment(ref droppedLinesSinceLastSend);
 	}
-
+	
 	public void Enqueue(string line) {
 		outputChannel.Writer.TryWrite(line);
 	}
-
+	
 	protected override void Dispose() {
 		if (!outputChannel.Writer.TryComplete()) {
 			Logger.Error("Could not mark channel as completed.");

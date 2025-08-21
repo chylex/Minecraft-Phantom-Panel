@@ -1,11 +1,11 @@
 ﻿@page "/users"
 @attribute [Authorize(Permission.ViewUsersPolicy)]
 @using System.Collections.Immutable
+@using Phantom.Common.Data.Web.Users
 @using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Authorization
 @using Phantom.Web.Services.Users
-@using Phantom.Common.Data.Web.Users
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject UserManager UserManager
 @inject RoleManager RoleManager
 @inject UserRoleManager UserRoleManager
@@ -66,7 +66,7 @@
   private readonly Dictionary<Guid, string> userGuidToRoleDescription = new ();
 
   private ImmutableArray<UserInfo> AllUsers => allUsers.GetValueOrDefault(ImmutableArray<UserInfo>.Empty);
-  
+
   private UserRolesDialog userRolesDialog = null!;
   private UserDeleteDialog userDeleteDialog = null!;
 

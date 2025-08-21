@@ -9,7 +9,7 @@ public sealed class ApplicationDbContextDesignFactory : IDesignTimeDbContextFact
 		var options = new DbContextOptionsBuilder<ApplicationDbContext>()
 		              .UseNpgsql(static options => options.MigrationsAssembly(Assembly.GetExecutingAssembly().FullName))
 		              .Options;
-
+		
 		return new ApplicationDbContext(options);
 	}
 }

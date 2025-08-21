@@ -15,10 +15,10 @@ namespace Phantom.Common.Data.Web.Users {
 namespace Phantom.Common.Data.Web.Users.SetUserPasswordErrors {
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record UserNotFound : SetUserPasswordError;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record PasswordIsInvalid([property: MemoryPackOrder(0)] ImmutableArray<PasswordRequirementViolation> Violations) : SetUserPasswordError;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record UnknownError : SetUserPasswordError;
 }

@@ -21,7 +21,7 @@ sealed record Variables(
 	private static Variables LoadOrThrow() {
 		var (agentKeyToken, agentKeyFilePath) = EnvironmentVariables.GetEitherString("AGENT_KEY", "AGENT_KEY_FILE").Require;
 		var javaSearchPath = EnvironmentVariables.GetString("JAVA_SEARCH_PATH").WithDefaultGetter(GetDefaultJavaSearchPath);
-
+		
 		return new Variables(
 			EnvironmentVariables.GetString("CONTROLLER_HOST").Require,
 			EnvironmentVariables.GetPortNumber("CONTROLLER_PORT").WithDefault(9401),
@@ -36,11 +36,11 @@ sealed record Variables(
 			(ushort) EnvironmentVariables.GetInteger("MAX_CONCURRENT_BACKUP_COMPRESSION_TASKS", min: 1, max: 10000).WithDefault(1)
 		);
 	}
-
+	
 	private static string GetDefaultJavaSearchPath() {
 		return JavaRuntimeDiscovery.GetSystemSearchPath() ?? throw new Exception("Could not automatically determine the path to Java installations on this system. Please set the JAVA_SEARCH_PATH environment variable to the folder containing Java installations.");
 	}
-
+	
 	public static Variables LoadOrStop() {
 		try {
 			return LoadOrThrow();

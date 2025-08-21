@@ -19,7 +19,7 @@ sealed record Variables(
 			Password = EnvironmentVariables.GetString("PG_PASS").Require,
 			Database = EnvironmentVariables.GetString("PG_DATABASE").Require
 		};
-
+		
 		return new Variables(
 			EnvironmentVariables.GetString("AGENT_RPC_SERVER_HOST").WithDefault("0.0.0.0"),
 			EnvironmentVariables.GetPortNumber("AGENT_RPC_SERVER_PORT").WithDefault(9401),
@@ -28,7 +28,7 @@ sealed record Variables(
 			connectionStringBuilder.ToString()
 		);
 	}
-
+	
 	public static Variables LoadOrStop() {
 		try {
 			return LoadOrThrow();

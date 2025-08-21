@@ -13,7 +13,7 @@ static class FormNumberInputTypes {
 			_                          => throw new InvalidOperationException($"Unsupported input type {type}")
 		};
 	}
-
+	
 	public static string GetBootstrapCssClass(this FormNumberInputType type) {
 		return type switch {
 			FormNumberInputType.Number => "form-control",

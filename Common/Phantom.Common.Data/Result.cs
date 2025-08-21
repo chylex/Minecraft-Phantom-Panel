@@ -17,7 +17,7 @@ public sealed partial class Result<TValue, TError> {
 	[MemoryPackOrder(2)]
 	[MemoryPackInclude]
 	private readonly TError? error;
-
+	
 	[MemoryPackIgnore]
 	public TValue Value => hasValue ? value! : throw new InvalidOperationException("Attempted to get value from an error result.");
 	
@@ -29,23 +29,23 @@ public sealed partial class Result<TValue, TError> {
 		this.value = value;
 		this.error = error;
 	}
-
+	
 	public bool Is(TValue expectedValue) {
 		return hasValue && EqualityComparer<TValue>.Default.Equals(value, expectedValue);
 	}
-
+	
 	public TOutput Into<TOutput>(Func<TValue, TOutput> valueConverter, Func<TError, TOutput> errorConverter) {
 		return hasValue ? valueConverter(value!) : errorConverter(error!);
 	}
-
+	
 	public Result<TValue, TNewError> MapError<TNewError>(Func<TError, TNewError> errorConverter) {
 		return hasValue ? value! : errorConverter(error!);
 	}
-
+	
 	public Utils.Result.Result Variant() {
 		return hasValue ? new Ok<TValue>(Value) : new Err<TError>(Error);
 	}
-
+	
 	public static implicit operator Result<TValue, TError>(TValue value) {
 		return new Result<TValue, TError>(hasValue: true, value, default);
 	}
@@ -53,7 +53,7 @@ public sealed partial class Result<TValue, TError> {
 	public static implicit operator Result<TValue, TError>(TError error) {
 		return new Result<TValue, TError>(hasValue: false, default, error);
 	}
-
+	
 	public static implicit operator bool(Result<TValue, TError> result) {
 		return result.hasValue;
 	}
@@ -68,15 +68,15 @@ public sealed partial class Result<TError> {
 	[MemoryPackOrder(1)]
 	[MemoryPackInclude]
 	private readonly TError? error;
-
+	
 	[MemoryPackIgnore]
 	public TError Error => !hasValue ? error! : throw new InvalidOperationException("Attempted to get error from a success result.");
-
+	
 	private Result(bool hasValue, TError? error) {
 		this.hasValue = hasValue;
 		this.error = error;
 	}
-
+	
 	public bool TryGetError([MaybeNullWhen(false)] out TError error) {
 		if (hasValue) {
 			error = default;
@@ -87,15 +87,15 @@ public sealed partial class Result<TError> {
 			return true;
 		}
 	}
-
+	
 	public static implicit operator Result<TError>([SuppressMessage("ReSharper", "UnusedParameter.Global")] Result.OkType _) {
 		return new Result<TError>(hasValue: true, default);
 	}
-
+	
 	public static implicit operator Result<TError>(TError error) {
 		return new Result<TError>(hasValue: false, error);
 	}
-
+	
 	public static implicit operator bool(Result<TError> result) {
 		return result.hasValue;
 	}
@@ -103,6 +103,6 @@ public sealed partial class Result<TError> {
 
 public static class Result {
 	public static OkType Ok { get; }  = new ();
-
+	
 	public readonly record struct OkType;
 }

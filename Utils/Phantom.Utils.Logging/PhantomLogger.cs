@@ -21,19 +21,19 @@ public static class PhantomLogger {
 		       .WriteTo.Async(c => c.Console(outputTemplate: template, formatProvider: CultureInfo.InvariantCulture, theme: AnsiConsoleTheme.Literate))
 		       .CreateLogger();
 	}
-
+	
 	public static ILogger Create(string name) {
 		return Base.ForContext("Category", name);
 	}
-
+	
 	public static ILogger Create(string name1, string name2) {
 		return Create(ConcatNames(name1, name2));
 	}
-
+	
 	public static ILogger Create<T>() {
 		return Create(typeof(T).Name);
 	}
-
+	
 	public static ILogger Create<T>(string name) {
 		return Create(typeof(T).Name, name);
 	}
@@ -41,15 +41,15 @@ public static class PhantomLogger {
 	public static ILogger Create<T>(string name1, string name2) {
 		return Create(typeof(T).Name, ConcatNames(name1, name2));
 	}
-
+	
 	public static ILogger Create<T1, T2>() {
 		return Create(typeof(T1).Name, typeof(T2).Name);
 	}
-
+	
 	private static string ConcatNames(string name1, string name2) {
 		return name1 + ":" + name2;
 	}
-
+	
 	public static void Dispose() {
 		Root.Dispose();
 		Base.Dispose();

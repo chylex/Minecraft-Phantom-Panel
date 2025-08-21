@@ -9,7 +9,7 @@ static partial class InstanceLogHtmlFilters {
 	/// </summary>
 	[GeneratedRegex(@"\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b", RegexOptions.NonBacktracking | RegexOptions.ExplicitCapture)]
 	private static partial Regex Ipv4();
-
+	
 	/// <summary>
 	/// Matches full IPv6 addresses in square brackets. Does not match compressed IPv6 addresses since Java's <c>toString()</c> currently expands them.
 	/// </summary>

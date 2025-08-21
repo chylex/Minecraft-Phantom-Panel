@@ -7,17 +7,17 @@ namespace Phantom.Utils.Collections;
 public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 	private readonly Dictionary<TKey, TValue> dict;
 	private readonly ReaderWriterLockSlim rwLock;
-
+	
 	public RwLockedDictionary(LockRecursionPolicy recursionPolicy) {
 		this.dict = new Dictionary<TKey, TValue>();
 		this.rwLock = new ReaderWriterLockSlim(recursionPolicy);
 	}
-
+	
 	public RwLockedDictionary(int capacity, LockRecursionPolicy recursionPolicy) {
 		this.dict = new Dictionary<TKey, TValue>(capacity);
 		this.rwLock = new ReaderWriterLockSlim(recursionPolicy);
 	}
-
+	
 	public TValue this[TKey key] {
 		get {
 			rwLock.EnterReadLock();
@@ -27,7 +27,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 				rwLock.ExitReadLock();
 			}
 		}
-
+		
 		set {
 			rwLock.EnterWriteLock();
 			try {
@@ -37,7 +37,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			}
 		}
 	}
-
+	
 	public ImmutableArray<TValue> ValuesCopy {
 		get {
 			rwLock.EnterReadLock();
@@ -48,7 +48,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			}
 		}
 	}
-
+	
 	public void ForEachValue(Action<TValue> action) {
 		rwLock.EnterReadLock();
 		try {
@@ -59,7 +59,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitReadLock();
 		}
 	}
-
+	
 	public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value) {
 		rwLock.EnterReadLock();
 		try {
@@ -68,7 +68,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitReadLock();
 		}
 	}
-
+	
 	public bool GetOrAdd(TKey key, Func<TKey, TValue> valueFactory, out TValue value) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
@@ -76,7 +76,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 				value = existingValue;
 				return false;
 			}
-
+			
 			rwLock.EnterWriteLock();
 			try {
 				dict[key] = value = valueFactory(key);
@@ -97,7 +97,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitWriteLock();
 		}
 	}
-
+	
 	public bool AddOrReplace(TKey key, TValue newValue, [MaybeNullWhen(false)] out TValue oldValue) {
 		rwLock.EnterWriteLock();
 		try {
@@ -108,14 +108,14 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitWriteLock();
 		}
 	}
-
+	
 	public bool AddOrReplaceIf(TKey key, TValue newValue, Predicate<TValue> replaceCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
 			if (dict.TryGetValue(key, out var oldValue) && !replaceCondition(oldValue)) {
 				return false;
 			}
-
+			
 			rwLock.EnterWriteLock();
 			try {
 				dict[key] = newValue;
@@ -127,18 +127,18 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitUpgradeableReadLock();
 		}
 	}
-
+	
 	public bool TryReplace(TKey key, Func<TValue, TValue> replacementValueFactory) {
 		return TryReplaceIf(key, replacementValueFactory, static _ => true);
 	}
-
+	
 	public bool TryReplaceIf(TKey key, Func<TValue, TValue> replacementValueFactory, Predicate<TValue> replaceCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
 			if (!dict.TryGetValue(key, out var oldValue) || !replaceCondition(oldValue)) {
 				return false;
 			}
-
+			
 			rwLock.EnterWriteLock();
 			try {
 				dict[key] = replacementValueFactory(oldValue);
@@ -150,32 +150,32 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitUpgradeableReadLock();
 		}
 	}
-
+	
 	public bool ReplaceAll(Func<TValue, TValue> replacementValueFactory) {
 		rwLock.EnterWriteLock();
 		try {
 			foreach (var (key, oldValue) in dict) {
 				dict[key] = replacementValueFactory(oldValue);
 			}
-
+			
 			return dict.Count > 0;
 		} finally {
 			rwLock.ExitWriteLock();
 		}
 	}
-
+	
 	public bool ReplaceAllIf(Func<TValue, TValue> replacementValueFactory, Predicate<TValue> replaceCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
 			bool hasChanged = false;
-
+			
 			try {
 				foreach (var (key, oldValue) in dict) {
 					if (replaceCondition(oldValue)) {
 						if (!hasChanged) {
 							rwLock.EnterWriteLock();
 						}
-
+						
 						hasChanged = true;
 						dict[key] = replacementValueFactory(oldValue);
 					}
@@ -185,13 +185,13 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 					rwLock.ExitWriteLock();
 				}
 			}
-
+			
 			return hasChanged;
 		} finally {
 			rwLock.ExitUpgradeableReadLock();
 		}
 	}
-
+	
 	public bool Remove(TKey key) {
 		rwLock.EnterWriteLock();
 		try {
@@ -200,14 +200,14 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitWriteLock();
 		}
 	}
-
+	
 	public bool RemoveIf(TKey key, Predicate<TValue> removeCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
 			if (!dict.TryGetValue(key, out var oldValue) || !removeCondition(oldValue)) {
 				return false;
 			}
-
+			
 			rwLock.EnterWriteLock();
 			try {
 				return dict.Remove(key);
@@ -218,7 +218,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitUpgradeableReadLock();
 		}
 	}
-
+	
 	public bool RemoveAll(Predicate<KeyValuePair<TKey, TValue>> removeCondition) {
 		rwLock.EnterUpgradeableReadLock();
 		try {
@@ -226,7 +226,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			if (keysToRemove.IsEmpty) {
 				return false;
 			}
-
+			
 			rwLock.EnterWriteLock();
 			try {
 				foreach (var key in keysToRemove) {
@@ -241,7 +241,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitUpgradeableReadLock();
 		}
 	}
-
+	
 	public ImmutableDictionary<TKey, TValue> ToImmutable() {
 		rwLock.EnterReadLock();
 		try {
@@ -250,7 +250,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 			rwLock.ExitReadLock();
 		}
 	}
-
+	
 	public ImmutableDictionary<TKey, TNewValue> ToImmutable<TNewValue>(Func<TValue, TNewValue> valueSelector) {
 		rwLock.EnterReadLock();
 		try {

@@ -14,15 +14,15 @@ public sealed class AgentServices {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentServices>();
 	
 	public ActorSystem ActorSystem { get; }
-
+	
 	private AgentFolders AgentFolders { get; }
 	private AgentState AgentState { get; }
 	private BackupManager BackupManager { get; }
-
+	
 	internal JavaRuntimeRepository JavaRuntimeRepository { get; }
 	internal InstanceTicketManager InstanceTicketManager { get; }
 	internal ActorRef<InstanceManagerActor.ICommand> InstanceManager { get; }
-
+	
 	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders, AgentServiceConfiguration serviceConfiguration, ControllerConnection controllerConnection) {
 		this.ActorSystem = ActorSystemFactory.Create("Agent");
 		
@@ -36,13 +36,13 @@ public sealed class AgentServices {
 		var instanceManagerInit = new InstanceManagerActor.Init(controllerConnection, agentFolders, AgentState, JavaRuntimeRepository, InstanceTicketManager, BackupManager);
 		this.InstanceManager = ActorSystem.ActorOf(InstanceManagerActor.Factory(instanceManagerInit), "InstanceManager");
 	}
-
+	
 	public async Task Initialize() {
 		await foreach (var runtime in JavaRuntimeDiscovery.Scan(AgentFolders.JavaSearchFolderPath)) {
 			JavaRuntimeRepository.Include(runtime);
 		}
 	}
-
+	
 	public async Task Shutdown() {
 		Logger.Information("Stopping services...");
 		

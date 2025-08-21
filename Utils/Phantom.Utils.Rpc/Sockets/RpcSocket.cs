@@ -16,7 +16,7 @@ public abstract class RpcSocket<TSocket> where TSocket : ThreadSafeSocket {
 	internal TSocket Socket { get; }
 	internal RpcConfiguration Config { get; }
 	internal MessageReplyTracker ReplyTracker { get; }
-
+	
 	protected RpcSocket(TSocket socket, RpcConfiguration config) {
 		Socket = socket;
 		Config = config;

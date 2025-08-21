@@ -28,54 +28,54 @@ sealed partial class BackupServerCommandDispatcher : IDisposable {
 		"Turned on world auto-saving",
 		"CONSOLE: Enabling level saving.."
 	);
-
+	
 	private readonly ILogger logger;
 	private readonly InstanceProcess process;
 	private readonly CancellationToken cancellationToken;
-
+	
 	private readonly TaskCompletionSource automaticSavingDisabled = AsyncTasks.CreateCompletionSource();
 	private readonly TaskCompletionSource savedTheGame = AsyncTasks.CreateCompletionSource();
 	private readonly TaskCompletionSource automaticSavingEnabled = AsyncTasks.CreateCompletionSource();
-
+	
 	public BackupServerCommandDispatcher(ILogger logger, InstanceProcess process, CancellationToken cancellationToken) {
 		this.logger = logger;
 		this.process = process;
 		this.cancellationToken = cancellationToken;
-
+		
 		this.process.AddOutputListener(OnOutput, maxLinesToReadFromHistory: 0);
 	}
-
+	
 	void IDisposable.Dispose() {
 		process.RemoveOutputListener(OnOutput);
 	}
-
+	
 	public async Task DisableAutomaticSaving() {
 		await process.SendCommand(MinecraftCommand.SaveOff, cancellationToken);
 		await automaticSavingDisabled.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 	}
-
+	
 	public async Task SaveAllChunks() {
 		await process.SendCommand(MinecraftCommand.SaveAll(flush: true), cancellationToken);
 		await savedTheGame.Task.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
 	}
-
+	
 	public async Task EnableAutomaticSaving() {
 		await process.SendCommand(MinecraftCommand.SaveOn, cancellationToken);
 		await automaticSavingEnabled.Task.WaitAsync(TimeSpan.FromMinutes(1), cancellationToken);
 	}
-
+	
 	private void OnOutput(object? sender, string? line) {
 		if (line == null) {
 			return;
 		}
-
+		
 		var match = ServerThreadInfoRegex().Match(line);
 		if (!match.Success) {
 			return;
 		}
-
+		
 		string info = match.Groups[1].Value;
-
+		
 		if (!automaticSavingDisabled.Task.IsCompleted) {
 			if (AutomaticSavingDisabledMessages.Contains(info)) {
 				logger.Debug("Detected that automatic saving is disabled.");

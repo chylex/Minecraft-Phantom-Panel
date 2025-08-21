@@ -40,7 +40,7 @@ public static class PhantomWebServices {
 	public static void UsePhantomServices(this IApplicationBuilder application) {
 		application.UseAuthorization();
 	}
-
+	
 	private static void ConfigureAuthorization(AuthorizationOptions o) {
 		foreach (var permission in Permission.All) {
 			o.AddPolicy(permission.Id, policy => policy.Requirements.Add(new PermissionBasedPolicyRequirement(permission)));

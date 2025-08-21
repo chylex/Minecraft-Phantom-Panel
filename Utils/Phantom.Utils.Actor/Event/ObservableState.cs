@@ -3,9 +3,9 @@
 public sealed class ObservableState<TState> {
 	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
 	private readonly List<IListener> listeners = new ();
-
+	
 	private TState state;
-
+	
 	public TState State {
 		get {
 			rwLock.EnterReadLock();
@@ -25,7 +25,7 @@ public sealed class ObservableState<TState> {
 		this.PublisherSide = new Publisher(this);
 		this.ReceiverSide = new Receiver(this);
 	}
-
+	
 	private interface IListener {
 		bool IsFor<TMessage>(ActorRef<TMessage> other);
 		void Notify(TState state);
@@ -35,7 +35,7 @@ public sealed class ObservableState<TState> {
 		public bool IsFor<TOtherMessage>(ActorRef<TOtherMessage> other) {
 			return Actor.IsSame(other);
 		}
-
+		
 		public void Notify(TState state) {
 			Actor.Tell(MessageFactory(state));
 		}
@@ -47,7 +47,7 @@ public sealed class ObservableState<TState> {
 		internal Publisher(ObservableState<TState> owner) {
 			this.owner = owner;
 		}
-
+		
 		public void Publish(TState state) {
 			Publish(static (_, newState) => newState, state);
 		}
@@ -69,23 +69,23 @@ public sealed class ObservableState<TState> {
 				owner.rwLock.ExitWriteLock();
 			}
 		}
-
+		
 		private void SetInternalState(TState state) {
 			owner.state = state;
-
+			
 			foreach (var listener in owner.listeners) {
 				listener.Notify(state);
 			}
 		}
 	}
-
+	
 	public readonly struct Receiver {
 		private readonly ObservableState<TState> owner;
 		
 		internal Receiver(ObservableState<TState> owner) {
 			this.owner = owner;
 		}
-
+		
 		public void Register<TMessage>(ActorRef<TMessage> actor, Func<TState, TMessage> messageFactory) {
 			var listener = new Listener<TMessage>(actor, messageFactory);
 			
@@ -97,7 +97,7 @@ public sealed class ObservableState<TState> {
 				owner.rwLock.ExitReadLock();
 			}
 		}
-
+		
 		public void Unregister<TMessage>(ActorRef<TMessage> actor) {
 			owner.rwLock.EnterWriteLock();
 			try {

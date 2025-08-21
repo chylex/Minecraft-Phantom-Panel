@@ -21,23 +21,23 @@ public class ApplicationDbContext : DbContext {
 	public DbSet<UserPermissionEntity> UserPermissions { get; init; } = null!;
 	public DbSet<RolePermissionEntity> RolePermissions { get; init; } = null!;
 	public DbSet<UserAgentAccessEntity> UserAgentAccess { get; init; } = null!;
-
+	
 	public DbSet<AgentEntity> Agents { get; init; } = null!;
 	public DbSet<InstanceEntity> Instances { get; init; } = null!;
 	public DbSet<AuditLogEntity> AuditLog { get; init; } = null!;
 	public DbSet<EventLogEntity> EventLog { get; init; } = null!;
-
+	
 	public AgentEntityUpsert AgentUpsert { get; }
 	public InstanceEntityUpsert InstanceUpsert { get; }
-
+	
 	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {
 		AgentUpsert = new AgentEntityUpsert(this);
 		InstanceUpsert = new InstanceEntityUpsert(this);
 	}
-
+	
 	protected override void OnModelCreating(ModelBuilder builder) {
 		base.OnModelCreating(builder);
-
+		
 		builder.Entity<AuditLogEntity>(static b => {
 			b.HasOne(static e => e.User).WithMany().HasForeignKey(static e => e.UserGuid).IsRequired(false).OnDelete(DeleteBehavior.SetNull);
 		});
@@ -70,10 +70,10 @@ public class ApplicationDbContext : DbContext {
 			b.HasOne<AgentEntity>().WithMany().HasForeignKey(static e => e.AgentGuid).IsRequired().OnDelete(DeleteBehavior.Cascade);
 		});
 	}
-
+	
 	protected override void ConfigureConventions(ModelConfigurationBuilder builder) {
 		base.ConfigureConventions(builder);
-
+		
 		builder.Properties<AuditLogEventType>().HaveConversion<EnumToStringConverter<AuditLogEventType>>();
 		builder.Properties<AuditLogSubjectType>().HaveConversion<EnumToStringConverter<AuditLogSubjectType>>();
 		builder.Properties<EventLogEventType>().HaveConversion<EnumToStringConverter<EventLogEventType>>();

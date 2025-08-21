@@ -9,7 +9,7 @@ namespace Phantom.Utils.Rpc.Runtime;
 
 public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket {
 	private readonly TSocket socket;
-
+	
 	private protected string LoggerName { get; }
 	private protected ILogger RuntimeLogger { get; }
 	private protected MessageReplyTracker ReplyTracker { get; }
@@ -21,7 +21,7 @@ public abstract class RpcRuntime<TSocket> where TSocket : ThreadSafeSocket {
 		this.RuntimeLogger = PhantomLogger.Create(LoggerName);
 		this.ReplyTracker = socket.ReplyTracker;
 	}
-
+	
 	protected async Task Launch() {
 		[SuppressMessage("ReSharper", "AccessToDisposedClosure")]
 		async Task RunTask() {

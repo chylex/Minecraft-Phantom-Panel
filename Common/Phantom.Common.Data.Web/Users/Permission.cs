@@ -9,11 +9,11 @@ public sealed record Permission(string Id, Permission? Parent) {
 		AllPermissions.Add(permission);
 		return permission;
 	}
-
+	
 	private Permission RegisterChild(string id) {
 		return Register(id, this);
 	}
-
+	
 	public const string ManageAllAgentsPolicy = "Agents.ManageAll";
 	public static readonly Permission ManageAllAgents = Register(ManageAllAgentsPolicy);
 	

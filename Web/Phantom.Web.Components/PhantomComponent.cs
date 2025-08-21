@@ -12,11 +12,11 @@ public abstract class PhantomComponent : ComponentBase, IDisposable {
 	
 	[CascadingParameter]
 	public Task<AuthenticationState> AuthenticationStateTask { get; set; } = null!;
-
+	
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
-
+	
 	protected CancellationToken CancellationToken => cancellationTokenSource.Token;
-
+	
 	protected async Task<AuthenticatedUser?> GetAuthenticatedUser() {
 		var authenticationState = await AuthenticationStateTask;
 		return authenticationState.GetAuthenticatedUser();
@@ -26,17 +26,17 @@ public abstract class PhantomComponent : ComponentBase, IDisposable {
 		var authenticationState = await AuthenticationStateTask;
 		return authenticationState.CheckPermission(permission);
 	}
-
+	
 	protected void InvokeAsyncChecked(Func<Task> task) {
 		InvokeAsync(task).ContinueWith(static t => Logger.Error(t.Exception, "Caught exception in async task."), TaskContinuationOptions.OnlyOnFaulted);
 	}
-
+	
 	public void Dispose() {
 		cancellationTokenSource.Cancel();
 		cancellationTokenSource.Dispose();
 		OnDisposed();
 		GC.SuppressFinalize(this);
 	}
-
+	
 	protected virtual void OnDisposed() {}
 }

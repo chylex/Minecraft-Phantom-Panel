@@ -43,10 +43,10 @@
     </Cell>
     <Cell class="text-center">
       @if (instance.PlayerCounts is var (online, maximum)) {
-	      <p class="font-monospace">@online.ToString() / @maximum.ToString()</p>
+        <p class="font-monospace">@online.ToString() / @maximum.ToString()</p>
       }
       else {
-	      <p class="font-monospace">-</p>
+        <p class="font-monospace">-</p>
       }
     </Cell>
     <Cell>@configuration.MinecraftServerKind @configuration.MinecraftVersion</Cell>

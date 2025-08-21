@@ -12,7 +12,7 @@ public sealed class StreamCopier : IDisposable {
 	public StreamCopier(int bufferSize = DefaultBufferSize) {
 		this.bufferSize = bufferSize;
 	}
-
+	
 	public async Task Copy(Stream source, Stream destination, CancellationToken cancellationToken) {
 		byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 		try {
@@ -30,7 +30,7 @@ public sealed class StreamCopier : IDisposable {
 	public void Dispose() {
 		BufferReady = null;
 	}
-
+	
 	public sealed class BufferEventArgs : EventArgs {
 		public ReadOnlyMemory<byte> Buffer { get; }
 		

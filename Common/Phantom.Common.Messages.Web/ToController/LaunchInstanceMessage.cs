@@ -5,7 +5,7 @@ using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Utils.Actor;
 
-namespace Phantom.Common.Messages.Web.ToController; 
+namespace Phantom.Common.Messages.Web.ToController;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record LaunchInstanceMessage(

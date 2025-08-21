@@ -38,7 +38,7 @@ try {
 	PhantomLogger.Root.Information("Controller version: {Version}", fullVersion);
 	
 	var (agentRpcServerHost, agentRpcServerPort, webRpcServerHost, webRpcServerPort, sqlConnectionString) = Variables.LoadOrStop();
-
+	
 	string secretsPath = Path.GetFullPath("./secrets");
 	CreateFolderOrStop(secretsPath, Chmod.URWX_GRX);
 	
@@ -55,14 +55,14 @@ try {
 	PhantomLogger.Root.InformationHeading("Launching Phantom Panel server...");
 	
 	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
-
+	
 	using var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken);
 	await controllerServices.Initialize();
-
+	
 	static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
 		return new RpcConfiguration(serviceName, host, port, connectionKey.Certificate);
 	}
-
+	
 	try {
 		await Task.WhenAll(
 			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.AgentRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken),
@@ -71,7 +71,7 @@ try {
 	} finally {
 		NetMQConfig.Cleanup();
 	}
-
+	
 	return 0;
 } catch (OperationCanceledException) {
 	return 0;

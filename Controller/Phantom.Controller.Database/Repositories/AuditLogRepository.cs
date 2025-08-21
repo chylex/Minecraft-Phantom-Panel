@@ -7,11 +7,11 @@ namespace Phantom.Controller.Database.Repositories;
 
 public sealed partial class AuditLogRepository {
 	private readonly ILazyDbContext db;
-
+	
 	public AuditLogRepository(ILazyDbContext db) {
 		this.db = db;
 	}
-
+	
 	public Task<ImmutableArray<AuditLogItem>> GetMostRecentItems(int count, CancellationToken cancellationToken) {
 		return db.Ctx
 		         .AuditLog

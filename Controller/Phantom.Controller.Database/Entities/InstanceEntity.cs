@@ -12,9 +12,9 @@ namespace Phantom.Controller.Database.Entities;
 public sealed class InstanceEntity {
 	[Key]
 	public Guid InstanceGuid { get; init; }
-
+	
 	public Guid AgentGuid { get; set; }
-
+	
 	public string InstanceName { get; set; }
 	public ushort ServerPort { get; set; }
 	public ushort RconPort { get; set; }
@@ -24,7 +24,7 @@ public sealed class InstanceEntity {
 	public Guid JavaRuntimeGuid { get; set; }
 	public string JvmArguments { get; set; }
 	public bool LaunchAutomatically { get; set; }
-
+	
 	internal InstanceEntity(Guid instanceGuid) {
 		InstanceGuid = instanceGuid;
 		InstanceName = null!;

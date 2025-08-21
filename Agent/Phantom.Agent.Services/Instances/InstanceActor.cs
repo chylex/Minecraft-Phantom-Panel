@@ -14,11 +14,11 @@ namespace Phantom.Agent.Services.Instances;
 
 sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	public readonly record struct Init(AgentState AgentState, Guid InstanceGuid, string ShortName, InstanceServices InstanceServices, InstanceTicketManager InstanceTicketManager, CancellationToken ShutdownCancellationToken);
-
+	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume, MailboxType = UnboundedJumpAheadMailbox.Name });
 	}
-
+	
 	private readonly AgentState agentState;
 	private readonly CancellationToken shutdownCancellationToken;
 	
@@ -28,10 +28,10 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	private readonly InstanceContext context;
 	
 	private readonly CancellationTokenSource actorCancellationTokenSource = new ();
-
+	
 	private IInstanceStatus currentStatus = InstanceStatus.NotRunning;
 	private InstanceRunningState? runningState = null;
-
+	
 	private InstanceActor(Init init) {
 		this.agentState = init.AgentState;
 		this.instanceGuid = init.InstanceGuid;
@@ -41,7 +41,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		
 		var logger = PhantomLogger.Create<InstanceActor>(init.ShortName);
 		this.context = new InstanceContext(instanceGuid, init.ShortName, logger, instanceServices, SelfTyped, actorCancellationTokenSource.Token);
-
+		
 		Receive<ReportInstanceStatusCommand>(ReportInstanceStatus);
 		ReceiveAsync<LaunchInstanceCommand>(LaunchInstance);
 		ReceiveAsync<StopInstanceCommand>(StopInstance);
@@ -50,29 +50,29 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		Receive<HandleProcessEndedCommand>(HandleProcessEnded);
 		ReceiveAsync<ShutdownCommand>(Shutdown);
 	}
-
+	
 	private void SetAndReportStatus(IInstanceStatus status) {
 		currentStatus = status;
 		ReportCurrentStatus();
 	}
-
+	
 	private void ReportCurrentStatus() {
 		agentState.UpdateInstance(new Instance(instanceGuid, currentStatus));
 		instanceServices.ControllerConnection.Send(new ReportInstanceStatusMessage(instanceGuid, currentStatus));
 	}
-
+	
 	private void TransitionState(InstanceRunningState? newState) {
 		if (runningState == newState) {
 			return;
 		}
-
+		
 		runningState?.Dispose();
 		runningState = newState;
 		runningState?.Initialize();
 	}
 	
 	public interface ICommand {}
-
+	
 	public sealed record ReportInstanceStatusCommand : ICommand;
 	
 	public sealed record LaunchInstanceCommand(InstanceConfiguration Configuration, IServerLauncher Launcher, InstanceTicketManager.Ticket Ticket, bool IsRestarting) : ICommand;
@@ -86,7 +86,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	public sealed record HandleProcessEndedCommand(IInstanceStatus Status) : ICommand, IJumpAhead;
 	
 	public sealed record ShutdownCommand : ICommand;
-
+	
 	private void ReportInstanceStatus(ReportInstanceStatusCommand command) {
 		ReportCurrentStatus();
 	}
@@ -103,12 +103,12 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			TransitionState(newState);
 		}
 	}
-
+	
 	private async Task StopInstance(StopInstanceCommand command) {
 		if (runningState is null) {
 			return;
 		}
-
+		
 		IInstanceStatus oldStatus = currentStatus;
 		SetAndReportStatus(InstanceStatus.Stopping);
 		
@@ -120,7 +120,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			SetAndReportStatus(oldStatus);
 		}
 	}
-
+	
 	private async Task<SendCommandToInstanceResult> SendCommandToInstance(SendCommandToInstanceCommand command) {
 		if (runningState is null) {
 			return SendCommandToInstanceResult.InstanceNotRunning;
@@ -143,7 +143,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			}
 		}
 	}
-
+	
 	private void HandleProcessEnded(HandleProcessEndedCommand command) {
 		if (runningState is { Process.HasEnded: true }) {
 			SetAndReportStatus(command.Status);
@@ -152,7 +152,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			TransitionState(null);
 		}
 	}
-
+	
 	private async Task Shutdown(ShutdownCommand command) {
 		await StopInstance(new StopInstanceCommand(MinecraftStopStrategy.Instant));
 		await actorCancellationTokenSource.CancelAsync();

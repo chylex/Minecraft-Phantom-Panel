@@ -36,11 +36,11 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		MinecraftVersions MinecraftVersions,
 		EventLogManager EventLogManager
 	);
-
+	
 	public static Props<IMessageToController> Factory(Init init) {
 		return Props<IMessageToController>.Create(() => new WebMessageHandlerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
-
+	
 	private readonly RpcConnectionToClient<IMessageToWeb> connection;
 	private readonly WebRegistrationHandler webRegistrationHandler;
 	private readonly ControllerState controllerState;
@@ -52,7 +52,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	private readonly AgentManager agentManager;
 	private readonly MinecraftVersions minecraftVersions;
 	private readonly EventLogManager eventLogManager;
-
+	
 	private WebMessageHandlerActor(Init init) {
 		this.connection = init.Connection;
 		this.webRegistrationHandler = init.WebRegistrationHandler;
@@ -65,10 +65,10 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		this.agentManager = init.AgentManager;
 		this.minecraftVersions = init.MinecraftVersions;
 		this.eventLogManager = init.EventLogManager;
-
+		
 		var senderActorInit = new WebMessageDataUpdateSenderActor.Init(connection, controllerState, init.InstanceLogManager);
 		Context.ActorOf(WebMessageDataUpdateSenderActor.Factory(senderActorInit), "DataUpdateSender");
-
+		
 		ReceiveAsync<RegisterWebMessage>(HandleRegisterWeb);
 		Receive<UnregisterWebMessage>(HandleUnregisterWeb);
 		ReceiveAndReplyLater<LogInMessage, Optional<LogInSuccess>>(HandleLogIn);
@@ -91,55 +91,55 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		ReceiveAndReplyLater<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>(HandleGetEventLog);
 		Receive<ReplyMessage>(HandleReply);
 	}
-
+	
 	private async Task HandleRegisterWeb(RegisterWebMessage message) {
 		await webRegistrationHandler.TryRegisterImpl(connection, message);
 	}
-
+	
 	private void HandleUnregisterWeb(UnregisterWebMessage message) {
 		connection.Close();
 	}
-
+	
 	private Task<Optional<LogInSuccess>> HandleLogIn(LogInMessage message) {
 		return userLoginManager.LogIn(message.Username, message.Password);
 	}
-
+	
 	private void HandleLogOut(LogOutMessage message) {
 		_ = userLoginManager.LogOut(message.UserGuid, message.SessionToken);
 	}
-
+	
 	private Optional<AuthenticatedUserInfo> GetAuthenticatedUser(GetAuthenticatedUser message) {
 		return userLoginManager.GetAuthenticatedUser(message.UserGuid, message.AuthToken);
 	}
-
+	
 	private Task<CreateOrUpdateAdministratorUserResult> HandleCreateOrUpdateAdministratorUser(CreateOrUpdateAdministratorUserMessage message) {
 		return userManager.CreateOrUpdateAdministrator(message.Username, message.Password);
 	}
-
+	
 	private Task<Result<CreateUserResult, UserActionFailure>> HandleCreateUser(CreateUserMessage message) {
 		return userManager.Create(userLoginManager.GetLoggedInUser(message.AuthToken), message.Username, message.Password);
 	}
-
+	
 	private Task<ImmutableArray<UserInfo>> HandleGetUsers(GetUsersMessage message) {
 		return userManager.GetAll();
 	}
-
+	
 	private Task<ImmutableArray<RoleInfo>> HandleGetRoles(GetRolesMessage message) {
 		return roleManager.GetAll();
 	}
-
+	
 	private Task<ImmutableDictionary<Guid, ImmutableArray<Guid>>> HandleGetUserRoles(GetUserRolesMessage message) {
 		return userRoleManager.GetUserRoles(message.UserGuids);
 	}
-
+	
 	private Task<Result<ChangeUserRolesResult, UserActionFailure>> HandleChangeUserRoles(ChangeUserRolesMessage message) {
 		return userRoleManager.ChangeUserRoles(userLoginManager.GetLoggedInUser(message.AuthToken), message.SubjectUserGuid, message.AddToRoleGuids, message.RemoveFromRoleGuids);
 	}
-
+	
 	private Task<Result<DeleteUserResult, UserActionFailure>> HandleDeleteUser(DeleteUserMessage message) {
 		return userManager.DeleteByGuid(userLoginManager.GetLoggedInUser(message.AuthToken), message.SubjectUserGuid);
 	}
-
+	
 	private Task<Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>> HandleCreateOrUpdateInstance(CreateOrUpdateInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.CreateOrUpdateInstanceCommand, CreateOrUpdateInstanceResult>(
 			Permission.CreateInstances,
@@ -148,7 +148,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 			loggedInUserGuid => new AgentActor.CreateOrUpdateInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.Configuration)
 		);
 	}
-
+	
 	private Task<Result<LaunchInstanceResult, UserInstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.LaunchInstanceCommand, LaunchInstanceResult>(
 			Permission.ControlInstances,
@@ -157,7 +157,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 			loggedInUserGuid => new AgentActor.LaunchInstanceCommand(loggedInUserGuid, message.InstanceGuid)
 		);
 	}
-
+	
 	private Task<Result<StopInstanceResult, UserInstanceActionFailure>> HandleStopInstance(StopInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.StopInstanceCommand, StopInstanceResult>(
 			Permission.ControlInstances,
@@ -166,7 +166,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 			loggedInUserGuid => new AgentActor.StopInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.StopStrategy)
 		);
 	}
-
+	
 	private Task<Result<SendCommandToInstanceResult, UserInstanceActionFailure>> HandleSendCommandToInstance(SendCommandToInstanceMessage message) {
 		return agentManager.DoInstanceAction<AgentActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(
 			Permission.ControlInstances,
@@ -175,23 +175,23 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 			loggedInUserGuid => new AgentActor.SendCommandToInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.Command)
 		);
 	}
-
+	
 	private Task<ImmutableArray<MinecraftVersion>> HandleGetMinecraftVersions(GetMinecraftVersionsMessage message) {
 		return minecraftVersions.GetVersions(CancellationToken.None);
 	}
-
+	
 	private ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>> HandleGetAgentJavaRuntimes(GetAgentJavaRuntimesMessage message) {
 		return controllerState.AgentJavaRuntimesByGuid;
 	}
-
+	
 	private Task<Result<ImmutableArray<AuditLogItem>, UserActionFailure>> HandleGetAuditLog(GetAuditLogMessage message) {
 		return auditLogManager.GetMostRecentItems(userLoginManager.GetLoggedInUser(message.AuthToken), message.Count);
 	}
-
+	
 	private Task<Result<ImmutableArray<EventLogItem>, UserActionFailure>> HandleGetEventLog(GetEventLogMessage message) {
 		return eventLogManager.GetMostRecentItems(userLoginManager.GetLoggedInUser(message.AuthToken), message.Count);
 	}
-
+	
 	private void HandleReply(ReplyMessage message) {
 		connection.Receive(message);
 	}

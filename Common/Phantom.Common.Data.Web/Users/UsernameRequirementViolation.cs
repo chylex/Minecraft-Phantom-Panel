@@ -13,7 +13,7 @@ namespace Phantom.Common.Data.Web.Users {
 namespace Phantom.Common.Data.Web.Users.UsernameRequirementViolations {
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record IsEmpty : UsernameRequirementViolation;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record TooLong([property: MemoryPackOrder(0)] int MaxLength) : UsernameRequirementViolation;
 }

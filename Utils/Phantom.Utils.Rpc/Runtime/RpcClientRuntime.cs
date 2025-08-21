@@ -11,10 +11,10 @@ public abstract class RpcClientRuntime<TClientMessage, TServerMessage, TReplyMes
 	private readonly RpcConnectionToServer<TServerMessage> connection;
 	private readonly IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions;
 	private readonly ActorRef<TClientMessage> handlerActor;
-
+	
 	private readonly SemaphoreSlim disconnectSemaphore;
 	private readonly CancellationToken receiveCancellationToken;
-
+	
 	protected RpcClientRuntime(RpcClientSocket<TClientMessage, TServerMessage, TReplyMessage> socket, ActorRef<TClientMessage> handlerActor, SemaphoreSlim disconnectSemaphore, CancellationToken receiveCancellationToken) : base(socket) {
 		this.connection = socket.Connection;
 		this.messageDefinitions = socket.MessageDefinitions;
@@ -22,15 +22,15 @@ public abstract class RpcClientRuntime<TClientMessage, TServerMessage, TReplyMes
 		this.disconnectSemaphore = disconnectSemaphore;
 		this.receiveCancellationToken = receiveCancellationToken;
 	}
-
+	
 	private protected sealed override Task Run(ClientSocket socket) {
 		return RunWithConnection(socket, connection);
 	}
-
+	
 	protected virtual async Task RunWithConnection(ClientSocket socket, RpcConnectionToServer<TServerMessage> connection) {
 		var replySender = new ReplySender<TServerMessage, TReplyMessage>(connection, messageDefinitions);
 		var messageHandler = new MessageHandler<TClientMessage>(LoggerName, handlerActor, replySender);
-
+		
 		try {
 			while (!receiveCancellationToken.IsCancellationRequested) {
 				var data = socket.Receive(receiveCancellationToken);
@@ -50,18 +50,18 @@ public abstract class RpcClientRuntime<TClientMessage, TServerMessage, TReplyMes
 			await disconnectSemaphore.WaitAsync(CancellationToken.None);
 		}
 	}
-
+	
 	private protected sealed override async Task Disconnect(ClientSocket socket) {
 		await SendDisconnectMessage(socket, RuntimeLogger);
 	}
 	
 	protected abstract Task SendDisconnectMessage(ClientSocket socket, ILogger logger);
-
+	
 	private void LogMessageType(ILogger logger, ReadOnlyMemory<byte> data) {
 		if (!logger.IsEnabled(LogEventLevel.Verbose)) {
 			return;
 		}
-
+		
 		if (data.Length > 0 && messageDefinitions.ToClient.TryGetType(data, out var type)) {
 			logger.Verbose("Received {MessageType} ({Bytes} B).", type.Name, data.Length);
 		}

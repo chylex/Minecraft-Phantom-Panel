@@ -8,11 +8,11 @@ public static class AuthenticationStateExtensions {
 	public static AuthenticatedUser? GetAuthenticatedUser(this AuthenticationState authenticationState) {
 		return authenticationState.User.GetAuthenticatedUser();
 	}
-
+	
 	public static AuthenticatedUser? GetAuthenticatedUser(this ClaimsPrincipal claimsPrincipal) {
 		return claimsPrincipal is CustomClaimsPrincipal principal ? principal.User : null;
 	}
-
+	
 	public static PermissionSet GetPermissions(this AuthenticationState authenticationState) {
 		return authenticationState.User.GetPermissions();
 	}
@@ -20,7 +20,7 @@ public static class AuthenticationStateExtensions {
 	public static PermissionSet GetPermissions(this ClaimsPrincipal claimsPrincipal) {
 		return claimsPrincipal.GetAuthenticatedUser() is {} user ? user.Info.Permissions : PermissionSet.None;
 	}
-
+	
 	public static bool CheckPermission(this AuthenticationState authenticationState, Permission permission) {
 		return authenticationState.User.CheckPermission(permission);
 	}

@@ -8,17 +8,17 @@ namespace Phantom.Agent.Rpc;
 
 sealed class KeepAliveLoop {
 	private static readonly ILogger Logger = PhantomLogger.Create<KeepAliveLoop>();
-
+	
 	private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(10);
-
+	
 	private readonly RpcConnectionToServer<IMessageToController> connection;
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
-
+	
 	public KeepAliveLoop(RpcConnectionToServer<IMessageToController> connection) {
 		this.connection = connection;
 		Task.Run(Run);
 	}
-
+	
 	private async Task Run() {
 		var cancellationToken = cancellationTokenSource.Token;
 		
@@ -37,7 +37,7 @@ sealed class KeepAliveLoop {
 			Logger.Information("Stopped keep-alive loop.");
 		}
 	}
-
+	
 	public void Cancel() {
 		cancellationTokenSource.Cancel();
 	}

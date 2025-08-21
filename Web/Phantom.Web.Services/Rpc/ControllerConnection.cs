@@ -10,11 +10,11 @@ public sealed class ControllerConnection {
 	public ControllerConnection(RpcConnectionToServer<IMessageToController> connection) {
 		this.connection = connection;
 	}
-
+	
 	public Task Send<TMessage>(TMessage message) where TMessage : IMessageToController {
 		return connection.Send(message);
 	}
-
+	
 	public Task<TReply> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken = default) where TMessage : IMessageToController, ICanReply<TReply> {
 		return connection.Send<TMessage, TReply>(message, waitForReplyTime, waitForReplyCancellationToken);
 	}

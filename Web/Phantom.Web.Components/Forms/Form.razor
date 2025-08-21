@@ -19,7 +19,7 @@
   public RenderFragment? ChildContent { get; set; }
 
   public event EventHandler? BeforeSubmit;
-  
+
   private async Task Submit(EditContext obj) {
     BeforeSubmit?.Invoke(this, EventArgs.Empty);
     if (obj.Validate()) {
@@ -30,5 +30,5 @@
   public void Dispose() {
     BeforeSubmit = null;
   }
-  
+
 }

@@ -12,7 +12,7 @@ public sealed record Role(Guid Guid, string Name, ImmutableArray<Permission> Per
 		AllRoles.Add(role);
 		return role;
 	}
-
+	
 	private static Guid SystemRoleGuid(byte id) {
 		return new Guid(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, id);
 	}

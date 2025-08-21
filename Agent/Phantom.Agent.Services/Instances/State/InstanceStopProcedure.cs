@@ -8,11 +8,11 @@ namespace Phantom.Agent.Services.Instances.State;
 
 static class InstanceStopProcedure {
 	private static readonly ushort[] Stops = { 60, 30, 10, 5, 4, 3, 2, 1, 0 };
-
+	
 	public static async Task<bool> Run(InstanceContext context, MinecraftStopStrategy stopStrategy, InstanceRunningState runningState, Action<IInstanceStatus> reportStatus, CancellationToken cancellationToken) {
 		var process = runningState.Process;
 		runningState.IsStopping = true;
-
+		
 		var seconds = stopStrategy.Seconds;
 		if (seconds > 0) {
 			try {
@@ -22,7 +22,7 @@ static class InstanceStopProcedure {
 				return false;
 			}
 		}
-
+		
 		try {
 			// Too late to cancel the stop procedure now.
 			runningState.OnStopInitiated();
@@ -36,19 +36,19 @@ static class InstanceStopProcedure {
 			reportStatus(InstanceStatus.NotRunning);
 			context.ReportEvent(InstanceEvent.Stopped);
 		}
-
+		
 		return true;
 	}
-
+	
 	private static async Task CountDownWithAnnouncements(InstanceContext context, InstanceProcess process, ushort seconds, CancellationToken cancellationToken) {
 		context.Logger.Information("Session stopping in {Seconds} seconds.", seconds);
-
+		
 		foreach (var stop in Stops) {
 			// TODO change to event-based cancellation
 			if (process.HasEnded) {
 				return;
 			}
-
+			
 			if (seconds > stop) {
 				await process.SendCommand(GetCountDownAnnouncementCommand(seconds), cancellationToken);
 				await Task.Delay(TimeSpan.FromSeconds(seconds - stop), cancellationToken);
@@ -56,19 +56,19 @@ static class InstanceStopProcedure {
 			}
 		}
 	}
-
+	
 	private static string GetCountDownAnnouncementCommand(ushort seconds) {
 		return MinecraftCommand.Say("Server shutting down in " + seconds + (seconds == 1 ? " second." : " seconds."));
 	}
-
+	
 	private static async Task DoStop(InstanceContext context, InstanceProcess process) {
 		context.Logger.Information("Sending stop command...");
 		await TrySendStopCommand(context, process);
-
+		
 		context.Logger.Information("Waiting for session to end...");
 		await WaitForSessionToEnd(context, process);
 	}
-
+	
 	private static async Task TrySendStopCommand(InstanceContext context, InstanceProcess process) {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		try {
@@ -83,7 +83,7 @@ static class InstanceStopProcedure {
 			context.Logger.Warning(e, "Caught exception while sending stop command.");
 		}
 	}
-
+	
 	private static async Task WaitForSessionToEnd(InstanceContext context, InstanceProcess process) {
 		try {
 			await process.WaitForExit(TimeSpan.FromSeconds(55));

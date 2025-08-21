@@ -8,15 +8,15 @@ public static class Files {
 			Options = FileOptions.Asynchronous,
 			Share = FileShare.Read
 		};
-
+		
 		if (!OperatingSystem.IsWindows()) {
 			options.UnixCreateMode = chmod;
 		}
-
+		
 		await using var stream = new FileStream(path, options);
 		await stream.WriteAsync(bytes);
 	}
-
+	
 	public static void RequireMaximumFileSize(string path, long maximumBytes) {
 		var actualBytes = new FileInfo(path).Length;
 		if (actualBytes > maximumBytes) {

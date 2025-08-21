@@ -20,7 +20,7 @@ public sealed partial class FileDownloadInfo {
 	public FileSize Size { get; }
 	
 	public FileDownloadInfo(string downloadUrl, Sha1String hash, FileSize size) : this(downloadUrl, hash.ToString(), size) {}
-
+	
 	[MemoryPackConstructor]
 	private FileDownloadInfo(string downloadUrl, string hash, FileSize size) {
 		this.DownloadUrl = downloadUrl;

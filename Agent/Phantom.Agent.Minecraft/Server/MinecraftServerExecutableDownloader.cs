@@ -10,7 +10,7 @@ namespace Phantom.Agent.Minecraft.Server;
 
 sealed class MinecraftServerExecutableDownloader {
 	private static readonly ILogger Logger = PhantomLogger.Create<MinecraftServerExecutableDownloader>();
-
+	
 	public Task<string?> Task { get; }
 	public event EventHandler<DownloadProgressEventArgs>? DownloadProgress;
 	public event EventHandler? Completed;
@@ -19,13 +19,13 @@ sealed class MinecraftServerExecutableDownloader {
 	
 	private readonly List<CancellationTokenRegistration> listenerCancellationRegistrations = new ();
 	private int listenerCount = 0;
-
+	
 	public MinecraftServerExecutableDownloader(FileDownloadInfo fileDownloadInfo, string minecraftVersion, string filePath, MinecraftServerExecutableDownloadListener listener) {
 		Register(listener);
 		Task = DownloadAndGetPath(fileDownloadInfo, minecraftVersion, filePath, new DownloadProgressCallback(this), cancellationTokenSource.Token);
 		Task.ContinueWith(OnCompleted, TaskScheduler.Default);
 	}
-
+	
 	public void Register(MinecraftServerExecutableDownloadListener listener) {
 		int newListenerCount;
 		
@@ -38,14 +38,14 @@ sealed class MinecraftServerExecutableDownloader {
 		
 		Logger.Debug("Registered download listener, current listener count: {Listeners}", newListenerCount);
 	}
-
+	
 	private void Unregister(object? listenerObject) {
 		int newListenerCount;
 		
 		lock (this) {
 			MinecraftServerExecutableDownloadListener listener = (MinecraftServerExecutableDownloadListener) listenerObject!;
 			DownloadProgress -= listener.DownloadProgressEventHandler;
-
+			
 			newListenerCount = --listenerCount;
 			if (newListenerCount <= 0) {
 				cancellationTokenSource.Cancel();
@@ -59,19 +59,19 @@ sealed class MinecraftServerExecutableDownloader {
 			Logger.Debug("Unregistered download listener, current listener count: {Listeners}", newListenerCount);
 		}
 	}
-
+	
 	private void ReportDownloadProgress(DownloadProgressEventArgs args) {
 		DownloadProgress?.Invoke(this, args);
 	}
-
+	
 	private void OnCompleted(Task task) {
 		Logger.Debug("Download task completed.");
-
+		
 		lock (this) {
 			Completed?.Invoke(this, EventArgs.Empty);
 			Completed = null;
 			DownloadProgress = null;
-
+			
 			foreach (var registration in listenerCancellationRegistrations) {
 				registration.Dispose();
 			}
@@ -80,22 +80,22 @@ sealed class MinecraftServerExecutableDownloader {
 			cancellationTokenSource.Dispose();
 		}
 	}
-
+	
 	private sealed class DownloadProgressCallback {
 		private readonly MinecraftServerExecutableDownloader downloader;
-
+		
 		public DownloadProgressCallback(MinecraftServerExecutableDownloader downloader) {
 			this.downloader = downloader;
 		}
-
+		
 		public void ReportProgress(ulong downloadedBytes, ulong totalBytes) {
 			downloader.ReportDownloadProgress(new DownloadProgressEventArgs(downloadedBytes, totalBytes));
 		}
 	}
-
+	
 	private static async Task<string?> DownloadAndGetPath(FileDownloadInfo fileDownloadInfo, string minecraftVersion, string filePath, DownloadProgressCallback progressCallback, CancellationToken cancellationToken) {
 		string tmpFilePath = filePath + ".tmp";
-
+		
 		try {
 			Logger.Information("Downloading server version {Version} from: {Url} ({Size})", minecraftVersion, fileDownloadInfo.DownloadUrl, fileDownloadInfo.Size.ToHumanReadable(decimalPlaces: 1));
 			try {
@@ -105,10 +105,10 @@ sealed class MinecraftServerExecutableDownloader {
 				TryDeleteExecutableAfterFailure(tmpFilePath);
 				throw;
 			}
-
+			
 			File.Move(tmpFilePath, filePath, true);
 			Logger.Information("Server version {Version} downloaded.", minecraftVersion);
-
+			
 			return filePath;
 		} catch (OperationCanceledException) {
 			Logger.Information("Download for server version {Version} was cancelled.", minecraftVersion);
@@ -120,17 +120,17 @@ sealed class MinecraftServerExecutableDownloader {
 			return null;
 		}
 	}
-
+	
 	private static async Task FetchServerExecutableFile(HttpClient http, DownloadProgressCallback progressCallback, FileDownloadInfo fileDownloadInfo, string filePath, CancellationToken cancellationToken) {
 		Sha1String downloadedFileHash;
-
+		
 		try {
 			var response = await http.GetAsync(fileDownloadInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 			response.EnsureSuccessStatusCode();
-
+			
 			await using var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
 			await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-
+			
 			using var streamCopier = new MinecraftServerDownloadStreamCopier(progressCallback, fileDownloadInfo.Size.Bytes);
 			downloadedFileHash = await streamCopier.Copy(responseStream, fileStream, cancellationToken);
 		} catch (OperationCanceledException) {
@@ -139,13 +139,13 @@ sealed class MinecraftServerExecutableDownloader {
 			Logger.Error(e, "Unable to download server executable.");
 			throw StopProcedureException.Instance;
 		}
-
+		
 		if (!downloadedFileHash.Equals(fileDownloadInfo.Hash)) {
 			Logger.Error("Downloaded server executable has mismatched SHA1 hash. Expected {Expected}, got {Actual}.", fileDownloadInfo.Hash, downloadedFileHash);
 			throw StopProcedureException.Instance;
 		}
 	}
-
+	
 	private static void TryDeleteExecutableAfterFailure(string filePath) {
 		if (File.Exists(filePath)) {
 			try {
@@ -155,33 +155,33 @@ sealed class MinecraftServerExecutableDownloader {
 			}
 		}
 	}
-
+	
 	private sealed class MinecraftServerDownloadStreamCopier : IDisposable {
 		private readonly StreamCopier streamCopier = new ();
 		private readonly IncrementalHash sha1 = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-
+		
 		private readonly DownloadProgressCallback progressCallback;
 		private readonly ulong totalBytes;
 		private ulong readBytes;
-
+		
 		public MinecraftServerDownloadStreamCopier(DownloadProgressCallback progressCallback, ulong totalBytes) {
 			this.progressCallback = progressCallback;
 			this.totalBytes = totalBytes;
 			this.streamCopier.BufferReady += OnBufferReady;
 		}
-
+		
 		private void OnBufferReady(object? sender, StreamCopier.BufferEventArgs args) {
 			sha1.AppendData(args.Buffer.Span);
-
+			
 			readBytes += (uint) args.Buffer.Length;
 			progressCallback.ReportProgress(readBytes, totalBytes);
 		}
-
+		
 		public async Task<Sha1String> Copy(Stream source, Stream destination, CancellationToken cancellationToken) {
 			await streamCopier.Copy(source, destination, cancellationToken);
 			return Sha1String.FromBytes(sha1.GetHashAndReset());
 		}
-
+		
 		public void Dispose() {
 			sha1.Dispose();
 			streamCopier.Dispose();

@@ -13,11 +13,11 @@ public sealed partial record AuthenticatedUserInfo(
 	public bool CheckPermission(Permission permission) {
 		return Permissions.Check(permission);
 	}
-
+	
 	public bool HasAccessToAgent(Guid agentGuid) {
 		return ManagedAgentGuids.Contains(agentGuid) || Permissions.Check(Permission.ManageAllAgents);
 	}
-
+	
 	public ImmutableHashSet<Guid> FilterAccessibleAgentGuids(ImmutableHashSet<Guid> agentGuids) {
 		return Permissions.Check(Permission.ManageAllAgents) ? agentGuids : agentGuids.Intersect(ManagedAgentGuids);
 	}

@@ -28,16 +28,16 @@ namespace Phantom.Controller.Services.Agents;
 
 sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentActor>();
-
+	
 	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
 	private static readonly TimeSpan DisconnectionThreshold = TimeSpan.FromSeconds(12);
-
+	
 	public readonly record struct Init(Guid AgentGuid, AgentConfiguration AgentConfiguration, ControllerState ControllerState, MinecraftVersions MinecraftVersions, IDbContextProvider DbProvider, CancellationToken CancellationToken);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new AgentActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume, MailboxType = UnboundedJumpAheadMailbox.Name });
 	}
-
+	
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
 	private readonly IDbContextProvider dbProvider;
@@ -53,7 +53,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	
 	private DateTimeOffset? lastPingTime;
 	private bool isOnline;
-
+	
 	private IAgentConnectionStatus ConnectionStatus {
 		get {
 			if (isOnline) {
@@ -67,12 +67,12 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			}
 		}
 	}
-
+	
 	private readonly ActorRef<AgentDatabaseStorageActor.ICommand> databaseStorageActor;
 	
 	private readonly Dictionary<Guid, ActorRef<InstanceActor.ICommand>> instanceActorByGuid = new ();
 	private readonly Dictionary<Guid, Instance> instanceDataByGuid = new ();
-
+	
 	private AgentActor(Init init) {
 		this.controllerState = init.ControllerState;
 		this.minecraftVersions = init.MinecraftVersions;
@@ -84,7 +84,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		this.connection = new AgentConnection(agentGuid, configuration.AgentName);
 		
 		this.databaseStorageActor = Context.ActorOf(AgentDatabaseStorageActor.Factory(new AgentDatabaseStorageActor.Init(agentGuid, init.DbProvider, init.CancellationToken)), "DatabaseStorage");
-
+		
 		NotifyAgentUpdated();
 		
 		ReceiveAsync<InitializeCommand>(Initialize);
@@ -102,17 +102,17 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		ReceiveAndReplyLater<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendMinecraftCommand);
 		Receive<ReceiveInstanceDataCommand>(ReceiveInstanceData);
 	}
-
+	
 	private void NotifyAgentUpdated() {
 		controllerState.UpdateAgent(new Agent(agentGuid, configuration, stats, ConnectionStatus));
 	}
-
+	
 	protected override void PreStart() {
 		Self.Tell(new InitializeCommand());
 		
 		Context.System.Scheduler.ScheduleTellRepeatedly(DisconnectionRecheckInterval, DisconnectionRecheckInterval, Self, new RefreshConnectionStatusCommand(), Self);
 	}
-
+	
 	private ActorRef<InstanceActor.ICommand> CreateNewInstance(Instance instance) {
 		UpdateInstanceData(instance);
 		
@@ -120,18 +120,18 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		instanceActorByGuid.Add(instance.InstanceGuid, instanceActor);
 		return instanceActor;
 	}
-
+	
 	private void UpdateInstanceData(Instance instance) {
 		instanceDataByGuid[instance.InstanceGuid] = instance;
 		controllerState.UpdateInstance(instance);
 	}
-
+	
 	private ActorRef<InstanceActor.ICommand> CreateInstanceActor(Instance instance) {
 		var init = new InstanceActor.Init(instance, SelfTyped, connection, dbProvider, cancellationToken);
 		var name = "Instance:" + instance.InstanceGuid;
 		return Context.ActorOf(InstanceActor.Factory(init), name);
 	}
-
+	
 	private void TellInstance(Guid instanceGuid, InstanceActor.ICommand command) {
 		if (instanceActorByGuid.TryGetValue(instanceGuid, out var instance)) {
 			instance.Tell(command);
@@ -140,13 +140,13 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			Logger.Warning("Could not deliver command {CommandType} to instance {InstanceGuid}, instance not found.", command.GetType().Name, instanceGuid);
 		}
 	}
-
+	
 	private void TellAllInstances(InstanceActor.ICommand command) {
 		foreach (var instance in instanceActorByGuid.Values) {
 			instance.Tell(command);
 		}
 	}
-
+	
 	private async Task<Result<TReply, InstanceActionFailure>> RequestInstance<TCommand, TReply>(Guid instanceGuid, TCommand command) where TCommand : InstanceActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
 		if (instanceActorByGuid.TryGetValue(instanceGuid, out var instance)) {
 			return await instance.Request(command, cancellationToken);
@@ -156,7 +156,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			return InstanceActionFailure.InstanceDoesNotExist;
 		}
 	}
-
+	
 	private async Task<ImmutableArray<ConfigureInstanceMessage>> PrepareInitialConfigurationMessages() {
 		var configurationMessages = ImmutableArray.CreateBuilder<ConfigureInstanceMessage>();
 		
@@ -164,10 +164,10 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(instanceConfiguration.MinecraftVersion, cancellationToken);
 			configurationMessages.Add(new ConfigureInstanceMessage(instanceGuid, instanceConfiguration, new InstanceLaunchProperties(serverExecutableInfo), launchAutomatically));
 		}
-
+		
 		return configurationMessages.ToImmutable();
 	}
-
+	
 	public interface ICommand {}
 	
 	private sealed record InitializeCommand : ICommand;
@@ -189,7 +189,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	public sealed record UpdateInstanceStatusCommand(Guid InstanceGuid, IInstanceStatus Status) : ICommand;
 	
 	public sealed record UpdateInstancePlayerCountsCommand(Guid InstanceGuid, InstancePlayerCounts? PlayerCounts) : ICommand;
-
+	
 	public sealed record LaunchInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record StopInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
@@ -197,17 +197,17 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	public sealed record SendCommandToInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record ReceiveInstanceDataCommand(Instance Instance) : ICommand, IJumpAhead;
-
+	
 	private async Task Initialize(InitializeCommand command) {
 		ImmutableArray<InstanceEntity> instanceEntities;
 		await using (var ctx = dbProvider.Eager()) {
 			instanceEntities = await ctx.Instances.Where(instance => instance.AgentGuid == agentGuid).AsAsyncEnumerable().ToImmutableArrayCatchingExceptionsAsync(OnException, cancellationToken);
 		}
-
+		
 		static void OnException(Exception e) {
 			Logger.Error(e, "Could not load instance from database.");
 		}
-
+		
 		foreach (var instanceEntity in instanceEntities) {
 			var instanceConfiguration = new InstanceConfiguration(
 				instanceEntity.AgentGuid,
@@ -220,11 +220,11 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 				instanceEntity.JavaRuntimeGuid,
 				JvmArgumentsHelper.Split(instanceEntity.JvmArguments)
 			);
-
+			
 			CreateNewInstance(Instance.Offline(instanceEntity.InstanceGuid, instanceConfiguration, instanceEntity.LaunchAutomatically));
 		}
 	}
-
+	
 	private async Task<ImmutableArray<ConfigureInstanceMessage>> Register(RegisterCommand command) {
 		var configurationMessages = await PrepareInitialConfigurationMessages();
 		
@@ -241,7 +241,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		
 		return configurationMessages;
 	}
-
+	
 	private void Unregister(UnregisterCommand command) {
 		if (connection.CloseIfSame(command.Connection)) {
 			stats = null;
@@ -254,7 +254,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			Logger.Information("Unregistered agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
 		}
 	}
-
+	
 	private void RefreshConnectionStatus(RefreshConnectionStatusCommand command) {
 		if (isOnline && lastPingTime != null && DateTimeOffset.Now - lastPingTime >= DisconnectionThreshold) {
 			isOnline = false;
@@ -272,12 +272,12 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 			NotifyAgentUpdated();
 		}
 	}
-
+	
 	private void UpdateStats(UpdateStatsCommand command) {
 		stats = new AgentStats(command.RunningInstanceCount, command.RunningInstanceMemory);
 		NotifyAgentUpdated();
 	}
-
+	
 	private void UpdateJavaRuntimes(UpdateJavaRuntimesCommand command) {
 		javaRuntimes = command.JavaRuntimes;
 		controllerState.UpdateAgentJavaRuntimes(agentGuid, javaRuntimes);
@@ -285,7 +285,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	
 	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance(CreateOrUpdateInstanceCommand command) {
 		var instanceConfiguration = command.Configuration;
-
+		
 		if (string.IsNullOrWhiteSpace(instanceConfiguration.InstanceName)) {
 			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceNameMustNotBeEmpty);
 		}
@@ -298,7 +298,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		                        .ContinueOnActor(CreateOrUpdateInstance1, command)
 		                        .Unwrap();
 	}
-
+	
 	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance1(FileDownloadInfo? serverExecutableInfo, CreateOrUpdateInstanceCommand command) {
 		if (serverExecutableInfo == null) {
 			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound);
@@ -321,7 +321,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		var instanceGuid = command.InstanceGuid;
 		var instanceName = command.Configuration.InstanceName;
 		var isCreating = command.IsCreatingInstance;
-
+		
 		if (result.Is(ConfigureInstanceResult.Success)) {
 			string action = isCreating ? "Added" : "Edited";
 			string relation = isCreating ? "to agent" : "in agent";
@@ -348,19 +348,19 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	private void UpdateInstancePlayerCounts(UpdateInstancePlayerCountsCommand command) {
 		TellInstance(command.InstanceGuid, new InstanceActor.SetPlayerCountsCommand(command.PlayerCounts));
 	}
-
+	
 	private Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {
 		return RequestInstance<InstanceActor.LaunchInstanceCommand, LaunchInstanceResult>(command.InstanceGuid, new InstanceActor.LaunchInstanceCommand(command.LoggedInUserGuid));
 	}
-
+	
 	private Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
 		return RequestInstance<InstanceActor.StopInstanceCommand, StopInstanceResult>(command.InstanceGuid, new InstanceActor.StopInstanceCommand(command.LoggedInUserGuid, command.StopStrategy));
 	}
-
+	
 	private Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
 		return RequestInstance<InstanceActor.SendCommandToInstanceCommand, SendCommandToInstanceResult>(command.InstanceGuid, new InstanceActor.SendCommandToInstanceCommand(command.LoggedInUserGuid, command.Command));
 	}
-
+	
 	private void ReceiveInstanceData(ReceiveInstanceDataCommand command) {
 		UpdateInstanceData(command.Instance);
 	}

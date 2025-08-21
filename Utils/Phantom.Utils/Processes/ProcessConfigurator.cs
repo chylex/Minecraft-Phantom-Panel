@@ -13,14 +13,14 @@ public sealed class ProcessConfigurator {
 		get => startInfo.FileName;
 		set => startInfo.FileName = value;
 	}
-
+	
 	public Collection<string> ArgumentList => startInfo.ArgumentList;
-
+	
 	public string WorkingDirectory {
 		get => startInfo.WorkingDirectory;
 		set => startInfo.WorkingDirectory = value;
 	}
-
+	
 	public bool RedirectInput {
 		get => startInfo.RedirectStandardInput;
 		set => startInfo.RedirectStandardInput = value;
@@ -30,7 +30,7 @@ public sealed class ProcessConfigurator {
 		get => startInfo.UseShellExecute;
 		set => startInfo.UseShellExecute = value;
 	}
-
+	
 	public Process CreateProcess() {
 		return new Process(new System.Diagnostics.Process { StartInfo = startInfo });
 	}

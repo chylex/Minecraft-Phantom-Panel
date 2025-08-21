@@ -3,5 +3,5 @@
   <ItemGroup>
     <None Include="**" />
   </ItemGroup>
-  
+
 </Project>

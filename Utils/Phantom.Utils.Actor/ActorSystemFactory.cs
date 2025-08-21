@@ -22,9 +22,9 @@ public static class ActorSystemFactory {
 		    mailbox-type : "Phantom.Utils.Actor.Mailbox.UnboundedJumpAheadMailbox, Phantom.Utils.Actor"
 		}
 		""";
-
+	
 	private static readonly BootstrapSetup Setup = BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(Configuration));
-
+	
 	public static ActorSystem Create(string name) {
 		return ActorSystem.Create(name, Setup);
 	}

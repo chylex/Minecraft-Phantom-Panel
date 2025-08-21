@@ -23,7 +23,7 @@
     if (!result) {
       return result.Error;
     }
-    
+
     switch (result.Value) {
       case DeleteUserResult.Deleted:
       case DeleteUserResult.NotFound:
@@ -34,7 +34,7 @@
         OnEditFailure("Could not delete user.");
         break;
     }
-    
+
     return null;
   }
 

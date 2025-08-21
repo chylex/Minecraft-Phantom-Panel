@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
 
-namespace Phantom.Common.Data.Web.Users; 
+namespace Phantom.Common.Data.Web.Users;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record ChangeUserRolesResult(

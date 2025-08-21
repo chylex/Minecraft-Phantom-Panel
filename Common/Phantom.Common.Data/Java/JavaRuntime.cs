@@ -13,28 +13,28 @@ public sealed partial record JavaRuntime(
 		if (ReferenceEquals(this, other)) {
 			return 0;
 		}
-
+		
 		if (ReferenceEquals(null, other)) {
 			return 1;
 		}
-
+		
 		if (TryParseFullVersion(FullVersion, out var fullVersion) && TryParseFullVersion(other.FullVersion, out var otherFullVersion)) {
 			var versionComparison = -fullVersion.CompareTo(otherFullVersion);
 			if (versionComparison != 0) {
 				return versionComparison;
 			}
 		}
-
+		
 		return string.Compare(DisplayName, other.DisplayName, StringComparison.OrdinalIgnoreCase);
 	}
-
+	
 	private static bool TryParseFullVersion(string versionString, [NotNullWhen(true)] out Version? version) {
 		int dashIndex = versionString.IndexOf('-');
 		var versionSpan = dashIndex != -1 ? versionString.AsSpan(0, dashIndex) : versionString;
 		if (versionSpan.Contains('_')) {
 			versionSpan = versionSpan.ToString().Replace('_', '.');
 		}
-
+		
 		return Version.TryParse(versionSpan, out version);
 	}
 }

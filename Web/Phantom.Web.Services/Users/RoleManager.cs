@@ -11,7 +11,7 @@ public sealed class RoleManager {
 	public RoleManager(ControllerConnection controllerConnection) {
 		this.controllerConnection = controllerConnection;
 	}
-
+	
 	public Task<ImmutableArray<RoleInfo>> GetAll(CancellationToken cancellationToken) {
 		return controllerConnection.Send<GetRolesMessage, ImmutableArray<RoleInfo>>(new GetRolesMessage(), cancellationToken);
 	}

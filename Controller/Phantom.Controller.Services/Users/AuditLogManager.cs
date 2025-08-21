@@ -6,15 +6,15 @@ using Phantom.Controller.Database;
 using Phantom.Controller.Database.Repositories;
 using Phantom.Controller.Services.Users.Sessions;
 
-namespace Phantom.Controller.Services.Users; 
+namespace Phantom.Controller.Services.Users;
 
 sealed class AuditLogManager {
 	private readonly IDbContextProvider dbProvider;
-
+	
 	public AuditLogManager(IDbContextProvider dbProvider) {
 		this.dbProvider = dbProvider;
 	}
-
+	
 	public async Task<Result<ImmutableArray<AuditLogItem>, UserActionFailure>> GetMostRecentItems(LoggedInUser loggedInUser, int count) {
 		if (!loggedInUser.CheckPermission(Permission.ViewAudit)) {
 			return UserActionFailure.NotAuthorized;

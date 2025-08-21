@@ -1,4 +1,6 @@
 ﻿@page "/setup"
+@using System.ComponentModel.DataAnnotations
+@using System.Security.Cryptography
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults
@@ -7,8 +9,6 @@
 @using Phantom.Web.Services
 @using Phantom.Web.Services.Authentication
 @using Phantom.Web.Services.Rpc
-@using System.ComponentModel.DataAnnotations
-@using System.Security.Cryptography
 @attribute [AllowAnonymous]
 @inject ApplicationProperties ApplicationProperties
 @inject UserLoginManager LoginManager
@@ -44,7 +44,7 @@
 
 @code {
 
-  private readonly CreateAdministratorAccountFormModel form = new();
+  private readonly CreateAdministratorAccountFormModel form = new ();
 
   private sealed class CreateAdministratorAccountFormModel : FormModel {
     [Required]
@@ -91,12 +91,12 @@
   private async Task<Result<string>> CreateOrUpdateAdministrator() {
     var reply = await ControllerConnection.Send<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(new CreateOrUpdateAdministratorUserMessage(form.Username, form.Password), Timeout.InfiniteTimeSpan);
     return reply switch {
-           Success             => Result.Ok,
-           CreationFailed fail => fail.Error.ToSentences("\n"),
-           UpdatingFailed fail => fail.Error.ToSentences("\n"),
-           AddingToRoleFailed  => "Could not assign administrator role to user.",
-           null                => "Timed out.",
-           _                   => "Unknown error."
+      Success             => Result.Ok,
+      CreationFailed fail => fail.Error.ToSentences("\n"),
+      UpdatingFailed fail => fail.Error.ToSentences("\n"),
+      AddingToRoleFailed  => "Could not assign administrator role to user.",
+      null                => "Timed out.",
+      _                   => "Unknown error."
     };
   }
 

@@ -21,7 +21,7 @@ sealed class AgentDatabaseStorageActor : ReceiveActor<AgentDatabaseStorageActor.
 	
 	private AgentConfiguration? configurationToStore;
 	private bool hasScheduledFlush;
-
+	
 	private AgentDatabaseStorageActor(Init init) {
 		this.agentGuid = init.AgentGuid;
 		this.dbProvider = init.DbProvider;
@@ -30,47 +30,47 @@ sealed class AgentDatabaseStorageActor : ReceiveActor<AgentDatabaseStorageActor.
 		Receive<StoreAgentConfigurationCommand>(StoreAgentConfiguration);
 		ReceiveAsync<FlushChangesCommand>(FlushChanges);
 	}
-
+	
 	public interface ICommand {}
 	
 	public sealed record StoreAgentConfigurationCommand(AgentConfiguration Configuration) : ICommand;
 	
 	private sealed record FlushChangesCommand : ICommand;
-
+	
 	private void StoreAgentConfiguration(StoreAgentConfigurationCommand command) {
 		configurationToStore = command.Configuration;
 		ScheduleFlush(TimeSpan.FromSeconds(2));
 	}
-
+	
 	private async Task FlushChanges(FlushChangesCommand command) {
 		hasScheduledFlush = false;
 		
 		if (configurationToStore == null) {
 			return;
 		}
-
+		
 		try {
 			await using var ctx = dbProvider.Eager();
 			var entity = ctx.AgentUpsert.Fetch(agentGuid);
-
+			
 			entity.Name = configurationToStore.AgentName;
 			entity.ProtocolVersion = configurationToStore.ProtocolVersion;
 			entity.BuildVersion = configurationToStore.BuildVersion;
 			entity.MaxInstances = configurationToStore.MaxInstances;
 			entity.MaxMemory = configurationToStore.MaxMemory;
-
+			
 			await ctx.SaveChangesAsync(cancellationToken);
 		} catch (Exception e) {
 			ScheduleFlush(TimeSpan.FromSeconds(10));
 			Logger.Error(e, "Could not store agent \"{AgentName}\" (GUID {AgentGuid}) in database.", configurationToStore.AgentName, agentGuid);
 			return;
 		}
-
+		
 		Logger.Information("Stored agent \"{AgentName}\" (GUID {AgentGuid}) in database.", configurationToStore.AgentName, agentGuid);
 		
 		configurationToStore = null;
 	}
-
+	
 	private void ScheduleFlush(TimeSpan delay) {
 		if (!hasScheduledFlush) {
 			hasScheduledFlush = true;

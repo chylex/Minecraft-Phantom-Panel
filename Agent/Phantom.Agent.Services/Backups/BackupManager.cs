@@ -9,28 +9,28 @@ sealed class BackupManager : IDisposable {
 	private readonly string destinationBasePath;
 	private readonly string temporaryBasePath;
 	private readonly SemaphoreSlim compressionSemaphore;
-
+	
 	public BackupManager(AgentFolders agentFolders, int maxConcurrentCompressionTasks) {
 		this.destinationBasePath = agentFolders.BackupsFolderPath;
 		this.temporaryBasePath = Path.Combine(agentFolders.TemporaryFolderPath, "backups");
 		this.compressionSemaphore = new SemaphoreSlim(maxConcurrentCompressionTasks, maxConcurrentCompressionTasks);
 	}
-
+	
 	public Task<BackupCreationResult> CreateBackup(string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
 		return new BackupCreator(this, loggerName, process, cancellationToken).CreateBackup();
 	}
-
+	
 	public void Dispose() {
 		compressionSemaphore.Dispose();
 	}
-
+	
 	private sealed class BackupCreator {
 		private readonly BackupManager manager;
 		private readonly string loggerName;
 		private readonly ILogger logger;
 		private readonly InstanceProcess process;
 		private readonly CancellationToken cancellationToken;
-
+		
 		public BackupCreator(BackupManager manager, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
 			this.manager = manager;
 			this.loggerName = loggerName;
@@ -38,7 +38,7 @@ sealed class BackupManager : IDisposable {
 			this.process = process;
 			this.cancellationToken = cancellationToken;
 		}
-
+		
 		public async Task<BackupCreationResult> CreateBackup() {
 			logger.Information("Backup started.");
 			
@@ -57,7 +57,7 @@ sealed class BackupManager : IDisposable {
 			LogBackupResult(result);
 			return result;
 		}
-
+		
 		private async Task<string?> CreateWorldArchive(BackupServerCommandDispatcher dispatcher, BackupCreationResult.Builder resultBuilder) {
 			try {
 				await dispatcher.DisableAutomaticSaving();
@@ -95,7 +95,7 @@ sealed class BackupManager : IDisposable {
 				logger.Information("Too many compression tasks running, waiting for one of them to complete...");
 				await manager.compressionSemaphore.WaitAsync(cancellationToken);
 			}
-
+			
 			logger.Information("Compressing backup...");
 			try {
 				var compressedFilePath = await BackupCompressor.Compress(filePath, cancellationToken);
@@ -106,7 +106,7 @@ sealed class BackupManager : IDisposable {
 				manager.compressionSemaphore.Release();
 			}
 		}
-
+		
 		private void LogBackupResult(BackupCreationResult result) {
 			if (result.Kind != BackupCreationResultKind.Success) {
 				logger.Warning("Backup failed: {Reason}", DescribeResult(result.Kind));
@@ -121,7 +121,7 @@ sealed class BackupManager : IDisposable {
 				logger.Information("Backup finished successfully.");
 			}
 		}
-
+		
 		private static string DescribeResult(BackupCreationResultKind kind) {
 			return kind switch {
 				BackupCreationResultKind.Success                            => "Backup created successfully.",

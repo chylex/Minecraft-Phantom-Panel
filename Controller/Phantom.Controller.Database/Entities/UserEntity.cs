@@ -8,10 +8,10 @@ namespace Phantom.Controller.Database.Entities;
 public sealed class UserEntity {
 	[Key]
 	public Guid UserGuid { get; init; }
-
+	
 	public string Name { get; init; }
 	public string PasswordHash { get; set; }
-
+	
 	public UserEntity(Guid userGuid, string name, string passwordHash) {
 		UserGuid = userGuid;
 		Name = name;

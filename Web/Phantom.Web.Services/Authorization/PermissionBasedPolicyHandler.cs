@@ -11,7 +11,7 @@ sealed class PermissionBasedPolicyHandler : AuthorizationHandler<PermissionBased
 		else {
 			context.Fail(new AuthorizationFailureReason(this, "Missing permission: " + requirement.Permission.Id));
 		}
-
+		
 		return Task.CompletedTask;
 	}
 }

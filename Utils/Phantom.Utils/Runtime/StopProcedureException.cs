@@ -5,6 +5,6 @@
 /// </summary>
 public sealed class StopProcedureException : Exception {
 	public static StopProcedureException Instance { get; } = new ();
-
+	
 	private StopProcedureException() {}
 }

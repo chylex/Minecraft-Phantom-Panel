@@ -24,32 +24,32 @@ public sealed class ControllerServices : IDisposable {
 	
 	private ControllerState ControllerState { get; }
 	private MinecraftVersions MinecraftVersions { get; }
-
+	
 	private AuthenticatedUserCache AuthenticatedUserCache { get; }
 	private UserManager UserManager { get; }
 	private RoleManager RoleManager { get; }
 	private UserRoleManager UserRoleManager { get; }
 	private UserLoginManager UserLoginManager { get; }
 	private PermissionManager PermissionManager { get; }
-
+	
 	private AgentManager AgentManager { get; }
 	private InstanceLogManager InstanceLogManager { get; }
 	
 	private AuditLogManager AuditLogManager { get; }
 	private EventLogManager EventLogManager { get; }
-
+	
 	public IRegistrationHandler<IMessageToAgent, IMessageFromAgentToController, RegisterAgentMessage> AgentRegistrationHandler { get; }
 	public IRegistrationHandler<IMessageToWeb, IMessageFromWebToController, RegisterWebMessage> WebRegistrationHandler { get; }
-
+	
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
-
+	
 	public ControllerServices(IDbContextProvider dbProvider, AuthToken agentAuthToken, AuthToken webAuthToken, CancellationToken shutdownCancellationToken) {
 		this.dbProvider = dbProvider;
 		this.cancellationToken = shutdownCancellationToken;
 		
 		this.ActorSystem = ActorSystemFactory.Create("Controller");
-
+		
 		this.ControllerState = new ControllerState();
 		this.MinecraftVersions = new MinecraftVersions();
 		
@@ -69,14 +69,14 @@ public sealed class ControllerServices : IDisposable {
 		this.AgentRegistrationHandler = new AgentRegistrationHandler(AgentManager, InstanceLogManager, EventLogManager);
 		this.WebRegistrationHandler = new WebRegistrationHandler(webAuthToken, ControllerState, InstanceLogManager, UserManager, RoleManager, UserRoleManager, UserLoginManager, AuditLogManager, AgentManager, MinecraftVersions, EventLogManager);
 	}
-
+	
 	public async Task Initialize() {
 		await DatabaseMigrator.Run(dbProvider, cancellationToken);
 		await AgentManager.Initialize();
 		await PermissionManager.Initialize();
 		await RoleManager.Initialize();
 	}
-
+	
 	public void Dispose() {
 		ActorSystem.Dispose();
 	}

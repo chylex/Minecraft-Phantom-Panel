@@ -8,11 +8,11 @@ namespace Phantom.Controller.Services.Users.Sessions;
 
 sealed class AuthenticatedUserCache {
 	private readonly ConcurrentDictionary<Guid, AuthenticatedUserInfo> authenticatedUsersByGuid = new ();
-
+	
 	public bool TryGet(Guid userGuid, out AuthenticatedUserInfo? userInfo) {
 		return authenticatedUsersByGuid.TryGetValue(userGuid, out userInfo);
 	}
-
+	
 	public async Task<AuthenticatedUserInfo?> Update(UserEntity user, ILazyDbContext db) {
 		var permissionRepository = new PermissionRepository(db);
 		var userPermissions = await permissionRepository.GetAllUserPermissions(user);

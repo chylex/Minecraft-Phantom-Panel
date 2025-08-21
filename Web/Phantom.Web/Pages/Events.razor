@@ -6,7 +6,7 @@
 @using Phantom.Web.Services.Agents
 @using Phantom.Web.Services.Events
 @using Phantom.Web.Services.Instances
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject AgentManager AgentManager
 @inject EventLogManager EventLogManager
 @inject InstanceManager InstanceManager
@@ -57,7 +57,7 @@
 
   private ImmutableArray<EventLogItem>? logItems;
   private string? loadError;
-  
+
   private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 

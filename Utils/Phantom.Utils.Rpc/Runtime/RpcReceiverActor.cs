@@ -12,32 +12,32 @@ sealed class RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessa
 		IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> RegistrationHandler,
 		RpcConnectionToClient<TClientMessage> Connection
 	);
-
+	
 	public static Props<ReceiveMessageCommand> Factory(Init init) {
 		return Props<ReceiveMessageCommand>.Create(() => new RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessage, TReplyMessage>(init), new ActorConfiguration {
 			SupervisorStrategy = SupervisorStrategies.Resume,
 			StashCapacity = 100
 		});
 	}
-
+	
 	public IStash Stash { get; set; } = null!;
-
+	
 	private readonly string loggerName;
 	private readonly IMessageDefinitions<TClientMessage, TServerMessage, TReplyMessage> messageDefinitions;
 	private readonly IRegistrationHandler<TClientMessage, TServerMessage, TRegistrationMessage> registrationHandler;
 	private readonly RpcConnectionToClient<TClientMessage> connection;
-
+	
 	private RpcReceiverActor(Init init) {
 		this.loggerName = init.LoggerName;
 		this.messageDefinitions = init.MessageDefinitions;
 		this.registrationHandler = init.RegistrationHandler;
 		this.connection = init.Connection;
-
+		
 		ReceiveAsync<ReceiveMessageCommand>(ReceiveMessageUnauthorized);
 	}
-
+	
 	public sealed record ReceiveMessageCommand(Type MessageType, ReadOnlyMemory<byte> Data);
-
+	
 	private async Task ReceiveMessageUnauthorized(ReceiveMessageCommand command) {
 		if (command.MessageType == typeof(TRegistrationMessage)) {
 			await HandleRegistrationMessage(command);
@@ -49,25 +49,25 @@ sealed class RpcReceiverActor<TClientMessage, TServerMessage, TRegistrationMessa
 			Stash.Stash();
 		}
 	}
-
+	
 	private async Task HandleRegistrationMessage(ReceiveMessageCommand command) {
 		if (!messageDefinitions.ToServer.Read(command.Data, out TRegistrationMessage message)) {
 			return;
 		}
-
+		
 		var props = await registrationHandler.TryRegister(connection, message);
 		if (props == null) {
 			return;
 		}
-
+		
 		var handlerActor = Context.ActorOf(props, "Handler");
 		var replySender = new ReplySender<TClientMessage, TReplyMessage>(connection, messageDefinitions);
 		BecomeAuthorized(new MessageHandler<TServerMessage>(loggerName, handlerActor, replySender));
 	}
-
+	
 	private void BecomeAuthorized(MessageHandler<TServerMessage> handler) {
 		Stash.UnstashAll();
-
+		
 		Become(() => {
 			Receive<ReceiveMessageCommand>(command => messageDefinitions.ToServer.Handle(command.Data, handler));
 		});

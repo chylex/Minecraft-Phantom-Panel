@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Phantom.Utils.Logging;
 using ILogger = Serilog.ILogger;
 
-namespace Phantom.Web.Services.Authentication; 
+namespace Phantom.Web.Services.Authentication;
 
 public sealed class UserSessionBrowserStorage {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserSessionBrowserStorage>();
 	
 	private const string SessionTokenKey = "PhantomSession";
-
+	
 	private readonly ProtectedLocalStorage localStorage;
 	
 	public UserSessionBrowserStorage(ProtectedLocalStorage localStorage) {
@@ -18,7 +18,7 @@ public sealed class UserSessionBrowserStorage {
 	}
 	
 	internal sealed record LocalStorageEntry(Guid UserGuid, ImmutableArray<byte> Token);
-
+	
 	internal async Task<LocalStorageEntry?> Get() {
 		try {
 			var result = await localStorage.GetAsync<LocalStorageEntry>(SessionTokenKey);
@@ -32,11 +32,11 @@ public sealed class UserSessionBrowserStorage {
 			return null;
 		}
 	}
-
+	
 	internal async Task Store(Guid userGuid, ImmutableArray<byte> token) {
 		await localStorage.SetAsync(SessionTokenKey, new LocalStorageEntry(userGuid, token));
 	}
-
+	
 	internal async Task<LocalStorageEntry?> Delete() {
 		var oldEntry = await Get();
 		if (oldEntry != null) {

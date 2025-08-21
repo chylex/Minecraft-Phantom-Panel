@@ -9,11 +9,11 @@ readonly record struct LoggedInUser(AuthenticatedUserInfo? AuthenticatedUserInfo
 	public bool CheckPermission(Permission permission) {
 		return AuthenticatedUserInfo is {} info && info.CheckPermission(permission);
 	}
-
+	
 	public bool HasAccessToAgent(Guid agentGuid) {
 		return AuthenticatedUserInfo is {} info && info.HasAccessToAgent(agentGuid);
 	}
-
+	
 	public ImmutableHashSet<Guid> FilterAccessibleAgentGuids(ImmutableHashSet<Guid> agentGuids) {
 		return AuthenticatedUserInfo is {} info ? info.FilterAccessibleAgentGuids(agentGuids) : ImmutableHashSet<Guid>.Empty;
 	}

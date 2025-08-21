@@ -13,5 +13,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Phantom.Common.Data\Phantom.Common.Data.csproj" />
   </ItemGroup>
-  
+
 </Project>

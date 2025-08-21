@@ -11,41 +11,41 @@ namespace Phantom.Web.Components.Forms.Fields;
 public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TValue> : InputBase<TValue>, ICustomFormField {
 	[Parameter]
 	public FormNumberInputType Type { get; set; }
-
+	
 	[Parameter]
 	public EventCallback<ChangeEventArgs> OnChange { get; set; }
-
+	
 	[Parameter]
 	public EventCallback<FocusEventArgs> OnBlur { get; set; }
-
+	
 	[Parameter]
 	public string ParsingErrorMessage { get; set; } = "The {0} field must be a number.";
-
+	
 	public bool TwoWayValueBinding { get; set; } = true;
-
+	
 	public void SetStringValue(string? value) {
 		CurrentValueAsString = value;
 	}
-
+	
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
 		builder.OpenElement(0, "input");
 		builder.AddMultipleAttributes(1, AdditionalAttributes);
 		builder.AddAttribute(2, "type", Type.GetHtmlInputType());
-
+		
 		if (!string.IsNullOrEmpty(CssClass)) {
 			builder.AddAttribute(3, "class", CssClass);
 		}
-
+		
 		if (TwoWayValueBinding) {
 			builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValueAsString));
 		}
-
+		
 		builder.AddAttribute(5, "onchange", OnChange);
 		builder.AddAttribute(6, "oninput", OnChange);
 		builder.AddAttribute(7, "onblur", OnBlur);
 		builder.CloseElement();
 	}
-
+	
 	protected override bool TryParseValueFromString(string? value, [MaybeNullWhen(false)] out TValue result, [NotNullWhen(false)] out string? validationErrorMessage) {
 		if (BindConverter.TryConvertTo(value, CultureInfo.InvariantCulture, out result)) {
 			validationErrorMessage = null;
@@ -56,7 +56,7 @@ public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAcc
 			return false;
 		}
 	}
-
+	
 	protected override string? FormatValueAsString(TValue? value) {
 		return value switch {
 			null      => null,

@@ -25,7 +25,7 @@ sealed record Variables(
 			EnvironmentVariables.GetString("WEB_BASE_PATH").Validate(static value => value.StartsWith('/') && value.EndsWith('/'), "Environment variable must begin and end with '/'").WithDefault("/")
 		);
 	}
-
+	
 	public static Variables LoadOrStop() {
 		try {
 			return LoadOrThrow();

@@ -5,7 +5,6 @@ using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Tasks;
 using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
@@ -19,12 +18,12 @@ sealed class InstanceTicketManager {
 	private readonly HashSet<Guid> activeTicketGuids = new ();
 	private readonly HashSet<ushort> usedPorts = new ();
 	private RamAllocationUnits usedMemory = new ();
-
+	
 	public InstanceTicketManager(AgentInfo agentInfo, ControllerConnection controllerConnection) {
 		this.agentInfo = agentInfo;
 		this.controllerConnection = controllerConnection;
 	}
-
+	
 	public Result<Ticket, LaunchInstanceResult> Reserve(InstanceConfiguration configuration) {
 		var memoryAllocation = configuration.MemoryAllocation;
 		var serverPort = configuration.ServerPort;
@@ -33,7 +32,7 @@ sealed class InstanceTicketManager {
 		if (!agentInfo.AllowedServerPorts.Contains(serverPort)) {
 			return LaunchInstanceResult.ServerPortNotAllowed;
 		}
-
+		
 		if (!agentInfo.AllowedRconPorts.Contains(rconPort)) {
 			return LaunchInstanceResult.RconPortNotAllowed;
 		}
@@ -42,7 +41,7 @@ sealed class InstanceTicketManager {
 			if (activeTicketGuids.Count + 1 > agentInfo.MaxInstances) {
 				return LaunchInstanceResult.InstanceLimitExceeded;
 			}
-
+			
 			if (usedMemory + memoryAllocation > agentInfo.MaxMemory) {
 				return LaunchInstanceResult.MemoryLimitExceeded;
 			}
@@ -50,11 +49,11 @@ sealed class InstanceTicketManager {
 			if (usedPorts.Contains(serverPort)) {
 				return LaunchInstanceResult.ServerPortAlreadyInUse;
 			}
-
+			
 			if (usedPorts.Contains(rconPort)) {
 				return LaunchInstanceResult.RconPortAlreadyInUse;
 			}
-
+			
 			var ticket = new Ticket(Guid.NewGuid(), memoryAllocation, serverPort, rconPort);
 			
 			activeTicketGuids.Add(ticket.TicketGuid);
@@ -64,11 +63,11 @@ sealed class InstanceTicketManager {
 			
 			RefreshAgentStatus();
 			Logger.Debug("Reserved ticket {TicketGuid} (server port {ServerPort}, rcon port {RconPort}, memory allocation {MemoryAllocation} MB).", ticket.TicketGuid, ticket.ServerPort, ticket.RconPort, ticket.MemoryAllocation.InMegabytes);
-
+			
 			return ticket;
 		}
 	}
-
+	
 	public bool IsValid(Ticket ticket) {
 		lock (this) {
 			return activeTicketGuids.Contains(ticket.TicketGuid);
@@ -80,7 +79,7 @@ sealed class InstanceTicketManager {
 			if (!activeTicketGuids.Remove(ticket.TicketGuid)) {
 				return;
 			}
-
+			
 			usedMemory -= ticket.MemoryAllocation;
 			usedPorts.Remove(ticket.ServerPort);
 			usedPorts.Remove(ticket.RconPort);

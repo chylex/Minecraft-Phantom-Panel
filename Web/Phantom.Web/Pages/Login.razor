@@ -1,7 +1,7 @@
 ﻿@page "/login"
+@using System.ComponentModel.DataAnnotations
 @using Phantom.Web.Services
 @using Phantom.Web.Services.Authentication
-@using System.ComponentModel.DataAnnotations
 @attribute [AllowAnonymous]
 @inject Navigation Navigation
 @inject UserLoginManager LoginManager
@@ -24,14 +24,14 @@
 
     <FormButtonSubmit Label="Login" class="btn btn-primary" />
   </div>
-  
+
   <FormSubmitError />
 </Form>
 
 @code {
 
   private readonly LoginFormModel form = new ();
-  
+
   private sealed class LoginFormModel : FormModel {
     [Required]
     public string Username { get; set; } = string.Empty;
@@ -48,9 +48,9 @@
 
   private async Task DoLogin(EditContext context) {
     await form.SubmitModel.StartSubmitting();
-    
+
     string? returnUrl = Navigation.GetQueryParameter("return", out var url) ? url : null;
-    
+
     if (!await LoginManager.LogIn(form.Username, form.Password, returnUrl)) {
       form.SubmitModel.StopSubmitting("Invalid username or password.");
     }

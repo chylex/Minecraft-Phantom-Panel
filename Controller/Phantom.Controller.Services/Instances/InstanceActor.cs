@@ -17,18 +17,18 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
-
+	
 	private readonly ActorRef<AgentActor.ICommand> agentActor;
 	private readonly AgentConnection agentConnection;
 	private readonly CancellationToken cancellationToken;
-
+	
 	private readonly Guid instanceGuid;
 	
 	private InstanceConfiguration configuration;
 	private IInstanceStatus status;
 	private InstancePlayerCounts? playerCounts;
 	private bool launchAutomatically;
-
+	
 	private readonly ActorRef<InstanceDatabaseStorageActor.ICommand> databaseStorageActor;
 	
 	private InstanceActor(Init init) {
@@ -37,9 +37,9 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		this.cancellationToken = init.CancellationToken;
 		
 		(this.instanceGuid, this.configuration, this.status, this.playerCounts, this.launchAutomatically) = init.Instance;
-
+		
 		this.databaseStorageActor = Context.ActorOf(InstanceDatabaseStorageActor.Factory(new InstanceDatabaseStorageActor.Init(instanceGuid, init.DbProvider, init.CancellationToken)), "DatabaseStorage");
-
+		
 		Receive<SetStatusCommand>(SetStatus);
 		Receive<SetPlayerCountsCommand>(SetPlayerCounts);
 		ReceiveAsyncAndReply<ConfigureInstanceCommand, Result<ConfigureInstanceResult, InstanceActionFailure>>(ConfigureInstance);
@@ -47,37 +47,37 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		ReceiveAsyncAndReply<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
 		ReceiveAsyncAndReply<SendCommandToInstanceCommand, Result<SendCommandToInstanceResult, InstanceActionFailure>>(SendMinecraftCommand);
 	}
-
+	
 	private void NotifyInstanceUpdated() {
 		agentActor.Tell(new AgentActor.ReceiveInstanceDataCommand(new Instance(instanceGuid, configuration, status, playerCounts, launchAutomatically)));
 	}
-
+	
 	private void SetLaunchAutomatically(bool newValue) {
 		if (launchAutomatically != newValue) {
 			launchAutomatically = newValue;
 			NotifyInstanceUpdated();
 		}
 	}
-
+	
 	private async Task<Result<TReply, InstanceActionFailure>> SendInstanceActionMessage<TMessage, TReply>(TMessage message) where TMessage : IMessageToAgent, ICanReply<Result<TReply, InstanceActionFailure>> {
 		var reply = await agentConnection.Send<TMessage, Result<TReply, InstanceActionFailure>>(message, TimeSpan.FromSeconds(10), cancellationToken);
 		return reply ?? InstanceActionFailure.AgentIsNotResponding;
 	}
-
+	
 	public interface ICommand {}
-
+	
 	public sealed record SetStatusCommand(IInstanceStatus Status) : ICommand;
 	
 	public sealed record SetPlayerCountsCommand(InstancePlayerCounts? PlayerCounts) : ICommand;
-
+	
 	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
-
+	
 	public sealed record LaunchInstanceCommand(Guid AuditLogUserGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record StopInstanceCommand(Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record SendCommandToInstanceCommand(Guid AuditLogUserGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
-
+	
 	private void SetStatus(SetStatusCommand command) {
 		status = command.Status;
 		
@@ -92,7 +92,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		playerCounts = command.PlayerCounts;
 		NotifyInstanceUpdated();
 	}
-
+	
 	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> ConfigureInstance(ConfigureInstanceCommand command) {
 		var message = new ConfigureInstanceMessage(command.InstanceGuid, command.Configuration, command.LaunchProperties);
 		var result = await SendInstanceActionMessage<ConfigureInstanceMessage, ConfigureInstanceResult>(message);
@@ -100,7 +100,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		if (result.Is(ConfigureInstanceResult.Success)) {
 			configuration = command.Configuration;
 			NotifyInstanceUpdated();
-
+			
 			var storeCommand = new InstanceDatabaseStorageActor.StoreInstanceConfigurationCommand(
 				command.AuditLogUserGuid,
 				command.IsCreatingInstance,
@@ -112,7 +112,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		
 		return result;
 	}
-
+	
 	private async Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {
 		var message = new LaunchInstanceMessage(instanceGuid);
 		var result = await SendInstanceActionMessage<LaunchInstanceMessage, LaunchInstanceResult>(message);
@@ -121,10 +121,10 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			SetLaunchAutomatically(true);
 			databaseStorageActor.Tell(new InstanceDatabaseStorageActor.StoreInstanceLaunchedCommand(command.AuditLogUserGuid));
 		}
-
+		
 		return result;
 	}
-
+	
 	private async Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
 		var message = new StopInstanceMessage(instanceGuid, command.StopStrategy);
 		var result = await SendInstanceActionMessage<StopInstanceMessage, StopInstanceResult>(message);
@@ -133,10 +133,10 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			SetLaunchAutomatically(false);
 			databaseStorageActor.Tell(new InstanceDatabaseStorageActor.StoreInstanceStoppedCommand(command.AuditLogUserGuid, command.StopStrategy));
 		}
-
+		
 		return result;
 	}
-
+	
 	private async Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {
 		var message = new SendCommandToInstanceMessage(instanceGuid, command.Command);
 		var result = await SendInstanceActionMessage<SendCommandToInstanceMessage, SendCommandToInstanceResult>(message);
@@ -144,7 +144,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		if (result.Is(SendCommandToInstanceResult.Success)) {
 			databaseStorageActor.Tell(new InstanceDatabaseStorageActor.StoreInstanceCommandSentCommand(command.AuditLogUserGuid, command.Command));
 		}
-
+		
 		return result;
 	}
 }

@@ -10,13 +10,13 @@ else if (LabelFragment != null) {
 
   [Parameter, EditorRequired]
   public string Id { get; set; } = null!;
-  
+
   [Parameter]
   public string? Label { get; set; }
 
   [Parameter]
   public RenderFragment? LabelFragment { get; set; }
-  
+
   protected override void OnParametersSet() {
     BlazorUtils.RequireEitherParameterIsSet(Label, LabelFragment);
   }

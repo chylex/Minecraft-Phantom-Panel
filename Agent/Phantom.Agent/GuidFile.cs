@@ -7,12 +7,12 @@ namespace Phantom.Agent;
 
 static class GuidFile {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(GuidFile));
-
+	
 	private const string GuidFileName = "agent.guid";
 	
 	public static async Task<Guid?> CreateOrLoad(string folderPath) {
 		string filePath = Path.Combine(folderPath, GuidFileName);
-
+		
 		if (File.Exists(filePath)) {
 			try {
 				var guid = await LoadGuidFromFile(filePath);
@@ -25,7 +25,7 @@ static class GuidFile {
 		}
 		
 		Logger.Information("Creating agent GUID file: {FilePath}", filePath);
-
+		
 		try {
 			var guid = Guid.NewGuid();
 			await File.WriteAllTextAsync(filePath, guid.ToString(), Encoding.ASCII);

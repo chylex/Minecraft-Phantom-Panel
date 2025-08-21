@@ -15,7 +15,7 @@ public static class MinecraftVersionTypes {
 		MinecraftVersionType.Release,
 		MinecraftVersionType.Snapshot
 	);
-
+	
 	public static MinecraftVersionType FromString(string? type) {
 		return type switch {
 			"release"   => MinecraftVersionType.Release,
@@ -25,7 +25,7 @@ public static class MinecraftVersionTypes {
 			_           => MinecraftVersionType.Other
 		};
 	}
-
+	
 	public static string ToNiceNamePlural(this MinecraftVersionType type) {
 		return type switch {
 			MinecraftVersionType.Release  => "Releases",

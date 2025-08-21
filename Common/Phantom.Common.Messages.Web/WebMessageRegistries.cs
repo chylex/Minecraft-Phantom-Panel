@@ -20,7 +20,7 @@ public static class WebMessageRegistries {
 	public static MessageRegistry<IMessageToWeb> ToWeb { get; } = new (PhantomLogger.Create("MessageRegistry", nameof(ToWeb)));
 	
 	public static IMessageDefinitions<IMessageToWeb, IMessageToController, ReplyMessage> Definitions { get; } = new MessageDefinitions();
-
+	
 	static WebMessageRegistries() {
 		ToController.Add<RegisterWebMessage>(0);
 		ToController.Add<UnregisterWebMessage>(1);
@@ -51,11 +51,11 @@ public static class WebMessageRegistries {
 		ToWeb.Add<RefreshUserSessionMessage>(4);
 		ToWeb.Add<ReplyMessage>(127);
 	}
-
+	
 	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToWeb, IMessageToController, ReplyMessage> {
 		public MessageRegistry<IMessageToWeb> ToClient => ToWeb;
 		public MessageRegistry<IMessageToController> ToServer => ToController;
-
+		
 		public ReplyMessage CreateReplyMessage(uint sequenceId, byte[] serializedReply) {
 			return new ReplyMessage(sequenceId, serializedReply);
 		}

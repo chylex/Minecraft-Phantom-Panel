@@ -12,5 +12,5 @@
   <ItemGroup>
     <ProjectReference Include="..\Phantom.Utils\Phantom.Utils.csproj" />
   </ItemGroup>
-  
+
 </Project>

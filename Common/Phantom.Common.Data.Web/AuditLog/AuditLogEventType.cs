@@ -32,7 +32,7 @@ public static class AuditLogEventTypeExtensions {
 		{ AuditLogEventType.InstanceStopped,           AuditLogSubjectType.Instance },
 		{ AuditLogEventType.InstanceCommandExecuted,   AuditLogSubjectType.Instance }
 	};
-
+	
 	static AuditLogEventTypeExtensions() {
 		foreach (var eventType in Enum.GetValues<AuditLogEventType>()) {
 			if (!SubjectTypes.ContainsKey(eventType)) {
@@ -40,7 +40,7 @@ public static class AuditLogEventTypeExtensions {
 			}
 		}
 	}
-
+	
 	public static AuditLogSubjectType GetSubjectType(this AuditLogEventType type) {
 		return SubjectTypes[type];
 	}

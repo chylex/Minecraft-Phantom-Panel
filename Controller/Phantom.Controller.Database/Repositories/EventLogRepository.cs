@@ -8,11 +8,11 @@ namespace Phantom.Controller.Database.Repositories;
 
 public sealed class EventLogRepository {
 	private readonly ILazyDbContext db;
-
+	
 	public EventLogRepository(ILazyDbContext db) {
 		this.db = db;
 	}
-
+	
 	public void AddItem(Guid eventGuid, DateTime utcTime, Guid? agentGuid, EventLogEventType eventType, string subjectId, Dictionary<string, object?>? extra = null) {
 		db.Ctx.EventLog.Add(new EventLogEntity(eventGuid, utcTime, agentGuid, eventType, subjectId, extra));
 	}

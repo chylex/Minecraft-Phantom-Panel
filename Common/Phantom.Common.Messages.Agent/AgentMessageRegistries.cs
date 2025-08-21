@@ -13,7 +13,7 @@ public static class AgentMessageRegistries {
 	public static MessageRegistry<IMessageToController> ToController { get; } = new (PhantomLogger.Create("MessageRegistry", nameof(ToController)));
 	
 	public static IMessageDefinitions<IMessageToAgent, IMessageToController, ReplyMessage> Definitions { get; } = new MessageDefinitions();
-
+	
 	static AgentMessageRegistries() {
 		ToAgent.Add<RegisterAgentSuccessMessage>(0);
 		ToAgent.Add<RegisterAgentFailureMessage>(1);
@@ -34,11 +34,11 @@ public static class AgentMessageRegistries {
 		ToController.Add<ReportInstancePlayerCountsMessage>(8);
 		ToController.Add<ReplyMessage>(127);
 	}
-
+	
 	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToAgent, IMessageToController, ReplyMessage> {
 		public MessageRegistry<IMessageToAgent> ToClient => ToAgent;
 		public MessageRegistry<IMessageToController> ToServer => ToController;
-
+		
 		public ReplyMessage CreateReplyMessage(uint sequenceId, byte[] serializedReply) {
 			return new ReplyMessage(sequenceId, serializedReply);
 		}

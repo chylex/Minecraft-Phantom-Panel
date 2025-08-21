@@ -9,7 +9,7 @@ namespace Phantom.Web;
 
 static class WebKey {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(WebKey));
-
+	
 	public static Task<(NetMQCertificate, AuthToken)?> Load(string? webKeyToken, string? webKeyFilePath) {
 		if (webKeyFilePath != null) {
 			return LoadFromFile(webKeyFilePath);
@@ -21,13 +21,13 @@ static class WebKey {
 			throw new InvalidOperationException();
 		}
 	}
-
+	
 	private static async Task<(NetMQCertificate, AuthToken)?> LoadFromFile(string webKeyFilePath) {
 		if (!File.Exists(webKeyFilePath)) {
 			Logger.Fatal("Missing web key file: {WebKeyFilePath}", webKeyFilePath);
 			return null;
 		}
-
+		
 		try {
 			Files.RequireMaximumFileSize(webKeyFilePath, 64);
 			return LoadFromBytes(await File.ReadAllBytesAsync(webKeyFilePath));
@@ -40,7 +40,7 @@ static class WebKey {
 			return null;
 		}
 	}
-
+	
 	private static (NetMQCertificate, AuthToken)? LoadFromToken(string webKey) {
 		try {
 			return LoadFromBytes(TokenGenerator.DecodeBytes(webKey));
@@ -49,7 +49,7 @@ static class WebKey {
 			return null;
 		}
 	}
-
+	
 	private static (NetMQCertificate, AuthToken)? LoadFromBytes(byte[] webKey) {
 		var (publicKey, webToken) = ConnectionCommonKey.FromBytes(webKey);
 		var controllerCertificate = NetMQCertificate.FromPublicKey(publicKey);

@@ -24,7 +24,7 @@ static class DefaultLogLevel {
 			_             => LogEnvironmentVariableErrorAndExit(level)
 		};
 	}
-
+	
 	private static LogEventLevel GetDefaultLevelFallback() {
 		#if DEBUG
 		return LogEventLevel.Verbose;
@@ -32,7 +32,7 @@ static class DefaultLogLevel {
 		return LogEventLevel.Information;
 		#endif
 	}
-
+	
 	[DoesNotReturn]
 	private static LogEventLevel LogEnvironmentVariableErrorAndExit(string logLevel) {
 		Console.Error.WriteLine("Invalid value of environment variable {0}: {1}", ENVIRONMENT_VARIABLE, logLevel);

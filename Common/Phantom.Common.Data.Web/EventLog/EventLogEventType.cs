@@ -20,7 +20,7 @@ public static class EventLogEventTypeExtensions {
 		{ EventLogEventType.InstanceBackupSucceededWithWarnings, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceBackupFailed, EventLogSubjectType.Instance }
 	};
-
+	
 	static EventLogEventTypeExtensions() {
 		foreach (var eventType in Enum.GetValues<EventLogEventType>()) {
 			if (!SubjectTypes.ContainsKey(eventType)) {
@@ -28,7 +28,7 @@ public static class EventLogEventTypeExtensions {
 			}
 		}
 	}
-
+	
 	public static EventLogSubjectType GetSubjectType(this EventLogEventType type) {
 		return SubjectTypes[type];
 	}

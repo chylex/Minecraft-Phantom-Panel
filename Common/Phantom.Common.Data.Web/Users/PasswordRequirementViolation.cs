@@ -15,13 +15,13 @@ namespace Phantom.Common.Data.Web.Users {
 namespace Phantom.Common.Data.Web.Users.PasswordRequirementViolations {
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record TooShort([property: MemoryPackOrder(0)] int MinimumLength) : PasswordRequirementViolation;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record MustContainLowercaseLetter : PasswordRequirementViolation;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record MustContainUppercaseLetter : PasswordRequirementViolation;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record MustContainDigit : PasswordRequirementViolation;
 }

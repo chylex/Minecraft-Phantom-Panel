@@ -35,12 +35,12 @@ static void CreateFolderOrStop(string path, UnixFileMode chmod) {
 
 try {
 	var fullVersion = AssemblyAttributes.GetFullVersion(Assembly.GetExecutingAssembly());
-
+	
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel web...");
 	PhantomLogger.Root.Information("Web version: {Version}", fullVersion);
-
+	
 	var (controllerHost, controllerPort, webKeyToken, webKeyFilePath, webServerHost, webServerPort, webBasePath) = Variables.LoadOrStop();
-
+	
 	var webKey = await WebKey.Load(webKeyToken, webKeyFilePath);
 	if (webKey == null) {
 		return 1;
@@ -48,7 +48,7 @@ try {
 	
 	string dataProtectionKeysPath = Path.GetFullPath("./keys");
 	CreateFolderOrStop(dataProtectionKeysPath, Chmod.URWX);
-
+	
 	var (controllerCertificate, webToken) = webKey.Value;
 	
 	var administratorToken = TokenGenerator.Create(60);
@@ -56,17 +56,17 @@ try {
 	
 	var rpcConfiguration = new RpcConfiguration("Web", controllerHost, controllerPort, controllerCertificate);
 	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, WebMessageRegistries.Definitions, new RegisterWebMessage(webToken));
-
+	
 	var webConfiguration = new WebLauncher.Configuration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, dataProtectionKeysPath, shutdownCancellationToken);
 	var webApplication = WebLauncher.CreateApplication(webConfiguration, applicationProperties, rpcSocket.Connection);
-
+	
 	using var actorSystem = ActorSystemFactory.Create("Web");
 	
 	ControllerMessageHandlerFactory messageHandlerFactory;
 	await using (var scope = webApplication.Services.CreateAsyncScope()) {
 		messageHandlerFactory = scope.ServiceProvider.GetRequiredService<ControllerMessageHandlerFactory>();
 	}
-
+	
 	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
 	var rpcTask = RpcClientRuntime.Launch(rpcSocket, messageHandlerFactory.Create(actorSystem), rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
@@ -93,7 +93,7 @@ try {
 		
 		NetMQConfig.Cleanup();
 	}
-
+	
 	return 0;
 } catch (OperationCanceledException) {
 	return 0;

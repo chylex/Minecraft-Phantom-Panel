@@ -4,7 +4,7 @@ public sealed class RingBuffer<T> {
 	private readonly T[] buffer;
 	
 	private int writeIndex;
-
+	
 	public RingBuffer(int capacity) {
 		if (capacity < 0) {
 			throw new ArgumentException("Capacity must not be negative.", nameof(capacity));
@@ -15,9 +15,9 @@ public sealed class RingBuffer<T> {
 	
 	public int Capacity => buffer.Length;
 	public int Count { get; private set; }
-
+	
 	public T Last => Count == 0 ? throw new InvalidOperationException("Ring buffer is empty.") : buffer[IndexOfItemFromEnd(1)];
-
+	
 	private int IndexOfItemFromEnd(int offset) {
 		return (writeIndex - offset + Capacity) % Capacity;
 	}
@@ -31,12 +31,12 @@ public sealed class RingBuffer<T> {
 		Count = Math.Max(writeIndex, Count);
 		writeIndex %= Capacity;
 	}
-
+	
 	public void Clear() {
 		Count = 0;
 		writeIndex = 0;
 	}
-
+	
 	public IEnumerable<T> EnumerateLast(uint maximumItems) {
 		if (Capacity == 0) {
 			yield break;

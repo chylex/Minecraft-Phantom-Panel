@@ -12,33 +12,33 @@ namespace Phantom.Controller.Services.Users;
 
 sealed class RoleManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<RoleManager>();
-
+	
 	private readonly IDbContextProvider dbProvider;
-
+	
 	public RoleManager(IDbContextProvider dbProvider) {
 		this.dbProvider = dbProvider;
 	}
-
+	
 	internal async Task Initialize() {
 		Logger.Information("Adding default roles to database.");
-
+		
 		await using var ctx = dbProvider.Eager();
-
+		
 		var existingRoleNames = await ctx.Roles
 		                                 .Select(static role => role.Name)
 		                                 .AsAsyncEnumerable()
 		                                 .ToImmutableSetAsync();
-
+		
 		var existingPermissionIdsByRoleGuid = await ctx.RolePermissions
 		                                               .GroupBy(static rp => rp.RoleGuid, static rp => rp.PermissionId)
 		                                               .ToDictionaryAsync(static g => g.Key, static g => g.ToImmutableHashSet());
-
+		
 		foreach (var role in Role.All) {
 			if (!existingRoleNames.Contains(role.Name)) {
 				Logger.Information("Adding default role \"{Name}\".", role.Name);
 				ctx.Roles.Add(new RoleEntity(role.Guid, role.Name));
 			}
-
+			
 			var existingPermissionIds = existingPermissionIdsByRoleGuid.TryGetValue(role.Guid, out var ids) ? ids : ImmutableHashSet<string>.Empty;
 			var missingPermissionIds = PermissionManager.GetMissingPermissionsOrdered(role.Permissions, existingPermissionIds);
 			if (!missingPermissionIds.IsEmpty) {
@@ -48,10 +48,10 @@ sealed class RoleManager {
 				}
 			}
 		}
-
+		
 		await ctx.SaveChangesAsync();
 	}
-
+	
 	public async Task<ImmutableArray<RoleInfo>> GetAll() {
 		await using var db = dbProvider.Lazy();
 		var roleRepository = new RoleRepository(db);

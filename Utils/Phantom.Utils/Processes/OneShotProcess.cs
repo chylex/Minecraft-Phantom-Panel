@@ -12,18 +12,18 @@ public sealed class OneShotProcess {
 		this.logger = logger;
 		this.configurator = configurator;
 	}
-
+	
 	public async Task<bool> Run(CancellationToken cancellationToken) {
 		using var process = configurator.CreateProcess();
 		process.OutputReceived += OutputReceived;
-
+		
 		try {
 			process.Start();
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception launching process.");
 			return false;
 		}
-
+		
 		try {
 			await process.WaitForExitAsync(cancellationToken);
 		} catch (OperationCanceledException) {
@@ -33,24 +33,24 @@ public sealed class OneShotProcess {
 			logger.Error(e, "Caught exception waiting for process to exit.");
 			return false;
 		}
-
+		
 		if (!process.HasExited) {
 			await TryKillProcess(process);
 			return false;
 		}
-
+		
 		if (process.ExitCode != 0) {
 			logger.Error("Process exited with code {ExitCode}.", process.ExitCode);
 			return false;
 		}
-
+		
 		logger.Debug("Process finished successfully.");
 		return true;
 	}
-
+	
 	private async Task TryKillProcess(Process process) {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-
+		
 		try {
 			process.Kill();
 			await process.WaitForExitAsync(timeout.Token);

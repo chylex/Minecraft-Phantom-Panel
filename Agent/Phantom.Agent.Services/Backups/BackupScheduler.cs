@@ -11,7 +11,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(2);
 	private static readonly TimeSpan BackupInterval = TimeSpan.FromMinutes(30);
 	private static readonly TimeSpan BackupFailureRetryDelay = TimeSpan.FromMinutes(5);
-
+	
 	private readonly BackupManager backupManager;
 	private readonly InstanceContext context;
 	private readonly SemaphoreSlim backupSemaphore = new (1, 1);
@@ -19,14 +19,14 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	private readonly InstancePlayerCountTracker playerCountTracker;
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted;
-
+	
 	public BackupScheduler(InstanceContext context, InstancePlayerCountTracker playerCountTracker) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName)) {
 		this.backupManager = context.Services.BackupManager;
 		this.context = context;
 		this.playerCountTracker = playerCountTracker;
 		Start();
 	}
-
+	
 	protected override async Task RunTask() {
 		await Task.Delay(InitialDelay, CancellationToken);
 		Logger.Information("Starting a new backup after server launched.");
@@ -46,7 +46,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 			}
 		}
 	}
-
+	
 	private async Task<BackupCreationResult> CreateBackup() {
 		if (!await backupSemaphore.WaitAsync(TimeSpan.FromSeconds(1))) {
 			return new BackupCreationResult(BackupCreationResultKind.BackupAlreadyRunning);
@@ -61,7 +61,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 			backupSemaphore.Release();
 		}
 	}
-
+	
 	private async Task WaitForOnlinePlayers() {
 		var task = playerCountTracker.WaitForOnlinePlayers(CancellationToken);
 		if (!task.IsCompleted) {
@@ -77,7 +77,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 			Logger.Warning("Could not detect whether any players are online, starting a new backup.");
 		}
 	}
-
+	
 	protected override void Dispose() {
 		backupSemaphore.Dispose();
 		serverOutputWhileWaitingForOnlinePlayers.Dispose();

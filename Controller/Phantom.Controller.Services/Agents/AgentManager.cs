@@ -43,26 +43,26 @@ sealed class AgentManager {
 		
 		this.addAgentActorFactory = CreateAgentActor;
 	}
-
+	
 	private ActorRef<AgentActor.ICommand> CreateAgentActor(Guid agentGuid, AgentConfiguration agentConfiguration) {
 		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, dbProvider, cancellationToken);
 		var name = "Agent:" + agentGuid;
 		return actorSystem.ActorOf(AgentActor.Factory(init), name);
 	}
-
+	
 	public async Task Initialize() {
 		await using var ctx = dbProvider.Eager();
-
+		
 		await foreach (var entity in ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var agentGuid = entity.AgentGuid;
 			var agentConfiguration = new AgentConfiguration(entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
-
+			
 			if (agentsByGuid.TryAdd(agentGuid, CreateAgentActor(agentGuid, agentConfiguration))) {
 				Logger.Information("Loaded agent \"{AgentName}\" (GUID {AgentGuid}) from database.", agentConfiguration.AgentName, agentGuid);
 			}
 		}
 	}
-
+	
 	public async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, RpcConnectionToClient<IMessageToAgent> connection) {
 		if (!this.authToken.FixedTimeEquals(authToken)) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
@@ -76,7 +76,7 @@ sealed class AgentManager {
 		
 		return true;
 	}
-
+	
 	public bool TellAgent(Guid agentGuid, AgentActor.ICommand command) {
 		if (agentsByGuid.TryGetValue(agentGuid, out var agent)) {
 			agent.Tell(command);
@@ -87,7 +87,7 @@ sealed class AgentManager {
 			return false;
 		}
 	}
-
+	
 	public async Task<Result<TReply, UserInstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Permission requiredPermission, ImmutableArray<byte> authToken, Guid agentGuid, Func<Guid, TCommand> commandFactoryFromLoggedInUserGuid) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
 		var loggedInUser = userLoginManager.GetLoggedInUser(authToken);
 		if (!loggedInUser.HasAccessToAgent(agentGuid) || !loggedInUser.CheckPermission(requiredPermission)) {

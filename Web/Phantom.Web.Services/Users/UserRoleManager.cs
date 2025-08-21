@@ -13,7 +13,7 @@ public sealed class UserRoleManager {
 	public UserRoleManager(ControllerConnection controllerConnection) {
 		this.controllerConnection = controllerConnection;
 	}
-
+	
 	public Task<ImmutableDictionary<Guid, ImmutableArray<Guid>>> GetUserRoles(ImmutableHashSet<Guid> userGuids, CancellationToken cancellationToken) {
 		return controllerConnection.Send<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>(new GetUserRolesMessage(userGuids), cancellationToken);
 	}
@@ -21,7 +21,7 @@ public sealed class UserRoleManager {
 	public async Task<ImmutableArray<Guid>> GetUserRoles(Guid userGuid, CancellationToken cancellationToken) {
 		return (await GetUserRoles(ImmutableHashSet.Create(userGuid), cancellationToken)).GetValueOrDefault(userGuid, ImmutableArray<Guid>.Empty);
 	}
-
+	
 	public async Task<Result<ChangeUserRolesResult, UserActionFailure>> ChangeUserRoles(AuthenticatedUser? authenticatedUser, Guid subjectUserGuid, ImmutableHashSet<Guid> addToRoleGuids, ImmutableHashSet<Guid> removeFromRoleGuids, CancellationToken cancellationToken) {
 		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.EditUsers)) {
 			return await controllerConnection.Send<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>(new ChangeUserRolesMessage(authenticatedUser.Token, subjectUserGuid, addToRoleGuids, removeFromRoleGuids), cancellationToken);

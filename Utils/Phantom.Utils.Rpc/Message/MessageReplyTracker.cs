@@ -10,17 +10,17 @@ sealed class MessageReplyTracker {
 	private readonly ConcurrentDictionary<uint, TaskCompletionSource<byte[]>> replyTasks = new (4, 16);
 	
 	private uint lastSequenceId;
-
+	
 	internal MessageReplyTracker(string loggerName) {
 		this.logger = PhantomLogger.Create<MessageReplyTracker>(loggerName);
 	}
-
+	
 	public uint RegisterReply() {
 		var sequenceId = Interlocked.Increment(ref lastSequenceId);
 		replyTasks[sequenceId] = AsyncTasks.CreateCompletionSource<byte[]>();
 		return sequenceId;
 	}
-
+	
 	public async Task<TReply> WaitForReply<TReply>(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) {
 		if (!replyTasks.TryGetValue(sequenceId, out var completionSource)) {
 			logger.Warning("No reply callback for id {SequenceId}.", sequenceId);
@@ -43,13 +43,13 @@ sealed class MessageReplyTracker {
 			ForgetReply(sequenceId);
 		}
 	}
-
+	
 	public void ForgetReply(uint sequenceId) {
 		if (replyTasks.TryRemove(sequenceId, out var task)) {
 			task.SetCanceled();
 		}
 	}
-
+	
 	public void ReceiveReply(uint sequenceId, byte[] serializedReply) {
 		if (replyTasks.TryRemove(sequenceId, out var task)) {
 			task.SetResult(serializedReply);

@@ -1,6 +1,6 @@
-﻿@using Phantom.Web.Services.Authentication
+﻿@using Phantom.Common.Data.Web.Users
 @using Phantom.Web.Services
-@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Authentication
 @inject ApplicationProperties ApplicationProperties
 
 <div class="navbar navbar-dark">
@@ -23,27 +23,27 @@
       </NotAuthorized>
       <Authorized>
         @{ var permissions = context.GetPermissions(); }
-        
+
         <NavMenuItem Label="Home" Icon="home" Match="NavLinkMatch.All" />
-        
+
         @if (permissions.Check(Permission.ViewInstances)) {
           <NavMenuItem Label="Instances" Icon="folder" Href="instances" />
         }
-        
+
         <NavMenuItem Label="Agents" Icon="cloud" Href="agents" />
-        
+
         @if (permissions.Check(Permission.ViewUsers)) {
           <NavMenuItem Label="Users" Icon="person" Href="users" />
         }
-        
+
         @if (permissions.Check(Permission.ViewAudit)) {
           <NavMenuItem Label="Audit Log" Icon="clipboard" Href="audit" />
         }
-        
+
         @if (permissions.Check(Permission.ViewEvents)) {
           <NavMenuItem Label="Event Log" Icon="project" Href="events" />
         }
-        
+
         <NavMenuItem Label="Logout" Icon="account-logout" Href="logout" />
       </Authorized>
     </AuthorizeView>

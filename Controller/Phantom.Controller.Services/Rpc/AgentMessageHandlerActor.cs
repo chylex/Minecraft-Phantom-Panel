@@ -17,7 +17,7 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 	public static Props<IMessageToController> Factory(Init init) {
 		return Props<IMessageToController>.Create(() => new AgentMessageHandlerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
-
+	
 	private readonly Guid agentGuid;
 	private readonly RpcConnectionToClient<IMessageToAgent> connection;
 	private readonly AgentRegistrationHandler agentRegistrationHandler;
@@ -32,7 +32,7 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 		this.agentManager = init.AgentManager;
 		this.instanceLogManager = init.InstanceLogManager;
 		this.eventLogManager = init.EventLogManager;
-
+		
 		ReceiveAsync<RegisterAgentMessage>(HandleRegisterAgent);
 		Receive<UnregisterAgentMessage>(HandleUnregisterAgent);
 		Receive<AgentIsAliveMessage>(HandleAgentIsAlive);
@@ -44,7 +44,7 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 		Receive<InstanceOutputMessage>(HandleInstanceOutput);
 		Receive<ReplyMessage>(HandleReply);
 	}
-
+	
 	private async Task HandleRegisterAgent(RegisterAgentMessage message) {
 		if (agentGuid != message.AgentInfo.AgentGuid) {
 			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.ConnectionAlreadyHasAnAgent));
@@ -53,40 +53,40 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 			await agentRegistrationHandler.TryRegisterImpl(connection, message);
 		}
 	}
-
+	
 	private void HandleUnregisterAgent(UnregisterAgentMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UnregisterCommand(connection));
 		connection.Close();
 	}
-
+	
 	private void HandleAgentIsAlive(AgentIsAliveMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.NotifyIsAliveCommand());
 	}
-
+	
 	private void HandleAdvertiseJavaRuntimes(AdvertiseJavaRuntimesMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateJavaRuntimesCommand(message.Runtimes));
 	}
-
+	
 	private void HandleReportAgentStatus(ReportAgentStatusMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateStatsCommand(message.RunningInstanceCount, message.RunningInstanceMemory));
 	}
-
+	
 	private void HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateInstanceStatusCommand(message.InstanceGuid, message.InstanceStatus));
 	}
-
+	
 	private void HandleReportInstancePlayerCounts(ReportInstancePlayerCountsMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateInstancePlayerCountsCommand(message.InstanceGuid, message.PlayerCounts));
 	}
-
+	
 	private void HandleReportInstanceEvent(ReportInstanceEventMessage message) {
 		message.Event.Accept(eventLogManager.CreateInstanceEventVisitor(message.EventGuid, message.UtcTime, agentGuid, message.InstanceGuid));
 	}
-
+	
 	private void HandleInstanceOutput(InstanceOutputMessage message) {
 		instanceLogManager.ReceiveLines(message.InstanceGuid, message.Lines);
 	}
-
+	
 	private void HandleReply(ReplyMessage message) {
 		connection.Receive(message);
 	}

@@ -16,13 +16,13 @@ namespace Phantom.Common.Data.Web.Users {
 namespace Phantom.Common.Data.Web.Users.AddUserErrors {
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record NameIsInvalid([property: MemoryPackOrder(0)] UsernameRequirementViolation Violation) : AddUserError;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record PasswordIsInvalid([property: MemoryPackOrder(0)] ImmutableArray<PasswordRequirementViolation> Violations) : AddUserError;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record NameAlreadyExists : AddUserError;
-
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record UnknownError : AddUserError;
 }

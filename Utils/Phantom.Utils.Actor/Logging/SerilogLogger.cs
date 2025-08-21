@@ -22,31 +22,31 @@ public sealed class SerilogLogger : ReceiveActor, IRequiresMessageQueue<ILoggerM
 		Receive<Warning>(LogWarning);
 		Receive<Error>(LogError);
 	}
-
+	
 	private void Initialize(InitializeLogger message) {
 		Sender.Tell(new LoggerInitialized());
 	}
-
+	
 	private void LogDebug(Debug item) {
 		Log(item, LogEventLevel.Debug);
 	}
-
+	
 	private void LogInfo(Info item) {
 		Log(item, LogEventLevel.Information);
 	}
-
+	
 	private void LogWarning(Warning item) {
 		Log(item, LogEventLevel.Warning);
 	}
-
+	
 	private void LogError(Error item) {
 		Log(item, LogEventLevel.Error);
 	}
-
+	
 	private void Log(LogEvent item, LogEventLevel level) {
 		GetLogger(item).Write(level, item.Cause, GetFormat(item), GetArgs(item));
 	}
-
+	
 	private ILogger GetLogger(LogEvent item) {
 		var source = item.LogSource;
 		
@@ -57,11 +57,11 @@ public sealed class SerilogLogger : ReceiveActor, IRequiresMessageQueue<ILoggerM
 		
 		return logger;
 	}
-
+	
 	private static string GetFormat(LogEvent item) {
 		return item.Message is LogMessage logMessage ? logMessage.Format : "{Message:l}";
 	}
-
+	
 	private static object[] GetArgs(LogEvent item) {
 		return item.Message is LogMessage logMessage ? logMessage.Parameters().Where(static a => a is not PropertyEnricher).ToArray() : new[] { item.Message };
 	}

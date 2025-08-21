@@ -7,7 +7,7 @@ using Phantom.Web.Services.Agents;
 using Phantom.Web.Services.Authentication;
 using Phantom.Web.Services.Instances;
 
-namespace Phantom.Web.Services.Rpc; 
+namespace Phantom.Web.Services.Rpc;
 
 sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToWeb> {
 	public readonly record struct Init(
@@ -45,27 +45,27 @@ sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToWeb> {
 		Receive<RefreshUserSessionMessage>(HandleRefreshUserSession);
 		Receive<ReplyMessage>(HandleReply);
 	}
-
+	
 	private void HandleRegisterWebResult(RegisterWebResultMessage message) {
 		registerSuccessWaiter.TrySetResult(message.Success);
 	}
-
+	
 	private void HandleRefreshAgents(RefreshAgentsMessage message) {
 		agentManager.RefreshAgents(message.Agents);
 	}
-
+	
 	private void HandleRefreshInstances(RefreshInstancesMessage message) {
 		instanceManager.RefreshInstances(message.Instances);
 	}
-
+	
 	private void HandleInstanceOutput(InstanceOutputMessage message) {
 		instanceLogManager.AddLines(message.InstanceGuid, message.Lines);
 	}
-
+	
 	private void HandleRefreshUserSession(RefreshUserSessionMessage message) {
 		userSessionRefreshManager.RefreshUser(message.UserGuid);
 	}
-
+	
 	private void HandleReply(ReplyMessage message) {
 		connection.Receive(message);
 	}

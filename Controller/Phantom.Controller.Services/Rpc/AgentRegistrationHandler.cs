@@ -18,11 +18,11 @@ sealed class AgentRegistrationHandler : IRegistrationHandler<IMessageToAgent, IM
 		this.instanceLogManager = instanceLogManager;
 		this.eventLogManager = eventLogManager;
 	}
-
+	
 	async Task<Props<IMessageToController>?> IRegistrationHandler<IMessageToAgent, IMessageToController, RegisterAgentMessage>.TryRegister(RpcConnectionToClient<IMessageToAgent> connection, RegisterAgentMessage message) {
 		return await TryRegisterImpl(connection, message) ? CreateMessageHandlerActorProps(message.AgentInfo.AgentGuid, connection) : null;
 	}
-
+	
 	public Task<bool> TryRegisterImpl(RpcConnectionToClient<IMessageToAgent> connection, RegisterAgentMessage message) {
 		return agentManager.RegisterAgent(message.AuthToken, message.AgentInfo, connection);
 	}

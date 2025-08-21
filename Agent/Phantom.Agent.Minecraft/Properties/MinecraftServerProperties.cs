@@ -14,7 +14,7 @@ static class MinecraftServerProperties {
 		protected override ushort Read(string value) => ushort.Parse(value);
 		protected override string Write(ushort value) => value.ToString();
 	}
-
+	
 	public static readonly MinecraftServerProperty<ushort> ServerPort = new UnsignedShort("server-port");
 	public static readonly MinecraftServerProperty<ushort> RconPort = new UnsignedShort("rcon.port");
 	public static readonly MinecraftServerProperty<bool> EnableRcon = new Boolean("enable-rcon");

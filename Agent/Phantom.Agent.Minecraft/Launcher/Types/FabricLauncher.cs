@@ -19,10 +19,10 @@ public sealed class FabricLauncher : BaseLauncher {
 		if (!File.Exists(launcherJarPath)) {
 			await DownloadLauncher(logger, launcherJarPath, cancellationToken);
 		}
-
+		
 		return new ServerJarInfo(launcherJarPath, ImmutableArray.Create("-Dfabric.installer.server.gameJar=" + Paths.NormalizeSlashes(serverJarPath)));
 	}
-
+	
 	private async Task DownloadLauncher(ILogger logger, string targetFilePath, CancellationToken cancellationToken) {
 		// TODO customizable loader version, probably with a dedicated temporary folder
 		string installerUrl = $"https://meta.fabricmc.net/v2/versions/loader/{MinecraftVersion}/stable/stable/server/jar";
@@ -42,7 +42,7 @@ public sealed class FabricLauncher : BaseLauncher {
 			throw;
 		}
 	}
-
+	
 	private static void TryDeleteLauncherAfterFailure(ILogger logger, string filePath) {
 		if (File.Exists(filePath)) {
 			try {
