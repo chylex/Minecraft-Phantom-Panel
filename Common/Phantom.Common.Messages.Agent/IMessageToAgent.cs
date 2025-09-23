@@ -1,3 +1,3 @@
 ﻿namespace Phantom.Common.Messages.Agent;
 
-public interface IMessageToAgent {}
+public interface IMessageToAgent;

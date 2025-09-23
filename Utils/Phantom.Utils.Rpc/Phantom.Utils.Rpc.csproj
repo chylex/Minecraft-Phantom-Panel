@@ -7,7 +7,6 @@
   
   <ItemGroup>
     <PackageReference Include="MemoryPack" />
-    <PackageReference Include="NetMQ" />
     <PackageReference Include="Serilog" />
   </ItemGroup>
   

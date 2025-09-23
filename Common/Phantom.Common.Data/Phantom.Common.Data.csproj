@@ -11,6 +11,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\..\Utils\Phantom.Utils\Phantom.Utils.csproj" />
+    <ProjectReference Include="..\..\Utils\Phantom.Utils.Rpc\Phantom.Utils.Rpc.csproj" />
   </ItemGroup>
 
 </Project>

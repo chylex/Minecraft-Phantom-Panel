@@ -33,7 +33,7 @@ public static class TokenGenerator {
 		return Encoding.ASCII.GetBytes(token);
 	}
 	
-	public static string EncodeBytes(byte[] bytes) {
+	public static string EncodeBytes(ReadOnlySpan<byte> bytes) {
 		return Base24.Encode(bytes);
 	}
 	

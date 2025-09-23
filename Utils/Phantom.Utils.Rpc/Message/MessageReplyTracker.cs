@@ -1,61 +1,90 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
 using Serilog;
+using Serilog.Events;
 
 namespace Phantom.Utils.Rpc.Message;
 
 sealed class MessageReplyTracker {
 	private readonly ILogger logger;
-	private readonly ConcurrentDictionary<uint, TaskCompletionSource<byte[]>> replyTasks = new (4, 16);
-	
-	private uint lastSequenceId;
+	private readonly ConcurrentDictionary<uint, Reply> pendingReplies = new (concurrencyLevel: 2, capacity: 16);
 	
 	internal MessageReplyTracker(string loggerName) {
 		this.logger = PhantomLogger.Create<MessageReplyTracker>(loggerName);
 	}
 	
-	public uint RegisterReply() {
-		var sequenceId = Interlocked.Increment(ref lastSequenceId);
-		replyTasks[sequenceId] = AsyncTasks.CreateCompletionSource<byte[]>();
-		return sequenceId;
+	public void RegisterReply<TMessage>(uint messageId) {
+		pendingReplies[messageId] = Reply.Create(typeof(TMessage));
 	}
 	
-	public async Task<TReply> WaitForReply<TReply>(uint sequenceId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) {
-		if (!replyTasks.TryGetValue(sequenceId, out var completionSource)) {
-			logger.Warning("No reply callback for id {SequenceId}.", sequenceId);
-			throw new ArgumentException("No reply callback for id: " + sequenceId, nameof(sequenceId));
+	public async Task<TReply> WaitForReply<TReply>(uint messageId, TimeSpan waitForReplyTime, CancellationToken cancellationToken) {
+		if (!pendingReplies.TryGetValue(messageId, out var reply)) {
+			logger.Warning("No reply callback for message {MessageId}.", messageId);
+			throw new ArgumentException("No reply callback for message: " + messageId, nameof(messageId));
 		}
 		
 		try {
-			byte[] replyBytes = await completionSource.Task.WaitAsync(waitForReplyTime, cancellationToken);
-			return MessageSerializer.Deserialize<TReply>(replyBytes);
+			ReadOnlyMemory<byte> serializedReply = await reply.Result.Task.WaitAsync(waitForReplyTime, cancellationToken);
+			return MessageSerialization.Deserialize<TReply>(serializedReply);
 		} catch (TimeoutException) {
-			logger.Debug("Timed out waiting for reply with id {SequenceId}.", sequenceId);
+			logger.Debug("Timed out waiting for reply with message {MessageId}.", messageId);
 			throw;
 		} catch (OperationCanceledException) {
-			logger.Debug("Cancelled waiting for reply with id {SequenceId}.", sequenceId);
+			logger.Debug("Cancelled waiting for reply with message {MessageId}.", messageId);
 			throw;
 		} catch (Exception e) {
-			logger.Warning(e, "Error processing reply with id {SequenceId}.", sequenceId);
+			logger.Warning(e, "Error processing reply with message {MessageId}.", messageId);
 			throw;
 		} finally {
-			ForgetReply(sequenceId);
+			ForgetReply(messageId);
 		}
 	}
 	
-	public void ForgetReply(uint sequenceId) {
-		if (replyTasks.TryRemove(sequenceId, out var task)) {
-			task.SetCanceled();
-		}
-	}
-	
-	public void ReceiveReply(uint sequenceId, byte[] serializedReply) {
-		if (replyTasks.TryRemove(sequenceId, out var task)) {
-			task.SetResult(serializedReply);
+	private bool CompleteReply(uint messageId, out Reply reply) {
+		if (pendingReplies.TryRemove(messageId, out reply)) {
+			reply.Stopwatch.Stop();
+			return true;
 		}
 		else {
-			logger.Warning("Received a reply with id {SequenceId} but no registered callback.", sequenceId);
+			return false;
+		}
+	}
+	
+	public void ReceiveReply(uint messageId, ReadOnlyMemory<byte> serializedReply) {
+		if (CompleteReply(messageId, out var reply)) {
+			if (logger.IsEnabled(LogEventLevel.Debug)) {
+				logger.Debug("Received reply to message {MessageId} of type {MessageType} in {WaitTime} ms ({ReplyBytes} B).", messageId, reply.MessageType.Name, reply.Stopwatch.ElapsedMilliseconds, serializedReply.Length);
+			}
+			
+			reply.Result.SetResult(serializedReply);
+		}
+	}
+	
+	public void FailReply(uint messageId, MessageErrorException e) {
+		if (CompleteReply(messageId, out var reply)) {
+			if (logger.IsEnabled(LogEventLevel.Debug)) {
+				logger.Debug("Received error response to message {MessageId} of type {MessageType} in {WaitTime} ms: {Error}", messageId, reply.MessageType.Name, reply.Stopwatch.ElapsedMilliseconds, e.Error);
+			}
+			
+			reply.Result.SetException(e);
+		}
+	}
+	
+	public void ForgetReply(uint messageId) {
+		if (CompleteReply(messageId, out var reply)) {
+			if (logger.IsEnabled(LogEventLevel.Debug)) {
+				logger.Debug("Cancelled reply to message {MessageId} of type {MessageType}.", messageId, reply.MessageType);
+			}
+			
+			reply.Result.SetCanceled();
+		}
+	}
+	
+	private readonly record struct Reply(Type MessageType, TaskCompletionSource<ReadOnlyMemory<byte>> Result, Stopwatch Stopwatch) {
+		public static Reply Create(Type messageType) {
+			return new Reply(messageType, AsyncTasks.CreateCompletionSource<ReadOnlyMemory<byte>>(), Stopwatch.StartNew());
 		}
 	}
 }

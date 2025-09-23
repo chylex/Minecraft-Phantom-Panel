@@ -1,14 +1,13 @@
 ﻿using System.Reflection;
-using NetMQ;
 using Phantom.Common.Messages.Web;
-using Phantom.Common.Messages.Web.ToController;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc;
-using Phantom.Utils.Rpc.Sockets;
+using Phantom.Utils.Rpc.Message;
+using Phantom.Utils.Rpc.Runtime.Client;
 using Phantom.Utils.Runtime;
+using Phantom.Utils.Threading;
 using Phantom.Web;
 using Phantom.Web.Services;
 using Phantom.Web.Services.Rpc;
@@ -49,49 +48,53 @@ try {
 	string dataProtectionKeysPath = Path.GetFullPath("./keys");
 	CreateFolderOrStop(dataProtectionKeysPath, Chmod.URWX);
 	
-	var (controllerCertificate, webToken) = webKey.Value;
-	
 	var administratorToken = TokenGenerator.Create(60);
 	var applicationProperties = new ApplicationProperties(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken));
 	
-	var rpcConfiguration = new RpcConfiguration("Web", controllerHost, controllerPort, controllerCertificate);
-	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, WebMessageRegistries.Definitions, new RegisterWebMessage(webToken));
+	var rpcClientConnectionParameters = new RpcClientConnectionParameters(
+		Host: controllerHost,
+		Port: controllerPort,
+		DistinguishedName: "phantom-controller",
+		CertificateThumbprint: webKey.Value.CertificateThumbprint,
+		AuthToken: webKey.Value.AuthToken,
+		Handshake: new IRpcClientHandshake.NoOp(),
+		MessageQueueCapacity: 250,
+		FrameQueueCapacity: 500,
+		MaxConcurrentlyHandledMessages: 100
+	);
+	
+	using var rpcClient = await RpcClient<IMessageToController, IMessageToWeb>.Connect("Controller", rpcClientConnectionParameters, WebMessageRegistries.Definitions, shutdownCancellationToken);
+	if (rpcClient == null) {
+		PhantomLogger.Root.Fatal("Could not connect to Phantom Controller, shutting down.");
+		return 1;
+	}
 	
 	var webConfiguration = new WebLauncher.Configuration(PhantomLogger.Create("Web"), webServerHost, webServerPort, webBasePath, dataProtectionKeysPath, shutdownCancellationToken);
-	var webApplication = WebLauncher.CreateApplication(webConfiguration, applicationProperties, rpcSocket.Connection);
+	var webApplication = WebLauncher.CreateApplication(webConfiguration, applicationProperties, rpcClient.MessageSender);
 	
 	using var actorSystem = ActorSystemFactory.Create("Web");
 	
-	ControllerMessageHandlerFactory messageHandlerFactory;
-	await using (var scope = webApplication.Services.CreateAsyncScope()) {
-		messageHandlerFactory = scope.ServiceProvider.GetRequiredService<ControllerMessageHandlerFactory>();
-	}
-	
-	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcTask = RpcClientRuntime.Launch(rpcSocket, messageHandlerFactory.Create(actorSystem), rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
-		PhantomLogger.Root.Information("Registering with the controller...");
-		if (await messageHandlerFactory.RegisterSuccessWaiter) {
-			PhantomLogger.Root.Information("Successfully registered with the controller.");
-		}
-		else {
-			PhantomLogger.Root.Fatal("Failed to register with the controller.");
-			return 1;
-		}
-		
 		PhantomLogger.Root.InformationHeading("Launching Phantom Panel web...");
 		PhantomLogger.Root.Information("Your administrator token is: {AdministratorToken}", administratorToken);
 		PhantomLogger.Root.Information("For administrator setup, visit: {HttpUrl}{SetupPath}", webConfiguration.HttpUrl, webConfiguration.BasePath + "setup");
 		
 		await WebLauncher.Launch(webConfiguration, webApplication);
+		
+		ActorRef<IMessageToWeb> rpcMessageHandlerActor;
+		await using (var scope = webApplication.Services.CreateAsyncScope()) {
+			var rpcMessageHandlerInit = scope.ServiceProvider.GetRequiredService<ControllerMessageHandlerActorInitFactory>().Create();
+			rpcMessageHandlerActor = actorSystem.ActorOf(ControllerMessageHandlerActor.Factory(rpcMessageHandlerInit), "ControllerMessageHandler");
+		}
+		
+		rpcClient.StartListening(new IMessageReceiver<IMessageToWeb>.Actor(rpcMessageHandlerActor));
+		
+		PhantomLogger.Root.Information("Phantom Panel web is ready.");
+		
+		await shutdownCancellationToken.WaitHandle.WaitOneAsync();
+		await webApplication.StopAsync();
 	} finally {
-		shutdownCancellationTokenSource.Cancel();
-		
-		rpcDisconnectSemaphore.Release();
-		await rpcTask;
-		rpcDisconnectSemaphore.Dispose();
-		
-		NetMQConfig.Cleanup();
+		await rpcClient.Shutdown();
 	}
 	
 	return 0;

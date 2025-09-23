@@ -34,6 +34,6 @@ sealed class ControllerState {
 	}
 	
 	public void UpdateOrDeleteUser(Guid userGuid) {
-		UserUpdatedOrDeleted?.Invoke(null, userGuid);
+		UserUpdatedOrDeleted?.Invoke(sender: null, userGuid);
 	}
 }

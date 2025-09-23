@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
-using Phantom.Agent.Rpc;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
@@ -8,10 +9,10 @@ using Phantom.Utils.Tasks;
 namespace Phantom.Agent.Services.Instances.State;
 
 sealed class InstanceLogSender : CancellableBackgroundTask {
-	private static readonly BoundedChannelOptions BufferOptions = new (capacity: 100) {
+	private static readonly BoundedChannelOptions BufferOptions = new (capacity: 200) {
 		SingleReader = true,
 		SingleWriter = true,
-		FullMode = BoundedChannelFullMode.DropNewest
+		FullMode = BoundedChannelFullMode.DropNewest,
 	};
 	
 	private static readonly TimeSpan SendDelay = TimeSpan.FromMilliseconds(200);
@@ -33,17 +34,29 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 		var lineReader = outputChannel.Reader;
 		var lineBuilder = ImmutableArray.CreateBuilder<string>();
 		
+		using var sendOutputCancellationTokenSource = new CancellationTokenSource();
+		
+		await using var sendOutputCancellationRegistration = CancellationToken.Register([SuppressMessage("ReSharper", "AccessToDisposedClosure")]() => {
+			sendOutputCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+		});
+		
+		var sendOutputCancellationToken = sendOutputCancellationTokenSource.Token;
+		
 		try {
 			while (await lineReader.WaitToReadAsync(CancellationToken)) {
 				await Task.Delay(SendDelay, CancellationToken);
-				SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
+				await SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder), sendOutputCancellationToken);
 			}
 		} catch (OperationCanceledException) {
 			// Ignore.
 		}
 		
 		// Flush remaining lines.
-		SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder));
+		try {
+			await SendOutputToServer(ReadLinesFromChannel(lineReader, lineBuilder), sendOutputCancellationToken);
+		} catch (OperationCanceledException) {
+			// Ignore.
+		}
 	}
 	
 	private ImmutableArray<string> ReadLinesFromChannel(ChannelReader<string> reader, ImmutableArray<string>.Builder builder) {
@@ -53,7 +66,7 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 			builder.Add(line);
 		}
 		
-		int droppedLines = Interlocked.Exchange(ref droppedLinesSinceLastSend, 0);
+		int droppedLines = Interlocked.Exchange(ref droppedLinesSinceLastSend, value: 0);
 		if (droppedLines > 0) {
 			builder.Add($"Dropped {droppedLines} {(droppedLines == 1 ? "line" : "lines")} due to buffer overflow.");
 		}
@@ -61,9 +74,12 @@ sealed class InstanceLogSender : CancellableBackgroundTask {
 		return builder.ToImmutable();
 	}
 	
-	private void SendOutputToServer(ImmutableArray<string> lines) {
-		if (!lines.IsEmpty) {
-			controllerConnection.Send(new InstanceOutputMessage(instanceGuid, lines));
+	private ValueTask SendOutputToServer(ImmutableArray<string> lines, CancellationToken cancellationToken) {
+		if (lines.IsEmpty) {
+			return ValueTask.CompletedTask;
+		}
+		else {
+			return controllerConnection.Send(new InstanceOutputMessage(instanceGuid, lines), cancellationToken);
 		}
 	}
 	

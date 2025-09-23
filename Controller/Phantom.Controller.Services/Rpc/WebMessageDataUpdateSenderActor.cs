@@ -5,24 +5,24 @@ using Phantom.Common.Messages.Web;
 using Phantom.Common.Messages.Web.ToWeb;
 using Phantom.Controller.Services.Instances;
 using Phantom.Utils.Actor;
-using Phantom.Utils.Rpc.Runtime;
+using Phantom.Utils.Rpc.Message;
 
 namespace Phantom.Controller.Services.Rpc;
 
 sealed class WebMessageDataUpdateSenderActor : ReceiveActor<WebMessageDataUpdateSenderActor.ICommand> {
-	public readonly record struct Init(RpcConnectionToClient<IMessageToWeb> Connection, ControllerState ControllerState, InstanceLogManager InstanceLogManager);
+	public readonly record struct Init(MessageSender<IMessageToWeb> MessageSender, ControllerState ControllerState, InstanceLogManager InstanceLogManager);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new WebMessageDataUpdateSenderActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
 	
-	private readonly RpcConnectionToClient<IMessageToWeb> connection;
+	private readonly MessageSender<IMessageToWeb> messageSender;
 	private readonly ControllerState controllerState;
 	private readonly InstanceLogManager instanceLogManager;
 	private readonly ActorRef<ICommand> selfCached;
 	
 	private WebMessageDataUpdateSenderActor(Init init) {
-		this.connection = init.Connection;
+		this.messageSender = init.MessageSender;
 		this.controllerState = init.ControllerState;
 		this.instanceLogManager = init.InstanceLogManager;
 		this.selfCached = SelfTyped;
@@ -70,18 +70,18 @@ sealed class WebMessageDataUpdateSenderActor : ReceiveActor<WebMessageDataUpdate
 	private sealed record RefreshUserSessionCommand(Guid UserGuid) : ICommand;
 	
 	private Task RefreshAgents(RefreshAgentsCommand command) {
-		return connection.Send(new RefreshAgentsMessage(command.Agents.Values.ToImmutableArray()));
+		return messageSender.Send(new RefreshAgentsMessage(command.Agents.Values.ToImmutableArray())).AsTask();
 	}
 	
 	private Task RefreshInstances(RefreshInstancesCommand command) {
-		return connection.Send(new RefreshInstancesMessage(command.Instances.Values.ToImmutableArray()));
+		return messageSender.Send(new RefreshInstancesMessage(command.Instances.Values.ToImmutableArray())).AsTask();
 	}
 	
 	private Task ReceiveInstanceLogs(ReceiveInstanceLogsCommand command) {
-		return connection.Send(new InstanceOutputMessage(command.InstanceGuid, command.Lines));
+		return messageSender.Send(new InstanceOutputMessage(command.InstanceGuid, command.Lines)).AsTask();
 	}
 	
 	private Task RefreshUserSession(RefreshUserSessionCommand command) {
-		return connection.Send(new RefreshUserSessionMessage(command.UserGuid));
+		return messageSender.Send(new RefreshUserSessionMessage(command.UserGuid)).AsTask();
 	}
 }

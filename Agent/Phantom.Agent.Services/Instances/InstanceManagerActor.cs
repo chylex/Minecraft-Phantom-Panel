@@ -4,8 +4,8 @@ using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Minecraft.Launcher.Types;
 using Phantom.Agent.Minecraft.Properties;
 using Phantom.Agent.Minecraft.Server;
-using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Backups;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
@@ -56,14 +56,9 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		ReceiveAsync<ShutdownCommand>(Shutdown);
 	}
 	
-	private string GetInstanceLoggerName(Guid guid) {
-		var prefix = guid.ToString();
-		return prefix[..prefix.IndexOf('-')] + "/" + Interlocked.Increment(ref instanceLoggerSequenceId);
-	}
-	
 	private sealed record InstanceInfo(ActorRef<InstanceActor.ICommand> Actor, InstanceConfiguration Configuration, IServerLauncher Launcher);
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool LaunchNow, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
@@ -118,7 +113,8 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			}
 		}
 		else {
-			var instanceInit = new InstanceActor.Init(agentState, instanceGuid, GetInstanceLoggerName(instanceGuid), instanceServices, instanceTicketManager, shutdownCancellationToken);
+			var instanceLoggerName = PhantomLogger.ShortenGuid(instanceGuid) + "/" + Interlocked.Increment(ref instanceLoggerSequenceId);
+			var instanceInit = new InstanceActor.Init(agentState, instanceGuid, instanceLoggerName, instanceServices, instanceTicketManager, shutdownCancellationToken);
 			instances[instanceGuid] = instance = new InstanceInfo(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), configuration, launcher);
 			
 			Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, instanceGuid);

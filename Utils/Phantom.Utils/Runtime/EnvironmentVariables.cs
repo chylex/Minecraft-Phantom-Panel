@@ -1,15 +1,17 @@
-﻿namespace Phantom.Utils.Runtime;
+﻿using System.Net;
+
+namespace Phantom.Utils.Runtime;
 
 public static class EnvironmentVariables {
 	private enum ValueKind {
 		Missing,
 		HasValue,
-		HasError
+		HasError,
 	}
 	
 	public readonly struct Value<T> where T : notnull {
 		internal static Value<T> Missing(string variableName, string errorMessage) {
-			return new Value<T>(default, ValueKind.Missing, variableName, errorMessage);
+			return new Value<T>(value: default, ValueKind.Missing, variableName, errorMessage);
 		}
 		
 		internal static Value<T> Of(T value, string variableName) {
@@ -17,7 +19,7 @@ public static class EnvironmentVariables {
 		}
 		
 		private static Value<T> Error(string variableName, string errorMessage) {
-			return new Value<T>(default, ValueKind.HasError, variableName, errorMessage);
+			return new Value<T>(value: default, ValueKind.HasError, variableName, errorMessage);
 		}
 		
 		private readonly T? value;
@@ -41,7 +43,7 @@ public static class EnvironmentVariables {
 		
 		internal Value<TResult> Map<TResult>(Func<T, TResult> mapper, Func<Exception, string> mapperThrowingErrorMessage) where TResult : notnull {
 			if (kind is ValueKind.Missing or ValueKind.HasError) {
-				return new Value<TResult>(default, kind, variableName, errorMessage);
+				return new Value<TResult>(value: default, kind, variableName, errorMessage);
 			}
 			
 			try {
@@ -67,6 +69,14 @@ public static class EnvironmentVariables {
 	public static Value<string> GetString(string variableName) {
 		var value = Environment.GetEnvironmentVariable(variableName);
 		return value == null ? Value<string>.Missing(variableName, "Missing environment variable") : Value<string>.Of(value, variableName);
+	}
+	
+	public static Value<IPAddress> GetIpAddress(string variableName) {
+		return GetString(variableName).Map(Parse, "Environment variable must be an IP address");
+		
+		static IPAddress Parse(string ipAddress) {
+			return ipAddress == "localhost" ? IPAddress.Loopback : IPAddress.Parse(ipAddress);
+		}
 	}
 	
 	public static Value<(string?, string?)> GetEitherString(string leftVariableName, string rightVariableName) {

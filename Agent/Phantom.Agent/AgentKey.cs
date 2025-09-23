@@ -1,4 +1,4 @@
-﻿using NetMQ;
+﻿using System.Text;
 using Phantom.Common.Data;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
@@ -10,7 +10,7 @@ namespace Phantom.Agent;
 static class AgentKey {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(AgentKey));
 	
-	public static Task<(NetMQCertificate, AuthToken)?> Load(string? agentKeyToken, string? agentKeyFilePath) {
+	public static Task<ConnectionKey?> Load(string? agentKeyToken, string? agentKeyFilePath) {
 		if (agentKeyFilePath != null) {
 			return LoadFromFile(agentKeyFilePath);
 		}
@@ -22,18 +22,19 @@ static class AgentKey {
 		}
 	}
 	
-	private static async Task<(NetMQCertificate, AuthToken)?> LoadFromFile(string agentKeyFilePath) {
+	private static async Task<ConnectionKey?> LoadFromFile(string agentKeyFilePath) {
 		if (!File.Exists(agentKeyFilePath)) {
 			Logger.Fatal("Missing agent key file: {AgentKeyFilePath}", agentKeyFilePath);
 			return null;
 		}
 		
 		try {
-			Files.RequireMaximumFileSize(agentKeyFilePath, 64);
-			return LoadFromBytes(await File.ReadAllBytesAsync(agentKeyFilePath));
+			Files.RequireMaximumFileSize(agentKeyFilePath, maximumBytes: 64);
+			string[] lines = await File.ReadAllLinesAsync(agentKeyFilePath, Encoding.UTF8);
+			return LoadFromToken(lines[0]);
 		} catch (IOException e) {
 			Logger.Fatal("Error loading agent key from file: {AgentKeyFilePath}", agentKeyFilePath);
-			Logger.Fatal(e.Message);
+			Logger.Fatal("{Message}", e.Message);
 			return null;
 		} catch (Exception) {
 			Logger.Fatal("File does not contain a valid agent key: {AgentKeyFilePath}", agentKeyFilePath);
@@ -41,7 +42,7 @@ static class AgentKey {
 		}
 	}
 	
-	private static (NetMQCertificate, AuthToken)? LoadFromToken(string agentKey) {
+	private static ConnectionKey? LoadFromToken(string agentKey) {
 		try {
 			return LoadFromBytes(TokenGenerator.DecodeBytes(agentKey));
 		} catch (Exception) {
@@ -50,11 +51,9 @@ static class AgentKey {
 		}
 	}
 	
-	private static (NetMQCertificate, AuthToken)? LoadFromBytes(byte[] agentKey) {
-		var (publicKey, agentToken) = ConnectionCommonKey.FromBytes(agentKey);
-		var controllerCertificate = NetMQCertificate.FromPublicKey(publicKey);
-		
+	private static ConnectionKey? LoadFromBytes(byte[] agentKey) {
+		var connectionKey = ConnectionKey.FromBytes(agentKey);
 		Logger.Information("Loaded agent key.");
-		return (controllerCertificate, agentToken);
+		return connectionKey;
 	}
 }

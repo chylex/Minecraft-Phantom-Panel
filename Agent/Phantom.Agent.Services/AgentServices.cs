@@ -1,8 +1,8 @@
 ﻿using Akka.Actor;
 using Phantom.Agent.Minecraft.Java;
-using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Instances;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
@@ -15,7 +15,6 @@ public sealed class AgentServices {
 	
 	public ActorSystem ActorSystem { get; }
 	
-	private AgentFolders AgentFolders { get; }
 	private AgentState AgentState { get; }
 	private BackupManager BackupManager { get; }
 	
@@ -23,30 +22,24 @@ public sealed class AgentServices {
 	internal InstanceTicketManager InstanceTicketManager { get; }
 	internal ActorRef<InstanceManagerActor.ICommand> InstanceManager { get; }
 	
-	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders, AgentServiceConfiguration serviceConfiguration, ControllerConnection controllerConnection) {
+	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders, AgentServiceConfiguration serviceConfiguration, ControllerConnection controllerConnection, JavaRuntimeRepository javaRuntimeRepository) {
 		this.ActorSystem = ActorSystemFactory.Create("Agent");
 		
-		this.AgentFolders = agentFolders;
 		this.AgentState = new AgentState();
 		this.BackupManager = new BackupManager(agentFolders, serviceConfiguration.MaxConcurrentCompressionTasks);
 		
-		this.JavaRuntimeRepository = new JavaRuntimeRepository();
+		this.JavaRuntimeRepository = javaRuntimeRepository;
 		this.InstanceTicketManager = new InstanceTicketManager(agentInfo, controllerConnection);
 		
 		var instanceManagerInit = new InstanceManagerActor.Init(controllerConnection, agentFolders, AgentState, JavaRuntimeRepository, InstanceTicketManager, BackupManager);
 		this.InstanceManager = ActorSystem.ActorOf(InstanceManagerActor.Factory(instanceManagerInit), "InstanceManager");
 	}
 	
-	public async Task Initialize() {
-		await foreach (var runtime in JavaRuntimeDiscovery.Scan(AgentFolders.JavaSearchFolderPath)) {
-			JavaRuntimeRepository.Include(runtime);
-		}
-	}
-	
 	public async Task Shutdown() {
 		Logger.Information("Stopping services...");
 		
 		await InstanceManager.Stop(new InstanceManagerActor.ShutdownCommand());
+		await InstanceTicketManager.Shutdown();
 		
 		BackupManager.Dispose();
 		

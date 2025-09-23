@@ -14,7 +14,7 @@ namespace Phantom.Web.Services;
 public static class PhantomWebServices {
 	public static void AddPhantomServices(this IServiceCollection services) {
 		services.AddSingleton<ControllerConnection>();
-		services.AddSingleton<ControllerMessageHandlerFactory>();
+		services.AddSingleton<ControllerMessageHandlerActorInitFactory>();
 		
 		services.AddSingleton<AgentManager>();
 		services.AddSingleton<InstanceManager>();

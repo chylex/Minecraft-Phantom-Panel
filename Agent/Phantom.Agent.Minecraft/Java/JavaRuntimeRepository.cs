@@ -6,41 +6,28 @@ using Phantom.Utils.Cryptography;
 namespace Phantom.Agent.Minecraft.Java;
 
 public sealed class JavaRuntimeRepository {
-	private readonly Dictionary<string, Guid> guidsByPath = new ();
-	private readonly Dictionary<Guid, JavaRuntimeExecutable> runtimesByGuid = new ();
-	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
+	private readonly ImmutableDictionary<Guid, JavaRuntimeExecutable> runtimesByGuid;
+	
+	internal JavaRuntimeRepository(ImmutableArray<JavaRuntimeExecutable> runtimes) {
+		var runtimesByGuidBuilder = ImmutableDictionary.CreateBuilder<Guid, JavaRuntimeExecutable>();
+		
+		foreach (JavaRuntimeExecutable runtime in runtimes) {
+			runtimesByGuidBuilder.Add(GenerateStableGuid(runtime.ExecutablePath), runtime);
+		}
+		
+		runtimesByGuid = runtimesByGuidBuilder.ToImmutable();
+	}
 	
 	public ImmutableArray<TaggedJavaRuntime> All {
 		get {
-			rwLock.EnterReadLock();
-			try {
-				return runtimesByGuid.Select(static kvp => new TaggedJavaRuntime(kvp.Key, kvp.Value.Runtime)).OrderBy(static taggedRuntime => taggedRuntime.Runtime).ToImmutableArray();
-			} finally {
-				rwLock.ExitReadLock();
-			}
+			return runtimesByGuid.Select(static kvp => new TaggedJavaRuntime(kvp.Key, kvp.Value.Runtime))
+			                     .OrderBy(static taggedRuntime => taggedRuntime.Runtime)
+			                     .ToImmutableArray();
 		}
 	}
 	
-	public void Include(JavaRuntimeExecutable runtime) {
-		rwLock.EnterWriteLock();
-		try {
-			if (!guidsByPath.TryGetValue(runtime.ExecutablePath, out var guid)) {
-				guidsByPath[runtime.ExecutablePath] = guid = GenerateStableGuid(runtime.ExecutablePath);
-			}
-			
-			runtimesByGuid[guid] = runtime;
-		} finally {
-			rwLock.ExitWriteLock();
-		}
-	}
-	
-	public bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
-		rwLock.EnterReadLock();
-		try {
-			return runtimesByGuid.TryGetValue(guid, out runtime);
-		} finally {
-			rwLock.ExitReadLock();
-		}
+	internal bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
+		return runtimesByGuid.TryGetValue(guid, out runtime);
 	}
 	
 	private static Guid GenerateStableGuid(string executablePath) {

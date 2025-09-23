@@ -1,6 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Rpc;
 using Phantom.Agent.Services.Backups;
+using Phantom.Agent.Services.Rpc;
 
 namespace Phantom.Agent.Services.Instances;
 

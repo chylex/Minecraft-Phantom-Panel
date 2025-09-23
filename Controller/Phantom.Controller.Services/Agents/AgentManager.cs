@@ -2,18 +2,16 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Messages.Agent;
+using Phantom.Common.Messages.Agent.Handshake;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
 using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc.Runtime;
 using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
@@ -22,19 +20,17 @@ sealed class AgentManager {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 	
 	private readonly IActorRefFactory actorSystem;
-	private readonly AuthToken authToken;
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
 	private readonly UserLoginManager userLoginManager;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
-	private readonly ConcurrentDictionary<Guid, ActorRef<AgentActor.ICommand>> agentsByGuid = new ();
+	private readonly ConcurrentDictionary<Guid, ActorRef<AgentActor.ICommand>> agentsByAgentGuid = new ();
 	private readonly Func<Guid, AgentConfiguration, ActorRef<AgentActor.ICommand>> addAgentActorFactory;
 	
-	public AgentManager(IActorRefFactory actorSystem, AuthToken authToken, ControllerState controllerState, MinecraftVersions minecraftVersions, UserLoginManager userLoginManager, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
+	public AgentManager(IActorRefFactory actorSystem, ControllerState controllerState, MinecraftVersions minecraftVersions, UserLoginManager userLoginManager, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
 		this.actorSystem = actorSystem;
-		this.authToken = authToken;
 		this.controllerState = controllerState;
 		this.minecraftVersions = minecraftVersions;
 		this.userLoginManager = userLoginManager;
@@ -57,28 +53,20 @@ sealed class AgentManager {
 			var agentGuid = entity.AgentGuid;
 			var agentConfiguration = new AgentConfiguration(entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
 			
-			if (agentsByGuid.TryAdd(agentGuid, CreateAgentActor(agentGuid, agentConfiguration))) {
+			if (agentsByAgentGuid.TryAdd(agentGuid, CreateAgentActor(agentGuid, agentConfiguration))) {
 				Logger.Information("Loaded agent \"{AgentName}\" (GUID {AgentGuid}) from database.", agentConfiguration.AgentName, agentGuid);
 			}
 		}
 	}
 	
-	public async Task<bool> RegisterAgent(AuthToken authToken, AgentInfo agentInfo, RpcConnectionToClient<IMessageToAgent> connection) {
-		if (!this.authToken.FixedTimeEquals(authToken)) {
-			await connection.Send(new RegisterAgentFailureMessage(RegisterAgentFailure.InvalidToken));
-			return false;
-		}
-		
-		var agentProperties = AgentConfiguration.From(agentInfo);
-		var agentActor = agentsByGuid.GetOrAdd(agentInfo.AgentGuid, addAgentActorFactory, agentProperties);
-		var configureInstanceMessages = await agentActor.Request(new AgentActor.RegisterCommand(agentProperties, connection), cancellationToken);
-		await connection.Send(new RegisterAgentSuccessMessage(configureInstanceMessages));
-		
-		return true;
+	public async Task<ImmutableArray<ConfigureInstanceMessage>> RegisterAgent(AgentRegistration registration) {
+		var agentConfiguration = AgentConfiguration.From(registration.AgentInfo);
+		var agentActor = agentsByAgentGuid.GetOrAdd(registration.AgentInfo.AgentGuid, addAgentActorFactory, agentConfiguration);
+		return await agentActor.Request(new AgentActor.RegisterCommand(agentConfiguration, registration.JavaRuntimes), cancellationToken);
 	}
 	
 	public bool TellAgent(Guid agentGuid, AgentActor.ICommand command) {
-		if (agentsByGuid.TryGetValue(agentGuid, out var agent)) {
+		if (agentsByAgentGuid.TryGetValue(agentGuid, out var agent)) {
 			agent.Tell(command);
 			return true;
 		}
@@ -94,7 +82,7 @@ sealed class AgentManager {
 			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
 		}
 		
-		if (!agentsByGuid.TryGetValue(agentGuid, out var agent)) {
+		if (!agentsByAgentGuid.TryGetValue(agentGuid, out var agent)) {
 			return (UserInstanceActionFailure) InstanceActionFailure.AgentDoesNotExist;
 		}
 		

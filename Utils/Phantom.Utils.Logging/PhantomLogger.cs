@@ -31,23 +31,46 @@ public static class PhantomLogger {
 	}
 	
 	public static ILogger Create<T>() {
-		return Create(typeof(T).Name);
+		return Create(TypeName<T>());
 	}
 	
 	public static ILogger Create<T>(string name) {
-		return Create(typeof(T).Name, name);
+		return Create(ConcatNames(TypeName<T>(), name));
 	}
 	
 	public static ILogger Create<T>(string name1, string name2) {
-		return Create(typeof(T).Name, ConcatNames(name1, name2));
+		return Create(ConcatNames(TypeName<T>(), name1, name2));
 	}
 	
 	public static ILogger Create<T1, T2>() {
-		return Create(typeof(T1).Name, typeof(T2).Name);
+		return Create(ConcatNames(TypeName<T1>(), TypeName<T2>()));
 	}
 	
-	private static string ConcatNames(string name1, string name2) {
+	public static ILogger Create<T1, T2>(string name) {
+		return Create(ConcatNames(TypeName<T1>(), TypeName<T2>(), name));
+	}
+	
+	public static ILogger Create<T1, T2>(string name1, string name2) {
+		return Create(ConcatNames(TypeName<T1>(), TypeName<T2>(), ConcatNames(name1, name2)));
+	}
+	
+	private static string TypeName<T>() {
+		string typeName = typeof(T).Name;
+		int genericsStartIndex = typeName.IndexOf('`');
+		return genericsStartIndex > 0 ? typeName[..genericsStartIndex] : typeName;
+	}
+	
+	public static string ConcatNames(string name1, string name2) {
 		return name1 + ":" + name2;
+	}
+	
+	public static string ConcatNames(string name1, string name2, string name3) {
+		return ConcatNames(name1, ConcatNames(name2, name3));
+	}
+	
+	public static string ShortenGuid(Guid guid) {
+		var prefix = guid.ToString();
+		return prefix[..prefix.IndexOf('-')];
 	}
 	
 	public static void Dispose() {

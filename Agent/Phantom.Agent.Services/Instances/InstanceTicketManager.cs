@@ -1,4 +1,4 @@
-﻿using Phantom.Agent.Rpc;
+﻿using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Instance;
@@ -9,20 +9,14 @@ using Serilog;
 
 namespace Phantom.Agent.Services.Instances;
 
-sealed class InstanceTicketManager {
+sealed class InstanceTicketManager(AgentInfo agentInfo, ControllerConnection controllerConnection) {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceTicketManager>();
 	
-	private readonly AgentInfo agentInfo;
-	private readonly ControllerConnection controllerConnection;
+	private readonly ControllerSendQueue<ReportAgentStatusMessage> reportStatusQueue = new (controllerConnection, nameof(InstanceTicketManager), capacity: 1, singleWriter: true);
 	
-	private readonly HashSet<Guid> activeTicketGuids = new ();
-	private readonly HashSet<ushort> usedPorts = new ();
+	private readonly HashSet<Guid> activeTicketGuids = [];
+	private readonly HashSet<ushort> usedPorts = [];
 	private RamAllocationUnits usedMemory = new ();
-	
-	public InstanceTicketManager(AgentInfo agentInfo, ControllerConnection controllerConnection) {
-		this.agentInfo = agentInfo;
-		this.controllerConnection = controllerConnection;
-	}
 	
 	public Result<Ticket, LaunchInstanceResult> Reserve(InstanceConfiguration configuration) {
 		var memoryAllocation = configuration.MemoryAllocation;
@@ -91,8 +85,12 @@ sealed class InstanceTicketManager {
 	
 	public void RefreshAgentStatus() {
 		lock (this) {
-			controllerConnection.Send(new ReportAgentStatusMessage(activeTicketGuids.Count, usedMemory));
+			reportStatusQueue.Enqueue(new ReportAgentStatusMessage(activeTicketGuids.Count, usedMemory));
 		}
+	}
+	
+	public async Task Shutdown() {
+		await reportStatusQueue.Shutdown(TimeSpan.FromSeconds(5));
 	}
 	
 	public sealed record Ticket(Guid TicketGuid, RamAllocationUnits MemoryAllocation, ushort ServerPort, ushort RconPort);

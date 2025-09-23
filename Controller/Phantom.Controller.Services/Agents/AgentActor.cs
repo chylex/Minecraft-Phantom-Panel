@@ -21,7 +21,7 @@ using Phantom.Utils.Actor.Mailbox;
 using Phantom.Utils.Actor.Tasks;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc.Runtime;
+using Phantom.Utils.Rpc.Runtime.Server;
 using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
@@ -89,11 +89,11 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		
 		ReceiveAsync<InitializeCommand>(Initialize);
 		ReceiveAsyncAndReply<RegisterCommand, ImmutableArray<ConfigureInstanceMessage>>(Register);
+		Receive<SetConnectionCommand>(SetConnection);
 		Receive<UnregisterCommand>(Unregister);
 		Receive<RefreshConnectionStatusCommand>(RefreshConnectionStatus);
 		Receive<NotifyIsAliveCommand>(NotifyIsAlive);
 		Receive<UpdateStatsCommand>(UpdateStats);
-		Receive<UpdateJavaRuntimesCommand>(UpdateJavaRuntimes);
 		ReceiveAndReplyLater<CreateOrUpdateInstanceCommand, Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstance);
 		Receive<UpdateInstanceStatusCommand>(UpdateInstanceStatus);
 		Receive<UpdateInstancePlayerCountsCommand>(UpdateInstancePlayerCounts);
@@ -168,21 +168,21 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		return configurationMessages.ToImmutable();
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	private sealed record InitializeCommand : ICommand;
 	
-	public sealed record RegisterCommand(AgentConfiguration Configuration, RpcConnectionToClient<IMessageToAgent> Connection) : ICommand, ICanReply<ImmutableArray<ConfigureInstanceMessage>>;
+	public sealed record RegisterCommand(AgentConfiguration Configuration, ImmutableArray<TaggedJavaRuntime> JavaRuntimes) : ICommand, ICanReply<ImmutableArray<ConfigureInstanceMessage>>;
 	
-	public sealed record UnregisterCommand(RpcConnectionToClient<IMessageToAgent> Connection) : ICommand;
+	public sealed record SetConnectionCommand(RpcServerToClientConnection<IMessageToController, IMessageToAgent> Connection) : ICommand;
+	
+	public sealed record UnregisterCommand : ICommand;
 	
 	private sealed record RefreshConnectionStatusCommand : ICommand;
 	
 	public sealed record NotifyIsAliveCommand : ICommand;
 	
 	public sealed record UpdateStatsCommand(int RunningInstanceCount, RamAllocationUnits RunningInstanceMemory) : ICommand;
-	
-	public sealed record UpdateJavaRuntimesCommand(ImmutableArray<TaggedJavaRuntime> JavaRuntimes) : ICommand;
 	
 	public sealed record CreateOrUpdateInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration) : ICommand, ICanReply<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>;
 	
@@ -229,7 +229,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		var configurationMessages = await PrepareInitialConfigurationMessages();
 		
 		configuration = command.Configuration;
-		connection.UpdateConnection(command.Connection, configuration.AgentName);
+		connection.SetAgentName(configuration.AgentName);
 		
 		lastPingTime = DateTimeOffset.Now;
 		isOnline = true;
@@ -239,20 +239,27 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		
 		databaseStorageActor.Tell(new AgentDatabaseStorageActor.StoreAgentConfigurationCommand(configuration));
 		
+		javaRuntimes = command.JavaRuntimes;
+		controllerState.UpdateAgentJavaRuntimes(agentGuid, javaRuntimes);
+		
 		return configurationMessages;
 	}
 	
+	private void SetConnection(SetConnectionCommand command) {
+		connection.UpdateConnection(command.Connection);
+	}
+	
 	private void Unregister(UnregisterCommand command) {
-		if (connection.CloseIfSame(command.Connection)) {
-			stats = null;
-			lastPingTime = null;
-			isOnline = false;
-			NotifyAgentUpdated();
-			
-			TellAllInstances(new InstanceActor.SetStatusCommand(InstanceStatus.Offline));
-			
-			Logger.Information("Unregistered agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
-		}
+		connection.Close();
+		
+		stats = null;
+		lastPingTime = null;
+		isOnline = false;
+		NotifyAgentUpdated();
+		
+		TellAllInstances(new InstanceActor.SetStatusCommand(InstanceStatus.Offline));
+		
+		Logger.Information("Unregistered agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
 	}
 	
 	private void RefreshConnectionStatus(RefreshConnectionStatusCommand command) {
@@ -270,17 +277,14 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 		if (!isOnline) {
 			isOnline = true;
 			NotifyAgentUpdated();
+			
+			Logger.Warning("Restored connection to agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
 		}
 	}
 	
 	private void UpdateStats(UpdateStatsCommand command) {
 		stats = new AgentStats(command.RunningInstanceCount, command.RunningInstanceMemory);
 		NotifyAgentUpdated();
-	}
-	
-	private void UpdateJavaRuntimes(UpdateJavaRuntimesCommand command) {
-		javaRuntimes = command.JavaRuntimes;
-		controllerState.UpdateAgentJavaRuntimes(agentGuid, javaRuntimes);
 	}
 	
 	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance(CreateOrUpdateInstanceCommand command) {

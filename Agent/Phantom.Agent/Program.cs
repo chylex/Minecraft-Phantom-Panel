@@ -1,17 +1,16 @@
 ﻿using System.Reflection;
-using NetMQ;
 using Phantom.Agent;
-using Phantom.Agent.Rpc;
+using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Services;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages.Agent;
-using Phantom.Common.Messages.Agent.ToController;
+using Phantom.Common.Messages.Agent.Handshake;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc;
-using Phantom.Utils.Rpc.Sockets;
+using Phantom.Utils.Rpc.Runtime.Client;
 using Phantom.Utils.Runtime;
+using Phantom.Utils.Threading;
 
 const int ProtocolVersion = 1;
 
@@ -48,33 +47,48 @@ try {
 		return 1;
 	}
 	
-	var (controllerCertificate, agentToken) = agentKey.Value;
 	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
+	var javaRuntimeRepository = await JavaRuntimeDiscovery.Scan(folders.JavaSearchFolderPath, shutdownCancellationToken);
 	
-	PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
+	var agentRegistrationHandler = new AgentRegistrationHandler();
+	var controllerHandshake = new ControllerHandshake(new AgentRegistration(agentInfo, javaRuntimeRepository.All), agentRegistrationHandler);
 	
-	var rpcConfiguration = new RpcConfiguration("Agent", controllerHost, controllerPort, controllerCertificate);
-	var rpcSocket = RpcClientSocket.Connect(rpcConfiguration, AgentMessageRegistries.Definitions, new RegisterAgentMessage(agentToken, agentInfo));
+	var rpcClientConnectionParameters = new RpcClientConnectionParameters(
+		Host: controllerHost,
+		Port: controllerPort,
+		DistinguishedName: "phantom-controller",
+		CertificateThumbprint: agentKey.Value.CertificateThumbprint,
+		AuthToken: agentKey.Value.AuthToken,
+		Handshake: controllerHandshake,
+		MessageQueueCapacity: 250,
+		FrameQueueCapacity: 500,
+		MaxConcurrentlyHandledMessages: 50
+	);
 	
-	var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcSocket.Connection));
-	await agentServices.Initialize();
+	using var rpcClient = await RpcClient<IMessageToController, IMessageToAgent>.Connect("Controller", rpcClientConnectionParameters, AgentMessageRegistries.Definitions, shutdownCancellationToken);
+	if (rpcClient == null) {
+		PhantomLogger.Root.Fatal("Could not connect to Phantom Controller, shutting down.");
+		return 1;
+	}
 	
-	var rpcMessageHandlerInit = new ControllerMessageHandlerActor.Init(rpcSocket.Connection, agentServices, shutdownCancellationTokenSource);
-	var rpcMessageHandlerActor = agentServices.ActorSystem.ActorOf(ControllerMessageHandlerActor.Factory(rpcMessageHandlerInit), "ControllerMessageHandler");
-	
-	var rpcDisconnectSemaphore = new SemaphoreSlim(0, 1);
-	var rpcTask = RpcClientRuntime.Launch(rpcSocket, rpcMessageHandlerActor, rpcDisconnectSemaphore, shutdownCancellationToken);
 	try {
-		await rpcTask.WaitAsync(shutdownCancellationToken);
-	} finally {
-		shutdownCancellationTokenSource.Cancel();
+		PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
+		
+		var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcClient.MessageSender), javaRuntimeRepository);
+		
+		var rpcMessageHandlerInit = new ControllerMessageHandlerActor.Init(agentServices);
+		var rpcMessageHandlerActor = agentServices.ActorSystem.ActorOf(ControllerMessageHandlerActor.Factory(rpcMessageHandlerInit), "ControllerMessageHandler");
+		
+		rpcClient.StartListening(new ControllerMessageReceiver(rpcMessageHandlerActor, agentRegistrationHandler));
+		
+		if (await agentRegistrationHandler.Start(agentServices, shutdownCancellationToken)) {
+			PhantomLogger.Root.Information("Phantom Panel agent is ready.");
+			await shutdownCancellationToken.WaitHandle.WaitOneAsync();
+		}
+		
 		await agentServices.Shutdown();
-		
-		rpcDisconnectSemaphore.Release();
-		await rpcTask;
-		rpcDisconnectSemaphore.Dispose();
-		
-		NetMQConfig.Cleanup();
+	} finally {
+		await rpcClient.Shutdown();
 	}
 	
 	return 0;

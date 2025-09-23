@@ -1,40 +1,34 @@
-﻿using System.Buffers;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Phantom.Utils.Actor;
+using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc.Frame.Types;
 using Serilog;
-using Serilog.Events;
 
 namespace Phantom.Utils.Rpc.Message;
 
-public sealed class MessageRegistry<TMessageBase> {
-	private const int DefaultBufferSize = 512;
-	
-	private readonly ILogger logger;
+public sealed class MessageRegistry<TMessageBase>(string loggerName) {
+	private readonly ILogger logger = PhantomLogger.Create<MessageRegistry<TMessageBase>>(loggerName);
 	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
-	private readonly Dictionary<ushort, Type> codeToTypeMapping = new ();
-	private readonly Dictionary<ushort, Action<ReadOnlyMemory<byte>, ushort, MessageHandler<TMessageBase>>> codeToHandlerMapping = new ();
+	private readonly Dictionary<ushort, Registration> codeToRegistrationMapping = new ();
 	
-	public MessageRegistry(ILogger logger) {
-		this.logger = logger;
-	}
+	private readonly record struct Registration(Type MessageType, Func<uint, ReadOnlyMemory<byte>, MessageHandler<TMessageBase>, CancellationToken, Task> Handler);
 	
 	public void Add<TMessage>(ushort code) where TMessage : TMessageBase {
-		if (HasReplyType(typeof(TMessage))) {
-			throw new ArgumentException("This overload is for messages without a reply");
+		Type messageType = typeof(TMessage);
+		
+		if (HasReplyType(messageType)) {
+			throw new ArgumentException("This overload is for messages without a reply.");
 		}
 		
-		AddTypeCodeMapping<TMessage>(code);
-		codeToHandlerMapping.Add(code, DeserializationHandler<TMessage>);
+		typeToCodeMapping.Add(messageType, code);
+		codeToRegistrationMapping.Add(code, new Registration(messageType, DeserializationHandler<TMessage>));
 	}
 	
 	public void Add<TMessage, TReply>(ushort code) where TMessage : TMessageBase, ICanReply<TReply> {
-		AddTypeCodeMapping<TMessage>(code);
-		codeToHandlerMapping.Add(code, DeserializationHandler<TMessage, TReply>);
-	}
-	
-	private void AddTypeCodeMapping<TMessage>(ushort code) where TMessage : TMessageBase {
-		typeToCodeMapping.Add(typeof(TMessage), code);
-		codeToTypeMapping.Add(code, typeof(TMessage));
+		Type messageType = typeof(TMessage);
+		
+		typeToCodeMapping.Add(messageType, code);
+		codeToRegistrationMapping.Add(code, new Registration(messageType, DeserializationHandler<TMessage, TReply>));
 	}
 	
 	private bool HasReplyType(Type messageType) {
@@ -44,140 +38,97 @@ public sealed class MessageRegistry<TMessageBase> {
 		return messageType.GetInterfaces().Any(type => type.FullName is {} name && name.StartsWith(replyInterfaceName, StringComparison.Ordinal));
 	}
 	
-	internal bool TryGetType(ReadOnlyMemory<byte> data, [NotNullWhen(true)] out Type? type) {
-		try {
-			var code = MessageSerializer.ReadCode(ref data);
-			return codeToTypeMapping.TryGetValue(code, out type);
-		} catch (Exception) {
+	internal bool TryGetType(MessageFrame frame, [NotNullWhen(true)] out Type? type) {
+		if (codeToRegistrationMapping.TryGetValue(frame.RegistryCode, out var registration)) {
+			type = registration.MessageType;
+			return true;
+		}
+		else {
 			type = null;
 			return false;
 		}
 	}
 	
-	public ReadOnlySpan<byte> Write<TMessage>(TMessage message) where TMessage : TMessageBase {
-		if (!GetMessageCode<TMessage>(out var code)) {
-			return default;
-		}
-		
-		var buffer = new ArrayBufferWriter<byte>(DefaultBufferSize);
-		
-		try {
-			MessageSerializer.WriteCode(buffer, code);
-			MessageSerializer.Serialize(buffer, message);
-			
-			CheckWrittenBufferLength<TMessage>(buffer);
-			return buffer.WrittenSpan;
-		} catch (Exception e) {
-			LogWriteFailure<TMessage>(e);
-			return default;
-		}
-	}
-	
-	public ReadOnlySpan<byte> Write<TMessage, TReply>(uint sequenceId, TMessage message) where TMessage : TMessageBase, ICanReply<TReply> {
-		if (!GetMessageCode<TMessage>(out var code)) {
-			return default;
-		}
-		
-		var buffer = new ArrayBufferWriter<byte>(DefaultBufferSize);
-		
-		try {
-			MessageSerializer.WriteCode(buffer, code);
-			MessageSerializer.WriteSequenceId(buffer, sequenceId);
-			MessageSerializer.Serialize(buffer, message);
-			
-			CheckWrittenBufferLength<TMessage>(buffer);
-			return buffer.WrittenSpan;
-		} catch (Exception e) {
-			LogWriteFailure<TMessage>(e);
-			return default;
-		}
-	}
-	
-	private bool GetMessageCode<TMessage>(out ushort code) where TMessage : TMessageBase {
-		if (typeToCodeMapping.TryGetValue(typeof(TMessage), out code)) {
-			return true;
+	internal MessageFrame CreateFrame<TMessage>(uint messageId, TMessage message) where TMessage : TMessageBase {
+		if (typeToCodeMapping.TryGetValue(typeof(TMessage), out ushort code)) {
+			return new MessageFrame(messageId, code, MessageSerialization.Serialize(message));
 		}
 		else {
-			logger.Error("Unknown message type {Type}.", typeof(TMessage));
-			return false;
+			throw new ArgumentException("Unknown message type: " + typeof(TMessage));
 		}
 	}
 	
-	private void CheckWrittenBufferLength<TMessage>(ArrayBufferWriter<byte> buffer) where TMessage : TMessageBase {
-		if (buffer.WrittenCount > DefaultBufferSize && logger.IsEnabled(LogEventLevel.Verbose)) {
-			logger.Verbose("Serializing {Type} exceeded default buffer size: {WrittenSize} B > {DefaultBufferSize} B", typeof(TMessage).Name, buffer.WrittenCount, DefaultBufferSize);
-		}
-	}
-	
-	private void LogWriteFailure<TMessage>(Exception e) where TMessage : TMessageBase {
-		logger.Error(e, "Failed to serialize message {Type}.", typeof(TMessage).Name);
-	}
-	
-	internal bool Read<TMessage>(ReadOnlyMemory<byte> data, out TMessage message) where TMessage : TMessageBase {
-		if (ReadTypeCode(ref data, out ushort code) && codeToTypeMapping.TryGetValue(code, out var expectedType) && expectedType == typeof(TMessage) && ReadMessage(data, out message)) {
-			return true;
+	internal async Task Handle(MessageFrame frame, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) {
+		uint messageId = frame.MessageId;
+		
+		if (codeToRegistrationMapping.TryGetValue(frame.RegistryCode, out var registration)) {
+			await registration.Handler(messageId, frame.SerializedMessage, handler, cancellationToken);
 		}
 		else {
-			message = default!;
-			return false;
+			logger.Error("Unknown message code {Code} for message {MessageId}.", frame.RegistryCode, messageId);
+			await handler.SendError(messageId, MessageError.UnknownMessageRegistryCode, cancellationToken);
 		}
 	}
 	
-	internal void Handle(ReadOnlyMemory<byte> data, MessageHandler<TMessageBase> handler) {
-		if (!ReadTypeCode(ref data, out var code)) {
+	private async Task DeserializationHandler<TMessage>(uint messageId, ReadOnlyMemory<byte> serializedMessage, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) where TMessage : TMessageBase {
+		TMessage message;
+		try {
+			message = MessageSerialization.Deserialize<TMessage>(serializedMessage);
+		} catch (Exception e) {
+			await OnMessageDeserializationError<TMessage>(messageId, e, handler, cancellationToken);
 			return;
 		}
 		
-		if (!codeToHandlerMapping.TryGetValue(code, out var handle)) {
-			logger.Error("Unknown message code {Code}.", code);
+		try {
+			handler.Receiver.OnMessage(message);
+		} catch (Exception e) {
+			await OnMessageHandlingError<TMessage>(messageId, e, handler, cancellationToken);
 			return;
 		}
 		
-		handle(data, code, handler);
-	}
-	
-	private bool ReadTypeCode(ref ReadOnlyMemory<byte> data, out ushort code) {
 		try {
-			code = MessageSerializer.ReadCode(ref data);
-			return true;
+			await handler.SendEmptyReply(messageId, cancellationToken);
 		} catch (Exception e) {
-			code = default;
-			logger.Error(e, "Failed to deserialize message code.");
-			return false;
+			await OnMessageReplyingError<TMessage>(messageId, e, handler, cancellationToken);
 		}
 	}
 	
-	private bool ReadSequenceId<TMessage, TReply>(ref ReadOnlyMemory<byte> data, out uint sequenceId) where TMessage : TMessageBase, ICanReply<TReply> {
+	private async Task DeserializationHandler<TMessage, TReply>(uint messageId, ReadOnlyMemory<byte> serializedMessage, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) where TMessage : TMessageBase, ICanReply<TReply> {
+		TMessage message;
 		try {
-			sequenceId = MessageSerializer.ReadSequenceId(ref data);
-			return true;
+			message = MessageSerialization.Deserialize<TMessage>(serializedMessage);
 		} catch (Exception e) {
-			sequenceId = default;
-			logger.Error(e, "Failed to deserialize sequence ID of message {Type}.", typeof(TMessage).Name);
-			return false;
+			await OnMessageDeserializationError<TMessage>(messageId, e, handler, cancellationToken);
+			return;
 		}
-	}
-	
-	private bool ReadMessage<TMessage>(ReadOnlyMemory<byte> data, out TMessage message) where TMessage : TMessageBase {
+		
+		TReply reply;
 		try {
-			message = MessageSerializer.Deserialize<TMessage>(data);
-			return true;
+			reply = await handler.Receiver.OnMessage<TMessage, TReply>(message, cancellationToken);
 		} catch (Exception e) {
-			message = default!;
-			logger.Error(e, "Failed to deserialize message {Type}.", typeof(TMessage).Name);
-			return false;
+			await OnMessageHandlingError<TMessage>(messageId, e, handler, cancellationToken);
+			return;
+		}
+		
+		try {
+			await handler.SendReply(messageId, reply, cancellationToken);
+		} catch (Exception e) {
+			await OnMessageReplyingError<TMessage>(messageId, e, handler, cancellationToken);
 		}
 	}
 	
-	private void DeserializationHandler<TMessage>(ReadOnlyMemory<byte> data, ushort code, MessageHandler<TMessageBase> handler) where TMessage : TMessageBase {
-		if (ReadMessage<TMessage>(data, out var message)) {
-			handler.Tell(message);
-		}
+	private async Task OnMessageDeserializationError<TMessage>(uint messageId, Exception exception, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) where TMessage : TMessageBase {
+		logger.Error(exception, "Could not deserialize message {MessageId} ({MessageType}).", messageId, typeof(TMessage).Name);
+		await handler.SendError(messageId, MessageError.MessageDeserializationError, cancellationToken);
 	}
 	
-	private void DeserializationHandler<TMessage, TReply>(ReadOnlyMemory<byte> data, ushort code, MessageHandler<TMessageBase> handler) where TMessage : TMessageBase, ICanReply<TReply> {
-		if (ReadSequenceId<TMessage, TReply>(ref data, out var sequenceId) && ReadMessage<TMessage>(data, out var message)) {
-			handler.TellAndReply<TMessage, TReply>(message, sequenceId);
-		}
+	private async Task OnMessageHandlingError<TMessage>(uint messageId, Exception exception, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) where TMessage : TMessageBase {
+		logger.Error(exception, "Could not handle message {MessageId} ({MessageType}).", messageId, typeof(TMessage).Name);
+		await handler.SendError(messageId, MessageError.MessageHandlingError, cancellationToken);
+	}
+	
+	private async Task OnMessageReplyingError<TMessage>(uint messageId, Exception exception, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) where TMessage : TMessageBase {
+		logger.Error(exception, "Could not reply to message {MessageId} ({MessageType}).", messageId, typeof(TMessage).Name);
+		await handler.SendError(messageId, MessageError.MessageReplyingError, cancellationToken);
 	}
 }

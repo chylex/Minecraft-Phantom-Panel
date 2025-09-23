@@ -1,6 +1,6 @@
 ﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Server;
-using Phantom.Agent.Rpc;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
@@ -19,29 +19,6 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	private readonly ManualResetEventSlim serverOutputEvent = new ();
 	
 	private InstancePlayerCounts? playerCounts;
-	
-	public InstancePlayerCounts? PlayerCounts {
-		get {
-			lock (this) {
-				return playerCounts;
-			}
-		}
-		private set {
-			EventHandler<int?>? onlinePlayerCountChanged;
-			lock (this) {
-				if (playerCounts == value) {
-					return;
-				}
-				
-				playerCounts = value;
-				onlinePlayerCountChanged = OnlinePlayerCountChanged;
-			}
-			
-			onlinePlayerCountChanged?.Invoke(this, value?.Online);
-			controllerConnection.Send(new ReportInstancePlayerCountsMessage(instanceGuid, value));
-		}
-	}
-	
 	private event EventHandler<int?>? OnlinePlayerCountChanged;
 	
 	private bool isDisposed = false;
@@ -64,7 +41,7 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 		while (!CancellationToken.IsCancellationRequested) {
 			serverOutputEvent.Reset();
 			
-			PlayerCounts = await TryGetPlayerCounts();
+			await UpdatePlayerCounts(await TryGetPlayerCounts());
 			
 			if (!firstDetection.Task.IsCompleted) {
 				firstDetection.SetResult();
@@ -82,12 +59,27 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", result.Online, result.Maximum);
 			return result;
 		} catch (ServerStatusProtocol.ProtocolException e) {
-			Logger.Error(e.Message);
+			Logger.Error("{Message}", e.Message);
 			return null;
 		} catch (Exception e) {
 			Logger.Error(e, "Caught exception while checking online player count.");
 			return null;
 		}
+	}
+	
+	private async Task UpdatePlayerCounts(InstancePlayerCounts? value) {
+		EventHandler<int?>? onlinePlayerCountChanged;
+		lock (this) {
+			if (playerCounts == value) {
+				return;
+			}
+			
+			playerCounts = value;
+			onlinePlayerCountChanged = OnlinePlayerCountChanged;
+		}
+		
+		onlinePlayerCountChanged?.Invoke(this, value?.Online);
+		await controllerConnection.Send(new ReportInstancePlayerCountsMessage(instanceGuid, value), CancellationToken);
 	}
 	
 	public async Task WaitForOnlinePlayers(CancellationToken cancellationToken) {

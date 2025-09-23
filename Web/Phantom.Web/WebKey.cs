@@ -1,5 +1,4 @@
-﻿using NetMQ;
-using Phantom.Common.Data;
+﻿using Phantom.Common.Data;
 using Phantom.Utils.Cryptography;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
@@ -10,7 +9,7 @@ namespace Phantom.Web;
 static class WebKey {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(WebKey));
 	
-	public static Task<(NetMQCertificate, AuthToken)?> Load(string? webKeyToken, string? webKeyFilePath) {
+	public static Task<ConnectionKey?> Load(string? webKeyToken, string? webKeyFilePath) {
 		if (webKeyFilePath != null) {
 			return LoadFromFile(webKeyFilePath);
 		}
@@ -22,18 +21,18 @@ static class WebKey {
 		}
 	}
 	
-	private static async Task<(NetMQCertificate, AuthToken)?> LoadFromFile(string webKeyFilePath) {
+	private static async Task<ConnectionKey?> LoadFromFile(string webKeyFilePath) {
 		if (!File.Exists(webKeyFilePath)) {
 			Logger.Fatal("Missing web key file: {WebKeyFilePath}", webKeyFilePath);
 			return null;
 		}
 		
 		try {
-			Files.RequireMaximumFileSize(webKeyFilePath, 64);
+			Files.RequireMaximumFileSize(webKeyFilePath, maximumBytes: 64);
 			return LoadFromBytes(await File.ReadAllBytesAsync(webKeyFilePath));
 		} catch (IOException e) {
 			Logger.Fatal("Error loading web key from file: {WebKeyFilePath}", webKeyFilePath);
-			Logger.Fatal(e.Message);
+			Logger.Fatal("{Message}", e.Message);
 			return null;
 		} catch (Exception) {
 			Logger.Fatal("File does not contain a valid web key: {WebKeyFilePath}", webKeyFilePath);
@@ -41,7 +40,7 @@ static class WebKey {
 		}
 	}
 	
-	private static (NetMQCertificate, AuthToken)? LoadFromToken(string webKey) {
+	private static ConnectionKey? LoadFromToken(string webKey) {
 		try {
 			return LoadFromBytes(TokenGenerator.DecodeBytes(webKey));
 		} catch (Exception) {
@@ -50,11 +49,9 @@ static class WebKey {
 		}
 	}
 	
-	private static (NetMQCertificate, AuthToken)? LoadFromBytes(byte[] webKey) {
-		var (publicKey, webToken) = ConnectionCommonKey.FromBytes(webKey);
-		var controllerCertificate = NetMQCertificate.FromPublicKey(publicKey);
-		
+	private static ConnectionKey? LoadFromBytes(byte[] webKey) {
+		var connectionKey = ConnectionKey.FromBytes(webKey);
 		Logger.Information("Loaded web key.");
-		return (controllerCertificate, webToken);
+		return connectionKey;
 	}
 }

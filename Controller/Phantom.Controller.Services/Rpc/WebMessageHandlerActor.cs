@@ -7,7 +7,6 @@ using Phantom.Common.Data.Web.AuditLog;
 using Phantom.Common.Data.Web.EventLog;
 using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Messages.Agent.BiDirectional;
 using Phantom.Common.Messages.Web;
 using Phantom.Common.Messages.Web.ToController;
 using Phantom.Controller.Minecraft;
@@ -17,14 +16,13 @@ using Phantom.Controller.Services.Instances;
 using Phantom.Controller.Services.Users;
 using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
-using Phantom.Utils.Rpc.Runtime;
+using Phantom.Utils.Rpc.Runtime.Server;
 
 namespace Phantom.Controller.Services.Rpc;
 
 sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	public readonly record struct Init(
-		RpcConnectionToClient<IMessageToWeb> Connection,
-		WebRegistrationHandler WebRegistrationHandler,
+		RpcServerToClientConnection<IMessageToController, IMessageToWeb> Connection,
 		ControllerState ControllerState,
 		InstanceLogManager InstanceLogManager,
 		UserManager UserManager,
@@ -41,8 +39,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		return Props<IMessageToController>.Create(() => new WebMessageHandlerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
 	
-	private readonly RpcConnectionToClient<IMessageToWeb> connection;
-	private readonly WebRegistrationHandler webRegistrationHandler;
+	private readonly RpcServerToClientConnection<IMessageToController, IMessageToWeb> connection;
 	private readonly ControllerState controllerState;
 	private readonly UserManager userManager;
 	private readonly RoleManager roleManager;
@@ -55,7 +52,6 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	
 	private WebMessageHandlerActor(Init init) {
 		this.connection = init.Connection;
-		this.webRegistrationHandler = init.WebRegistrationHandler;
 		this.controllerState = init.ControllerState;
 		this.userManager = init.UserManager;
 		this.roleManager = init.RoleManager;
@@ -66,11 +62,9 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		this.minecraftVersions = init.MinecraftVersions;
 		this.eventLogManager = init.EventLogManager;
 		
-		var senderActorInit = new WebMessageDataUpdateSenderActor.Init(connection, controllerState, init.InstanceLogManager);
+		var senderActorInit = new WebMessageDataUpdateSenderActor.Init(connection.MessageSender, controllerState, init.InstanceLogManager);
 		Context.ActorOf(WebMessageDataUpdateSenderActor.Factory(senderActorInit), "DataUpdateSender");
 		
-		ReceiveAsync<RegisterWebMessage>(HandleRegisterWeb);
-		Receive<UnregisterWebMessage>(HandleUnregisterWeb);
 		ReceiveAndReplyLater<LogInMessage, Optional<LogInSuccess>>(HandleLogIn);
 		Receive<LogOutMessage>(HandleLogOut);
 		ReceiveAndReply<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(GetAuthenticatedUser);
@@ -89,15 +83,6 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		ReceiveAndReply<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(HandleGetAgentJavaRuntimes);
 		ReceiveAndReplyLater<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>(HandleGetAuditLog);
 		ReceiveAndReplyLater<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>(HandleGetEventLog);
-		Receive<ReplyMessage>(HandleReply);
-	}
-	
-	private async Task HandleRegisterWeb(RegisterWebMessage message) {
-		await webRegistrationHandler.TryRegisterImpl(connection, message);
-	}
-	
-	private void HandleUnregisterWeb(UnregisterWebMessage message) {
-		connection.Close();
 	}
 	
 	private Task<Optional<LogInSuccess>> HandleLogIn(LogInMessage message) {
@@ -190,9 +175,5 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	
 	private Task<Result<ImmutableArray<EventLogItem>, UserActionFailure>> HandleGetEventLog(GetEventLogMessage message) {
 		return eventLogManager.GetMostRecentItems(userLoginManager.GetLoggedInUser(message.AuthToken), message.Count);
-	}
-	
-	private void HandleReply(ReplyMessage message) {
-		connection.Receive(message);
 	}
 }

@@ -1,35 +1,21 @@
-﻿using Phantom.Utils.Actor;
-using Phantom.Utils.Logging;
-using Serilog;
+﻿namespace Phantom.Utils.Rpc.Message;
 
-namespace Phantom.Utils.Rpc.Message;
-
-sealed class MessageHandler<TMessageBase> {
-	private readonly ILogger logger;
-	private readonly ActorRef<TMessageBase> handlerActor;
-	private readonly IReplySender replySender;
+sealed class MessageHandler<TMessageBase>(IMessageReceiver<TMessageBase> messageReceiver, IMessageReplySender replySender) {
+	public IMessageReceiver<TMessageBase> Receiver => messageReceiver;
 	
-	public MessageHandler(string loggerName, ActorRef<TMessageBase> handlerActor, IReplySender replySender) {
-		this.logger = PhantomLogger.Create("MessageHandler", loggerName);
-		this.handlerActor = handlerActor;
-		this.replySender = replySender;
+	public void OnPing() {
+		messageReceiver.OnPing();
 	}
 	
-	public void Tell(TMessageBase message) {
-		handlerActor.Tell(message);
+	public ValueTask SendEmptyReply(uint messageId, CancellationToken cancellationToken) {
+		return replySender.SendEmptyReply(messageId, cancellationToken);
 	}
 	
-	public Task TellAndReply<TMessage, TReply>(TMessage message, uint sequenceId) where TMessage : ICanReply<TReply> {
-		return handlerActor.Request(message).ContinueWith(task => {
-			if (task.IsCompletedSuccessfully) {
-				return replySender.SendReply(sequenceId, MessageSerializer.Serialize(task.Result));
-			}
-			
-			if (task.IsFaulted) {
-				logger.Error(task.Exception, "Failed to handle message {Type}.", message.GetType().Name);
-			}
-			
-			return task;
-		}, TaskScheduler.Default);
+	public ValueTask SendReply<TReply>(uint messageId, TReply reply, CancellationToken cancellationToken) {
+		return replySender.SendReply(messageId, reply, cancellationToken);
+	}
+	
+	public ValueTask SendError(uint messageId, MessageError error, CancellationToken cancellationToken) {
+		return replySender.SendError(messageId, error, cancellationToken);
 	}
 }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.DataProtection;
 using Phantom.Common.Messages.Web;
-using Phantom.Utils.Rpc.Runtime;
+using Phantom.Utils.Rpc.Message;
 using Phantom.Web.Services;
 using Serilog;
 using ILogger = Serilog.ILogger;
@@ -12,7 +12,7 @@ static class WebLauncher {
 		public string HttpUrl => "http://" + Host + ":" + Port;
 	}
 	
-	internal static WebApplication CreateApplication(Configuration config, ApplicationProperties applicationProperties, RpcConnectionToServer<IMessageToController> controllerConnection) {
+	internal static WebApplication CreateApplication(Configuration config, ApplicationProperties applicationProperties, MessageSender<IMessageToController> sendChannel) {
 		var assembly = typeof(WebLauncher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = assembly.GetName().Name,
@@ -29,7 +29,7 @@ static class WebLauncher {
 		}
 		
 		builder.Services.AddSingleton(applicationProperties);
-		builder.Services.AddSingleton(controllerConnection);
+		builder.Services.AddSingleton(sendChannel);
 		builder.Services.AddPhantomServices();
 		
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
@@ -62,7 +62,7 @@ static class WebLauncher {
 		application.MapFallbackToPage("/_Host");
 		
 		logger.Information("Starting Web server on port {Port}...", config.Port);
-		return application.RunAsync(config.CancellationToken);
+		return application.StartAsync(config.CancellationToken);
 	}
 	
 	private sealed class NullLifetime : IHostLifetime {

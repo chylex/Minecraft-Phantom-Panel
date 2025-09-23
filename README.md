@@ -14,8 +14,8 @@ This architecture has several goals and benefits:
 
 1. The services can run on separate computers, in separate containers, or a mixture of both.
 2. The services can be updated independently.
-   - The Controller or Web can receive new features, bug fixes, and security updates without the need to shutdown every Minecraft server.
-   - Agent updates can be staggered or delayed. For example, if you have Agents in different geographical locations, you could schedule around timezones and update them at times when people are unlikely to be online.
+   - The Controller or Web can receive updates without the need to shut down every Minecraft server.
+   - Agent updates can be staggered or delayed. For example, if the Agents are in different geographical locations, each can be updated at a time when people are unlikely to be online.
 3. Agents are lightweight processes which should have minimal impact on the performance of Minecraft servers.
 
 When an official Controller update is released, it will work with older versions of Agents. There is no guarantee it will also work in reverse (updated Agents and an older Controller), but if there is an Agent update that is compatible with an older Controller, it will be mentioned in the release notes.
@@ -28,34 +28,28 @@ This project is **work-in-progress**, and currently has no official releases. Fe
 
 For a quick start, I recommend using [Docker](https://www.docker.com/) or another containerization platform. The `Dockerfile` in the root of the repository can build three target images: `phantom-web`, `phantom-controller`, and `phantom-agent`.
 
-All images put the built application into the `/app` folder. The Agent image also installs Java 8, 16, 17, and 18.
+All images put the built application into the `/app` folder. The Agent image includes Java 8, 16, 17, and 21.
 
 Files are stored relative to the working directory. In the provided images, the working directory is set to `/data`.
+
+> [!IMPORTANT]
+> The 3 services communicate with each other using TLS. Due to inconsistent TLS support and implementation quirks between operating systems, Phantom Panel is intended to run only on Linux with up-to-date OpenSSL libraries. Support for other operating systems only exists for the purposes of local development, and components running on different operating systems may not be able to communicate with each other.
 
 ## Controller
 
 The Controller comprises 3 key areas:
 
 * **Agent RPC server** that Agents connect to.
-* **Web RPC server** that Web connects to.
+* **Web RPC server** that the Web connects to.
 * **PostgreSQL database connection** to persist data.
 
 The configuration for these is set via environment variables.
 
 ### Agent & Web Keys
 
-When the Controller starts for the first time, it will generate two pairs of key files. Each pair consists of a **common** and a **secret** key file. One pair is generated for **Agents**, and one for the **Web**.
+When the Controller starts for the first time, it will generate two certificate files (`agent.pfx` and `web.pfx`), which are used for TLS communication, and two authentication token files (`agent.auth` and `web.auth`). These files must only be accessible to the Controller itself.
 
-The **common keys** contain encryption certificates and authorization tokens, which are needed to connect to the Controller. Both the Controller and the connecting Agent or Web must have access to the appropriate **common key**.
-
-The **secret keys** contain information the Controller needs to establish an encrypted communication channel. These files should only be accessible by the Controller itself.
-
-The **common keys** have two forms:
-
-* A binary file `/data/secrets/agent.key` or `/data/secrets/web.key` that can be distributed to the other services.
-* A plaintext-encoded version printed into the logs on every startup, that can be passed to the other services in an environment variable.
-
-The **secret keys** are stored as binary files `/data/secrets/agent.secret` and `/data/secrets/web.secret`.
+On every start, the Controller prints the **Agent Key** and **Web Key** to standard output. These keys contain the authentication token, which lets the Controller validate the identity of the connecting service, and a certificate signature, which lets the connecting service validate the identity of the Controller. The keys must be passed to the Agent and Web services using an environment variable or a file.
 
 ### Storage
 
@@ -87,14 +81,14 @@ The `/data` folder will contain two folders:
 
 Use volumes to persist either the whole `/data` folder, or just `/data/data` if you don't want to persist the volatile files.
 
-### Environment variables
+### Environment Variables
 
 * **Controller Communication**
   - `CONTROLLER_HOST` is the hostname of the Controller.
   - `CONTROLLER_PORT` is the Agent RPC port of the Controller. Default: `9401`
   - `AGENT_NAME` is the display name of the Agent. Emoji are allowed.
-  - `AGENT_KEY` is the plaintext-encoded version of [Agent Key](#agent--web-keys).
-  - `AGENT_KEY_FILE` is a path to the [Agent Key](#agent--web-keys) binary file.
+  - `AGENT_KEY` is the [Agent Key](#agent--web-keys). Mutually exclusive with `AGENT_KEY_FILE`.
+  - `AGENT_KEY_FILE` is a path to a file containing the [Agent Key](#agent--web-keys). Mutually exclusive with `AGENT_KEY`.
 * **Agent Configuration**
   - `MAX_INSTANCES` is the number of instances that can be created.
   - `MAX_MEMORY` is the maximum amount of RAM that can be distributed among all instances. Use a positive integer with an optional suffix 'M' for MB, or 'G' for GB. Examples: `4096M`, `16G`
@@ -110,13 +104,13 @@ Use volumes to persist either the whole `/data` folder, or just `/data/data` if 
 
 Use volumes to persist the whole `/data` folder.
 
-### Environment variables
+### Environment Variables
 
 * **Controller Communication**
   - `CONTROLLER_HOST` is the hostname of the Controller.
   - `CONTROLLER_PORT` is the Web RPC port of the Controller. Default: `9402`
-  - `WEB_KEY` is the plaintext-encoded version of [Web Key](#agent--web-keys).
-  - `WEB_KEY_FILE` is a path to the [Web Key](#agent--web-keys) binary file.
+  - `WEB_KEY` is the [Web Key](#agent--web-keys). Mutually exclusive with `WEB_KEY_FILE`.
+  - `WEB_KEY_FILE` is a path to a file containing the [Web Key](#agent--web-keys). Mutually exclusive with `WEB_KEY`.
 * **Web Server**
   - `WEB_SERVER_HOST` is the host. Default: `0.0.0.0`
   - `WEB_SERVER_PORT` is the port. Default: `9400`

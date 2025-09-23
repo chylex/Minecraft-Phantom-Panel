@@ -74,10 +74,6 @@ sealed class Base24 {
 	}
 	
 	public byte[] Decode(ReadOnlySpan<char> data) {
-		if (data == null) {
-			throw new ArgumentNullException(nameof(data));
-		}
-		
 		if (data.Length % 7 != 0) {
 			throw new ArgumentException("The data length must be multiple of 7 chars.");
 		}

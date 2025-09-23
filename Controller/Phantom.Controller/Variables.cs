@@ -1,14 +1,13 @@
-﻿using Npgsql;
+﻿using System.Net;
+using Npgsql;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 
 namespace Phantom.Controller;
 
 sealed record Variables(
-	string AgentRpcServerHost,
-	ushort AgentRpcServerPort,
-	string WebRpcServerHost,
-	ushort WebRpcServerPort,
+	EndPoint AgentRpcServerHost,
+	EndPoint WebRpcServerHost,
 	string SqlConnectionString
 ) {
 	private static Variables LoadOrThrow() {
@@ -20,11 +19,19 @@ sealed record Variables(
 			Database = EnvironmentVariables.GetString("PG_DATABASE").Require
 		};
 		
+		EndPoint agentRpcServerHost = new IPEndPoint(
+			EnvironmentVariables.GetIpAddress("AGENT_RPC_SERVER_HOST").WithDefault(IPAddress.Any),
+			EnvironmentVariables.GetPortNumber("AGENT_RPC_SERVER_PORT").WithDefault(9401)
+		);
+		
+		EndPoint webRpcServerHost = new IPEndPoint(
+			EnvironmentVariables.GetIpAddress("WEB_RPC_SERVER_HOST").WithDefault(IPAddress.Any),
+			EnvironmentVariables.GetPortNumber("WEB_RPC_SERVER_PORT").WithDefault(9402)
+		);
+		
 		return new Variables(
-			EnvironmentVariables.GetString("AGENT_RPC_SERVER_HOST").WithDefault("0.0.0.0"),
-			EnvironmentVariables.GetPortNumber("AGENT_RPC_SERVER_PORT").WithDefault(9401),
-			EnvironmentVariables.GetString("WEB_RPC_SERVER_HOST").WithDefault("0.0.0.0"),
-			EnvironmentVariables.GetPortNumber("WEB_RPC_SERVER_PORT").WithDefault(9402),
+			agentRpcServerHost,
+			webRpcServerHost,
 			connectionStringBuilder.ToString()
 		);
 	}
@@ -33,7 +40,7 @@ sealed record Variables(
 		try {
 			return LoadOrThrow();
 		} catch (Exception e) {
-			PhantomLogger.Root.Fatal(e.Message);
+			PhantomLogger.Root.Fatal("{Error}", e.Message);
 			throw StopProcedureException.Instance;
 		}
 	}

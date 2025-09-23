@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Phantom.Common.Data.Java;
+using Phantom.Utils.Collections;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Serilog;
@@ -19,13 +21,14 @@ public sealed class JavaRuntimeDiscovery {
 		return null;
 	}
 	
-	public static IAsyncEnumerable<JavaRuntimeExecutable> Scan(string folderPath) {
-		return new JavaRuntimeDiscovery().ScanInternal(folderPath);
+	public static async Task<JavaRuntimeRepository> Scan(string folderPath, CancellationToken cancellationToken) {
+		var runtimes = await new JavaRuntimeDiscovery().ScanInternal(folderPath, cancellationToken).ToImmutableArrayAsync(cancellationToken);
+		return new JavaRuntimeRepository(runtimes);
 	}
 	
 	private readonly Dictionary<string, int> duplicateDisplayNames = new ();
 	
-	private async IAsyncEnumerable<JavaRuntimeExecutable> ScanInternal(string folderPath) {
+	private async IAsyncEnumerable<JavaRuntimeExecutable> ScanInternal(string folderPath, [EnumeratorCancellation] CancellationToken cancellationToken) {
 		Logger.Information("Starting Java runtime scan in: {FolderPath}", folderPath);
 		
 		string javaExecutableName = OperatingSystem.IsWindows() ? "java.exe" : "java";
@@ -37,6 +40,8 @@ public sealed class JavaRuntimeDiscovery {
 			IgnoreInaccessible = true,
 			AttributesToSkip = FileAttributes.Hidden | FileAttributes.ReparsePoint | FileAttributes.System
 		}).Order()) {
+			cancellationToken.ThrowIfCancellationRequested();
+			
 			var javaExecutablePath = Paths.NormalizeSlashes(Path.Combine(binFolderPath, javaExecutableName));
 			
 			FileAttributes javaExecutableAttributes;
@@ -54,7 +59,7 @@ public sealed class JavaRuntimeDiscovery {
 			
 			JavaRuntime? foundRuntime;
 			try {
-				foundRuntime = await TryReadJavaRuntimeInformationFromProcess(javaExecutablePath);
+				foundRuntime = await TryReadJavaRuntimeInformationFromProcess(javaExecutablePath, cancellationToken);
 			} catch (OperationCanceledException) {
 				Logger.Error("Java process did not exit in time.");
 				continue;
@@ -73,7 +78,7 @@ public sealed class JavaRuntimeDiscovery {
 		}
 	}
 	
-	private async Task<JavaRuntime?> TryReadJavaRuntimeInformationFromProcess(string javaExecutablePath) {
+	private async Task<JavaRuntime?> TryReadJavaRuntimeInformationFromProcess(string javaExecutablePath, CancellationToken cancellationToken) {
 		var startInfo = new ProcessStartInfo {
 			FileName = javaExecutablePath,
 			WorkingDirectory = Path.GetDirectoryName(javaExecutablePath),
@@ -81,32 +86,29 @@ public sealed class JavaRuntimeDiscovery {
 			RedirectStandardInput = false,
 			RedirectStandardOutput = false,
 			RedirectStandardError = true,
-			UseShellExecute = false
+			UseShellExecute = false,
 		};
 		
-		var process = new Process { StartInfo = startInfo };
-		var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		using var timeoutCancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		using var combinedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancellationTokenSource.Token, cancellationToken);
 		
-		try {
-			process.Start();
+		using var process = new Process();
+		process.StartInfo = startInfo;
+		process.Start();
+		
+		JavaRuntimeBuilder runtimeBuilder = new ();
+		
+		while (await process.StandardError.ReadLineAsync(combinedCancellationTokenSource.Token) is {} line) {
+			ExtractJavaVersionPropertiesFromLine(line, runtimeBuilder);
 			
-			JavaRuntimeBuilder runtimeBuilder = new ();
-			
-			while (await process.StandardError.ReadLineAsync(cancellationTokenSource.Token) is {} line) {
-				ExtractJavaVersionPropertiesFromLine(line, runtimeBuilder);
-				
-				JavaRuntime? runtime = runtimeBuilder.TryBuild(duplicateDisplayNames);
-				if (runtime != null) {
-					return runtime;
-				}
+			JavaRuntime? runtime = runtimeBuilder.TryBuild(duplicateDisplayNames);
+			if (runtime != null) {
+				return runtime;
 			}
-			
-			await process.WaitForExitAsync(cancellationTokenSource.Token);
-			return null;
-		} finally {
-			process.Dispose();
-			cancellationTokenSource.Dispose();
 		}
+		
+		await process.WaitForExitAsync(combinedCancellationTokenSource.Token);
+		return null;
 	}
 	
 	private static void ExtractJavaVersionPropertiesFromLine(ReadOnlySpan<char> line, JavaRuntimeBuilder runtimeBuilder) {

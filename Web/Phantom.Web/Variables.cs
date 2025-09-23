@@ -30,7 +30,7 @@ sealed record Variables(
 		try {
 			return LoadOrThrow();
 		} catch (Exception e) {
-			PhantomLogger.Root.Fatal(e.Message);
+			PhantomLogger.Root.Fatal("{Error}", e.Message);
 			throw StopProcedureException.Instance;
 		}
 	}

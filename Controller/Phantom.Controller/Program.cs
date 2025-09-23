@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using NetMQ;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Web;
 using Phantom.Controller;
@@ -7,9 +6,11 @@ using Phantom.Controller.Database.Postgres;
 using Phantom.Controller.Services;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc;
-using Phantom.Utils.Rpc.Runtime;
+using Phantom.Utils.Rpc.Runtime.Server;
 using Phantom.Utils.Runtime;
+using Phantom.Utils.Tasks;
+using RpcAgentServer = Phantom.Utils.Rpc.Runtime.Server.RpcServer<Phantom.Common.Messages.Agent.IMessageToController, Phantom.Common.Messages.Agent.IMessageToAgent, Phantom.Common.Data.Agent.AgentInfo>;
+using RpcWebServer = Phantom.Utils.Rpc.Runtime.Server.RpcServer<Phantom.Common.Messages.Web.IMessageToController, Phantom.Common.Messages.Web.IMessageToWeb, Phantom.Utils.Rpc.Runtime.Server.RpcServerClientHandshake.NoValue>;
 
 var shutdownCancellationTokenSource = new CancellationTokenSource();
 var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
@@ -37,7 +38,7 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel controller...");
 	PhantomLogger.Root.Information("Controller version: {Version}", fullVersion);
 	
-	var (agentRpcServerHost, agentRpcServerPort, webRpcServerHost, webRpcServerPort, sqlConnectionString) = Variables.LoadOrStop();
+	var (agentRpcServerHost, webRpcServerHost, sqlConnectionString) = Variables.LoadOrStop();
 	
 	string secretsPath = Path.GetFullPath("./secrets");
 	CreateFolderOrStop(secretsPath, Chmod.URWX_GRX);
@@ -56,20 +57,41 @@ try {
 	
 	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
 	
-	using var controllerServices = new ControllerServices(dbContextFactory, agentKeyData.AuthToken, webKeyData.AuthToken, shutdownCancellationToken);
+	using var controllerServices = new ControllerServices(dbContextFactory, shutdownCancellationToken);
 	await controllerServices.Initialize();
 	
-	static RpcConfiguration ConfigureRpc(string serviceName, string host, ushort port, ConnectionKeyData connectionKey) {
-		return new RpcConfiguration(serviceName, host, port, connectionKey.Certificate);
-	}
+	var agentConnectionParameters = new RpcServerConnectionParameters(
+		EndPoint: agentRpcServerHost,
+		Certificate: agentKeyData.Certificate,
+		AuthToken: agentKeyData.AuthToken,
+		PingIntervalSeconds: 10,
+		MessageQueueCapacity: 50,
+		FrameQueueCapacity: 100,
+		MaxConcurrentlyHandledMessages: 20
+	);
 	
-	try {
-		await Task.WhenAll(
-			RpcServerRuntime.Launch(ConfigureRpc("Agent", agentRpcServerHost, agentRpcServerPort, agentKeyData), AgentMessageRegistries.Definitions, controllerServices.AgentRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken),
-			RpcServerRuntime.Launch(ConfigureRpc("Web", webRpcServerHost, webRpcServerPort, webKeyData), WebMessageRegistries.Definitions, controllerServices.WebRegistrationHandler, controllerServices.ActorSystem, shutdownCancellationToken)
-		);
-	} finally {
-		NetMQConfig.Cleanup();
+	var webConnectionParameters = new RpcServerConnectionParameters(
+		EndPoint: webRpcServerHost,
+		Certificate: webKeyData.Certificate,
+		AuthToken: webKeyData.AuthToken,
+		PingIntervalSeconds: 60,
+		MessageQueueCapacity: 250,
+		FrameQueueCapacity: 500,
+		MaxConcurrentlyHandledMessages: 100
+	);
+	
+	var rpcServerTasks = new LinkedTasks<bool>([
+		new RpcAgentServer("Agent", agentConnectionParameters, AgentMessageRegistries.Definitions, controllerServices.AgentHandshake, controllerServices.AgentRegistrar).Run(shutdownCancellationToken),
+		new RpcWebServer("Web", webConnectionParameters, WebMessageRegistries.Definitions, new RpcServerClientHandshake.NoOp(), controllerServices.WebRegistrar).Run(shutdownCancellationToken),
+	]);
+	
+	// If either RPC server crashes, stop the whole process.
+	await rpcServerTasks.CancelTokenWhenAnyCompletes(shutdownCancellationTokenSource);
+	
+	foreach (Task<bool> rpcServerTask in await rpcServerTasks.WaitForAll()) {
+		if (rpcServerTask.IsFaulted || rpcServerTask is { IsCompletedSuccessfully: true, Result: false }) {
+			return 1;
+		}
 	}
 	
 	return 0;

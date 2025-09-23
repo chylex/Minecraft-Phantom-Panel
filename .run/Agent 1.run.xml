@@ -5,7 +5,7 @@
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.workdir/Agent1" />
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
-      <env name="AGENT_KEY" value="JXBQQYG5T267RQS75MXWBTCJZY5CKTCCGQY22MCZPHSQQSJYCHH2NG2TCNXQY6TBSXM9NQDRS2CMX" />
+      <env name="AGENT_KEY" value="K5ZRZYYJ9GWM2FS6XH5N5QQ7WZRPNDGHYMN5QP7RP6PPY27KRPMSYGCN" />
       <env name="AGENT_NAME" value="Agent 1" />
       <env name="ALLOWED_RCON_PORTS" value="25575,27000,27001" />
       <env name="ALLOWED_SERVER_PORTS" value="25565,26000,26001" />
@@ -15,14 +15,19 @@
       <env name="MAX_MEMORY" value="12G" />
     </envs>
     <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    <option name="ENV_FILE_PATHS" value="" />
+    <option name="REDIRECT_INPUT_PATH" value="" />
+    <option name="PTY_MODE" value="Auto" />
     <option name="USE_MONO" value="0" />
     <option name="RUNTIME_ARGUMENTS" value="" />
+    <option name="AUTO_ATTACH_CHILDREN" value="0" />
+    <option name="MIXED_MODE_DEBUG" value="0" />
     <option name="PROJECT_PATH" value="$PROJECT_DIR$/Agent/Phantom.Agent/Phantom.Agent.csproj" />
     <option name="PROJECT_EXE_PATH_TRACKING" value="1" />
     <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
     <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="0" />
     <option name="PROJECT_KIND" value="DotNetCore" />
-    <option name="PROJECT_TFM" value="net8.0" />
+    <option name="PROJECT_TFM" value="net9.0" />
     <method v="2">
       <option name="Build" />
     </method>

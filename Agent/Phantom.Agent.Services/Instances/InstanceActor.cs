@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Minecraft.Launcher;
 using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Instances.State;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
@@ -23,9 +24,11 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	private readonly CancellationToken shutdownCancellationToken;
 	
 	private readonly Guid instanceGuid;
-	private readonly InstanceServices instanceServices;
 	private readonly InstanceTicketManager instanceTicketManager;
 	private readonly InstanceContext context;
+	
+	private readonly ControllerSendQueue<ReportInstanceStatusMessage> reportStatusQueue;
+	private readonly ControllerSendQueue<ReportInstanceEventMessage> reportEventsQueue;
 	
 	private readonly CancellationTokenSource actorCancellationTokenSource = new ();
 	
@@ -33,14 +36,18 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	private InstanceRunningState? runningState = null;
 	
 	private InstanceActor(Init init) {
+		InstanceServices services = init.InstanceServices;
+		
 		this.agentState = init.AgentState;
 		this.instanceGuid = init.InstanceGuid;
-		this.instanceServices = init.InstanceServices;
 		this.instanceTicketManager = init.InstanceTicketManager;
 		this.shutdownCancellationToken = init.ShutdownCancellationToken;
 		
+		this.reportStatusQueue = new ControllerSendQueue<ReportInstanceStatusMessage>(services.ControllerConnection, init.ShortName + "-Status", capacity: 1, singleWriter: true);
+		this.reportEventsQueue = new ControllerSendQueue<ReportInstanceEventMessage>(services.ControllerConnection, init.ShortName + "-Events", capacity: 1000, singleWriter: true);
+		
 		var logger = PhantomLogger.Create<InstanceActor>(init.ShortName);
-		this.context = new InstanceContext(instanceGuid, init.ShortName, logger, instanceServices, SelfTyped, actorCancellationTokenSource.Token);
+		this.context = new InstanceContext(instanceGuid, init.ShortName, logger, services, reportEventsQueue, SelfTyped, actorCancellationTokenSource.Token);
 		
 		Receive<ReportInstanceStatusCommand>(ReportInstanceStatus);
 		ReceiveAsync<LaunchInstanceCommand>(LaunchInstance);
@@ -58,7 +65,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	private void ReportCurrentStatus() {
 		agentState.UpdateInstance(new Instance(instanceGuid, currentStatus));
-		instanceServices.ControllerConnection.Send(new ReportInstanceStatusMessage(instanceGuid, currentStatus));
+		reportStatusQueue.Enqueue(new ReportInstanceStatusMessage(instanceGuid, currentStatus));
 	}
 	
 	private void TransitionState(InstanceRunningState? newState) {
@@ -71,7 +78,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		runningState?.Initialize();
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	public sealed record ReportInstanceStatusCommand : ICommand;
 	
@@ -156,6 +163,12 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	private async Task Shutdown(ShutdownCommand command) {
 		await StopInstance(new StopInstanceCommand(MinecraftStopStrategy.Instant));
 		await actorCancellationTokenSource.CancelAsync();
+		
+		await Task.WhenAll(
+			reportStatusQueue.Shutdown(TimeSpan.FromSeconds(5)),
+			reportEventsQueue.Shutdown(TimeSpan.FromSeconds(5))
+		);
+		
 		Context.Stop(Self);
 	}
 }

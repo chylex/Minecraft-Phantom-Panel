@@ -1,66 +1,60 @@
 ﻿using Phantom.Common.Messages.Agent;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc.Runtime;
+using Phantom.Utils.Rpc.Runtime.Server;
 using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
 
-sealed class AgentConnection {
+sealed class AgentConnection(Guid agentGuid, string agentName) {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentConnection>();
 	
-	private readonly Guid agentGuid;
-	private string agentName;
+	private string agentName = agentName;
+	private RpcServerToClientConnection<IMessageToController, IMessageToAgent>? connection;
 	
-	private RpcConnectionToClient<IMessageToAgent>? connection;
-	
-	public AgentConnection(Guid agentGuid, string agentName) {
-		this.agentName = agentName;
-		this.agentGuid = agentGuid;
+	public void SetAgentName(string newAgentName) {
+		Volatile.Write(ref agentName, newAgentName);
 	}
 	
-	public void UpdateConnection(RpcConnectionToClient<IMessageToAgent> newConnection, string newAgentName) {
+	public void UpdateConnection(RpcServerToClientConnection<IMessageToController, IMessageToAgent> newConnection) {
 		lock (this) {
-			connection?.Close();
+			if (connection != null) {
+				_ = connection.CloseSession();
+			}
+			
 			connection = newConnection;
-			agentName = newAgentName;
 		}
 	}
 	
-	public bool CloseIfSame(RpcConnectionToClient<IMessageToAgent> expected) {
+	public void Close() {
 		lock (this) {
-			if (connection != null && connection.IsSame(expected)) {
-				connection.Close();
-				return true;
+			connection = null;
+		}
+	}
+	
+	public ValueTask Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
+		lock (this) {
+			if (connection != null) {
+				return connection.MessageSender.Send(message);
 			}
 		}
 		
-		return false;
-	}
-	
-	public Task Send<TMessage>(TMessage message) where TMessage : IMessageToAgent {
-		lock (this) {
-			if (connection == null) {
-				LogAgentOffline();
-				return Task.CompletedTask;
-			}
-			
-			return connection.Send(message);
-		}
+		LogAgentOffline();
+		return ValueTask.CompletedTask;
 	}
 	
 	public Task<TReply?> Send<TMessage, TReply>(TMessage message, TimeSpan waitForReplyTime, CancellationToken waitForReplyCancellationToken) where TMessage : IMessageToAgent, ICanReply<TReply> where TReply : class {
 		lock (this) {
-			if (connection == null) {
-				LogAgentOffline();
-				return Task.FromResult<TReply?>(default);
+			if (connection != null) {
+				return connection.MessageSender.Send<TMessage, TReply>(message, waitForReplyTime, waitForReplyCancellationToken)!;
 			}
-			
-			return connection.Send<TMessage, TReply>(message, waitForReplyTime, waitForReplyCancellationToken)!;
 		}
+		
+		LogAgentOffline();
+		return Task.FromResult<TReply?>(null);
 	}
 	
 	private void LogAgentOffline() {
-		Logger.Error("Could not send message to offline agent \"{Name}\" (GUID {Guid}).", agentName, agentGuid);
+		Logger.Error("Could not send message to offline agent \"{Name}\" (GUID {Guid}).", Volatile.Read(ref agentName), agentGuid);
 	}
 }

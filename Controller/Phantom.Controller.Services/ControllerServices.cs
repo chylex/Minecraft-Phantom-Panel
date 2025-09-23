@@ -1,9 +1,4 @@
 ﻿using Akka.Actor;
-using Phantom.Common.Data;
-using Phantom.Common.Messages.Agent;
-using Phantom.Common.Messages.Agent.ToController;
-using Phantom.Common.Messages.Web;
-using Phantom.Common.Messages.Web.ToController;
 using Phantom.Controller.Database;
 using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Agents;
@@ -13,9 +8,8 @@ using Phantom.Controller.Services.Rpc;
 using Phantom.Controller.Services.Users;
 using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
-using Phantom.Utils.Rpc.Runtime;
-using IMessageFromAgentToController = Phantom.Common.Messages.Agent.IMessageToController;
-using IMessageFromWebToController = Phantom.Common.Messages.Web.IMessageToController;
+using IRpcAgentRegistrar = Phantom.Utils.Rpc.Runtime.Server.IRpcServerClientRegistrar<Phantom.Common.Messages.Agent.IMessageToController, Phantom.Common.Messages.Agent.IMessageToAgent, Phantom.Common.Data.Agent.AgentInfo>;
+using IRpcWebRegistrar = Phantom.Utils.Rpc.Runtime.Server.IRpcServerClientRegistrar<Phantom.Common.Messages.Web.IMessageToController, Phantom.Common.Messages.Web.IMessageToWeb, Phantom.Utils.Rpc.Runtime.Server.RpcServerClientHandshake.NoValue>;
 
 namespace Phantom.Controller.Services;
 
@@ -38,13 +32,14 @@ public sealed class ControllerServices : IDisposable {
 	private AuditLogManager AuditLogManager { get; }
 	private EventLogManager EventLogManager { get; }
 	
-	public IRegistrationHandler<IMessageToAgent, IMessageFromAgentToController, RegisterAgentMessage> AgentRegistrationHandler { get; }
-	public IRegistrationHandler<IMessageToWeb, IMessageFromWebToController, RegisterWebMessage> WebRegistrationHandler { get; }
+	public IRpcAgentRegistrar AgentRegistrar { get; }
+	public AgentClientHandshake AgentHandshake { get; }
+	public IRpcWebRegistrar WebRegistrar { get; }
 	
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
-	public ControllerServices(IDbContextProvider dbProvider, AuthToken agentAuthToken, AuthToken webAuthToken, CancellationToken shutdownCancellationToken) {
+	public ControllerServices(IDbContextProvider dbProvider, CancellationToken shutdownCancellationToken) {
 		this.dbProvider = dbProvider;
 		this.cancellationToken = shutdownCancellationToken;
 		
@@ -60,14 +55,15 @@ public sealed class ControllerServices : IDisposable {
 		this.UserLoginManager = new UserLoginManager(AuthenticatedUserCache, UserManager, dbProvider);
 		this.PermissionManager = new PermissionManager(dbProvider);
 		
-		this.AgentManager = new AgentManager(ActorSystem, agentAuthToken, ControllerState, MinecraftVersions, UserLoginManager, dbProvider, cancellationToken);
+		this.AgentManager = new AgentManager(ActorSystem, ControllerState, MinecraftVersions, UserLoginManager, dbProvider, cancellationToken);
 		this.InstanceLogManager = new InstanceLogManager();
 		
 		this.AuditLogManager = new AuditLogManager(dbProvider);
 		this.EventLogManager = new EventLogManager(ControllerState, ActorSystem, dbProvider, shutdownCancellationToken);
 		
-		this.AgentRegistrationHandler = new AgentRegistrationHandler(AgentManager, InstanceLogManager, EventLogManager);
-		this.WebRegistrationHandler = new WebRegistrationHandler(webAuthToken, ControllerState, InstanceLogManager, UserManager, RoleManager, UserRoleManager, UserLoginManager, AuditLogManager, AgentManager, MinecraftVersions, EventLogManager);
+		this.AgentRegistrar = new AgentClientRegistrar(ActorSystem, AgentManager, InstanceLogManager, EventLogManager);
+		this.AgentHandshake = new AgentClientHandshake(AgentManager);
+		this.WebRegistrar = new WebClientRegistrar(ActorSystem, ControllerState, InstanceLogManager, UserManager, RoleManager, UserRoleManager, UserLoginManager, AuditLogManager, AgentManager, MinecraftVersions, EventLogManager);
 	}
 	
 	public async Task Initialize() {
