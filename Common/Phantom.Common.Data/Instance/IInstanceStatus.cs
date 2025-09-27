@@ -3,17 +3,17 @@
 namespace Phantom.Common.Data.Instance;
 
 [MemoryPackable]
-[MemoryPackUnion(0, typeof(InstanceIsOffline))]
-[MemoryPackUnion(1, typeof(InstanceIsInvalid))]
-[MemoryPackUnion(2, typeof(InstanceIsNotRunning))]
-[MemoryPackUnion(3, typeof(InstanceIsDownloading))]
-[MemoryPackUnion(4, typeof(InstanceIsLaunching))]
-[MemoryPackUnion(5, typeof(InstanceIsRunning))]
-[MemoryPackUnion(6, typeof(InstanceIsBackingUp))]
-[MemoryPackUnion(7, typeof(InstanceIsRestarting))]
-[MemoryPackUnion(8, typeof(InstanceIsStopping))]
-[MemoryPackUnion(9, typeof(InstanceIsFailed))]
-public partial interface IInstanceStatus {}
+[MemoryPackUnion(tag: 0, typeof(InstanceIsOffline))]
+[MemoryPackUnion(tag: 1, typeof(InstanceIsInvalid))]
+[MemoryPackUnion(tag: 2, typeof(InstanceIsNotRunning))]
+[MemoryPackUnion(tag: 3, typeof(InstanceIsDownloading))]
+[MemoryPackUnion(tag: 4, typeof(InstanceIsLaunching))]
+[MemoryPackUnion(tag: 5, typeof(InstanceIsRunning))]
+[MemoryPackUnion(tag: 6, typeof(InstanceIsBackingUp))]
+[MemoryPackUnion(tag: 7, typeof(InstanceIsRestarting))]
+[MemoryPackUnion(tag: 8, typeof(InstanceIsStopping))]
+[MemoryPackUnion(tag: 9, typeof(InstanceIsFailed))]
+public partial interface IInstanceStatus;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsOffline : IInstanceStatus;

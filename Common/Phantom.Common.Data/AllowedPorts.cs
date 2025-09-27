@@ -35,7 +35,7 @@ public sealed partial class AllowedPorts {
 	}
 	
 	private static AllowedPorts FromString(ReadOnlySpan<char> definitions) {
-		List<PortRange> parsedDefinitions = new ();
+		List<PortRange> parsedDefinitions = [];
 		
 		while (!definitions.IsEmpty) {
 			int separatorIndex = definitions.IndexOf(',');
@@ -49,7 +49,7 @@ public sealed partial class AllowedPorts {
 			}
 		}
 		
-		return new AllowedPorts(parsedDefinitions.ToImmutableArray());
+		return new AllowedPorts([..parsedDefinitions]);
 	}
 	
 	public static AllowedPorts FromString(string definitions) {

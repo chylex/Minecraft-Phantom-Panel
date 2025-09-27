@@ -4,9 +4,9 @@ using Phantom.Common.Data.Web.Users.SetUserPasswordErrors;
 
 namespace Phantom.Common.Data.Web.Users {
 	[MemoryPackable]
-	[MemoryPackUnion(0, typeof(UserNotFound))]
-	[MemoryPackUnion(1, typeof(PasswordIsInvalid))]
-	[MemoryPackUnion(2, typeof(UnknownError))]
+	[MemoryPackUnion(tag: 0, typeof(UserNotFound))]
+	[MemoryPackUnion(tag: 1, typeof(PasswordIsInvalid))]
+	[MemoryPackUnion(tag: 2, typeof(UnknownError))]
 	public abstract partial record SetUserPasswordError {
 		internal SetUserPasswordError() {}
 	}

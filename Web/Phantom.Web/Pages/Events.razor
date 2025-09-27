@@ -62,7 +62,7 @@
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
-    var result = await EventLogManager.GetMostRecentItems(await GetAuthenticatedUser(), 50, CancellationToken);
+    var result = await EventLogManager.GetMostRecentItems(await GetAuthenticatedUser(), count: 50, CancellationToken);
     if (result) {
       logItems = result.Value;
       agentNamesByGuid = AgentManager.GetAll().ToImmutableDictionary(static kvp => kvp.AgentGuid, static kvp => kvp.Configuration.AgentName);
@@ -72,7 +72,7 @@
       logItems = ImmutableArray<EventLogItem>.Empty;
       loadError = result.Error switch {
         UserActionFailure.NotAuthorized => "You do not have permission to view the event log.",
-        _                               => "Unknown error."
+        _                               => "Unknown error.",
       };
     }
   }
@@ -84,7 +84,7 @@
   private string? GetSubjectName(EventLogSubjectType type, string id) {
     return type switch {
       EventLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
-      _                            => null
+      _                            => null,
     };
   }
 

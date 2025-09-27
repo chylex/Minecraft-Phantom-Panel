@@ -67,22 +67,22 @@ public sealed class RamAllocationUnitsTests {
 			Assert.That(CallFromString("123A5M"), Throws.Exception.TypeOf<ArgumentOutOfRangeException>().With.Message.StartsWith("Must begin with a number."));
 		}
 		
-		[TestCase("0m", 0)]
-		[TestCase("256m", 256)]
-		[TestCase("256M", 256)]
-		[TestCase("512M", 512)]
-		[TestCase("65536M", 65536)]
+		[TestCase("0m", arg2: 0)]
+		[TestCase("256m", arg2: 256)]
+		[TestCase("256M", arg2: 256)]
+		[TestCase("512M", arg2: 512)]
+		[TestCase("65536M", arg2: 65536)]
 		[TestCase("16776960M", 16777216 - 256)]
 		public void ValidDefinitionInMegabytesIsParsedCorrectly(string definition, int megabytes) {
 			Assert.That(RamAllocationUnits.FromString(definition).InMegabytes, Is.EqualTo(megabytes));
 		}
 		
-		[TestCase("0g", 0)]
-		[TestCase("1g", 1024)]
-		[TestCase("1G", 1024)]
-		[TestCase("8G", 8192)]
-		[TestCase("64G", 65536)]
-		[TestCase("16383G", 16776192)]
+		[TestCase("0g", arg2: 0)]
+		[TestCase("1g", arg2: 1024)]
+		[TestCase("1G", arg2: 1024)]
+		[TestCase("8G", arg2: 8192)]
+		[TestCase("64G", arg2: 65536)]
+		[TestCase("16383G", arg2: 16776192)]
 		public void ValidDefinitionInGigabytesIsParsedCorrectly(string definition, int megabytes) {
 			Assert.That(RamAllocationUnits.FromString(definition).InMegabytes, Is.EqualTo(megabytes));
 		}

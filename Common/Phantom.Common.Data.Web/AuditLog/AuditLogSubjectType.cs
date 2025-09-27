@@ -2,5 +2,5 @@
 
 public enum AuditLogSubjectType {
 	User,
-	Instance
+	Instance,
 }

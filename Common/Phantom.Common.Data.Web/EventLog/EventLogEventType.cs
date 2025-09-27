@@ -7,7 +7,7 @@ public enum EventLogEventType {
 	InstanceStopped,
 	InstanceBackupSucceeded,
 	InstanceBackupSucceededWithWarnings,
-	InstanceBackupFailed
+	InstanceBackupFailed,
 }
 
 public static class EventLogEventTypeExtensions {
@@ -18,7 +18,7 @@ public static class EventLogEventTypeExtensions {
 		{ EventLogEventType.InstanceStopped, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceBackupSucceeded, EventLogSubjectType.Instance },
 		{ EventLogEventType.InstanceBackupSucceededWithWarnings, EventLogSubjectType.Instance },
-		{ EventLogEventType.InstanceBackupFailed, EventLogSubjectType.Instance }
+		{ EventLogEventType.InstanceBackupFailed, EventLogSubjectType.Instance },
 	};
 	
 	static EventLogEventTypeExtensions() {

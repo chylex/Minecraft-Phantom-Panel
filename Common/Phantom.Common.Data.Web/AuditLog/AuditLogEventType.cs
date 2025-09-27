@@ -13,7 +13,7 @@ public enum AuditLogEventType {
 	InstanceEdited,
 	InstanceLaunched,
 	InstanceStopped,
-	InstanceCommandExecuted
+	InstanceCommandExecuted,
 }
 
 public static class AuditLogEventTypeExtensions {
@@ -30,7 +30,7 @@ public static class AuditLogEventTypeExtensions {
 		{ AuditLogEventType.InstanceEdited,            AuditLogSubjectType.Instance },
 		{ AuditLogEventType.InstanceLaunched,          AuditLogSubjectType.Instance },
 		{ AuditLogEventType.InstanceStopped,           AuditLogSubjectType.Instance },
-		{ AuditLogEventType.InstanceCommandExecuted,   AuditLogSubjectType.Instance }
+		{ AuditLogEventType.InstanceCommandExecuted,   AuditLogSubjectType.Instance },
 	};
 	
 	static AuditLogEventTypeExtensions() {

@@ -4,11 +4,11 @@ namespace Phantom.Common.Data.Web.Minecraft;
 
 public static class JvmArgumentsHelper {
 	public static ImmutableArray<string> Split(string arguments) {
-		return arguments.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToImmutableArray();
+		return [..arguments.Split(separator: '\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
 	}
 	
 	public static string Join(ImmutableArray<string> arguments) {
-		return string.Join('\n', arguments);
+		return string.Join(separator: '\n', arguments);
 	}
 	
 	public static ValidationError? Validate(string arguments) {
@@ -35,6 +35,6 @@ public static class JvmArgumentsHelper {
 	public enum ValidationError {
 		InvalidFormat,
 		XmxNotAllowed,
-		XmsNotAllowed
+		XmsNotAllowed,
 	}
 }

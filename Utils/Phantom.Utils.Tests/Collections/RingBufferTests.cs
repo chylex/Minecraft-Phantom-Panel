@@ -18,19 +18,19 @@ public sealed class RingBufferTests {
 	public sealed class Count {
 		[Test]
 		public void OneItem() {
-			var buffer = PrepareRingBuffer(10, "a");
+			var buffer = PrepareRingBuffer(capacity: 10, "a");
 			Assert.That(buffer, Has.Count.EqualTo(1));
 		}
 		
 		[Test]
 		public void MultipleItemsWithinCapacity() {
-			var buffer = PrepareRingBuffer(10, "a", "b", "c");
+			var buffer = PrepareRingBuffer(capacity: 10, "a", "b", "c");
 			Assert.That(buffer, Has.Count.EqualTo(3));
 		}
 		
 		[Test]
 		public void MultipleItemsOverflowingCapacity() {
-			var buffer = PrepareRingBuffer(3, "a", "b", "c", "d", "e", "f");
+			var buffer = PrepareRingBuffer(capacity: 3, "a", "b", "c", "d", "e", "f");
 			Assert.That(buffer, Has.Count.EqualTo(3));
 		}
 	}
@@ -38,19 +38,19 @@ public sealed class RingBufferTests {
 	public sealed class Last {
 		[Test]
 		public void OneItem() {
-			var buffer = PrepareRingBuffer(10, "a");
+			var buffer = PrepareRingBuffer(capacity: 10, "a");
 			Assert.That(buffer.Last, Is.EqualTo("a"));
 		}
 		
 		[Test]
 		public void MultipleItemsWithinCapacity() {
-			var buffer = PrepareRingBuffer(10, "a", "b", "c");
+			var buffer = PrepareRingBuffer(capacity: 10, "a", "b", "c");
 			Assert.That(buffer.Last, Is.EqualTo("c"));
 		}
 		
 		[Test]
 		public void MultipleItemsOverflowingCapacity() {
-			var buffer = PrepareRingBuffer(3, "a", "b", "c", "d", "e", "f");
+			var buffer = PrepareRingBuffer(capacity: 3, "a", "b", "c", "d", "e", "f");
 			Assert.That(buffer.Last, Is.EqualTo("f"));
 		}
 	}
@@ -58,25 +58,25 @@ public sealed class RingBufferTests {
 	public sealed class EnumerateLast {
 		[Test]
 		public void AddOneItemAndEnumerateOne() {
-			var buffer = PrepareRingBuffer(10, "a");
+			var buffer = PrepareRingBuffer(capacity: 10, "a");
 			Assert.That(buffer.EnumerateLast(1), Is.EquivalentTo(new[] { "a" }));
 		}
 		
 		[Test]
 		public void AddOneItemAndEnumerateMaxValue() {
-			var buffer = PrepareRingBuffer(10, "a");
+			var buffer = PrepareRingBuffer(capacity: 10, "a");
 			Assert.That(buffer.EnumerateLast(uint.MaxValue), Is.EquivalentTo(new[] { "a" }));
 		}
 		
 		[Test]
 		public void AddMultipleItemsWithinCapacityAndEnumerateFewer() {
-			var buffer = PrepareRingBuffer(10, "a", "b", "c");
+			var buffer = PrepareRingBuffer(capacity: 10, "a", "b", "c");
 			Assert.That(buffer.EnumerateLast(2), Is.EquivalentTo(new[] { "b", "c" }));
 		}
 		
 		[Test]
 		public void AddMultipleItemsWithinCapacityAndEnumerateMaxValue() {
-			var buffer = PrepareRingBuffer(10, "a", "b", "c");
+			var buffer = PrepareRingBuffer(capacity: 10, "a", "b", "c");
 			Assert.That(buffer.EnumerateLast(uint.MaxValue), Is.EquivalentTo(new[] { "a", "b", "c" }));
 		}
 		

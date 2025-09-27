@@ -57,7 +57,7 @@ sealed partial class AuditLogRepository {
 		
 		public void UserDeleted(UserEntity user) {
 			AddItem(AuditLogEventType.UserDeleted, user.UserGuid.ToString(), new Dictionary<string, object?> {
-				{ "username", user.Name }
+				{ "username", user.Name },
 			});
 		}
 		
@@ -75,13 +75,13 @@ sealed partial class AuditLogRepository {
 		
 		public void InstanceCommandExecuted(Guid instanceGuid, string command) {
 			AddItem(AuditLogEventType.InstanceCommandExecuted, instanceGuid.ToString(), new Dictionary<string, object?> {
-				{ "command", command }
+				{ "command", command },
 			});
 		}
 		
 		public void InstanceStopped(Guid instanceGuid, int stopInSeconds) {
 			AddItem(AuditLogEventType.InstanceStopped, instanceGuid.ToString(), new Dictionary<string, object?> {
-				{ "stop_in_seconds", stopInSeconds.ToString() }
+				{ "stop_in_seconds", stopInSeconds.ToString() },
 			});
 		}
 	}

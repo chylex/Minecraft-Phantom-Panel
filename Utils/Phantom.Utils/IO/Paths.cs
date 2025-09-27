@@ -11,6 +11,6 @@ public static class Paths {
 	}
 	
 	public static string NormalizeSlashes(string path) {
-		return path.Replace('\\', '/');
+		return path.Replace(oldChar: '\\', newChar: '/');
 	}
 }

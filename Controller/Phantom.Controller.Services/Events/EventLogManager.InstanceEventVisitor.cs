@@ -30,7 +30,7 @@ sealed partial class EventLogManager {
 		
 		public void OnLaunchFailed(InstanceLaunchFailedEvent e) {
 			eventLogManager.EnqueueItem(eventGuid, utcTime, agentGuid, EventLogEventType.InstanceLaunchFailed, instanceGuid.ToString(), new Dictionary<string, object?> {
-				{ "reason", e.Reason.ToString() }
+				{ "reason", e.Reason.ToString() },
 			});
 		}
 		
@@ -46,7 +46,7 @@ sealed partial class EventLogManager {
 			var eventType = e.Kind switch {
 				BackupCreationResultKind.Success when e.Warnings != BackupCreationWarnings.None => EventLogEventType.InstanceBackupSucceededWithWarnings,
 				BackupCreationResultKind.Success                                                => EventLogEventType.InstanceBackupSucceeded,
-				_                                                                               => EventLogEventType.InstanceBackupFailed
+				_                                                                               => EventLogEventType.InstanceBackupFailed,
 			};
 			
 			var dictionary = new Dictionary<string, object?>();

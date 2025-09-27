@@ -14,7 +14,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	
 	private readonly BackupManager backupManager;
 	private readonly InstanceContext context;
-	private readonly SemaphoreSlim backupSemaphore = new (1, 1);
+	private readonly SemaphoreSlim backupSemaphore = new (initialCount: 1, maxCount: 1);
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
 	private readonly InstancePlayerCountTracker playerCountTracker;
 	

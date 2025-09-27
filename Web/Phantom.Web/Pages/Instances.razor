@@ -1,6 +1,7 @@
 ﻿@page "/instances"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
 @using System.Collections.Immutable
+@using System.Diagnostics.CodeAnalysis
 @using Phantom.Common.Data.Web.Instance
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Web.Services.Agents
@@ -80,6 +81,7 @@
     });
   }
 
+  [SuppressMessage("ReSharper", "UseCollectionExpression")]
   protected override async Task OnInitializedAsync() {
     var authenticatedUser = await GetAuthenticatedUser();
     if (authenticatedUser == null) {

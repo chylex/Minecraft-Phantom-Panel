@@ -7,20 +7,8 @@ using ILogger = Serilog.ILogger;
 
 namespace Phantom.Web.Services.Authentication;
 
-public sealed class UserLoginManager {
+public sealed class UserLoginManager(Navigation navigation, UserSessionBrowserStorage sessionBrowserStorage, CustomAuthenticationStateProvider authenticationStateProvider, ControllerConnection controllerConnection) {
 	private static readonly ILogger Logger = PhantomLogger.Create<UserLoginManager>();
-	
-	private readonly Navigation navigation;
-	private readonly UserSessionBrowserStorage sessionBrowserStorage;
-	private readonly CustomAuthenticationStateProvider authenticationStateProvider;
-	private readonly ControllerConnection controllerConnection;
-	
-	public UserLoginManager(Navigation navigation, UserSessionBrowserStorage sessionBrowserStorage, CustomAuthenticationStateProvider authenticationStateProvider, ControllerConnection controllerConnection) {
-		this.navigation = navigation;
-		this.sessionBrowserStorage = sessionBrowserStorage;
-		this.authenticationStateProvider = authenticationStateProvider;
-		this.controllerConnection = controllerConnection;
-	}
 	
 	public async Task<bool> LogIn(string username, string password, string? returnUrl = null) {
 		Optional<LogInSuccess> result;

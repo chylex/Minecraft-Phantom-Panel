@@ -9,7 +9,7 @@ public class EnvironmentVariablesTests {
 	private const string VariableNameMissing = "PhantomTestMissing";
 	private const string VariableNameExistingPrefix = "PhantomTest_";
 	
-	private readonly HashSet<string> createdVariables = new ();
+	private readonly HashSet<string> createdVariables = [];
 	
 	private static void Discard<T>(T value) {
 		_ = value;
@@ -25,7 +25,7 @@ public class EnvironmentVariablesTests {
 	[TearDown]
 	public void RemoveCreatedVariables() {
 		foreach (var variable in createdVariables) {
-			Environment.SetEnvironmentVariable(variable, null, EnvironmentVariableTarget.Process);
+			Environment.SetEnvironmentVariable(variable, value: null, EnvironmentVariableTarget.Process);
 		}
 	}
 	
@@ -121,8 +121,8 @@ public class EnvironmentVariablesTests {
 			return EnvironmentVariables.GetInteger(variableName, min: 1000, max: 6000);
 		}
 		
-		[TestCase("1000", 1000)]
-		[TestCase("6000", 6000)]
+		[TestCase("1000", arg2: 1000)]
+		[TestCase("6000", arg2: 6000)]
 		public void JustInRangeOrThrowReturnsActualValue(string inputValue, int returnedValue) {
 			Assert.That(GetValue(CreateVariable(inputValue)).Require, Is.EqualTo(returnedValue));
 		}

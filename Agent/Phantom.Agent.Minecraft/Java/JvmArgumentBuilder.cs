@@ -2,13 +2,8 @@
 
 namespace Phantom.Agent.Minecraft.Java;
 
-sealed class JvmArgumentBuilder {
-	private readonly JvmProperties basicProperties;
-	private readonly List<string> customArguments = new ();
-	
-	public JvmArgumentBuilder(JvmProperties basicProperties) {
-		this.basicProperties = basicProperties;
-	}
+sealed class JvmArgumentBuilder(JvmProperties basicProperties) {
+	private readonly List<string> customArguments = [];
 	
 	public void Add(string argument) {
 		customArguments.Add(argument);

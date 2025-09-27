@@ -21,14 +21,14 @@
   [Parameter]
   public string? Message { get; set; }
 
-  private string[] messageLines = Array.Empty<string>();
+  private string[] messageLines = [];
 
   protected override void OnParametersSet() {
     BlazorUtils.RequireEitherParameterIsSet(Form, Model);
 
     var model = Form?.Model.SubmitModel ?? Model;
     var message = model?.SubmitError ?? Message;
-    messageLines = message?.Split('\n') ?? Array.Empty<string>();
+    messageLines = message?.Split('\n') ?? [];
   }
 
 }

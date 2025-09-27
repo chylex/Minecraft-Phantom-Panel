@@ -6,7 +6,7 @@ public static class Files {
 			Mode = mode,
 			Access = FileAccess.Write,
 			Options = FileOptions.Asynchronous,
-			Share = FileShare.Read
+			Share = FileShare.Read,
 		};
 		
 		if (!OperatingSystem.IsWindows()) {

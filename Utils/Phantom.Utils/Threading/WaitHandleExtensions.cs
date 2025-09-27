@@ -12,7 +12,7 @@ public static class WaitHandleExtensions {
 			taskCompletionSource.TrySetCanceled(cancellationToken);
 		}
 		
-		var waitRegistration = ThreadPool.RegisterWaitForSingleObject(waitHandle, SetResult, null, Timeout.InfiniteTimeSpan, true);
+		var waitRegistration = ThreadPool.RegisterWaitForSingleObject(waitHandle, SetResult, state: null, Timeout.InfiniteTimeSpan, executeOnlyOnce: true);
 		var tokenRegistration = cancellationToken.Register(SetCancelled, useSynchronizationContext: false);
 		
 		void Cleanup(Task t) {

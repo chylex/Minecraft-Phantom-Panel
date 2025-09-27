@@ -7,14 +7,14 @@ public enum MinecraftVersionType : ushort {
 	Release = 1,
 	Snapshot = 2,
 	OldBeta = 3,
-	OldAlpha = 4
+	OldAlpha = 4,
 }
 
 public static class MinecraftVersionTypes {
-	public static readonly ImmutableArray<MinecraftVersionType> WithServerJars = ImmutableArray.Create(
+	public static readonly ImmutableArray<MinecraftVersionType> WithServerJars = [
 		MinecraftVersionType.Release,
-		MinecraftVersionType.Snapshot
-	);
+		MinecraftVersionType.Snapshot,
+	];
 	
 	public static MinecraftVersionType FromString(string? type) {
 		return type switch {
@@ -22,7 +22,7 @@ public static class MinecraftVersionTypes {
 			"snapshot"  => MinecraftVersionType.Snapshot,
 			"old_beta"  => MinecraftVersionType.OldBeta,
 			"old_alpha" => MinecraftVersionType.OldAlpha,
-			_           => MinecraftVersionType.Other
+			_           => MinecraftVersionType.Other,
 		};
 	}
 	
@@ -32,7 +32,7 @@ public static class MinecraftVersionTypes {
 			MinecraftVersionType.Snapshot => "Snapshots",
 			MinecraftVersionType.OldBeta  => "Beta",
 			MinecraftVersionType.OldAlpha => "Alpha",
-			_                             => "Unknown"
+			_                             => "Unknown",
 		};
 	}
 }

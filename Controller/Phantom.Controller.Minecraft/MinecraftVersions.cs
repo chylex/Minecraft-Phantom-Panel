@@ -12,7 +12,7 @@ public sealed class MinecraftVersions : IDisposable {
 	
 	private readonly MinecraftVersionApi api = new ();
 	private readonly Stopwatch cacheTimer = new ();
-	private readonly SemaphoreSlim cacheSemaphore = new (1, 1);
+	private readonly SemaphoreSlim cacheSemaphore = new (initialCount: 1, maxCount: 1);
 	
 	private bool IsCacheNotExpired => cacheTimer.IsRunning && cacheTimer.Elapsed < CacheRetentionTime;
 	

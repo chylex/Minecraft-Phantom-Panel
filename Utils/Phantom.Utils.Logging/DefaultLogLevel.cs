@@ -21,7 +21,7 @@ static class DefaultLogLevel {
 			"WARNING"     => LogEventLevel.Warning,
 			"ERROR"       => LogEventLevel.Error,
 			null          => GetDefaultLevelFallback(),
-			_             => LogEnvironmentVariableErrorAndExit(level)
+			_             => LogEnvironmentVariableErrorAndExit(level),
 		};
 	}
 	

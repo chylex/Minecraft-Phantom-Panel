@@ -7,7 +7,7 @@ using Phantom.Common.Data.Minecraft;
 namespace Phantom.Agent.Services.Instances.State;
 
 static class InstanceStopProcedure {
-	private static readonly ushort[] Stops = { 60, 30, 10, 5, 4, 3, 2, 1, 0 };
+	private static readonly ushort[] Stops = [60, 30, 10, 5, 4, 3, 2, 1, 0];
 	
 	public static async Task<bool> Run(InstanceContext context, MinecraftStopStrategy stopStrategy, InstanceRunningState runningState, Action<IInstanceStatus> reportStatus, CancellationToken cancellationToken) {
 		var process = runningState.Process;

@@ -9,5 +9,5 @@ public enum LaunchInstanceResult : byte {
 	ServerPortNotAllowed     = 6,
 	ServerPortAlreadyInUse   = 7,
 	RconPortNotAllowed       = 8,
-	RconPortAlreadyInUse     = 9
+	RconPortAlreadyInUse     = 9,
 }

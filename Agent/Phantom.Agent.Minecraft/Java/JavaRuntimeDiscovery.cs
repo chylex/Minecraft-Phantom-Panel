@@ -38,7 +38,7 @@ public sealed class JavaRuntimeDiscovery {
 			RecurseSubdirectories = true,
 			ReturnSpecialDirectories = false,
 			IgnoreInaccessible = true,
-			AttributesToSkip = FileAttributes.Hidden | FileAttributes.ReparsePoint | FileAttributes.System
+			AttributesToSkip = FileAttributes.Hidden | FileAttributes.ReparsePoint | FileAttributes.System,
 		}).Order()) {
 			cancellationToken.ThrowIfCancellationRequested();
 			

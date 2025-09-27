@@ -63,6 +63,6 @@ public sealed class SerilogLogger : ReceiveActor, IRequiresMessageQueue<ILoggerM
 	}
 	
 	private static object[] GetArgs(LogEvent item) {
-		return item.Message is LogMessage logMessage ? logMessage.Parameters().Where(static a => a is not PropertyEnricher).ToArray() : new[] { item.Message };
+		return item.Message is LogMessage logMessage ? logMessage.Parameters().Where(static a => a is not PropertyEnricher).ToArray() : [item.Message];
 	}
 }

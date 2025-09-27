@@ -9,12 +9,12 @@ public abstract class FormCustomValidationAttribute<TModel, TValue> : Validation
 	
 	protected sealed override ValidationResult? IsValid(object? value, ValidationContext validationContext) {
 		if (value is not TValue typedValue) {
-			return new ValidationResult(null, new[] { FieldName });
+			return new ValidationResult(errorMessage: null, [FieldName]);
 		}
 		
 		var model = (TModel) validationContext.ObjectInstance;
 		var result = Validate(model, typedValue);
-		return result == ValidationResult.Success ? result : new ValidationResult(result?.ErrorMessage, new[] { FieldName });
+		return result == ValidationResult.Success ? result : new ValidationResult(result?.ErrorMessage, [FieldName]);
 	}
 	
 	protected abstract string FieldName { get; }

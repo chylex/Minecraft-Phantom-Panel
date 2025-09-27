@@ -28,7 +28,7 @@ public abstract class FormInputBase<TValue> : ComponentBase {
 	protected IReadOnlyDictionary<string, object> GetAttributes(string cssClass) {
 		Dictionary<string, object> result = new (2 + (AdditionalAttributes?.Count ?? 0)) {
 			["id"] = Id,
-			["class"] = cssClass
+			["class"] = cssClass,
 		};
 		
 		if (AdditionalAttributes != null) {

@@ -2,7 +2,7 @@
 
 public enum FormNumberInputType {
 	Number,
-	Range
+	Range,
 }
 
 static class FormNumberInputTypes {
@@ -10,7 +10,7 @@ static class FormNumberInputTypes {
 		return type switch {
 			FormNumberInputType.Number => "number",
 			FormNumberInputType.Range  => "range",
-			_                          => throw new InvalidOperationException($"Unsupported input type {type}")
+			_                          => throw new InvalidOperationException($"Unsupported input type {type}"),
 		};
 	}
 	
@@ -18,7 +18,7 @@ static class FormNumberInputTypes {
 		return type switch {
 			FormNumberInputType.Number => "form-control",
 			FormNumberInputType.Range  => "form-range",
-			_                          => throw new InvalidOperationException($"Unsupported input type {type}")
+			_                          => throw new InvalidOperationException($"Unsupported input type {type}"),
 		};
 	}
 }

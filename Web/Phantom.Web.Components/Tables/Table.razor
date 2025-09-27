@@ -49,7 +49,7 @@
     get {
       List<string> classes = new (4) {
         "table",
-        "align-middle"
+        "align-middle",
       };
 
       if (ItemUrl != null) {
@@ -60,7 +60,7 @@
         classes.Add(Class);
       }
 
-      return string.Join(' ', classes);
+      return string.Join(separator: ' ', classes);
     }
   }
 

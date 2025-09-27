@@ -6,7 +6,7 @@ namespace Phantom.Utils.Processes;
 public sealed class ProcessConfigurator {
 	private readonly ProcessStartInfo startInfo = new () {
 		RedirectStandardOutput = true,
-		RedirectStandardError = true
+		RedirectStandardError = true,
 	};
 	
 	public string FileName {

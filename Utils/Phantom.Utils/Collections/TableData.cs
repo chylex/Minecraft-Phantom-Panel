@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace Phantom.Utils.Collections;
 
 public sealed class TableData<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictionary<TKey, TRow> where TRow : notnull where TKey : notnull {
-	private readonly List<TRow> rowList = new ();
+	private readonly List<TRow> rowList = [];
 	private readonly Dictionary<TKey, TRow> rowDictionary = new ();
 	
 	public TRow this[int index] => rowList[index];
@@ -47,7 +47,7 @@ public sealed class TableData<TRow, TKey> : IReadOnlyList<TRow>, IReadOnlyDictio
 	}
 	
 	public void UpdateFrom<TSource>(ImmutableArray<TSource> sourceItems, Func<TSource, TKey> getKey, Func<TSource, TRow> createRow, Func<TSource, TRow, TRow> updateRow) {
-		Dictionary<TRow, int> rowIndices = Enumerable.Range(0, rowList.Count).ToDictionary(i => rowList[i], static i => i, ReferenceEqualityComparer<TRow>.Instance);
+		Dictionary<TRow, int> rowIndices = Enumerable.Range(start: 0, rowList.Count).ToDictionary(i => rowList[i], static i => i, ReferenceEqualityComparer<TRow>.Instance);
 		HashSet<TKey> removedKeys = rowDictionary.Keys.ToHashSet();
 		
 		foreach (var sourceItem in sourceItems) {

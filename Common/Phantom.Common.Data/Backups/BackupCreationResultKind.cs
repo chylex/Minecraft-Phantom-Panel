@@ -10,7 +10,7 @@ public enum BackupCreationResultKind : byte {
 	BackupFileAlreadyExists = 6,
 	CouldNotCreateBackupFolder = 7,
 	CouldNotCopyWorldToTemporaryFolder = 8,
-	CouldNotCreateWorldArchive = 9
+	CouldNotCreateWorldArchive = 9,
 }
 
 public static class BackupCreationResultSummaryExtensions {

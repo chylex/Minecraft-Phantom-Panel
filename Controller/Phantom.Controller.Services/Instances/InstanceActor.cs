@@ -64,7 +64,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		return reply ?? InstanceActionFailure.AgentIsNotResponding;
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	public sealed record SetStatusCommand(IInstanceStatus Status) : ICommand;
 	

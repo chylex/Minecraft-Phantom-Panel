@@ -3,11 +3,11 @@ using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults;
 
 namespace Phantom.Common.Data.Web.Users {
 	[MemoryPackable]
-	[MemoryPackUnion(0, typeof(Success))]
-	[MemoryPackUnion(1, typeof(CreationFailed))]
-	[MemoryPackUnion(2, typeof(UpdatingFailed))]
-	[MemoryPackUnion(3, typeof(AddingToRoleFailed))]
-	[MemoryPackUnion(4, typeof(UnknownError))]
+	[MemoryPackUnion(tag: 0, typeof(Success))]
+	[MemoryPackUnion(tag: 1, typeof(CreationFailed))]
+	[MemoryPackUnion(tag: 2, typeof(UpdatingFailed))]
+	[MemoryPackUnion(tag: 3, typeof(AddingToRoleFailed))]
+	[MemoryPackUnion(tag: 4, typeof(UnknownError))]
 	public abstract partial record CreateOrUpdateAdministratorUserResult {
 		internal CreateOrUpdateAdministratorUserResult() {}
 	}

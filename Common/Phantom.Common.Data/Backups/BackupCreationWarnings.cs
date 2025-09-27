@@ -7,7 +7,7 @@ public enum BackupCreationWarnings : byte {
 	None = 0,
 	CouldNotDeleteTemporaryFolder = 1 << 0,
 	CouldNotCompressWorldArchive = 1 << 1,
-	CouldNotRestoreAutomaticSaving = 1 << 2
+	CouldNotRestoreAutomaticSaving = 1 << 2,
 }
 
 public static class BackupCreationWarningsExtensions {

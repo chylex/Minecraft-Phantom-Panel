@@ -4,11 +4,11 @@ using Phantom.Common.Data.Backups;
 namespace Phantom.Common.Data.Instance;
 
 [MemoryPackable]
-[MemoryPackUnion(0, typeof(InstanceLaunchSucceededEvent))]
-[MemoryPackUnion(1, typeof(InstanceLaunchFailedEvent))]
-[MemoryPackUnion(2, typeof(InstanceCrashedEvent))]
-[MemoryPackUnion(3, typeof(InstanceStoppedEvent))]
-[MemoryPackUnion(4, typeof(InstanceBackupCompletedEvent))]
+[MemoryPackUnion(tag: 0, typeof(InstanceLaunchSucceededEvent))]
+[MemoryPackUnion(tag: 1, typeof(InstanceLaunchFailedEvent))]
+[MemoryPackUnion(tag: 2, typeof(InstanceCrashedEvent))]
+[MemoryPackUnion(tag: 3, typeof(InstanceStoppedEvent))]
+[MemoryPackUnion(tag: 4, typeof(InstanceBackupCompletedEvent))]
 public partial interface IInstanceEvent {
 	void Accept(IInstanceEventVisitor visitor);
 }

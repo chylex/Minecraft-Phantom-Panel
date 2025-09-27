@@ -19,11 +19,10 @@ public sealed class JavaRuntimeRepository {
 	}
 	
 	public ImmutableArray<TaggedJavaRuntime> All {
-		get {
-			return runtimesByGuid.Select(static kvp => new TaggedJavaRuntime(kvp.Key, kvp.Value.Runtime))
-			                     .OrderBy(static taggedRuntime => taggedRuntime.Runtime)
-			                     .ToImmutableArray();
-		}
+		[SuppressMessage("ReSharper", "UseCollectionExpression")]
+		get => runtimesByGuid.Select(static kvp => new TaggedJavaRuntime(kvp.Key, kvp.Value.Runtime))
+		                     .OrderBy(static taggedRuntime => taggedRuntime.Runtime)
+		                     .ToImmutableArray();
 	}
 	
 	internal bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {

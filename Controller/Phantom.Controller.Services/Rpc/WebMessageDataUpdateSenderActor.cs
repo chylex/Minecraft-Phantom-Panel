@@ -59,7 +59,7 @@ sealed class WebMessageDataUpdateSenderActor : ReceiveActor<WebMessageDataUpdate
 		selfCached.Tell(new ReceiveInstanceLogsCommand(e.InstanceGuid, e.Lines));
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	private sealed record RefreshAgentsCommand(ImmutableDictionary<Guid, Agent> Agents) : ICommand;
 	
@@ -70,11 +70,11 @@ sealed class WebMessageDataUpdateSenderActor : ReceiveActor<WebMessageDataUpdate
 	private sealed record RefreshUserSessionCommand(Guid UserGuid) : ICommand;
 	
 	private Task RefreshAgents(RefreshAgentsCommand command) {
-		return messageSender.Send(new RefreshAgentsMessage(command.Agents.Values.ToImmutableArray())).AsTask();
+		return messageSender.Send(new RefreshAgentsMessage([..command.Agents.Values])).AsTask();
 	}
 	
 	private Task RefreshInstances(RefreshInstancesCommand command) {
-		return messageSender.Send(new RefreshInstancesMessage(command.Instances.Values.ToImmutableArray())).AsTask();
+		return messageSender.Send(new RefreshInstancesMessage([..command.Instances.Values])).AsTask();
 	}
 	
 	private Task ReceiveInstanceLogs(ReceiveInstanceLogsCommand command) {

@@ -4,5 +4,5 @@ public enum AddRoleError : byte {
 	NameIsEmpty,
 	NameIsTooLong,
 	NameAlreadyExists,
-	UnknownError
+	UnknownError,
 }

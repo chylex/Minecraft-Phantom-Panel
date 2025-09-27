@@ -3,8 +3,8 @@ using Phantom.Common.Data.Web.Users.UsernameRequirementViolations;
 
 namespace Phantom.Common.Data.Web.Users {
 	[MemoryPackable]
-	[MemoryPackUnion(0, typeof(IsEmpty))]
-	[MemoryPackUnion(1, typeof(TooLong))]
+	[MemoryPackUnion(tag: 0, typeof(IsEmpty))]
+	[MemoryPackUnion(tag: 1, typeof(TooLong))]
 	public abstract partial record UsernameRequirementViolation {
 		internal UsernameRequirementViolation() {}
 	}

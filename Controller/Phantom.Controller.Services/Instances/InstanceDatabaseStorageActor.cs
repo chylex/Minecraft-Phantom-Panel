@@ -35,10 +35,10 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 	}
 	
 	private ValueTask<InstanceEntity?> FindInstanceEntity(ILazyDbContext db) {
-		return db.Ctx.Instances.FindAsync(new object[] { instanceGuid }, cancellationToken);
+		return db.Ctx.Instances.FindAsync([instanceGuid], cancellationToken);
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	public sealed record StoreInstanceConfigurationCommand(Guid AuditLogUserGuid, bool IsCreatingInstance, InstanceConfiguration Configuration) : ICommand;
 	

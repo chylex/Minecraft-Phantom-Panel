@@ -58,7 +58,7 @@
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
-    var result = await AuditLogManager.GetMostRecentItems(await GetAuthenticatedUser(), 50, CancellationToken);
+    var result = await AuditLogManager.GetMostRecentItems(await GetAuthenticatedUser(), count: 50, CancellationToken);
     if (result) {
       logItems = result.Value;
       userNamesByGuid = (await UserManager.GetAll(CancellationToken)).ToImmutableDictionary(static user => user.Guid, static user => user.Name);
@@ -68,7 +68,7 @@
       logItems = ImmutableArray<AuditLogItem>.Empty;
       loadError = result.Error switch {
         UserActionFailure.NotAuthorized => "You do not have permission to view the audit log.",
-        _                               => "Unknown error."
+        _                               => "Unknown error.",
       };
     }
   }
@@ -77,7 +77,7 @@
     return type switch {
       AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
       AuditLogSubjectType.User     => userNamesByGuid != null && userNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
-      _                            => null
+      _                            => null,
     };
   }
 

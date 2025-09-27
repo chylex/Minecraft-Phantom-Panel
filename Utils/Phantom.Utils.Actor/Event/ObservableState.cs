@@ -2,7 +2,7 @@
 
 public sealed class ObservableState<TState> {
 	private readonly ReaderWriterLockSlim rwLock = new (LockRecursionPolicy.NoRecursion);
-	private readonly List<IListener> listeners = new ();
+	private readonly List<IListener> listeners = [];
 	
 	private TState state;
 	

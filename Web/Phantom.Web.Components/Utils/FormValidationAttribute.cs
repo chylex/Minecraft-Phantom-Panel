@@ -9,7 +9,7 @@ public abstract class FormValidationAttribute<TModel, TValue> : ValidationAttrib
 	
 	protected sealed override ValidationResult? IsValid(object? value, ValidationContext validationContext) {
 		var model = (TModel) validationContext.ObjectInstance;
-		return value is TValue typedValue && IsValid(model, typedValue) ? ValidationResult.Success : new ValidationResult(null, new[] { FieldName });
+		return value is TValue typedValue && IsValid(model, typedValue) ? ValidationResult.Success : new ValidationResult(errorMessage: null, [FieldName]);
 	}
 	
 	protected abstract string FieldName { get; }

@@ -4,8 +4,8 @@ using Phantom.Common.Data.Replies;
 namespace Phantom.Common.Data.Web.Users;
 
 [MemoryPackable]
-[MemoryPackUnion(0, typeof(OfUserActionFailure))]
-[MemoryPackUnion(1, typeof(OfInstanceActionFailure))]
+[MemoryPackUnion(tag: 0, typeof(OfUserActionFailure))]
+[MemoryPackUnion(tag: 1, typeof(OfInstanceActionFailure))]
 public abstract partial record UserInstanceActionFailure {
 	internal UserInstanceActionFailure() {}
 	

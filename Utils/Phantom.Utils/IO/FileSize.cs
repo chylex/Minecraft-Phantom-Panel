@@ -3,9 +3,9 @@
 public readonly record struct FileSize(ulong Bytes) {
 	private const int Scale = 1024;
 	
-	private static readonly string[] Units = {
-		"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"
-	};
+	private static readonly string[] Units = [
+		"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB",
+	];
 	
 	public string ToHumanReadable(int decimalPlaces) {
 		int power = Bytes == 0L ? 0 : (int) Math.Log(Bytes, Scale);

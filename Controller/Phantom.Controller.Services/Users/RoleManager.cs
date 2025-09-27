@@ -57,6 +57,6 @@ sealed class RoleManager {
 		var roleRepository = new RoleRepository(db);
 		
 		var allRoles = await roleRepository.GetAll();
-		return allRoles.Select(static role => role.ToRoleInfo()).ToImmutableArray();
+		return [..allRoles.Select(static role => role.ToRoleInfo())];
 	}
 }

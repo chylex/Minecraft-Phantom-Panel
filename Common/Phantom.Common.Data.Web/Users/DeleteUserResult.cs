@@ -3,5 +3,5 @@
 public enum DeleteUserResult : byte {
 	Deleted,
 	NotFound,
-	Failed
+	Failed,
 }

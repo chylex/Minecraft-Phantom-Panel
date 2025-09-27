@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using Phantom.Agent.Minecraft.Instance;
+﻿using Phantom.Agent.Minecraft.Instance;
 using Phantom.Utils.IO;
 using Serilog;
 
@@ -20,7 +19,7 @@ public sealed class FabricLauncher : BaseLauncher {
 			await DownloadLauncher(logger, launcherJarPath, cancellationToken);
 		}
 		
-		return new ServerJarInfo(launcherJarPath, ImmutableArray.Create("-Dfabric.installer.server.gameJar=" + Paths.NormalizeSlashes(serverJarPath)));
+		return new ServerJarInfo(launcherJarPath, ["-Dfabric.installer.server.gameJar=" + Paths.NormalizeSlashes(serverJarPath)]);
 	}
 	
 	private async Task DownloadLauncher(ILogger logger, string targetFilePath, CancellationToken cancellationToken) {

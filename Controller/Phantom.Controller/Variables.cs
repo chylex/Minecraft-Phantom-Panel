@@ -16,7 +16,7 @@ sealed record Variables(
 			Port = EnvironmentVariables.GetPortNumber("PG_PORT").Require,
 			Username = EnvironmentVariables.GetString("PG_USER").Require,
 			Password = EnvironmentVariables.GetString("PG_PASS").Require,
-			Database = EnvironmentVariables.GetString("PG_DATABASE").Require
+			Database = EnvironmentVariables.GetString("PG_DATABASE").Require,
 		};
 		
 		EndPoint agentRpcServerHost = new IPEndPoint(

@@ -16,7 +16,7 @@ static class Messages {
 			NameIsInvalid e     => e.Violation.ToSentence(),
 			PasswordIsInvalid e => string.Join(delimiter, e.Violations.Select(static v => v.ToSentence())),
 			NameAlreadyExists   => "Username is already occupied.",
-			_                   => "Unknown error."
+			_                   => "Unknown error.",
 		};
 	}
 	
@@ -24,7 +24,7 @@ static class Messages {
 		return error switch {
 			UserNotFound                                                    => "User not found.",
 			Common.Data.Web.Users.SetUserPasswordErrors.PasswordIsInvalid e => string.Join(delimiter, e.Violations.Select(static v => v.ToSentence())),
-			_                                                               => "Unknown error."
+			_                                                               => "Unknown error.",
 		};
 	}
 	
@@ -32,7 +32,7 @@ static class Messages {
 		return violation switch {
 			IsEmpty   => "Username must not be empty.",
 			TooLong v => "Username must not be longer than " + v.MaxLength + " character(s).",
-			_         => "Unknown error."
+			_         => "Unknown error.",
 		};
 	}
 	
@@ -42,7 +42,7 @@ static class Messages {
 			MustContainLowercaseLetter => "Password must contain a lowercase letter.",
 			MustContainUppercaseLetter => "Password must contain an uppercase letter.",
 			MustContainDigit           => "Password must contain a digit.",
-			_                          => "Unknown error."
+			_                          => "Unknown error.",
 		};
 	}
 	
@@ -51,7 +51,7 @@ static class Messages {
 			JvmArgumentsHelper.ValidationError.InvalidFormat => "Invalid format.",
 			JvmArgumentsHelper.ValidationError.XmxNotAllowed => "The -Xmx argument must not be specified manually.",
 			JvmArgumentsHelper.ValidationError.XmsNotAllowed => "The -Xms argument must not be specified manually.",
-			_                                                => throw new ArgumentOutOfRangeException(nameof(result), result, null)
+			_                                                => throw new ArgumentOutOfRangeException(nameof(result), result, message: null),
 		};
 	}
 	
@@ -66,7 +66,7 @@ static class Messages {
 			LaunchInstanceResult.ServerPortAlreadyInUse   => "Server port already in use.",
 			LaunchInstanceResult.RconPortNotAllowed       => "Rcon port not allowed.",
 			LaunchInstanceResult.RconPortAlreadyInUse     => "Rcon port already in use.",
-			_                                             => "Unknown error."
+			_                                             => "Unknown error.",
 		};
 	}
 	
@@ -77,7 +77,7 @@ static class Messages {
 			InstanceLaunchFailReason.CouldNotConfigureMinecraftServer       => "Could not configure Minecraft server.",
 			InstanceLaunchFailReason.CouldNotPrepareMinecraftServerLauncher => "Could not prepare Minecraft server launcher.",
 			InstanceLaunchFailReason.CouldNotStartMinecraftServer           => "Could not start Minecraft server.",
-			_                                                               => "Unknown error."
+			_                                                               => "Unknown error.",
 		};
 	}
 	
@@ -85,7 +85,7 @@ static class Messages {
 		return reason switch {
 			SendCommandToInstanceResult.Success            => "Command sent.",
 			SendCommandToInstanceResult.InstanceNotRunning => "Instance is not running.",
-			_                                              => "Unknown error."
+			_                                              => "Unknown error.",
 		};
 	}
 	
@@ -94,7 +94,7 @@ static class Messages {
 			StopInstanceResult.StopInitiated           => "Stopping initiated.",
 			StopInstanceResult.InstanceAlreadyStopping => "Instance is already stopping.",
 			StopInstanceResult.InstanceAlreadyStopped  => "Instance is already stopped.",
-			_                                          => "Unknown error."
+			_                                          => "Unknown error.",
 		};
 	}
 }

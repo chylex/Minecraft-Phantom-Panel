@@ -3,7 +3,7 @@
 public enum FormTextInputType {
 	Text,
 	Password,
-	Textarea
+	Textarea,
 }
 
 static class FormTextInputTypes {
@@ -11,7 +11,7 @@ static class FormTextInputTypes {
 		return type switch {
 			FormTextInputType.Text     => "text",
 			FormTextInputType.Password => "password",
-			_                          => throw new InvalidOperationException($"Unsupported input type {type}")
+			_                          => throw new InvalidOperationException($"Unsupported input type {type}"),
 		};
 	}
 }

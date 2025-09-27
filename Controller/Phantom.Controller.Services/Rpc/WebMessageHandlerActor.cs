@@ -39,7 +39,6 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		return Props<IMessageToController>.Create(() => new WebMessageHandlerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
 	
-	private readonly RpcServerToClientConnection<IMessageToController, IMessageToWeb> connection;
 	private readonly ControllerState controllerState;
 	private readonly UserManager userManager;
 	private readonly RoleManager roleManager;
@@ -51,7 +50,6 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 	private readonly EventLogManager eventLogManager;
 	
 	private WebMessageHandlerActor(Init init) {
-		this.connection = init.Connection;
 		this.controllerState = init.ControllerState;
 		this.userManager = init.UserManager;
 		this.roleManager = init.RoleManager;
@@ -62,7 +60,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 		this.minecraftVersions = init.MinecraftVersions;
 		this.eventLogManager = init.EventLogManager;
 		
-		var senderActorInit = new WebMessageDataUpdateSenderActor.Init(connection.MessageSender, controllerState, init.InstanceLogManager);
+		var senderActorInit = new WebMessageDataUpdateSenderActor.Init(init.Connection.MessageSender, controllerState, init.InstanceLogManager);
 		Context.ActorOf(WebMessageDataUpdateSenderActor.Factory(senderActorInit), "DataUpdateSender");
 		
 		ReceiveAndReplyLater<LogInMessage, Optional<LogInSuccess>>(HandleLogIn);

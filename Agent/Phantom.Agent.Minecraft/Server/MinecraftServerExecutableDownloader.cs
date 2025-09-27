@@ -17,7 +17,7 @@ sealed class MinecraftServerExecutableDownloader {
 	
 	private readonly CancellationTokenSource cancellationTokenSource = new ();
 	
-	private readonly List<CancellationTokenRegistration> listenerCancellationRegistrations = new ();
+	private readonly List<CancellationTokenRegistration> listenerCancellationRegistrations = [];
 	private int listenerCount = 0;
 	
 	public MinecraftServerExecutableDownloader(FileDownloadInfo fileDownloadInfo, string minecraftVersion, string filePath, MinecraftServerExecutableDownloadListener listener) {
@@ -106,7 +106,7 @@ sealed class MinecraftServerExecutableDownloader {
 				throw;
 			}
 			
-			File.Move(tmpFilePath, filePath, true);
+			File.Move(tmpFilePath, filePath, overwrite: true);
 			Logger.Information("Server version {Version} downloaded.", minecraftVersion);
 			
 			return filePath;

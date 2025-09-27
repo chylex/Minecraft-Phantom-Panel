@@ -51,11 +51,11 @@ public sealed partial class Result<TValue, TError> {
 	}
 	
 	public static implicit operator Result<TValue, TError>(TValue value) {
-		return new Result<TValue, TError>(hasValue: true, value, default);
+		return new Result<TValue, TError>(hasValue: true, value, error: default);
 	}
 	
 	public static implicit operator Result<TValue, TError>(TError error) {
-		return new Result<TValue, TError>(hasValue: false, default, error);
+		return new Result<TValue, TError>(hasValue: false, value: default, error);
 	}
 	
 	public static implicit operator bool(Result<TValue, TError> result) {
@@ -93,7 +93,7 @@ public sealed partial class Result<TError> {
 	}
 	
 	public static implicit operator Result<TError>([SuppressMessage("ReSharper", "UnusedParameter.Global")] Result.OkType _) {
-		return new Result<TError>(hasValue: true, default);
+		return new Result<TError>(hasValue: true, error: default);
 	}
 	
 	public static implicit operator Result<TError>(TError error) {

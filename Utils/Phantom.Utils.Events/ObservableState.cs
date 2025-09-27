@@ -13,19 +13,9 @@ public abstract class ObservableState<T> {
 		Subs.Publish(GetData());
 	}
 	
-	protected void Update(object? sender, EventArgs e) {
-		Subs.Publish(GetData());
-	}
-	
 	protected abstract T GetData();
 	
-	private sealed class Subscribers : EventSubscribers<T> {
-		private readonly ObservableState<T> observer;
-		
-		public Subscribers(ILogger logger, ObservableState<T> observer) : base(logger) {
-			this.observer = observer;
-		}
-		
+	private sealed class Subscribers(ILogger logger, ObservableState<T> observer) : EventSubscribers<T>(logger) {
 		public override void Subscribe(object owner, Action<T> subscriber) {
 			base.Subscribe(owner, subscriber);
 			subscriber(observer.GetData());

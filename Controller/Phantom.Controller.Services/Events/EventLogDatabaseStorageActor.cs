@@ -19,7 +19,7 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
-	private readonly LinkedList<StoreEventCommand> pendingCommands = new ();
+	private readonly LinkedList<StoreEventCommand> pendingCommands = [];
 	private bool hasScheduledFlush = false;
 	
 	private EventLogDatabaseStorageActor(Init init) {
@@ -30,7 +30,7 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 		ReceiveAsync<FlushChangesCommand>(FlushChanges);
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	public sealed record StoreEventCommand(Guid EventGuid, DateTime UtcTime, Guid? AgentGuid, EventLogEventType EventType, string SubjectId, Dictionary<string, object?>? Extra = null) : ICommand;
 	

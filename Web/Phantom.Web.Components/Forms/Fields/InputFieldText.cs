@@ -28,26 +28,26 @@ public sealed class InputFieldText : InputBase<string?>, ICustomFormField {
 	
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
 		if (Type == FormTextInputType.Textarea) {
-			builder.OpenElement(0, "textarea");
-			builder.AddMultipleAttributes(1, AdditionalAttributes);
+			builder.OpenElement(sequence: 0, "textarea");
+			builder.AddMultipleAttributes(sequence: 1, AdditionalAttributes);
 		}
 		else {
-			builder.OpenElement(0, "input");
-			builder.AddMultipleAttributes(1, AdditionalAttributes);
-			builder.AddAttribute(2, "type", Type.GetHtmlInputType());
+			builder.OpenElement(sequence: 0, "input");
+			builder.AddMultipleAttributes(sequence: 1, AdditionalAttributes);
+			builder.AddAttribute(sequence: 2, "type", Type.GetHtmlInputType());
 		}
 		
 		if (!string.IsNullOrEmpty(CssClass)) {
-			builder.AddAttribute(3, "class", CssClass);
+			builder.AddAttribute(sequence: 3, "class", CssClass);
 		}
 		
 		if (TwoWayValueBinding) {
-			builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValue));
+			builder.AddAttribute(sequence: 4, "value", BindConverter.FormatValue(CurrentValue));
 		}
 		
-		builder.AddAttribute(5, "onchange", OnChange);
-		builder.AddAttribute(6, "oninput", OnChange);
-		builder.AddAttribute(7, "onblur", OnBlur);
+		builder.AddAttribute(sequence: 5, "onchange", OnChange);
+		builder.AddAttribute(sequence: 6, "oninput", OnChange);
+		builder.AddAttribute(sequence: 7, "onblur", OnBlur);
 		builder.CloseElement();
 	}
 	

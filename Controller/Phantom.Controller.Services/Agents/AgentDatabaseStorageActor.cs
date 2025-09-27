@@ -31,7 +31,7 @@ sealed class AgentDatabaseStorageActor : ReceiveActor<AgentDatabaseStorageActor.
 		ReceiveAsync<FlushChangesCommand>(FlushChanges);
 	}
 	
-	public interface ICommand {}
+	public interface ICommand;
 	
 	public sealed record StoreAgentConfigurationCommand(AgentConfiguration Configuration) : ICommand;
 	

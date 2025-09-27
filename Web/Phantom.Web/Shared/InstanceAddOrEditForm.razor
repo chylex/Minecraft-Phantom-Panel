@@ -1,23 +1,23 @@
-﻿@using Phantom.Web.Components.Utils
-@using System.Collections.Immutable
+﻿@using System.Collections.Immutable
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
+@using Phantom.Common.Data
+@using Phantom.Common.Data.Instance
+@using Phantom.Common.Data.Java
+@using Phantom.Common.Data.Minecraft
+@using Phantom.Common.Data.Replies
+@using Phantom.Common.Data.Web.Agent
 @using Phantom.Common.Data.Web.Instance
 @using Phantom.Common.Data.Web.Minecraft
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Common.Messages.Web.ToController
 @using Phantom.Utils.Result
-@using Phantom.Common.Data.Replies
-@using Phantom.Common.Data.Web.Agent
-@using Phantom.Common.Data.Minecraft
-@using Phantom.Common.Data.Java
-@using Phantom.Common.Data
-@using Phantom.Common.Data.Instance
+@using Phantom.Web.Components.Utils
 @using Phantom.Web.Services
 @using Phantom.Web.Services.Agents
 @using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Rpc
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject Navigation Navigation
 @inject ControllerConnection ControllerConnection
 @inject AgentManager AgentManager
@@ -137,7 +137,7 @@
         const ushort MinimumMemoryUnits = 2;
         ushort maximumMemoryUnits = form.MaximumMemoryUnits;
         double availableMemoryRatio = maximumMemoryUnits <= MinimumMemoryUnits ? 100.0 : 100.0 * (form.AvailableMemoryUnits - MinimumMemoryUnits) / (maximumMemoryUnits - MinimumMemoryUnits);
-        string memoryInputSplitVar = FormattableString.Invariant($"--range-split: {Math.Round(availableMemoryRatio, 2)}%");
+        string memoryInputSplitVar = FormattableString.Invariant($"--range-split: {Math.Round(availableMemoryRatio, digits: 2)}%");
       }
       <FormNumberInput Id="instance-memory" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="@MinimumMemoryUnits" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" class="form-range split-danger" style="@memoryInputSplitVar">
         <LabelFragment>
@@ -312,7 +312,7 @@
 
   private void SetMinecraftVersionType(MinecraftVersionType type) {
     minecraftVersionType = type;
-    availableMinecraftVersions = allMinecraftVersions.Where(version => version.Type == type).ToImmutableArray();
+    availableMinecraftVersions = [..allMinecraftVersions.Where(version => version.Type == type)];
 
     if (!availableMinecraftVersions.IsEmpty && !availableMinecraftVersions.Any(version => version.Id == form.MinecraftVersion)) {
       form.MinecraftVersion = availableMinecraftVersions[0].Id;

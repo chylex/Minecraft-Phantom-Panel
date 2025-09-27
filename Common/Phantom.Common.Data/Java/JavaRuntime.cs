@@ -14,7 +14,7 @@ public sealed partial record JavaRuntime(
 			return 0;
 		}
 		
-		if (ReferenceEquals(null, other)) {
+		if (other is null) {
 			return 1;
 		}
 		
@@ -30,9 +30,9 @@ public sealed partial record JavaRuntime(
 	
 	private static bool TryParseFullVersion(string versionString, [NotNullWhen(true)] out Version? version) {
 		int dashIndex = versionString.IndexOf('-');
-		var versionSpan = dashIndex != -1 ? versionString.AsSpan(0, dashIndex) : versionString;
+		var versionSpan = dashIndex != -1 ? versionString.AsSpan(start: 0, dashIndex) : versionString;
 		if (versionSpan.Contains('_')) {
-			versionSpan = versionSpan.ToString().Replace('_', '.');
+			versionSpan = versionSpan.ToString().Replace(oldChar: '_', newChar: '.');
 		}
 		
 		return Version.TryParse(versionSpan, out version);

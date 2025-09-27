@@ -27,7 +27,7 @@
 @code {
 
   private ImmutableDictionary<Guid, RoleInfo> allRolesByGuid = ImmutableDictionary<Guid, RoleInfo>.Empty;
-  private List<RoleItem> items = new ();
+  private List<RoleItem> items = [];
 
   protected override async Task BeforeShown(UserInfo user) {
     var allRoles = await RoleManager.GetAll(CancellationToken);

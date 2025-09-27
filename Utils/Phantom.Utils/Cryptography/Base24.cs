@@ -82,7 +82,7 @@ sealed class Base24 {
 		var result = new byte[decodedDataLength];
 		
 		for (int i = 0; i < data.Length / 7; ++i) {
-			var subData = data.Slice(i * 7, 7);
+			var subData = data.Slice(i * 7, length: 7);
 			uint value = 0;
 			
 			foreach (char c in subData) {

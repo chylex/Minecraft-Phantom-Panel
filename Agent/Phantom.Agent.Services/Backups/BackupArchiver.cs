@@ -108,7 +108,7 @@ sealed class BackupArchiver {
 	
 	private async Task<bool> CreateTarArchive(string sourceFolderPath, string backupFilePath) {
 		try {
-			await TarFile.CreateFromDirectoryAsync(sourceFolderPath, backupFilePath, false, cancellationToken);
+			await TarFile.CreateFromDirectoryAsync(sourceFolderPath, backupFilePath, includeBaseDirectory: false, cancellationToken);
 			return true;
 		} catch (Exception e) {
 			logger.Error(e, "Could not create archive.");
@@ -135,7 +135,7 @@ sealed class BackupArchiver {
 		foreach (FileInfo file in sourceFolder.EnumerateFiles()) {
 			var filePath = relativePath.Add(file.Name);
 			if (IsFileSkipped(filePath)) {
-				logger.Debug("Skipping file: {File}", string.Join('/', filePath));
+				logger.Debug("Skipping file: {File}", string.Join(separator: '/', filePath));
 				continue;
 			}
 			
@@ -150,7 +150,7 @@ sealed class BackupArchiver {
 		foreach (DirectoryInfo directory in sourceFolder.EnumerateDirectories()) {
 			var folderPath = relativePath.Add(directory.Name);
 			if (IsFolderSkipped(folderPath)) {
-				logger.Debug("Skipping folder: {Folder}", string.Join('/', folderPath));
+				logger.Debug("Skipping folder: {Folder}", string.Join(separator: '/', folderPath));
 				continue;
 			}
 			
@@ -172,7 +172,7 @@ sealed class BackupArchiver {
 				}
 				else {
 					logger.Warning("Failed copying file {File}, retrying...", sourceFile.FullName);
-					await Task.Delay(200, cancellationToken);
+					await Task.Delay(millisecondsDelay: 200, cancellationToken);
 				}
 			}
 		}

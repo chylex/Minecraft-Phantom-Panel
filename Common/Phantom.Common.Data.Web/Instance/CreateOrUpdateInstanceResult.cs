@@ -6,7 +6,7 @@ public enum CreateOrUpdateInstanceResult : byte {
 	InstanceNameMustNotBeEmpty,
 	InstanceMemoryMustNotBeZero,
 	MinecraftVersionDownloadInfoNotFound,
-	AgentNotFound
+	AgentNotFound,
 }
 
 public static class CreateOrUpdateInstanceResultExtensions {
@@ -17,7 +17,7 @@ public static class CreateOrUpdateInstanceResultExtensions {
 			CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero          => "Memory must not be 0 MB.",
 			CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound => "Could not find download information for the selected Minecraft version.",
 			CreateOrUpdateInstanceResult.AgentNotFound                        => "Agent not found.",
-			_                                                                 => "Unknown error."
+			_                                                                 => "Unknown error.",
 		};
 	}
 }

@@ -28,21 +28,21 @@ public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAcc
 	}
 	
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
-		builder.OpenElement(0, "input");
-		builder.AddMultipleAttributes(1, AdditionalAttributes);
-		builder.AddAttribute(2, "type", Type.GetHtmlInputType());
+		builder.OpenElement(sequence: 0, "input");
+		builder.AddMultipleAttributes(sequence: 1, AdditionalAttributes);
+		builder.AddAttribute(sequence: 2, "type", Type.GetHtmlInputType());
 		
 		if (!string.IsNullOrEmpty(CssClass)) {
-			builder.AddAttribute(3, "class", CssClass);
+			builder.AddAttribute(sequence: 3, "class", CssClass);
 		}
 		
 		if (TwoWayValueBinding) {
-			builder.AddAttribute(4, "value", BindConverter.FormatValue(CurrentValueAsString));
+			builder.AddAttribute(sequence: 4, "value", BindConverter.FormatValue(CurrentValueAsString));
 		}
 		
-		builder.AddAttribute(5, "onchange", OnChange);
-		builder.AddAttribute(6, "oninput", OnChange);
-		builder.AddAttribute(7, "onblur", OnBlur);
+		builder.AddAttribute(sequence: 5, "onchange", OnChange);
+		builder.AddAttribute(sequence: 6, "oninput", OnChange);
+		builder.AddAttribute(sequence: 7, "onblur", OnBlur);
 		builder.CloseElement();
 	}
 	
@@ -68,7 +68,7 @@ public sealed class InputFieldNumeric<[DynamicallyAccessedMembers(DynamicallyAcc
 			decimal v => BindConverter.FormatValue(v, CultureInfo.InvariantCulture),
 			ushort v  => BindConverter.FormatValue((int) v, CultureInfo.InvariantCulture),
 			uint v    => BindConverter.FormatValue((long) v, CultureInfo.InvariantCulture),
-			_         => throw new InvalidOperationException($"Unsupported value type {value.GetType()}")
+			_         => throw new InvalidOperationException($"Unsupported value type {value.GetType()}"),
 		};
 	}
 }

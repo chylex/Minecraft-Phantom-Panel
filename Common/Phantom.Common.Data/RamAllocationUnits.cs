@@ -24,7 +24,7 @@ public readonly partial record struct RamAllocationUnits(
 	}
 	
 	public static RamAllocationUnits operator -(RamAllocationUnits left, RamAllocationUnits right) {
-		ushort units = (ushort) Math.Max(left.RawValue - right.RawValue, 0);
+		ushort units = (ushort) Math.Max(left.RawValue - right.RawValue, val2: 0);
 		return new RamAllocationUnits(units);
 	}
 	
@@ -68,7 +68,7 @@ public readonly partial record struct RamAllocationUnits(
 			throw new ArgumentOutOfRangeException(nameof(megabytes), "Must be at most " + MaximumMegabytes + " MB.");
 		}
 		
-		return new RamAllocationUnits((ushort) Math.Clamp(units, 0, MaximumUnits));
+		return new RamAllocationUnits((ushort) Math.Clamp(units, min: 0, MaximumUnits));
 	}
 	
 	/// <summary>
@@ -83,7 +83,7 @@ public readonly partial record struct RamAllocationUnits(
 		int unitMultiplier = char.ToUpperInvariant(definition[^1]) switch {
 			'M' => 1,
 			'G' => 1024,
-			_   => throw new ArgumentOutOfRangeException(nameof(definition), "Must end with 'M' or 'G'.")
+			_   => throw new ArgumentOutOfRangeException(nameof(definition), "Must end with 'M' or 'G'."),
 		};
 		
 		if (!int.TryParse(definition[..^1], out int size)) {

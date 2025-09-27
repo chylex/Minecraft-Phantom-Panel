@@ -6,5 +6,5 @@ public enum InstanceLaunchFailReason : byte {
 	CouldNotDownloadMinecraftServer        = 6,
 	CouldNotConfigureMinecraftServer       = 7,
 	CouldNotPrepareMinecraftServerLauncher = 8,
-	CouldNotStartMinecraftServer           = 9
+	CouldNotStartMinecraftServer           = 9,
 }

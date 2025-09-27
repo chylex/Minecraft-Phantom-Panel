@@ -29,7 +29,7 @@ sealed class UserManager {
 		var userRepository = new UserRepository(db);
 		
 		var allUsers = await userRepository.GetAll();
-		return allUsers.Select(static user => user.ToUserInfo()).ToImmutableArray();
+		return [..allUsers.Select(static user => user.ToUserInfo())];
 	}
 	
 	public async Task<UserEntity?> GetAuthenticated(string username, string password) {

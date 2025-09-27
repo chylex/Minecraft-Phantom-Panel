@@ -1,7 +1,7 @@
 ﻿namespace Phantom.Common.Data.Web.Users;
 
 public sealed record Permission(string Id, Permission? Parent) {
-	private static readonly List<Permission> AllPermissions = new ();
+	private static readonly List<Permission> AllPermissions = [];
 	public static IEnumerable<Permission> All => AllPermissions;
 	
 	private static Permission Register(string id, Permission? parent = null) {

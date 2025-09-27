@@ -2,12 +2,4 @@
 
 namespace Phantom.Agent.Minecraft.Java;
 
-public sealed class JavaRuntimeExecutable {
-	internal string ExecutablePath { get; }
-	internal JavaRuntime Runtime { get; }
-	
-	internal JavaRuntimeExecutable(string executablePath, JavaRuntime runtime) {
-		this.ExecutablePath = executablePath;
-		this.Runtime = runtime;
-	}
-}
+sealed record JavaRuntimeExecutable(string ExecutablePath, JavaRuntime Runtime);

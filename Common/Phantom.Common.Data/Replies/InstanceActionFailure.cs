@@ -4,7 +4,7 @@ public enum InstanceActionFailure : byte {
 	AgentDoesNotExist,
 	AgentShuttingDown,
 	AgentIsNotResponding,
-	InstanceDoesNotExist
+	InstanceDoesNotExist,
 }
 
 public static class InstanceActionFailureExtensions {
@@ -14,7 +14,7 @@ public static class InstanceActionFailureExtensions {
 			InstanceActionFailure.AgentShuttingDown    => "Agent is shutting down.",
 			InstanceActionFailure.AgentIsNotResponding => "Agent is not responding.",
 			InstanceActionFailure.InstanceDoesNotExist => "Instance does not exist.",
-			_                                          => "Unknown error."
+			_                                          => "Unknown error.",
 		};
 	}
 }

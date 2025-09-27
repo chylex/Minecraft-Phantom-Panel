@@ -53,7 +53,7 @@ public abstract class BaseLauncher : IServerLauncher {
 			FileName = javaRuntimeExecutable.ExecutablePath,
 			WorkingDirectory = instanceProperties.InstanceFolder,
 			RedirectInput = true,
-			UseShellExecute = false
+			UseShellExecute = false,
 		};
 		
 		var processArguments = processConfigurator.ArgumentList;
@@ -105,7 +105,7 @@ public abstract class BaseLauncher : IServerLauncher {
 	
 	private static async Task AcceptEula(InstanceProperties instanceProperties) {
 		var eulaFilePath = Path.Combine(instanceProperties.InstanceFolder, "eula.txt");
-		await File.WriteAllLinesAsync(eulaFilePath, new[] { "# EULA", "eula=true" }, Encoding.UTF8);
+		await File.WriteAllLinesAsync(eulaFilePath, ["# EULA", "eula=true"], Encoding.UTF8);
 	}
 	
 	private static async Task UpdateServerProperties(InstanceProperties instanceProperties) {

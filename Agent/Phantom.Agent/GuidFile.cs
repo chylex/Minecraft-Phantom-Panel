@@ -37,7 +37,7 @@ static class GuidFile {
 	}
 	
 	private static async Task<Guid> LoadGuidFromFile(string filePath) {
-		Files.RequireMaximumFileSize(filePath, 128);
+		Files.RequireMaximumFileSize(filePath, maximumBytes: 128);
 		string contents = await File.ReadAllTextAsync(filePath, Encoding.ASCII);
 		return Guid.Parse(contents.Trim());
 	}

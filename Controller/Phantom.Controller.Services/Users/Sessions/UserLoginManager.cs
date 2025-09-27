@@ -11,14 +11,12 @@ sealed class UserLoginManager {
 	private const int SessionIdBytes = 20;
 	
 	private readonly AuthenticatedUserCache authenticatedUserCache;
-	private readonly UserManager userManager;
 	private readonly IDbContextProvider dbProvider;
 	
 	private readonly UserSessionBucket[] sessionBuckets = new UserSessionBucket[256];
 	
-	public UserLoginManager(AuthenticatedUserCache authenticatedUserCache, UserManager userManager, IDbContextProvider dbProvider) {
+	public UserLoginManager(AuthenticatedUserCache authenticatedUserCache, IDbContextProvider dbProvider) {
 		this.authenticatedUserCache = authenticatedUserCache;
-		this.userManager = userManager;
 		this.dbProvider = dbProvider;
 		
 		for (int i = 0; i < sessionBuckets.GetLength(0); i++) {
@@ -126,7 +124,7 @@ sealed class UserLoginManager {
 		}
 		
 		public bool Equals(UserSession? other) {
-			if (ReferenceEquals(null, other)) {
+			if (other is null) {
 				return false;
 			}
 			

@@ -3,10 +3,10 @@
 namespace Phantom.Common.Data.Web.Agent;
 
 [MemoryPackable]
-[MemoryPackUnion(0, typeof(AgentIsOffline))]
-[MemoryPackUnion(1, typeof(AgentIsDisconnected))]
-[MemoryPackUnion(2, typeof(AgentIsOnline))]
-public partial interface IAgentConnectionStatus {}
+[MemoryPackUnion(tag: 0, typeof(AgentIsOffline))]
+[MemoryPackUnion(tag: 1, typeof(AgentIsDisconnected))]
+[MemoryPackUnion(tag: 2, typeof(AgentIsOnline))]
+public partial interface IAgentConnectionStatus;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record AgentIsOffline : IAgentConnectionStatus;

@@ -18,7 +18,7 @@ public sealed class StreamCopier : IDisposable {
 		try {
 			int bytesRead;
 			while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) != 0) {
-				var dataRead = new ReadOnlyMemory<byte>(buffer, 0, bytesRead);
+				var dataRead = new ReadOnlyMemory<byte>(buffer, start: 0, bytesRead);
 				BufferReady?.Invoke(this, new BufferEventArgs(dataRead));
 				await destination.WriteAsync(dataRead, cancellationToken);
 			}

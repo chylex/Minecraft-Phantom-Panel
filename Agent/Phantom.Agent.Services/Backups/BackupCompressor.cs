@@ -50,8 +50,8 @@ static class BackupCompressor {
 				"--rm",
 				"--no-progress",
 				"-o", destinationFilePath,
-				"--", sourceFilePath
-			}
+				"--", sourceFilePath,
+			},
 		};
 		
 		static void OnZstdOutput(object? sender, Process.Output output) {

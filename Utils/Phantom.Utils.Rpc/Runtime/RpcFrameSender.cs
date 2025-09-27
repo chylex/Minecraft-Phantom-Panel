@@ -1,9 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Frame;
 using Phantom.Utils.Rpc.Frame.Types;
 using Phantom.Utils.Rpc.Message;
+using Phantom.Utils.Tasks;
 using Serilog;
 using Serilog.Events;
 
@@ -102,11 +102,10 @@ sealed class RpcFrameSender<TMessageBase> : IMessageReplySender {
 		}
 	}
 	
-	[SuppressMessage("ReSharper", "FunctionNeverReturns")]
 	private async Task PingSchedule() {
 		CancellationToken cancellationToken = pingCancellationTokenSource.Token;
 		
-		while (true) {
+		while (cancellationToken.Check()) {
 			await Task.Delay(PingInterval, cancellationToken);
 			
 			pongTask = new TaskCompletionSource<DateTimeOffset>();

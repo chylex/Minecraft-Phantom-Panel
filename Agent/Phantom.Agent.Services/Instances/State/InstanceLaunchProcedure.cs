@@ -46,7 +46,7 @@ static class InstanceLaunchProcedure {
 		byte lastDownloadProgress = byte.MaxValue;
 		
 		void OnDownloadProgress(object? sender, DownloadProgressEventArgs args) {
-			byte progress = (byte) Math.Min(args.DownloadedBytes * 100 / args.TotalBytes, 100);
+			byte progress = (byte) Math.Min(args.DownloadedBytes * 100 / args.TotalBytes, val2: 100);
 			
 			if (lastDownloadProgress != progress) {
 				lastDownloadProgress = progress;

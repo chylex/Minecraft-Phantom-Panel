@@ -42,7 +42,7 @@ public sealed class RwLockedDictionary<TKey, TValue> where TKey : notnull {
 		get {
 			rwLock.EnterReadLock();
 			try {
-				return dict.Values.ToImmutableArray();
+				return [..dict.Values];
 			} finally {
 				rwLock.ExitReadLock();
 			}

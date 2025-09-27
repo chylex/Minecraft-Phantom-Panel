@@ -37,6 +37,6 @@ sealed class PermissionManager {
 	}
 	
 	public static ImmutableArray<string> GetMissingPermissionsOrdered(IEnumerable<Permission> allPermissions, ImmutableHashSet<string> existingPermissionIds) {
-		return allPermissions.Select(static permission => permission.Id).Except(existingPermissionIds).Order().ToImmutableArray();
+		return [..allPermissions.Select(static permission => permission.Id).Except(existingPermissionIds).Order()];
 	}
 }

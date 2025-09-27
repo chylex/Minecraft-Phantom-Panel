@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using Phantom.Agent.Services.Instances;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Tasks;
 using Phantom.Utils.Threading;
 using Serilog;
 
@@ -44,9 +44,8 @@ public sealed class AgentRegistrationHandler {
 		return true;
 	}
 	
-	[SuppressMessage("ReSharper", "FunctionNeverReturns")]
 	private async Task HandleNewSessionRegistrations(AgentServices agentServices, CancellationToken cancellationToken) {
-		while (true) {
+		while (cancellationToken.Check()) {
 			await newSessionEvent.WaitHandle.WaitOneAsync(cancellationToken);
 			newSessionEvent.Reset();
 			

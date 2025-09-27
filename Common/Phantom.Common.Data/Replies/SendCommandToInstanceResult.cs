@@ -3,5 +3,5 @@
 public enum SendCommandToInstanceResult : byte {
 	UnknownError = 0,
 	Success = 1,
-	InstanceNotRunning = 2
+	InstanceNotRunning = 2,
 }

@@ -133,7 +133,7 @@ sealed class BackupManager : IDisposable {
 				BackupCreationResultKind.CouldNotCreateBackupFolder         => "Could not create backup folder.",
 				BackupCreationResultKind.CouldNotCopyWorldToTemporaryFolder => "Could not copy world to temporary folder.",
 				BackupCreationResultKind.CouldNotCreateWorldArchive         => "Could not create world archive.",
-				_                                                           => "Unknown error."
+				_                                                           => "Unknown error.",
 			};
 		}
 	}

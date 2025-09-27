@@ -4,7 +4,7 @@ using Serilog;
 namespace Phantom.Utils.Events;
 
 public class EventSubscribers<T> {
-	private readonly RwLockedDictionary<object, Action<T>> subscribers = new (1, LockRecursionPolicy.NoRecursion);
+	private readonly RwLockedDictionary<object, Action<T>> subscribers = new (capacity: 1, LockRecursionPolicy.NoRecursion);
 	private readonly ILogger logger;
 	
 	internal EventSubscribers(ILogger logger) {

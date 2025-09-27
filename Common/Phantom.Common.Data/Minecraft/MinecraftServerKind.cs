@@ -2,5 +2,5 @@
 
 public enum MinecraftServerKind : ushort {
 	Vanilla = 1,
-	Fabric = 2
+	Fabric = 2,
 }

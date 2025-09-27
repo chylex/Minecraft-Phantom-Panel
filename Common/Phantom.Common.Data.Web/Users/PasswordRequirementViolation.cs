@@ -3,10 +3,10 @@ using Phantom.Common.Data.Web.Users.PasswordRequirementViolations;
 
 namespace Phantom.Common.Data.Web.Users {
 	[MemoryPackable]
-	[MemoryPackUnion(0, typeof(TooShort))]
-	[MemoryPackUnion(1, typeof(MustContainLowercaseLetter))]
-	[MemoryPackUnion(2, typeof(MustContainUppercaseLetter))]
-	[MemoryPackUnion(3, typeof(MustContainDigit))]
+	[MemoryPackUnion(tag: 0, typeof(TooShort))]
+	[MemoryPackUnion(tag: 1, typeof(MustContainLowercaseLetter))]
+	[MemoryPackUnion(tag: 2, typeof(MustContainUppercaseLetter))]
+	[MemoryPackUnion(tag: 3, typeof(MustContainDigit))]
 	public abstract partial record PasswordRequirementViolation {
 		internal PasswordRequirementViolation() {}
 	}

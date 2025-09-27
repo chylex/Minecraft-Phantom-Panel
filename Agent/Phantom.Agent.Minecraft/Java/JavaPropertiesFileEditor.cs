@@ -20,7 +20,7 @@ sealed class JavaPropertiesFileEditor {
 			File.Move(tmpFilePath, filePath, overwrite: true);
 		}
 		else {
-			await EditFromCopyOrCreate(null, filePath);
+			await EditFromCopyOrCreate(sourceFilePath: null, filePath);
 		}
 	}
 	

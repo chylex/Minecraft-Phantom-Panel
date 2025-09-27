@@ -97,13 +97,13 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		IServerLauncher launcher = configuration.MinecraftServerKind switch {
 			MinecraftServerKind.Vanilla => new VanillaLauncher(properties),
 			MinecraftServerKind.Fabric  => new FabricLauncher(properties),
-			_                           => InvalidLauncher.Instance
+			_                           => InvalidLauncher.Instance,
 		};
 		
 		if (instances.TryGetValue(instanceGuid, out var instance)) {
 			instances[instanceGuid] = instance with {
 				Configuration = configuration,
-				Launcher = launcher
+				Launcher = launcher,
 			};
 			
 			Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, instanceGuid);

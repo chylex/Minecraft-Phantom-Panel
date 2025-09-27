@@ -16,7 +16,7 @@ static class WebLauncher {
 		var assembly = typeof(WebLauncher).Assembly;
 		var builder = WebApplication.CreateBuilder(new WebApplicationOptions {
 			ApplicationName = assembly.GetName().Name,
-			ContentRootPath = Path.GetDirectoryName(assembly.Location)
+			ContentRootPath = Path.GetDirectoryName(assembly.Location),
 		});
 		
 		builder.Host.UseSerilog(config.Logger, dispose: true);

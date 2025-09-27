@@ -4,10 +4,10 @@ using Phantom.Common.Data.Web.Users.AddUserErrors;
 
 namespace Phantom.Common.Data.Web.Users {
 	[MemoryPackable]
-	[MemoryPackUnion(0, typeof(NameIsInvalid))]
-	[MemoryPackUnion(1, typeof(PasswordIsInvalid))]
-	[MemoryPackUnion(2, typeof(NameAlreadyExists))]
-	[MemoryPackUnion(3, typeof(UnknownError))]
+	[MemoryPackUnion(tag: 0, typeof(NameIsInvalid))]
+	[MemoryPackUnion(tag: 1, typeof(PasswordIsInvalid))]
+	[MemoryPackUnion(tag: 2, typeof(NameAlreadyExists))]
+	[MemoryPackUnion(tag: 3, typeof(UnknownError))]
 	public abstract partial record AddUserError {
 		internal AddUserError() {}
 	}

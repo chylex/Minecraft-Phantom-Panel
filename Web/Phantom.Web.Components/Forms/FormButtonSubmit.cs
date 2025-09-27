@@ -24,17 +24,17 @@ public sealed class FormButtonSubmit : ComponentBase {
 	protected override void BuildRenderTree(RenderTreeBuilder builder) {
 		var model = Form?.Model.SubmitModel ?? Model ?? throw new InvalidOperationException();
 		
-		builder.OpenElement(0, "input");
-		builder.AddMultipleAttributes(1, AdditionalAttributes);
-		builder.AddAttribute(2, "type", "submit");
+		builder.OpenElement(sequence: 0, "input");
+		builder.AddMultipleAttributes(sequence: 1, AdditionalAttributes);
+		builder.AddAttribute(sequence: 2, "type", "submit");
 		
 		string? cssClass = BlazorUtils.CombineClassNames(AdditionalAttributes, model.SubmitError == null ? null : "is-invalid");
 		if (!string.IsNullOrEmpty(cssClass)) {
-			builder.AddAttribute(3, "class", cssClass);
+			builder.AddAttribute(sequence: 3, "class", cssClass);
 		}
 		
-		builder.AddAttribute(4, "disabled", BlazorUtils.CombineBooleansWithOr(AdditionalAttributes, "disabled", model.IsSubmitting));
-		builder.AddAttribute(5, "value", Label);
+		builder.AddAttribute(sequence: 4, "disabled", BlazorUtils.CombineBooleansWithOr(AdditionalAttributes, "disabled", model.IsSubmitting));
+		builder.AddAttribute(sequence: 5, "value", Label);
 		builder.CloseElement();
 	}
 	

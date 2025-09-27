@@ -19,7 +19,7 @@ public sealed class UserSessionRefreshManager {
 		public event EventHandler? UserNeedsRefresh;
 		
 		internal void Notify() {
-			UserNeedsRefresh?.Invoke(null, EventArgs.Empty);
+			UserNeedsRefresh?.Invoke(sender: null, EventArgs.Empty);
 		}
 	}
 }
