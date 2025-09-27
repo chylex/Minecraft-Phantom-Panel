@@ -1,4 +1,5 @@
-﻿using Phantom.Agent.Minecraft.Instance;
+﻿using System.Net.Sockets;
+using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Instance;
@@ -18,6 +19,8 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	private readonly TaskCompletionSource firstDetection = AsyncTasks.CreateCompletionSource();
 	private readonly ManualResetEventSlim serverOutputEvent = new ();
 	
+	private bool WaitingForFirstDetection => !firstDetection.Task.IsCompleted;
+	
 	private InstancePlayerCounts? playerCounts;
 	private event EventHandler<int?>? OnlinePlayerCountChanged;
 	
@@ -33,33 +36,40 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	
 	protected override async Task RunTask() {
 		// Give the server time to start accepting connections.
-		await Task.Delay(TimeSpan.FromSeconds(10), CancellationToken);
+		await Task.Delay(TimeSpan.FromSeconds(5), CancellationToken);
 		
 		serverOutputEvent.Set();
 		process.AddOutputListener(OnOutput, maxLinesToReadFromHistory: 0);
 		
-		while (!CancellationToken.IsCancellationRequested) {
+		while (CancellationToken.Check()) {
 			serverOutputEvent.Reset();
 			
-			await UpdatePlayerCounts(await TryGetPlayerCounts());
+			InstancePlayerCounts? latestPlayerCounts = await TryGetPlayerCounts();
+			UpdatePlayerCounts(latestPlayerCounts);
 			
-			if (!firstDetection.Task.IsCompleted) {
-				firstDetection.SetResult();
+			if (latestPlayerCounts == null) {
+				await Task.Delay(WaitingForFirstDetection ? TimeSpan.FromSeconds(5) : TimeSpan.FromSeconds(10), CancellationToken);
 			}
-			
-			await Task.Delay(TimeSpan.FromSeconds(10), CancellationToken);
-			await serverOutputEvent.WaitHandle.WaitOneAsync(CancellationToken);
-			await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
+			else {
+				await Task.Delay(TimeSpan.FromSeconds(10), CancellationToken);
+				await serverOutputEvent.WaitHandle.WaitOneAsync(CancellationToken);
+				await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
+			}
 		}
 	}
 	
 	private async Task<InstancePlayerCounts?> TryGetPlayerCounts() {
 		try {
-			var result = await ServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
-			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", result.Online, result.Maximum);
-			return result;
+			return await ServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
 		} catch (ServerStatusProtocol.ProtocolException e) {
 			Logger.Error("{Message}", e.Message);
+			return null;
+		} catch (SocketException e) {
+			bool waitingForServerStart = e.SocketErrorCode == SocketError.ConnectionRefused && WaitingForFirstDetection;
+			if (!waitingForServerStart) {
+				Logger.Warning("Could not check online player count. Socket error {ErrorCode} ({ErrorCodeName}), reason: {ErrorMessage}", e.ErrorCode, e.SocketErrorCode, e.Message);
+			}
+			
 			return null;
 		} catch (Exception e) {
 			Logger.Error(e, "Caught exception while checking online player count.");
@@ -67,19 +77,27 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 		}
 	}
 	
-	private async Task UpdatePlayerCounts(InstancePlayerCounts? value) {
+	private void UpdatePlayerCounts(InstancePlayerCounts? newPlayerCounts) {
+		if (newPlayerCounts is {} value) {
+			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", value.Online, value.Maximum);
+			firstDetection.TrySetResult();
+		}
+		
 		EventHandler<int?>? onlinePlayerCountChanged;
 		lock (this) {
-			if (playerCounts == value) {
+			if (playerCounts == newPlayerCounts) {
 				return;
 			}
 			
-			playerCounts = value;
+			playerCounts = newPlayerCounts;
 			onlinePlayerCountChanged = OnlinePlayerCountChanged;
 		}
 		
-		onlinePlayerCountChanged?.Invoke(this, value?.Online);
-		await controllerConnection.Send(new ReportInstancePlayerCountsMessage(instanceGuid, value), CancellationToken);
+		onlinePlayerCountChanged?.Invoke(this, newPlayerCounts?.Online);
+		
+		if (!controllerConnection.TrySend(new ReportInstancePlayerCountsMessage(instanceGuid, newPlayerCounts))) {
+			Logger.Warning("Could not report online player count to Controller.");
+		}
 	}
 	
 	public async Task WaitForOnlinePlayers(CancellationToken cancellationToken) {

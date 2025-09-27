@@ -24,7 +24,7 @@ public static class ServerStatusProtocol {
 	private static async Task<short> ReadStreamHeader(NetworkStream tcpStream, CancellationToken cancellationToken) {
 		var headerBuffer = ArrayPool<byte>.Shared.Rent(3);
 		try {
-			await tcpStream.ReadExactlyAsync(headerBuffer, 0, 3, cancellationToken);
+			await tcpStream.ReadExactlyAsync(headerBuffer, offset: 0, count: 3, cancellationToken);
 			
 			if (headerBuffer[0] != 0xFF) {
 				throw new ProtocolException("Unexpected first byte in response from server: " + headerBuffer[0]);
@@ -44,8 +44,8 @@ public static class ServerStatusProtocol {
 	private static async Task<InstancePlayerCounts> ReadPlayerCounts(NetworkStream tcpStream, int messageLength, CancellationToken cancellationToken) {
 		var messageBuffer = ArrayPool<byte>.Shared.Rent(messageLength);
 		try {
-			await tcpStream.ReadExactlyAsync(messageBuffer, 0, messageLength, cancellationToken);
-			return ReadPlayerCountsFromResponse(messageBuffer.AsSpan(0, messageLength));
+			await tcpStream.ReadExactlyAsync(messageBuffer, offset: 0, messageLength, cancellationToken);
+			return ReadPlayerCountsFromResponse(messageBuffer.AsSpan(start: 0, messageLength));
 		} finally {
 			ArrayPool<byte>.Shared.Return(messageBuffer);
 		}
@@ -54,7 +54,7 @@ public static class ServerStatusProtocol {
 	/// <summary>
 	/// Legacy query protocol uses the paragraph symbol (§) as separator encoded in UTF-16BE.
 	/// </summary>
-	private static readonly byte[] Separator = { 0x00, 0xA7 };
+	private static readonly byte[] Separator = [0x00, 0xA7];
 	
 	private static InstancePlayerCounts ReadPlayerCountsFromResponse(ReadOnlySpan<byte> messageBuffer) {
 		int lastSeparator = messageBuffer.LastIndexOf(Separator);
