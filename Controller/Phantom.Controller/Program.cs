@@ -81,8 +81,8 @@ try {
 	);
 	
 	var rpcServerTasks = new LinkedTasks<bool>([
-		new RpcAgentServer("Agent", agentConnectionParameters, AgentMessageRegistries.Definitions, controllerServices.AgentHandshake, controllerServices.AgentRegistrar).Run(shutdownCancellationToken),
-		new RpcWebServer("Web", webConnectionParameters, WebMessageRegistries.Definitions, new RpcServerClientHandshake.NoOp(), controllerServices.WebRegistrar).Run(shutdownCancellationToken),
+		new RpcAgentServer("Agent", agentConnectionParameters, AgentMessageRegistries.Registries, controllerServices.AgentHandshake, controllerServices.AgentRegistrar).Run(shutdownCancellationToken),
+		new RpcWebServer("Web", webConnectionParameters, WebMessageRegistries.Registries, new RpcServerClientHandshake.NoOp(), controllerServices.WebRegistrar).Run(shutdownCancellationToken),
 	]);
 	
 	// If either RPC server crashes, stop the whole process.

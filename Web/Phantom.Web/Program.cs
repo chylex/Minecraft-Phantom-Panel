@@ -63,7 +63,7 @@ try {
 		MaxConcurrentlyHandledMessages: 100
 	);
 	
-	using var rpcClient = await RpcClient<IMessageToController, IMessageToWeb>.Connect("Controller", rpcClientConnectionParameters, WebMessageRegistries.Definitions, shutdownCancellationToken);
+	using var rpcClient = await RpcClient<IMessageToController, IMessageToWeb>.Connect("Controller", rpcClientConnectionParameters, WebMessageRegistries.Registries, shutdownCancellationToken);
 	if (rpcClient == null) {
 		PhantomLogger.Root.Fatal("Could not connect to Phantom Controller, shutting down.");
 		return 1;

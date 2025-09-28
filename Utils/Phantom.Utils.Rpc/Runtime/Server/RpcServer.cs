@@ -10,16 +10,32 @@ using Serilog;
 
 namespace Phantom.Utils.Rpc.Runtime.Server;
 
-public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult>(
-	string loggerName,
-	RpcServerConnectionParameters connectionParameters,
-	IMessageDefinitions<TClientToServerMessage, TServerToClientMessage> messageDefinitions,
-	IRpcServerClientHandshake<THandshakeResult> clientHandshake,
-	IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> clientRegistrar
-) {
-	private readonly ILogger logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult>>(loggerName);
-	private readonly RpcServerClientSessions<TServerToClientMessage> clientSessions = new (loggerName, connectionParameters, messageDefinitions.ToClient);
+public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult> {
+	private readonly string loggerName;
+	private readonly ILogger logger;
+	private readonly RpcServerConnectionParameters connectionParameters;
+	private readonly MessageRegistries<TClientToServerMessage, TServerToClientMessage>.WithMapping messageRegistries;
+	private readonly IRpcServerClientHandshake<THandshakeResult> clientHandshake;
+	private readonly IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> clientRegistrar;
+	
+	private readonly RpcServerClientSessions<TServerToClientMessage> clientSessions;
 	private readonly List<Client> clients = [];
+	
+	public RpcServer(
+		string loggerName,
+		RpcServerConnectionParameters connectionParameters,
+		MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries,
+		IRpcServerClientHandshake<THandshakeResult> clientHandshake,
+		IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> clientRegistrar
+	) {
+		this.loggerName = loggerName;
+		this.logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult>>(loggerName);
+		this.connectionParameters = connectionParameters;
+		this.messageRegistries = messageRegistries.CreateMapping();
+		this.clientHandshake = clientHandshake;
+		this.clientRegistrar = clientRegistrar;
+		this.clientSessions = new RpcServerClientSessions<TServerToClientMessage>(loggerName, connectionParameters, this.messageRegistries.ToClient.Mapping);
+	}
 	
 	public async Task<bool> Run(CancellationToken shutdownToken) {
 		EndPoint endPoint = connectionParameters.EndPoint;
@@ -36,7 +52,7 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 		
 		var serverData = new SharedData(
 			connectionParameters,
-			messageDefinitions.ToServer,
+			messageRegistries,
 			clientHandshake,
 			clientRegistrar,
 			clientSessions
@@ -94,7 +110,7 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 	
 	private readonly record struct SharedData(
 		RpcServerConnectionParameters ConnectionParameters,
-		MessageRegistry<TClientToServerMessage> MessageRegistry,
+		MessageRegistries<TClientToServerMessage, TServerToClientMessage>.WithMapping MessageDefinitions,
 		IRpcServerClientHandshake<THandshakeResult> ClientHandshake,
 		IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> ClientRegistrar,
 		RpcServerClientSessions<TServerToClientMessage> ClientSessions
@@ -226,6 +242,8 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 				}
 				
 				await stream.WriteUnsignedShort(sharedData.ConnectionParameters.PingIntervalSeconds, cancellationToken);
+				await sharedData.MessageDefinitions.ToClient.Write(stream, cancellationToken);
+				await sharedData.MessageDefinitions.ToServer.Write(stream, cancellationToken);
 				await stream.Flush(cancellationToken);
 				
 				var sessionId = await stream.ReadGuid(cancellationToken);
@@ -263,7 +281,7 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 			switch (await sharedData.ClientHandshake.Perform(session.IsNew, stream, cancellationToken)) {
 				case Left<THandshakeResult, Exception>(var handshakeResult):
 					try {
-						var connection = new RpcServerToClientConnection<TClientToServerMessage, TServerToClientMessage>(sharedData.ConnectionParameters, sharedData.MessageRegistry, session, stream);
+						var connection = new RpcServerToClientConnection<TClientToServerMessage, TServerToClientMessage>(sharedData.ConnectionParameters, sharedData.MessageDefinitions.ToServer.Mapping, session, stream);
 						var messageReceiver = sharedData.ClientRegistrar.Register(connection, handshakeResult);
 						
 						return new EstablishedConnection(session, connection, messageReceiver);

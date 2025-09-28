@@ -10,23 +10,18 @@ public static class AgentMessageRegistries {
 	public static MessageRegistry<IMessageToAgent> ToAgent { get; } = new (nameof(ToAgent));
 	public static MessageRegistry<IMessageToController> ToController { get; } = new (nameof(ToController));
 	
-	public static IMessageDefinitions<IMessageToController, IMessageToAgent> Definitions { get; } = new MessageDefinitions();
+	public static MessageRegistries<IMessageToController, IMessageToAgent> Registries => new (ToAgent, ToController);
 	
 	static AgentMessageRegistries() {
-		ToAgent.Add<ConfigureInstanceMessage, Result<ConfigureInstanceResult, InstanceActionFailure>>(1);
-		ToAgent.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>(2);
-		ToAgent.Add<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>(3);
-		ToAgent.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>(4);
+		ToAgent.Add<ConfigureInstanceMessage, Result<ConfigureInstanceResult, InstanceActionFailure>>();
+		ToAgent.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, InstanceActionFailure>>();
+		ToAgent.Add<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>();
+		ToAgent.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>();
 		
-		ToController.Add<ReportInstanceStatusMessage>(1);
-		ToController.Add<InstanceOutputMessage>(2);
-		ToController.Add<ReportAgentStatusMessage>(3);
-		ToController.Add<ReportInstanceEventMessage>(4);
-		ToController.Add<ReportInstancePlayerCountsMessage>(5);
-	}
-	
-	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToController, IMessageToAgent> {
-		public MessageRegistry<IMessageToAgent> ToClient => ToAgent;
-		public MessageRegistry<IMessageToController> ToServer => ToController;
+		ToController.Add<ReportInstanceStatusMessage>();
+		ToController.Add<InstanceOutputMessage>();
+		ToController.Add<ReportAgentStatusMessage>();
+		ToController.Add<ReportInstanceEventMessage>();
+		ToController.Add<ReportInstancePlayerCountsMessage>();
 	}
 }

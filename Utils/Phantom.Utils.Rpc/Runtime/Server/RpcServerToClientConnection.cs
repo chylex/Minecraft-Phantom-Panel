@@ -8,24 +8,29 @@ namespace Phantom.Utils.Rpc.Runtime.Server;
 public sealed class RpcServerToClientConnection<TClientToServerMessage, TServerToClientMessage> {
 	private readonly ILogger logger;
 	private readonly RpcCommonConnectionParameters connectionParameters;
-	private readonly MessageRegistry<TClientToServerMessage> messageRegistry;
+	private readonly MessageTypeMapping<TClientToServerMessage> messageTypeMapping;
 	private readonly RpcServerClientSession<TServerToClientMessage> session;
 	private readonly RpcStream stream;
 	
 	public Guid SessionId => session.SessionId;
 	public MessageSender<TServerToClientMessage> MessageSender => session.MessageSender;
 	
-	internal RpcServerToClientConnection(RpcCommonConnectionParameters connectionParameters, MessageRegistry<TClientToServerMessage> messageRegistry, RpcServerClientSession<TServerToClientMessage> session, RpcStream stream) {
+	internal RpcServerToClientConnection(
+		RpcCommonConnectionParameters connectionParameters,
+		MessageTypeMapping<TClientToServerMessage> messageTypeMapping,
+		RpcServerClientSession<TServerToClientMessage> session,
+		RpcStream stream
+	) {
 		this.logger = PhantomLogger.Create<RpcServerToClientConnection<TClientToServerMessage, TServerToClientMessage>>(session.LoggerName);
 		this.connectionParameters = connectionParameters;
-		this.messageRegistry = messageRegistry;
+		this.messageTypeMapping = messageTypeMapping;
 		this.session = session;
 		this.stream = stream;
 	}
 	
 	internal async Task Listen(IMessageReceiver<TClientToServerMessage> messageReceiver) {
 		var messageHandler = new MessageHandler<TClientToServerMessage>(messageReceiver, session.FrameSender);
-		var frameReader = new RpcFrameReader<TServerToClientMessage, TClientToServerMessage>(session.LoggerName, connectionParameters, messageRegistry, messageHandler, MessageSender, session.FrameSender);
+		var frameReader = new RpcFrameReader<TServerToClientMessage, TClientToServerMessage>(session.LoggerName, connectionParameters, messageTypeMapping, messageHandler, MessageSender, session.FrameSender);
 		
 		try {
 			await IFrame.ReadFrom(stream, frameReader, session.CloseCancellationToken);

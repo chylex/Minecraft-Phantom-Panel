@@ -1,30 +1,36 @@
-﻿using System.Net.Security;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Runtime.Tls;
 using Serilog;
+using Serilog.Events;
 
 namespace Phantom.Utils.Rpc.Runtime.Client;
 
-sealed class RpcClientToServerConnector {
+[SuppressMessage("ReSharper", "StaticMemberInGenericType")]
+sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage> {
 	private static readonly TimeSpan InitialRetryDelay = TimeSpan.FromMilliseconds(500);
 	private static readonly TimeSpan MaximumRetryDelay = TimeSpan.FromSeconds(30);
 	private static readonly TimeSpan DisconnectTimeout = TimeSpan.FromSeconds(10);
 	
 	private readonly ILogger logger;
-	private readonly Guid sessionId;
 	private readonly RpcClientConnectionParameters parameters;
+	private readonly MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries;
+	private readonly Guid sessionId;
 	private readonly SslClientAuthenticationOptions sslOptions;
 	
 	private bool loggedCertificateValidationError = false;
 	
-	public RpcClientToServerConnector(string loggerName, RpcClientConnectionParameters parameters) {
-		this.logger = PhantomLogger.Create<RpcClientToServerConnector>(loggerName);
-		this.sessionId = Guid.NewGuid();
+	public RpcClientToServerConnector(string loggerName, RpcClientConnectionParameters parameters, MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries) {
+		this.logger = PhantomLogger.Create<RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>>(loggerName);
 		this.parameters = parameters;
+		this.messageRegistries = messageRegistries;
+		this.sessionId = Guid.NewGuid();
 		
 		this.sslOptions = new SslClientAuthenticationOptions {
 			AllowRenegotiation = false,
@@ -114,7 +120,7 @@ sealed class RpcClientToServerConnector {
 			
 			if (await AuthenticateAndPerformHandshake(stream, cancellationToken) is {} result) {
 				logger.Information("Connected to {Host}:{Port}.", parameters.Host, parameters.Port);
-				return new Connection(clientSocket, stream, result.IsNewSession, result.PingInterval);
+				return new Connection(clientSocket, stream, result.IsNewSession, result.PingInterval, result.MessageTypeMappings);
 			}
 		} catch (Exception e) {
 			logger.Error(e, "Caught unhandled exception.");
@@ -167,13 +173,12 @@ sealed class RpcClientToServerConnector {
 		await stream.WriteGuid(sessionId, cancellationToken);
 		await stream.Flush(cancellationToken);
 		
-		ushort pingIntervalSeconds = await stream.ReadUnsignedShort(cancellationToken);
-		if (pingIntervalSeconds == 0) {
-			logger.Error("Server sent invalid ping interval.");
+		var pingInterval = await ReadPingInterval(stream, cancellationToken);
+		if (pingInterval == null) {
 			return null;
 		}
 		
-		logger.Debug("Server requested a ping interval of {PingInterval}s.", pingIntervalSeconds);
+		var mappedMessageDefinitions = await ReadMessageMappings(stream, cancellationToken);
 		
 		await parameters.Handshake.Perform(stream, cancellationToken);
 		
@@ -183,10 +188,42 @@ sealed class RpcClientToServerConnector {
 			return null;
 		}
 		
-		return new ConnectionResult(finalHandshakeResult == RpcFinalHandshakeResult.NewSession, TimeSpan.FromSeconds(pingIntervalSeconds));
+		return new ConnectionResult(finalHandshakeResult == RpcFinalHandshakeResult.NewSession, pingInterval.Value, mappedMessageDefinitions);
 	}
 	
-	private readonly record struct ConnectionResult(bool IsNewSession, TimeSpan PingInterval);
+	private async Task<TimeSpan?> ReadPingInterval(RpcStream stream, CancellationToken cancellationToken) {
+		ushort pingIntervalSeconds = await stream.ReadUnsignedShort(cancellationToken);
+		if (pingIntervalSeconds == 0) {
+			logger.Error("Server sent invalid ping interval.");
+			return null;
+		}
+		
+		logger.Debug("Server requested a ping interval of {PingInterval}s.", pingIntervalSeconds);
+		return TimeSpan.FromSeconds(pingIntervalSeconds);
+	}
+	
+	private async Task<MessageTypeMappings<TClientToServerMessage, TServerToClientMessage>> ReadMessageMappings(RpcStream stream, CancellationToken cancellationToken) {
+		var toClient = await ReadMessageMapping(messageRegistries.ToClient, stream, cancellationToken);
+		var toServer = await ReadMessageMapping(messageRegistries.ToServer, stream, cancellationToken);
+		
+		return new MessageTypeMappings<TClientToServerMessage, TServerToClientMessage>(toClient, toServer);
+	}
+	
+	private async Task<MessageTypeMapping<TMessageBase>> ReadMessageMapping<TMessageBase>(MessageRegistry<TMessageBase> messageRegistry, RpcStream stream, CancellationToken cancellationToken) {
+		var result = await messageRegistry.ReadMapping(stream, cancellationToken);
+		
+		if (logger.IsEnabled(LogEventLevel.Debug)) {
+			foreach ((byte messageTypeCode, MessageTypeName messageTypeName) in result.SupportedMessages) {
+				logger.Debug("Server requested code {MessageCode} for message {MessageBaseTypeName}:{MessageTypeName}.", messageTypeCode, typeof(TMessageBase).Name, messageTypeName);
+			}
+		}
+		
+		foreach ((byte messageTypeCode, MessageTypeName messageTypeName) in result.UnsupportedMessages) {
+			logger.Warning("Server requested code {MessageCode} for message {MessageBaseTypeName}:{MessageTypeName} that the client does not support.", messageTypeCode, typeof(TMessageBase).Name, messageTypeName);
+		}
+		
+		return result.TypeMapping;
+	}
 	
 	private bool ValidateServerCertificate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) {
 		if (certificate == null || sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable)) {
@@ -221,7 +258,9 @@ sealed class RpcClientToServerConnector {
 		await socket.DisconnectAsync(reuseSocket: false, timeoutTokenSource.Token);
 	}
 	
-	internal sealed record Connection(Socket Socket, RpcStream Stream, bool IsNewSession, TimeSpan PingInterval) : IAsyncDisposable {
+	private readonly record struct ConnectionResult(bool IsNewSession, TimeSpan PingInterval, MessageTypeMappings<TClientToServerMessage, TServerToClientMessage> MessageTypeMappings);
+	
+	internal sealed record Connection(Socket Socket, RpcStream Stream, bool IsNewSession, TimeSpan PingInterval, MessageTypeMappings<TClientToServerMessage, TServerToClientMessage> MessageTypeMappings) : IAsyncDisposable {
 		public async Task Disconnect() {
 			await DisconnectSocket(Socket, Stream);
 		}

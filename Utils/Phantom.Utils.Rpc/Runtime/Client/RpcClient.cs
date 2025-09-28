@@ -7,21 +7,25 @@ using Serilog;
 namespace Phantom.Utils.Rpc.Runtime.Client;
 
 public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : IRpcConnectionProvider, IDisposable {
-	public static async Task<RpcClient<TClientToServerMessage, TServerToClientMessage>?> Connect(string loggerName, RpcClientConnectionParameters connectionParameters, IMessageDefinitions<TClientToServerMessage, TServerToClientMessage> messageDefinitions, CancellationToken cancellationToken) {
-		RpcClientToServerConnector connector = new RpcClientToServerConnector(loggerName, connectionParameters);
-		RpcClientToServerConnector.Connection? connection = await connector.ConnectWithRetries(maxAttempts: 10, cancellationToken);
-		return connection == null ? null : new RpcClient<TClientToServerMessage, TServerToClientMessage>(loggerName, connectionParameters, connector, connection, messageDefinitions);
+	public static async Task<RpcClient<TClientToServerMessage, TServerToClientMessage>?> Connect(
+		string loggerName,
+		RpcClientConnectionParameters connectionParameters,
+		MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries,
+		CancellationToken cancellationToken
+	) {
+		var connector = new RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>(loggerName, connectionParameters, messageRegistries);
+		var connection = await connector.ConnectWithRetries(maxAttempts: 10, cancellationToken);
+		return connection == null ? null : new RpcClient<TClientToServerMessage, TServerToClientMessage>(loggerName, connectionParameters, connector, connection);
 	}
 	
 	private readonly string loggerName;
 	private readonly ILogger logger;
 	
 	private readonly RpcCommonConnectionParameters connectionParameters;
-	private readonly RpcClientToServerConnector connector;
-	private readonly IMessageDefinitions<TClientToServerMessage, TServerToClientMessage> messageDefinitions;
+	private readonly RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage> connector;
 	private readonly IRpcFrameSenderProvider<TClientToServerMessage>.Mutable frameSenderProvider = new ();
 	
-	private RpcClientToServerConnector.Connection currentConnection;
+	private RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>.Connection currentConnection;
 	private readonly SemaphoreSlim currentConnectionSemaphore = new (1);
 	
 	private Task? listenerTask;
@@ -30,14 +34,18 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 	
 	public MessageSender<TClientToServerMessage> MessageSender { get; }
 	
-	private RpcClient(string loggerName, RpcCommonConnectionParameters connectionParameters, RpcClientToServerConnector connector, RpcClientToServerConnector.Connection connection, IMessageDefinitions<TClientToServerMessage, TServerToClientMessage> messageDefinitions) {
+	private RpcClient(
+		string loggerName,
+		RpcCommonConnectionParameters connectionParameters,
+		RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage> connector,
+		RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>.Connection connection
+	) {
 		this.loggerName = loggerName;
 		this.logger = PhantomLogger.Create<RpcClient<TClientToServerMessage, TServerToClientMessage>>(loggerName);
 		
 		this.connectionParameters = connectionParameters;
 		this.connector = connector;
 		this.currentConnection = connection;
-		this.messageDefinitions = messageDefinitions;
 		
 		this.MessageSender = new MessageSender<TClientToServerMessage>(loggerName, connectionParameters, frameSenderProvider);
 	}
@@ -46,7 +54,7 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 		return (await GetConnection(cancellationToken)).Stream;
 	}
 	
-	private async Task<RpcClientToServerConnector.Connection> GetConnection(CancellationToken cancellationToken) {
+	private async Task<RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>.Connection> GetConnection(CancellationToken cancellationToken) {
 		await currentConnectionSemaphore.WaitAsync(cancellationToken);
 		try {
 			if (!currentConnection.Socket.Connected) {
@@ -70,7 +78,7 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 	private async Task Listen(IMessageReceiver<TServerToClientMessage> messageReceiver) {
 		CancellationToken cancellationToken = shutdownCancellationTokenSource.Token;
 		
-		RpcClientToServerConnector.Connection? connection = null;
+		RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>.Connection? connection = null;
 		SessionState? sessionState = null;
 		
 		try {
@@ -138,10 +146,10 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 		}
 	}
 	
-	private SessionState NewSessionState(RpcClientToServerConnector.Connection connection, IMessageReceiver<TServerToClientMessage> messageReceiver) {
-		var frameSender = new RpcFrameSender<TClientToServerMessage>(loggerName, connectionParameters, this, messageDefinitions.ToServer, connection.PingInterval);
+	private SessionState NewSessionState(RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>.Connection connection, IMessageReceiver<TServerToClientMessage> messageReceiver) {
+		var frameSender = new RpcFrameSender<TClientToServerMessage>(loggerName, connectionParameters, this, connection.MessageTypeMappings.ToServer, connection.PingInterval);
 		var messageHandler = new MessageHandler<TServerToClientMessage>(messageReceiver, frameSender);
-		var frameReader = new RpcFrameReader<TClientToServerMessage, TServerToClientMessage>(loggerName, connectionParameters, messageDefinitions.ToClient, messageHandler, MessageSender, frameSender);
+		var frameReader = new RpcFrameReader<TClientToServerMessage, TServerToClientMessage>(loggerName, connectionParameters, connection.MessageTypeMappings.ToClient, messageHandler, MessageSender, frameSender);
 		
 		frameSenderProvider.SetNewValue(frameSender);
 		messageReceiver.OnSessionRestarted();
@@ -150,7 +158,7 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 	}
 	
 	private readonly record struct SessionState(RpcFrameSender<TClientToServerMessage> FrameSender, RpcFrameReader<TClientToServerMessage, TServerToClientMessage> FrameReader) {
-		public void Update(ILogger logger, RpcClientToServerConnector.Connection connection) {
+		public void Update(ILogger logger, RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>.Connection connection) {
 			TimeSpan currentPingInterval = FrameSender.PingInterval;
 			if (currentPingInterval != connection.PingInterval) {
 				logger.Warning("Server requested a different ping interval ({ServerPingInterval}s) than currently set ({ClientPingInterval}s), but ping interval cannot be updated for existing sessions.", connection.PingInterval.TotalSeconds, currentPingInterval.TotalSeconds);

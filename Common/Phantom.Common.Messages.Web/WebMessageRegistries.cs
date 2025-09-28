@@ -17,36 +17,31 @@ public static class WebMessageRegistries {
 	public static MessageRegistry<IMessageToController> ToController { get; } = new (nameof(ToController));
 	public static MessageRegistry<IMessageToWeb> ToWeb { get; } = new (nameof(ToWeb));
 	
-	public static IMessageDefinitions<IMessageToController, IMessageToWeb> Definitions { get; } = new MessageDefinitions();
+	public static MessageRegistries<IMessageToController, IMessageToWeb> Registries => new (ToWeb, ToController);
 	
 	static WebMessageRegistries() {
-		ToController.Add<LogInMessage, Optional<LogInSuccess>>(1);
-		ToController.Add<LogOutMessage>(2);
-		ToController.Add<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(3);
-		ToController.Add<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(4);
-		ToController.Add<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>(5);
-		ToController.Add<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>(6);
-		ToController.Add<GetUsersMessage, ImmutableArray<UserInfo>>(7);
-		ToController.Add<GetRolesMessage, ImmutableArray<RoleInfo>>(8);
-		ToController.Add<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>(9);
-		ToController.Add<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>(10);
-		ToController.Add<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>(11);
-		ToController.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, UserInstanceActionFailure>>(12);
-		ToController.Add<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>(13);
-		ToController.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>(14);
-		ToController.Add<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>(15);
-		ToController.Add<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>(16);
-		ToController.Add<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>(17);
-		ToController.Add<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>(18);
+		ToController.Add<LogInMessage, Optional<LogInSuccess>>();
+		ToController.Add<LogOutMessage>();
+		ToController.Add<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>();
+		ToController.Add<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>();
+		ToController.Add<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>();
+		ToController.Add<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>();
+		ToController.Add<GetUsersMessage, ImmutableArray<UserInfo>>();
+		ToController.Add<GetRolesMessage, ImmutableArray<RoleInfo>>();
+		ToController.Add<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>();
+		ToController.Add<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>();
+		ToController.Add<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>();
+		ToController.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, UserInstanceActionFailure>>();
+		ToController.Add<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>();
+		ToController.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>();
+		ToController.Add<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>();
+		ToController.Add<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>();
+		ToController.Add<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>();
+		ToController.Add<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>();
 		
-		ToWeb.Add<RefreshAgentsMessage>(1);
-		ToWeb.Add<RefreshInstancesMessage>(2);
-		ToWeb.Add<InstanceOutputMessage>(3);
-		ToWeb.Add<RefreshUserSessionMessage>(4);
-	}
-	
-	private sealed class MessageDefinitions : IMessageDefinitions<IMessageToController, IMessageToWeb> {
-		public MessageRegistry<IMessageToWeb> ToClient => ToWeb;
-		public MessageRegistry<IMessageToController> ToServer => ToController;
+		ToWeb.Add<RefreshAgentsMessage>();
+		ToWeb.Add<RefreshInstancesMessage>();
+		ToWeb.Add<InstanceOutputMessage>();
+		ToWeb.Add<RefreshUserSessionMessage>();
 	}
 }

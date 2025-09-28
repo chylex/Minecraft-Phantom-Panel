@@ -9,7 +9,7 @@ namespace Phantom.Utils.Rpc.Runtime;
 sealed class RpcFrameReader<TSentMessage, TReceivedMessage>(
 	string loggerName,
 	RpcCommonConnectionParameters connectionParameters,
-	MessageRegistry<TReceivedMessage> messageRegistry,
+	MessageTypeMapping<TReceivedMessage> messageTypeMapping,
 	MessageHandler<TReceivedMessage> messageHandler,
 	MessageSender<TSentMessage> messageSender,
 	RpcFrameSender<TSentMessage> frameSender
@@ -38,7 +38,7 @@ sealed class RpcFrameReader<TSentMessage, TReceivedMessage>(
 			return;
 		}
 		
-		if (messageRegistry.TryGetType(frame, out var messageType)) {
+		if (messageTypeMapping.TryGetType(frame, out var messageType)) {
 			logger.Debug("Received message {MesageId} of type {MessageType} ({Bytes} B).", frame.MessageId, messageType.Name, frame.SerializedMessage.Length);
 		}
 		
@@ -58,7 +58,7 @@ sealed class RpcFrameReader<TSentMessage, TReceivedMessage>(
 	
 	private async Task HandleMessage(MessageFrame frame, CancellationToken cancellationToken) {
 		try {
-			await messageRegistry.Handle(frame, messageHandler, cancellationToken);
+			await messageTypeMapping.Handle(frame, messageHandler, cancellationToken);
 		} finally {
 			messageHandlingSemaphore.Release();
 		}

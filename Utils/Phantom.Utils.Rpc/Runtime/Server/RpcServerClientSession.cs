@@ -28,12 +28,12 @@ sealed class RpcServerClientSession<TServerToClientMessage> : IRpcConnectionProv
 	
 	public CancellationToken CloseCancellationToken => closeCancellationTokenSource.Token;
 	
-	public RpcServerClientSession(string loggerName, RpcServerConnectionParameters connectionParameters, MessageRegistry<TServerToClientMessage> messageRegistry, RpcServerClientSessions<TServerToClientMessage> sessions, Guid sessionId) {
+	public RpcServerClientSession(string loggerName, RpcServerConnectionParameters connectionParameters, MessageTypeMapping<TServerToClientMessage> messageTypeMapping, RpcServerClientSessions<TServerToClientMessage> sessions, Guid sessionId) {
 		this.logger = PhantomLogger.Create<RpcServerClientSession<TServerToClientMessage>>(loggerName);
 		this.LoggerName = loggerName;
 		this.sessions = sessions;
 		this.SessionId = sessionId;
-		this.FrameSender = new RpcFrameSender<TServerToClientMessage>(loggerName, connectionParameters, this, messageRegistry, connectionParameters.PingInterval);
+		this.FrameSender = new RpcFrameSender<TServerToClientMessage>(loggerName, connectionParameters, this, messageTypeMapping, connectionParameters.PingInterval);
 		this.MessageSender = new MessageSender<TServerToClientMessage>(loggerName, connectionParameters, new IRpcFrameSenderProvider<TServerToClientMessage>.Constant(FrameSender));
 		
 		this.closeAfterDisconnectionTimer = new Timer(DisconnectedSessionTimeout) { AutoReset = false };

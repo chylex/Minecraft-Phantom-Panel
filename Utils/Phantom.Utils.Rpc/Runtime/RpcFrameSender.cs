@@ -12,7 +12,7 @@ namespace Phantom.Utils.Rpc.Runtime;
 sealed class RpcFrameSender<TMessageBase> : IMessageReplySender {
 	private readonly ILogger logger;
 	private readonly IRpcConnectionProvider connectionProvider;
-	private readonly MessageRegistry<TMessageBase> messageRegistry;
+	private readonly MessageTypeMapping<TMessageBase> messageTypeMapping;
 	private readonly MessageReceiveTracker messageReceiveTracker = new ();
 	
 	private readonly Channel<IFrame> frameQueue;
@@ -27,10 +27,10 @@ sealed class RpcFrameSender<TMessageBase> : IMessageReplySender {
 	
 	internal TimeSpan PingInterval { get; }
 	
-	internal RpcFrameSender(string loggerName, RpcCommonConnectionParameters connectionParameters, IRpcConnectionProvider connectionProvider, MessageRegistry<TMessageBase> messageRegistry, TimeSpan pingInterval) {
+	internal RpcFrameSender(string loggerName, RpcCommonConnectionParameters connectionParameters, IRpcConnectionProvider connectionProvider, MessageTypeMapping<TMessageBase> messageTypeMapping, TimeSpan pingInterval) {
 		this.logger = PhantomLogger.Create<RpcFrameSender<TMessageBase>>(loggerName);
 		this.connectionProvider = connectionProvider;
-		this.messageRegistry = messageRegistry;
+		this.messageTypeMapping = messageTypeMapping;
 		
 		this.frameQueue = Channel.CreateBounded<IFrame>(new BoundedChannelOptions(connectionParameters.FrameQueueCapacity) {
 			AllowSynchronousContinuations = false,
@@ -50,7 +50,7 @@ sealed class RpcFrameSender<TMessageBase> : IMessageReplySender {
 	}
 	
 	public async ValueTask SendMessage<TMessage>(uint messageId, TMessage message, CancellationToken cancellationToken) where TMessage : TMessageBase {
-		var frame = messageRegistry.CreateFrame(messageId, message);
+		var frame = messageTypeMapping.CreateFrame(messageId, message);
 		logger.Debug("Sending message {MesageId} of type {MessageType} ({MessageBytes} B).", messageId, typeof(TMessage).Name, frame.SerializedMessage.Length);
 		await SendFrame(frame, cancellationToken);
 	}

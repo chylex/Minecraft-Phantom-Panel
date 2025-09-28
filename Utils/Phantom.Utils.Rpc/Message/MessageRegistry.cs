@@ -1,74 +1,105 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Immutable;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Rpc.Frame.Types;
+using Phantom.Utils.Rpc.Runtime;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Message;
 
 public sealed class MessageRegistry<TMessageBase>(string loggerName) {
 	private readonly ILogger logger = PhantomLogger.Create<MessageRegistry<TMessageBase>>(loggerName);
-	private readonly Dictionary<Type, ushort> typeToCodeMapping = new ();
-	private readonly Dictionary<ushort, Registration> codeToRegistrationMapping = new ();
+	private readonly List<MessageInfo> messageInfoList = [];
 	
-	private readonly record struct Registration(Type MessageType, Func<uint, ReadOnlyMemory<byte>, MessageHandler<TMessageBase>, CancellationToken, Task> Handler);
+	private readonly record struct MessageInfo(Type Type, MessageTypeName TypeName, DeserializeAndHandleFunc Action);
 	
-	public void Add<TMessage>(ushort code) where TMessage : TMessageBase {
-		Type messageType = typeof(TMessage);
-		
-		if (HasReplyType(messageType)) {
+	internal delegate Task DeserializeAndHandleFunc(uint messageId, ReadOnlyMemory<byte> serializedMessage, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken);
+	
+	public void Add<TMessage>() where TMessage : TMessageBase {
+		if (HasReplyType(typeof(TMessage))) {
 			throw new ArgumentException("This overload is for messages without a reply.");
 		}
 		
-		typeToCodeMapping.Add(messageType, code);
-		codeToRegistrationMapping.Add(code, new Registration(messageType, DeserializationHandler<TMessage>));
+		AddImpl(typeof(TMessage), DeserializationHandler<TMessage>);
 	}
 	
-	public void Add<TMessage, TReply>(ushort code) where TMessage : TMessageBase, ICanReply<TReply> {
-		Type messageType = typeof(TMessage);
-		
-		typeToCodeMapping.Add(messageType, code);
-		codeToRegistrationMapping.Add(code, new Registration(messageType, DeserializationHandler<TMessage, TReply>));
+	public void Add<TMessage, TReply>() where TMessage : TMessageBase, ICanReply<TReply> {
+		AddImpl(typeof(TMessage), DeserializationHandler<TMessage, TReply>);
 	}
 	
-	private bool HasReplyType(Type messageType) {
+	private void AddImpl(Type messageType, DeserializeAndHandleFunc action) {
+		messageInfoList.Add(new MessageInfo(messageType, new MessageTypeName(messageType.Name), action));
+	}
+	
+	private static bool HasReplyType(Type messageType) {
 		string replyInterfaceName = typeof(ICanReply<object>).FullName!;
 		replyInterfaceName = replyInterfaceName[..(replyInterfaceName.IndexOf('`') + 1)];
 		
 		return messageType.GetInterfaces().Any(type => type.FullName is {} name && name.StartsWith(replyInterfaceName, StringComparison.Ordinal));
 	}
 	
-	internal bool TryGetType(MessageFrame frame, [NotNullWhen(true)] out Type? type) {
-		if (codeToRegistrationMapping.TryGetValue(frame.RegistryCode, out var registration)) {
-			type = registration.MessageType;
-			return true;
-		}
-		else {
-			type = null;
-			return false;
-		}
-	}
-	
-	internal MessageFrame CreateFrame<TMessage>(uint messageId, TMessage message) where TMessage : TMessageBase {
-		if (typeToCodeMapping.TryGetValue(typeof(TMessage), out ushort code)) {
-			return new MessageFrame(messageId, code, MessageSerialization.Serialize(message));
-		}
-		else {
-			throw new ArgumentException("Unknown message type: " + typeof(TMessage));
-		}
-	}
-	
-	internal async Task Handle(MessageFrame frame, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) {
-		uint messageId = frame.MessageId;
+	internal WithMapping CreateMapping() {
+		var messageTypeNames = ImmutableArray.CreateBuilder<MessageTypeName>();
+		var messageTypeMapping = new MessageTypeMapping<TMessageBase>.Builder();
 		
-		if (codeToRegistrationMapping.TryGetValue(frame.RegistryCode, out var registration)) {
-			await registration.Handler(messageId, frame.SerializedMessage, handler, cancellationToken);
+		int nextMessageCode = 0;
+		
+		foreach ((Type messageType, MessageTypeName messageTypeName, DeserializeAndHandleFunc action) in messageInfoList) {
+			if (nextMessageCode == byte.MaxValue) {
+				throw new InvalidOperationException("Trying to register too many messages (" + (nextMessageCode + 1) + ").");
+			}
+			
+			messageTypeNames.Add(messageTypeName);
+			messageTypeMapping.Add((byte) nextMessageCode++, messageType, action);
 		}
-		else {
-			logger.Error("Unknown message code {Code} for message {MessageId}.", frame.RegistryCode, messageId);
-			await handler.SendError(messageId, MessageError.UnknownMessageRegistryCode, cancellationToken);
+		
+		return new WithMapping(messageTypeNames.ToImmutable(), messageTypeMapping.Build(loggerName));
+	}
+	
+	internal sealed class WithMapping(ImmutableArray<MessageTypeName> messageTypeNames, MessageTypeMapping<TMessageBase> mapping) {
+		public MessageTypeMapping<TMessageBase> Mapping => mapping;
+		
+		public async ValueTask Write(RpcStream stream, CancellationToken cancellationToken) {
+			foreach (MessageTypeName typeName in messageTypeNames) {
+				await typeName.Write(stream, cancellationToken);
+			}
+			
+			await MessageTypeName.WriteEnd(stream, cancellationToken);
 		}
 	}
+	
+	internal async ValueTask<ReadMappingResult> ReadMapping(RpcStream stream, CancellationToken cancellationToken) {
+		var messageTypeNameToInfoMapping = messageInfoList.ToImmutableDictionary(static item => item.TypeName, static item => item);
+		
+		var messageTypeMapping = new MessageTypeMapping<TMessageBase>.Builder();
+		var supportedMessages = ImmutableSortedDictionary.CreateBuilder<byte, MessageTypeName>();
+		var unsupportedMessages = ImmutableSortedDictionary.CreateBuilder<byte, MessageTypeName>();
+		
+		byte nextMessageCode = 0;
+		
+		while (await MessageTypeName.Read(stream, cancellationToken) is {} messageTypeName) {
+			if (nextMessageCode == byte.MaxValue) {
+				throw new InvalidOperationException("Trying to register too many messages (" + (nextMessageCode + 1) + ").");
+			}
+			
+			if (messageTypeNameToInfoMapping.TryGetValue(messageTypeName, out var messageInfo)) {
+				messageTypeMapping.Add(nextMessageCode, messageInfo.Type, messageInfo.Action);
+				supportedMessages.Add(nextMessageCode, messageTypeName);
+			}
+			else {
+				unsupportedMessages.Add(nextMessageCode, messageTypeName);
+			}
+			
+			++nextMessageCode;
+		}
+		
+		return new ReadMappingResult(messageTypeMapping.Build(loggerName), supportedMessages.ToImmutable(), unsupportedMessages.ToImmutable());
+	}
+	
+	internal readonly record struct ReadMappingResult(
+		MessageTypeMapping<TMessageBase> TypeMapping,
+		ImmutableSortedDictionary<byte, MessageTypeName> SupportedMessages,
+		ImmutableSortedDictionary<byte, MessageTypeName> UnsupportedMessages
+	);
 	
 	private async Task DeserializationHandler<TMessage>(uint messageId, ReadOnlyMemory<byte> serializedMessage, MessageHandler<TMessageBase> handler, CancellationToken cancellationToken) where TMessage : TMessageBase {
 		TMessage message;

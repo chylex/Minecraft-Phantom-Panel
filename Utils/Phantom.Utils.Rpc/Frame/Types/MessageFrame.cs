@@ -3,7 +3,7 @@ using Phantom.Utils.Rpc.Runtime;
 
 namespace Phantom.Utils.Rpc.Frame.Types;
 
-sealed record MessageFrame(uint MessageId, ushort RegistryCode, ReadOnlyMemory<byte> SerializedMessage) : IFrame {
+sealed record MessageFrame(uint MessageId, byte MessageTypeCode, ReadOnlyMemory<byte> SerializedMessage) : IFrame {
 	public const int MaxMessageBytes = 1024 * 1024 * 8;
 	
 	public ReadOnlyMemory<byte> FrameType => IFrame.TypeMessage;
@@ -13,19 +13,19 @@ sealed record MessageFrame(uint MessageId, ushort RegistryCode, ReadOnlyMemory<b
 		CheckMessageLength(serializedMessageLength);
 		
 		await stream.WriteUnsignedInt(MessageId, cancellationToken);
-		await stream.WriteUnsignedShort(RegistryCode, cancellationToken);
+		await stream.WriteByte(MessageTypeCode, cancellationToken);
 		await stream.WriteUnsignedInt(serializedMessageLength, cancellationToken);
 		await stream.WriteBytes(SerializedMessage, cancellationToken);
 	}
 	
 	public static async Task<MessageFrame> Read(RpcStream stream, CancellationToken cancellationToken) {
 		var messageId = await stream.ReadUnsignedInt(cancellationToken);
-		var registryCode = await stream.ReadUnsignedShort(cancellationToken);
+		var messageTypeCode = await stream.ReadByte(cancellationToken);
 		var serializedMessageLength = await stream.ReadUnsignedInt(cancellationToken);
 		CheckMessageLength(serializedMessageLength);
 		var serializedMessage = await stream.ReadBytes(serializedMessageLength, cancellationToken);
 		
-		return new MessageFrame(messageId, registryCode, serializedMessage);
+		return new MessageFrame(messageId, messageTypeCode, serializedMessage);
 	}
 	
 	private static void CheckMessageLength(uint messageLength) {
