@@ -1,10 +1,10 @@
-﻿@using Phantom.Common.Data.Replies
+﻿@using System.ComponentModel.DataAnnotations
+@using Phantom.Common.Data.Minecraft
+@using Phantom.Common.Data.Replies
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Utils.Result
 @using Phantom.Web.Services.Instances
-@using System.ComponentModel.DataAnnotations
-@using Phantom.Common.Data.Minecraft
-@inherits Phantom.Web.Components.PhantomComponent
+@inherits PhantomComponent
 @inject IJSRuntime Js;
 @inject InstanceManager InstanceManager;
 
@@ -66,11 +66,11 @@
         form.SubmitModel.StopSubmitting(stopInstanceResult.ToSentence());
         break;
 
-      case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+      case Err<UserInstanceActionFailure>(UserInstanceActionFailure.Instance(var failure)):
         form.SubmitModel.StopSubmitting(failure.ToSentence());
         break;
 
-      case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+      case Err<UserInstanceActionFailure>(UserInstanceActionFailure.User(UserActionFailure.NotAuthorized)):
         form.SubmitModel.StopSubmitting("You do not have permission to stop this instance.");
         break;
 

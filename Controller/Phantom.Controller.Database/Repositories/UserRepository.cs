@@ -2,9 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Data.Web.Users.AddUserErrors;
-using Phantom.Common.Data.Web.Users.PasswordRequirementViolations;
-using Phantom.Common.Data.Web.Users.UsernameRequirementViolations;
 using Phantom.Controller.Database.Entities;
 using Phantom.Utils.Collections;
 
@@ -16,10 +13,10 @@ public sealed class UserRepository {
 	
 	private static UsernameRequirementViolation? CheckUsernameRequirements(string username) {
 		if (string.IsNullOrWhiteSpace(username)) {
-			return new IsEmpty();
+			return new UsernameRequirementViolation.IsEmpty();
 		}
 		else if (username.Length > MaxUserNameLength) {
-			return new TooLong(MaxUserNameLength);
+			return new UsernameRequirementViolation.TooLong(MaxUserNameLength);
 		}
 		else {
 			return null;
@@ -30,19 +27,19 @@ public sealed class UserRepository {
 		var violations = ImmutableArray.CreateBuilder<PasswordRequirementViolation>();
 		
 		if (password.Length < MinimumPasswordLength) {
-			violations.Add(new TooShort(MinimumPasswordLength));
+			violations.Add(new PasswordRequirementViolation.TooShort(MinimumPasswordLength));
 		}
 		
 		if (!password.Any(char.IsLower)) {
-			violations.Add(new MustContainLowercaseLetter());
+			violations.Add(new PasswordRequirementViolation.MustContainLowercaseLetter());
 		}
 		
 		if (!password.Any(char.IsUpper)) {
-			violations.Add(new MustContainUppercaseLetter());
+			violations.Add(new PasswordRequirementViolation.MustContainUppercaseLetter());
 		}
 		
 		if (!password.Any(char.IsDigit)) {
-			violations.Add(new MustContainDigit());
+			violations.Add(new PasswordRequirementViolation.MustContainDigit());
 		}
 		
 		return violations.ToImmutable();
@@ -73,16 +70,16 @@ public sealed class UserRepository {
 	public async Task<Result<UserEntity, AddUserError>> CreateUser(string username, string password) {
 		var usernameRequirementViolation = CheckUsernameRequirements(username);
 		if (usernameRequirementViolation != null) {
-			return new NameIsInvalid(usernameRequirementViolation);
+			return new AddUserError.NameIsInvalid(usernameRequirementViolation);
 		}
 		
 		var passwordRequirementViolations = CheckPasswordRequirements(password);
 		if (!passwordRequirementViolations.IsEmpty) {
-			return new PasswordIsInvalid(passwordRequirementViolations);
+			return new AddUserError.PasswordIsInvalid(passwordRequirementViolations);
 		}
 		
 		if (await db.Ctx.Users.AnyAsync(user => user.Name == username)) {
-			return new NameAlreadyExists();
+			return new AddUserError.NameAlreadyExists();
 		}
 		
 		var user = new UserEntity(Guid.NewGuid(), username, UserPasswords.Hash(password));
@@ -95,7 +92,7 @@ public sealed class UserRepository {
 	public Result<SetUserPasswordError> SetUserPassword(UserEntity user, string password) {
 		var requirementViolations = CheckPasswordRequirements(password);
 		if (!requirementViolations.IsEmpty) {
-			return new Common.Data.Web.Users.SetUserPasswordErrors.PasswordIsInvalid(requirementViolations);
+			return new SetUserPasswordError.PasswordIsInvalid(requirementViolations);
 		}
 		
 		user.PasswordHash = UserPasswords.Hash(password);

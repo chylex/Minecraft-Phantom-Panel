@@ -2,47 +2,42 @@
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Data.Web.Users.AddUserErrors;
-using Phantom.Common.Data.Web.Users.PasswordRequirementViolations;
-using Phantom.Common.Data.Web.Users.SetUserPasswordErrors;
-using Phantom.Common.Data.Web.Users.UsernameRequirementViolations;
-using PasswordIsInvalid = Phantom.Common.Data.Web.Users.AddUserErrors.PasswordIsInvalid;
 
 namespace Phantom.Web.Utils;
 
 static class Messages {
 	public static string ToSentences(this AddUserError error, string delimiter) {
 		return error switch {
-			NameIsInvalid e     => e.Violation.ToSentence(),
-			PasswordIsInvalid e => string.Join(delimiter, e.Violations.Select(static v => v.ToSentence())),
-			NameAlreadyExists   => "Username is already occupied.",
-			_                   => "Unknown error.",
+			AddUserError.NameIsInvalid e     => e.Violation.ToSentence(),
+			AddUserError.PasswordIsInvalid e => string.Join(delimiter, e.Violations.Select(static v => v.ToSentence())),
+			AddUserError.NameAlreadyExists   => "Username is already occupied.",
+			_                                => "Unknown error.",
 		};
 	}
 	
 	public static string ToSentences(this SetUserPasswordError error, string delimiter) {
 		return error switch {
-			UserNotFound                                                    => "User not found.",
-			Common.Data.Web.Users.SetUserPasswordErrors.PasswordIsInvalid e => string.Join(delimiter, e.Violations.Select(static v => v.ToSentence())),
-			_                                                               => "Unknown error.",
+			SetUserPasswordError.UserNotFound        => "User not found.",
+			SetUserPasswordError.PasswordIsInvalid e => string.Join(delimiter, e.Violations.Select(static v => v.ToSentence())),
+			_                                        => "Unknown error.",
 		};
 	}
 	
 	public static string ToSentence(this UsernameRequirementViolation violation) {
 		return violation switch {
-			IsEmpty   => "Username must not be empty.",
-			TooLong v => "Username must not be longer than " + v.MaxLength + " character(s).",
-			_         => "Unknown error.",
+			UsernameRequirementViolation.IsEmpty   => "Username must not be empty.",
+			UsernameRequirementViolation.TooLong v => "Username must not be longer than " + v.MaxLength + " character(s).",
+			_                                      => "Unknown error.",
 		};
 	}
 	
 	public static string ToSentence(this PasswordRequirementViolation violation) {
 		return violation switch {
-			TooShort v                 => "Password must be at least " + v.MinimumLength + " character(s) long.",
-			MustContainLowercaseLetter => "Password must contain a lowercase letter.",
-			MustContainUppercaseLetter => "Password must contain an uppercase letter.",
-			MustContainDigit           => "Password must contain a digit.",
-			_                          => "Unknown error.",
+			PasswordRequirementViolation.TooShort v                 => "Password must be at least " + v.MinimumLength + " character(s) long.",
+			PasswordRequirementViolation.MustContainLowercaseLetter => "Password must contain a lowercase letter.",
+			PasswordRequirementViolation.MustContainUppercaseLetter => "Password must contain an uppercase letter.",
+			PasswordRequirementViolation.MustContainDigit           => "Password must contain a digit.",
+			_                                                       => "Unknown error.",
 		};
 	}
 	

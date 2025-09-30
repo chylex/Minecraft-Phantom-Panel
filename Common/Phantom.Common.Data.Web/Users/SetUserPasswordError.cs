@@ -1,18 +1,15 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
-using Phantom.Common.Data.Web.Users.SetUserPasswordErrors;
 
-namespace Phantom.Common.Data.Web.Users {
-	[MemoryPackable]
-	[MemoryPackUnion(tag: 0, typeof(UserNotFound))]
-	[MemoryPackUnion(tag: 1, typeof(PasswordIsInvalid))]
-	[MemoryPackUnion(tag: 2, typeof(UnknownError))]
-	public abstract partial record SetUserPasswordError {
-		internal SetUserPasswordError() {}
-	}
-}
+namespace Phantom.Common.Data.Web.Users;
 
-namespace Phantom.Common.Data.Web.Users.SetUserPasswordErrors {
+[MemoryPackable]
+[MemoryPackUnion(tag: 0, typeof(UserNotFound))]
+[MemoryPackUnion(tag: 1, typeof(PasswordIsInvalid))]
+[MemoryPackUnion(tag: 2, typeof(UnknownError))]
+public abstract partial record SetUserPasswordError {
+	private SetUserPasswordError() {}
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record UserNotFound : SetUserPasswordError;
 	

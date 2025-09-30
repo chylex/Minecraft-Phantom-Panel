@@ -3,7 +3,6 @@
 @using System.Security.Cryptography
 @using Phantom.Common.Data
 @using Phantom.Common.Data.Web.Users
-@using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults
 @using Phantom.Common.Messages.Web.ToController
 @using Phantom.Utils.Cryptography
 @using Phantom.Web.Services
@@ -91,12 +90,12 @@
   private async Task<Result<string>> CreateOrUpdateAdministrator() {
     var reply = await ControllerConnection.Send<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>(new CreateOrUpdateAdministratorUserMessage(form.Username, form.Password), Timeout.InfiniteTimeSpan);
     return reply switch {
-      Success             => Result.Ok,
-      CreationFailed fail => fail.Error.ToSentences("\n"),
-      UpdatingFailed fail => fail.Error.ToSentences("\n"),
-      AddingToRoleFailed  => "Could not assign administrator role to user.",
-      null                => "Timed out.",
-      _                   => "Unknown error.",
+      CreateOrUpdateAdministratorUserResult.Success             => Result.Ok,
+      CreateOrUpdateAdministratorUserResult.CreationFailed fail => fail.Error.ToSentences("\n"),
+      CreateOrUpdateAdministratorUserResult.UpdatingFailed fail => fail.Error.ToSentences("\n"),
+      CreateOrUpdateAdministratorUserResult.AddingToRoleFailed  => "Could not assign administrator role to user.",
+      null                                                      => "Timed out.",
+      _                                                         => "Unknown error.",
     };
   }
 

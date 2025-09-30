@@ -1,16 +1,13 @@
 ﻿using MemoryPack;
-using Phantom.Common.Data.Web.Users.UsernameRequirementViolations;
 
-namespace Phantom.Common.Data.Web.Users {
-	[MemoryPackable]
-	[MemoryPackUnion(tag: 0, typeof(IsEmpty))]
-	[MemoryPackUnion(tag: 1, typeof(TooLong))]
-	public abstract partial record UsernameRequirementViolation {
-		internal UsernameRequirementViolation() {}
-	}
-}
+namespace Phantom.Common.Data.Web.Users;
 
-namespace Phantom.Common.Data.Web.Users.UsernameRequirementViolations {
+[MemoryPackable]
+[MemoryPackUnion(tag: 0, typeof(IsEmpty))]
+[MemoryPackUnion(tag: 1, typeof(TooLong))]
+public abstract partial record UsernameRequirementViolation {
+	private UsernameRequirementViolation() {}
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record IsEmpty : UsernameRequirementViolation;
 	

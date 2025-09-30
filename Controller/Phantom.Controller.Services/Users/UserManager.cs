@@ -1,7 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Web.Users;
-using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Database.Repositories;
@@ -57,12 +56,12 @@ sealed class UserManager {
 					wasCreated = true;
 				}
 				else {
-					return new CreationFailed(result.Error);
+					return new CreateOrUpdateAdministratorUserResult.CreationFailed(result.Error);
 				}
 			}
 			else {
 				if (userRepository.SetUserPassword(user, password).TryGetError(out var error)) {
-					return new UpdatingFailed(error);
+					return new CreateOrUpdateAdministratorUserResult.UpdatingFailed(error);
 				}
 				
 				auditLogWriter.AdministratorUserModified(user);
@@ -71,7 +70,7 @@ sealed class UserManager {
 			
 			var role = await new RoleRepository(db).GetByGuid(Role.Administrator.Guid);
 			if (role == null) {
-				return new AddingToRoleFailed();
+				return new CreateOrUpdateAdministratorUserResult.AddingToRoleFailed();
 			}
 			
 			await new UserRoleRepository(db).Add(user, role);
@@ -85,10 +84,10 @@ sealed class UserManager {
 				Logger.Information("Updated administrator user \"{Username}\" (GUID {Guid}).", username, user.UserGuid);
 			}
 			
-			return new Success(user.ToUserInfo());
+			return new CreateOrUpdateAdministratorUserResult.Success(user.ToUserInfo());
 		} catch (Exception e) {
 			Logger.Error(e, "Could not create or update administrator user \"{Username}\".", username);
-			return new UnknownError();
+			return new CreateOrUpdateAdministratorUserResult.UnknownError();
 		}
 	}
 	
@@ -104,7 +103,7 @@ sealed class UserManager {
 		try {
 			var result = await userRepository.CreateUser(username, password);
 			if (!result) {
-				return new Common.Data.Web.Users.CreateUserResults.CreationFailed(result.Error);
+				return new CreateUserResult.CreationFailed(result.Error);
 			}
 			
 			var user = result.Value;
@@ -113,10 +112,10 @@ sealed class UserManager {
 			await db.Ctx.SaveChangesAsync();
 			
 			Logger.Information("Created user \"{Username}\" (GUID {Guid}).", username, user.UserGuid);
-			return new Common.Data.Web.Users.CreateUserResults.Success(user.ToUserInfo());
+			return new CreateUserResult.Success(user.ToUserInfo());
 		} catch (Exception e) {
 			Logger.Error(e, "Could not create user \"{Username}\".", username);
-			return new Common.Data.Web.Users.CreateUserResults.UnknownError();
+			return new CreateUserResult.UnknownError();
 		}
 	}
 	

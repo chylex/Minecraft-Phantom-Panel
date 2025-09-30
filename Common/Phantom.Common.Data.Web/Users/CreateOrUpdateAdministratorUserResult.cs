@@ -1,19 +1,16 @@
 ﻿using MemoryPack;
-using Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults;
 
-namespace Phantom.Common.Data.Web.Users {
-	[MemoryPackable]
-	[MemoryPackUnion(tag: 0, typeof(Success))]
-	[MemoryPackUnion(tag: 1, typeof(CreationFailed))]
-	[MemoryPackUnion(tag: 2, typeof(UpdatingFailed))]
-	[MemoryPackUnion(tag: 3, typeof(AddingToRoleFailed))]
-	[MemoryPackUnion(tag: 4, typeof(UnknownError))]
-	public abstract partial record CreateOrUpdateAdministratorUserResult {
-		internal CreateOrUpdateAdministratorUserResult() {}
-	}
-}
+namespace Phantom.Common.Data.Web.Users;
 
-namespace Phantom.Common.Data.Web.Users.CreateOrUpdateAdministratorUserResults {
+[MemoryPackable]
+[MemoryPackUnion(tag: 0, typeof(Success))]
+[MemoryPackUnion(tag: 1, typeof(CreationFailed))]
+[MemoryPackUnion(tag: 2, typeof(UpdatingFailed))]
+[MemoryPackUnion(tag: 3, typeof(AddingToRoleFailed))]
+[MemoryPackUnion(tag: 4, typeof(UnknownError))]
+public abstract partial record CreateOrUpdateAdministratorUserResult {
+	private CreateOrUpdateAdministratorUserResult() {}
+	
 	[MemoryPackable(GenerateType.VersionTolerant)]
 	public sealed partial record Success([property: MemoryPackOrder(0)] UserInfo User) : CreateOrUpdateAdministratorUserResult;
 	

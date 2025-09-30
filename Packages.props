@@ -22,7 +22,7 @@
   
   <ItemGroup>
     <PackageReference Update="BCrypt.Net-Next.StrongName" Version="4.0.3" />
-    <PackageReference Update="MemoryPack"                 Version="1.10.0" />
+    <PackageReference Update="MemoryPack"                 Version="1.21.4" />
   </ItemGroup>
   
   <ItemGroup>

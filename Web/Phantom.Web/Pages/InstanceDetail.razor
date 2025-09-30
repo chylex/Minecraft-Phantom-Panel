@@ -1,12 +1,12 @@
 ﻿@page "/instances/{InstanceGuid:guid}"
 @attribute [Authorize(Permission.ViewInstancesPolicy)]
+@using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Replies
 @using Phantom.Common.Data.Web.Instance
 @using Phantom.Common.Data.Web.Users
 @using Phantom.Utils.Result
-@using Phantom.Common.Data.Instance
-@using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Authorization
+@using Phantom.Web.Services.Instances
 @inherits PhantomComponent
 @inject InstanceManager InstanceManager
 
@@ -101,11 +101,11 @@
           lastError = launchInstanceResult.ToSentence();
           break;
 
-        case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+        case Err<UserInstanceActionFailure>(UserInstanceActionFailure.Instance(var failure)):
           lastError = failure.ToSentence();
           break;
 
-        case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+        case Err<UserInstanceActionFailure>(UserInstanceActionFailure.User(UserActionFailure.NotAuthorized)):
           lastError = "You do not have permission to launch this instance.";
           break;
 

@@ -351,11 +351,11 @@
         form.SubmitModel.StopSubmitting(createOrUpdateInstanceResult.ToSentence());
         break;
 
-      case Err<UserInstanceActionFailure>(OfInstanceActionFailure(var failure)):
+      case Err<UserInstanceActionFailure>(UserInstanceActionFailure.Instance(var failure)):
         form.SubmitModel.StopSubmitting(failure.ToSentence());
         break;
 
-      case Err<UserInstanceActionFailure>(OfUserActionFailure(UserActionFailure.NotAuthorized)):
+      case Err<UserInstanceActionFailure>(UserInstanceActionFailure.User(UserActionFailure.NotAuthorized)):
         form.SubmitModel.StopSubmitting("You do not have permission to create or edit instances.");
         break;
 
