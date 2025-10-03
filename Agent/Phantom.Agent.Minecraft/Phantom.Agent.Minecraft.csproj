@@ -6,7 +6,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Kajabity.Tools.Java" />
+    <InternalsVisibleTo Include="Phantom.Agent.Minecraft.Tests" />
   </ItemGroup>
   
   <ItemGroup>

@@ -13,11 +13,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="Kajabity.Tools.Java" Version="0.3.8607.38728" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Update="Akka"                       Version="1.5.17.1" />
+    <PackageReference Update="Akka" Version="1.5.17.1" />
   </ItemGroup>
   
   <ItemGroup>

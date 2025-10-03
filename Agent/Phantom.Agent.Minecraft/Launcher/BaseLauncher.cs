@@ -43,7 +43,7 @@ public abstract class BaseLauncher : IServerLauncher {
 		
 		try {
 			await AcceptEula(instanceProperties);
-			await UpdateServerProperties(instanceProperties);
+			await UpdateServerProperties(instanceProperties, cancellationToken);
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception while configuring the server.");
 			return new LaunchResult.CouldNotConfigureMinecraftServer();
@@ -108,9 +108,9 @@ public abstract class BaseLauncher : IServerLauncher {
 		await File.WriteAllLinesAsync(eulaFilePath, ["# EULA", "eula=true"], Encoding.UTF8);
 	}
 	
-	private static async Task UpdateServerProperties(InstanceProperties instanceProperties) {
+	private static async Task UpdateServerProperties(InstanceProperties instanceProperties, CancellationToken cancellationToken) {
 		var serverPropertiesEditor = new JavaPropertiesFileEditor();
 		instanceProperties.ServerProperties.SetTo(serverPropertiesEditor);
-		await serverPropertiesEditor.EditOrCreate(Path.Combine(instanceProperties.InstanceFolder, "server.properties"));
+		await serverPropertiesEditor.EditOrCreate(Path.Combine(instanceProperties.InstanceFolder, "server.properties"), comment: "server.properties", cancellationToken);
 	}
 }
