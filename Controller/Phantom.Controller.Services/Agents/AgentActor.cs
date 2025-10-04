@@ -26,7 +26,7 @@ using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
 
-sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
+sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentActor>();
 	
 	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
@@ -37,6 +37,8 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new AgentActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume, MailboxType = UnboundedJumpAheadMailbox.Name });
 	}
+	
+	public ITimerScheduler Timers { get; set; } = null!;
 	
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
@@ -110,7 +112,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand> {
 	protected override void PreStart() {
 		Self.Tell(new InitializeCommand());
 		
-		Context.System.Scheduler.ScheduleTellRepeatedly(DisconnectionRecheckInterval, DisconnectionRecheckInterval, Self, new RefreshConnectionStatusCommand(), Self);
+		Timers.StartPeriodicTimer("RefreshConnectionStatus", new RefreshConnectionStatusCommand(), DisconnectionRecheckInterval, Self);
 	}
 	
 	private ActorRef<InstanceActor.ICommand> CreateNewInstance(Instance instance) {

@@ -1,4 +1,5 @@
-﻿using Phantom.Common.Data.Web.EventLog;
+﻿using Akka.Actor;
+using Phantom.Common.Data.Web.EventLog;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Repositories;
 using Phantom.Utils.Actor;
@@ -7,7 +8,7 @@ using Serilog;
 
 namespace Phantom.Controller.Services.Events;
 
-sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorageActor.ICommand> {
+sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorageActor.ICommand>, IWithTimers {
 	private static readonly ILogger Logger = PhantomLogger.Create<EventLogDatabaseStorageActor>();
 	
 	public readonly record struct Init(IDbContextProvider DbProvider, CancellationToken CancellationToken);
@@ -15,6 +16,8 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new EventLogDatabaseStorageActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
+	
+	public ITimerScheduler Timers { get; set; } = null!;
 	
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
@@ -71,7 +74,7 @@ sealed class EventLogDatabaseStorageActor : ReceiveActor<EventLogDatabaseStorage
 	private void ScheduleFlush(TimeSpan delay) {
 		if (!hasScheduledFlush) {
 			hasScheduledFlush = true;
-			Context.System.Scheduler.ScheduleTellOnce(delay, Self, new FlushChangesCommand(), Self);
+			Timers.StartSingleTimer("FlushChanges", new FlushChangesCommand(), delay, Self);
 		}
 	}
 }
