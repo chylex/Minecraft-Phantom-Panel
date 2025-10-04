@@ -53,10 +53,10 @@ static class WebLauncher {
 			application.UseExceptionHandler("/_Error");
 		}
 		
-		application.UseStaticFiles();
 		application.UseRouting();
 		application.UsePhantomServices();
 		
+		application.MapStaticAssets();
 		application.MapControllers();
 		application.MapBlazorHub();
 		application.MapFallbackToPage("/_Host");
