@@ -1,8 +1,8 @@
 ﻿<Project>
   
   <ItemGroup>
-    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization" Version="8.0.0" />
-    <PackageReference Update="Microsoft.AspNetCore.Components.Web"           Version="8.0.0" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization" Version="9.0.9" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Web"           Version="9.0.9" />
   </ItemGroup>
   
   <ItemGroup>
