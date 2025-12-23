@@ -8,6 +8,7 @@ using Phantom.Common.Data.Web.EventLog;
 using Phantom.Controller.Database.Converters;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Database.Factories;
+using Phantom.Utils.Rpc;
 
 namespace Phantom.Controller.Database;
 
@@ -79,6 +80,8 @@ public class ApplicationDbContext : DbContext {
 		builder.Properties<EventLogEventType>().HaveConversion<EnumToStringConverter<EventLogEventType>>();
 		builder.Properties<EventLogSubjectType>().HaveConversion<EnumToStringConverter<EventLogSubjectType>>();
 		builder.Properties<MinecraftServerKind>().HaveConversion<EnumToStringConverter<MinecraftServerKind>>();
+		
+		builder.Properties<AuthSecret>().HaveConversion<AuthSecretConverter>();
 		builder.Properties<RamAllocationUnits>().HaveConversion<RamAllocationUnitsConverter>();
 	}
 }

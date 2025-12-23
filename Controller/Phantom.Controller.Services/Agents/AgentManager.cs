@@ -12,57 +12,57 @@ using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc;
 using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
 
-sealed class AgentManager {
+sealed class AgentManager(
+	IActorRefFactory actorSystem,
+	AgentConnectionKeys agentConnectionKeys,
+	ControllerState controllerState,
+	MinecraftVersions minecraftVersions,
+	IDbContextProvider dbProvider,
+	CancellationToken cancellationToken
+) {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentManager>();
 	
-	private readonly IActorRefFactory actorSystem;
-	private readonly ControllerState controllerState;
-	private readonly MinecraftVersions minecraftVersions;
-	private readonly UserLoginManager userLoginManager;
-	private readonly IDbContextProvider dbProvider;
-	private readonly CancellationToken cancellationToken;
-	
 	private readonly ConcurrentDictionary<Guid, ActorRef<AgentActor.ICommand>> agentsByAgentGuid = new ();
-	private readonly Func<Guid, AgentConfiguration, ActorRef<AgentActor.ICommand>> addAgentActorFactory;
-	
-	public AgentManager(IActorRefFactory actorSystem, ControllerState controllerState, MinecraftVersions minecraftVersions, UserLoginManager userLoginManager, IDbContextProvider dbProvider, CancellationToken cancellationToken) {
-		this.actorSystem = actorSystem;
-		this.controllerState = controllerState;
-		this.minecraftVersions = minecraftVersions;
-		this.userLoginManager = userLoginManager;
-		this.dbProvider = dbProvider;
-		this.cancellationToken = cancellationToken;
-		
-		this.addAgentActorFactory = CreateAgentActor;
-	}
-	
-	private ActorRef<AgentActor.ICommand> CreateAgentActor(Guid agentGuid, AgentConfiguration agentConfiguration) {
-		var init = new AgentActor.Init(agentGuid, agentConfiguration, controllerState, minecraftVersions, dbProvider, cancellationToken);
-		var name = "Agent:" + agentGuid;
-		return actorSystem.ActorOf(AgentActor.Factory(init), name);
-	}
 	
 	public async Task Initialize() {
 		await using var ctx = dbProvider.Eager();
 		
 		await foreach (var entity in ctx.Agents.AsAsyncEnumerable().WithCancellation(cancellationToken)) {
 			var agentGuid = entity.AgentGuid;
-			var agentConfiguration = new AgentConfiguration(entity.Name, entity.ProtocolVersion, entity.BuildVersion, entity.MaxInstances, entity.MaxMemory);
 			
-			if (agentsByAgentGuid.TryAdd(agentGuid, CreateAgentActor(agentGuid, agentConfiguration))) {
-				Logger.Information("Loaded agent \"{AgentName}\" (GUID {AgentGuid}) from database.", agentConfiguration.AgentName, agentGuid);
+			if (AddAgent(loggedInUserGuid: null, agentGuid, entity.Configuration, entity.AuthSecret, entity.RuntimeInfo)) {
+				Logger.Information("Loaded agent \"{AgentName}\" (GUID {AgentGuid}) from database.", entity.Name, agentGuid);
 			}
 		}
 	}
 	
-	public async Task<ImmutableArray<ConfigureInstanceMessage>> RegisterAgent(AgentRegistration registration) {
-		var agentConfiguration = AgentConfiguration.From(registration.AgentInfo);
-		var agentActor = agentsByAgentGuid.GetOrAdd(registration.AgentInfo.AgentGuid, addAgentActorFactory, agentConfiguration);
-		return await agentActor.Request(new AgentActor.RegisterCommand(agentConfiguration, registration.JavaRuntimes), cancellationToken);
+	private bool AddAgent(Guid? loggedInUserGuid, Guid agentGuid, AgentConfiguration configuration, AuthSecret authSecret, AgentRuntimeInfo runtimeInfo) {
+		var init = new AgentActor.Init(loggedInUserGuid, agentGuid, configuration, authSecret, runtimeInfo, agentConnectionKeys, controllerState, minecraftVersions, dbProvider, cancellationToken);
+		var name = "Agent:" + agentGuid;
+		return agentsByAgentGuid.TryAdd(agentGuid, actorSystem.ActorOf(AgentActor.Factory(init), name));
+	}
+	
+	public async Task<ImmutableArray<ConfigureInstanceMessage>?> RegisterAgent(Guid agentGuid, AgentRegistration registration) {
+		if (!agentsByAgentGuid.TryGetValue(agentGuid, out var agentActor)) {
+			return null;
+		}
+		
+		var runtimeInfo = AgentRuntimeInfo.From(registration.AgentInfo);
+		return await agentActor.Request(new AgentActor.RegisterCommand(runtimeInfo, registration.JavaRuntimes), cancellationToken);
+	}
+	
+	public async Task<AuthSecret?> GetAgentAuthSecret(Guid agentGuid) {
+		if (agentsByAgentGuid.TryGetValue(agentGuid, out var agent)) {
+			return await agent.Request(new AgentActor.GetAuthSecretCommand(), cancellationToken);
+		}
+		else {
+			return null;
+		}
 	}
 	
 	public bool TellAgent(Guid agentGuid, AgentActor.ICommand command) {
@@ -71,13 +71,31 @@ sealed class AgentManager {
 			return true;
 		}
 		else {
-			Logger.Warning("Could not deliver command {CommandType} to agent {AgentGuid}, agent not registered.", command.GetType().Name, agentGuid);
+			Logger.Warning("Could not deliver command {CommandType} to unknown agent {AgentGuid}.", command.GetType().Name, agentGuid);
 			return false;
 		}
 	}
 	
-	public async Task<Result<TReply, UserInstanceActionFailure>> DoInstanceAction<TCommand, TReply>(Permission requiredPermission, ImmutableArray<byte> authToken, Guid agentGuid, Func<Guid, TCommand> commandFactoryFromLoggedInUserGuid) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
-		var loggedInUser = userLoginManager.GetLoggedInUser(authToken);
+	public Result<CreateOrUpdateAgentResult, UserActionFailure> CreateOrUpdateAgent(LoggedInUser loggedInUser, Guid agentGuid, AgentConfiguration configuration) {
+		if (!loggedInUser.CheckPermission(Permission.ManageAllAgents)) {
+			return UserActionFailure.NotAuthorized;
+		}
+		
+		if (configuration.AgentName.Length == 0) {
+			return CreateOrUpdateAgentResult.AgentNameMustNotBeEmpty;
+		}
+		
+		if (agentsByAgentGuid.TryGetValue(agentGuid, out var agent)) {
+			agent.Tell(new AgentActor.ConfigureAgentCommand(loggedInUser.Guid!.Value, configuration));
+		}
+		else {
+			AddAgent(loggedInUser.Guid!.Value, agentGuid, configuration, AuthSecret.Generate(), new AgentRuntimeInfo());
+		}
+		
+		return CreateOrUpdateAgentResult.Success;
+	}
+	
+	public async Task<Result<TReply, UserInstanceActionFailure>> DoInstanceAction<TCommand, TReply>(LoggedInUser loggedInUser, Permission requiredPermission, Guid agentGuid, Func<Guid, TCommand> commandFactoryFromLoggedInUserGuid) where TCommand : class, AgentActor.ICommand, ICanReply<Result<TReply, InstanceActionFailure>> {
 		if (!loggedInUser.HasAccessToAgent(agentGuid) || !loggedInUser.CheckPermission(requiredPermission)) {
 			return (UserInstanceActionFailure) UserActionFailure.NotAuthorized;
 		}

@@ -7,17 +7,15 @@
     <envs>
       <env name="ASPNETCORE_ENVIRONMENT" value="Development" />
       <env name="CONTROLLER_HOST" value="localhost" />
-      <env name="WEB_KEY" value="T5Y722D2GZBXT2H27QS95P2YQRFB2GCTKHSWT5CZFDTFKW52TCM9GDRW" />
+      <env name="WEB_KEY" value="G9WXPDGCGHJD9W9XBPMNYWN6YTK7NKRWHT29P2XKNDCBWKHWXP2YQRFB2GCTKHSWT5CZFDTFKW52TCM9GDRW" />
       <env name="WEB_SERVER_HOST" value="localhost" />
     </envs>
-    <option name="USE_EXTERNAL_CONSOLE" value="0" />
     <option name="ENV_FILE_PATHS" value="" />
     <option name="REDIRECT_INPUT_PATH" value="" />
-    <option name="PTY_MODE" value="Auto" />
+    <option name="MIXED_MODE_DEBUG" value="0" />
     <option name="USE_MONO" value="0" />
     <option name="RUNTIME_ARGUMENTS" value="" />
     <option name="AUTO_ATTACH_CHILDREN" value="0" />
-    <option name="MIXED_MODE_DEBUG" value="0" />
     <option name="PROJECT_PATH" value="$PROJECT_DIR$/Web/Phantom.Web/Phantom.Web.csproj" />
     <option name="PROJECT_EXE_PATH_TRACKING" value="1" />
     <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />

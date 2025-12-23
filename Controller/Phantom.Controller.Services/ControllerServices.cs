@@ -8,8 +8,10 @@ using Phantom.Controller.Services.Rpc;
 using Phantom.Controller.Services.Users;
 using Phantom.Controller.Services.Users.Sessions;
 using Phantom.Utils.Actor;
-using IRpcAgentRegistrar = Phantom.Utils.Rpc.Runtime.Server.IRpcServerClientRegistrar<Phantom.Common.Messages.Agent.IMessageToController, Phantom.Common.Messages.Agent.IMessageToAgent, Phantom.Common.Data.Agent.AgentInfo>;
-using IRpcWebRegistrar = Phantom.Utils.Rpc.Runtime.Server.IRpcServerClientRegistrar<Phantom.Common.Messages.Web.IMessageToController, Phantom.Common.Messages.Web.IMessageToWeb, Phantom.Utils.Rpc.Runtime.Server.RpcServerClientHandshake.NoValue>;
+using Phantom.Utils.Rpc.Runtime.Server;
+using Phantom.Utils.Rpc.Runtime.Tls;
+using IRpcAgentRegistrar = Phantom.Utils.Rpc.Runtime.Server.IRpcServerClientRegistrar<Phantom.Common.Messages.Agent.IMessageToController, Phantom.Common.Messages.Agent.IMessageToAgent>;
+using IRpcWebRegistrar = Phantom.Utils.Rpc.Runtime.Server.IRpcServerClientRegistrar<Phantom.Common.Messages.Web.IMessageToController, Phantom.Common.Messages.Web.IMessageToWeb>;
 
 namespace Phantom.Controller.Services;
 
@@ -32,14 +34,15 @@ public sealed class ControllerServices : IDisposable {
 	private AuditLogManager AuditLogManager { get; }
 	private EventLogManager EventLogManager { get; }
 	
+	public IRpcServerClientAuthProvider AgentAuthProvider { get; }
+	public IRpcServerClientHandshake AgentHandshake { get; }
 	public IRpcAgentRegistrar AgentRegistrar { get; }
-	public AgentClientHandshake AgentHandshake { get; }
 	public IRpcWebRegistrar WebRegistrar { get; }
 	
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
-	public ControllerServices(IDbContextProvider dbProvider, CancellationToken shutdownCancellationToken) {
+	public ControllerServices(IDbContextProvider dbProvider, RpcCertificateThumbprint agentCertificateThumbprint, CancellationToken shutdownCancellationToken) {
 		this.dbProvider = dbProvider;
 		this.cancellationToken = shutdownCancellationToken;
 		
@@ -55,14 +58,15 @@ public sealed class ControllerServices : IDisposable {
 		this.UserLoginManager = new UserLoginManager(AuthenticatedUserCache, dbProvider);
 		this.PermissionManager = new PermissionManager(dbProvider);
 		
-		this.AgentManager = new AgentManager(ActorSystem, ControllerState, MinecraftVersions, UserLoginManager, dbProvider, cancellationToken);
+		this.AgentManager = new AgentManager(ActorSystem, new AgentConnectionKeys(agentCertificateThumbprint), ControllerState, MinecraftVersions, dbProvider, cancellationToken);
 		this.InstanceLogManager = new InstanceLogManager();
 		
 		this.AuditLogManager = new AuditLogManager(dbProvider);
 		this.EventLogManager = new EventLogManager(ControllerState, ActorSystem, dbProvider, shutdownCancellationToken);
 		
-		this.AgentRegistrar = new AgentClientRegistrar(ActorSystem, AgentManager, InstanceLogManager, EventLogManager);
+		this.AgentAuthProvider = new AgentClientAuthProvider(AgentManager);
 		this.AgentHandshake = new AgentClientHandshake(AgentManager);
+		this.AgentRegistrar = new AgentClientRegistrar(ActorSystem, AgentManager, InstanceLogManager, EventLogManager);
 		this.WebRegistrar = new WebClientRegistrar(ActorSystem, ControllerState, InstanceLogManager, UserManager, RoleManager, UserRoleManager, UserLoginManager, AuditLogManager, AgentManager, MinecraftVersions, EventLogManager);
 	}
 	

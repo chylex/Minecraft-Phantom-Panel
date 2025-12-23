@@ -1,30 +1,35 @@
 ﻿using System.Collections.Immutable;
-using System.Security.Cryptography;
 
 namespace Phantom.Utils.Rpc;
 
-public sealed class AuthToken {
-	public const int Length = 12;
+public sealed record AuthToken(Guid Guid, AuthSecret Secret) {
+	public const int Length = Serialization.GuidBytes + AuthSecret.Length;
 	
-	public ImmutableArray<byte> Bytes { get; }
+	public ImmutableArray<byte> ToBytes() {
+		Span<byte> buffer = stackalloc byte[Length];
+		ToBytes(buffer);
+		return [..buffer];
+	}
 	
-	public AuthToken(ImmutableArray<byte> bytes) {
+	public void ToBytes(Span<byte> buffer) {
+		Serialization.WriteGuid(buffer, Guid);
+		Secret.Bytes.CopyTo(buffer[Serialization.GuidBytes..]);
+	}
+	
+	public static AuthToken FromBytes(ReadOnlySpan<byte> bytes) {
 		if (bytes.Length != Length) {
-			throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid token length: " + bytes.Length + ". Token length must be exactly " + Length + " bytes.");
+			throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid auth token length: " + bytes.Length + ". Auth token must be exactly " + Length + " bytes.");
 		}
 		
-		this.Bytes = bytes;
-	}
-	
-	internal bool FixedTimeEquals(AuthToken providedAuthToken) {
-		return FixedTimeEquals(providedAuthToken.Bytes.AsSpan());
-	}
-	
-	public bool FixedTimeEquals(ReadOnlySpan<byte> other) {
-		return CryptographicOperations.FixedTimeEquals(Bytes.AsSpan(), other);
+		var guidSpan = bytes[..Serialization.GuidBytes];
+		var secretSpan = bytes[Serialization.GuidBytes..];
+		
+		var guid = new Guid(guidSpan);
+		var secret = new AuthSecret([..secretSpan]);
+		return new AuthToken(guid, secret);
 	}
 	
 	public static AuthToken Generate() {
-		return new AuthToken([..RandomNumberGenerator.GetBytes(Length)]);
+		return new AuthToken(Guid.NewGuid(), AuthSecret.Generate());
 	}
 }

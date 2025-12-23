@@ -5,6 +5,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc.Handshake;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Runtime.Tls;
 using Serilog;
@@ -21,16 +22,19 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 	private readonly ILogger logger;
 	private readonly RpcClientConnectionParameters parameters;
 	private readonly MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries;
-	private readonly Guid sessionId;
+	private readonly Guid sessionGuid;
 	private readonly SslClientAuthenticationOptions sslOptions;
 	
+	private bool wasRejectedDueToClosedSession = false;
 	private bool loggedCertificateValidationError = false;
+	
+	internal bool IsEnabled => !wasRejectedDueToClosedSession;
 	
 	public RpcClientToServerConnector(string loggerName, RpcClientConnectionParameters parameters, MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries) {
 		this.logger = PhantomLogger.Create<RpcClientToServerConnector<TClientToServerMessage, TServerToClientMessage>>(loggerName);
 		this.parameters = parameters;
 		this.messageRegistries = messageRegistries;
-		this.sessionId = Guid.NewGuid();
+		this.sessionGuid = Guid.NewGuid();
 		
 		this.sslOptions = new SslClientAuthenticationOptions {
 			AllowRenegotiation = false,
@@ -57,7 +61,7 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 			
 			cancellationToken.ThrowIfCancellationRequested();
 			
-			if (attempt >= maxAttempts) {
+			if (attempt >= maxAttempts || wasRejectedDueToClosedSession) {
 				break;
 			}
 			
@@ -82,6 +86,11 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 			}
 			
 			cancellationToken.ThrowIfCancellationRequested();
+			
+			if (wasRejectedDueToClosedSession) {
+				logger.Warning("A restart will be required to start a new session!");
+				await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+			}
 			
 			logger.Warning("Retrying in {Seconds}s.", nextAttemptDelay.TotalSeconds.ToString("F1"));
 			nextAttemptDelay = await WaitForRetry(nextAttemptDelay, cancellationToken);
@@ -136,6 +145,30 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 		return null;
 	}
 	
+	private bool ValidateServerCertificate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) {
+		if (certificate == null || sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable)) {
+			logger.Error("Could not establish a secure connection, server did not provide a certificate.");
+		}
+		else if (sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch)) {
+			logger.Error("Could not establish a secure connection, server certificate has the wrong name: {Name}", certificate.Subject);
+		}
+		else if (!parameters.CertificateThumbprint.Check(certificate)) {
+			logger.Error("Could not establish a secure connection, server certificate does not match.");
+		}
+		else if (TlsSupport.CheckAlgorithm((X509Certificate2) certificate) is {} error) {
+			logger.Error("Could not establish a secure connection, server certificate rejected because it uses {ActualAlgorithmName} instead of {ExpectedAlgorithmName}.", error.ActualAlgorithmName, error.ExpectedAlgorithmName);
+		}
+		else if ((sslPolicyErrors & ~SslPolicyErrors.RemoteCertificateChainErrors) != SslPolicyErrors.None) {
+			logger.Error("Could not establish a secure connection, server certificate validation failed.");
+		}
+		else {
+			return true;
+		}
+		
+		loggedCertificateValidationError = true;
+		return false;
+	}
+	
 	private async Task<ConnectionResult?> AuthenticateAndPerformHandshake(RpcStream stream, CancellationToken cancellationToken) {
 		try {
 			loggedCertificateValidationError = false;
@@ -165,13 +198,41 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 		await stream.WriteAuthToken(parameters.AuthToken, cancellationToken);
 		await stream.Flush(cancellationToken);
 		
-		if (await stream.ReadByte(cancellationToken) != 1) {
-			logger.Error("Server rejected authorization token.");
-			return null;
+		var authResult = (RpcAuthResult) await stream.ReadByte(cancellationToken);
+		switch (authResult) {
+			case RpcAuthResult.Success:
+				break;
+			
+			case RpcAuthResult.UnknownClient:
+				logger.Error("Server rejected unknown client.");
+				return null;
+			
+			case RpcAuthResult.InvalidSecret:
+				logger.Error("Server rejected unauthorized client.");
+				return null;
+			
+			default:
+				logger.Error("Server rejected client authorization with unknown error code: {ErrorCode}", authResult);
+				return null;
 		}
 		
-		await stream.WriteGuid(sessionId, cancellationToken);
+		await stream.WriteGuid(sessionGuid, cancellationToken);
 		await stream.Flush(cancellationToken);
+		
+		var sessionRegistrationResult = (RpcSessionRegistrationResult) await stream.ReadByte(cancellationToken);
+		switch (sessionRegistrationResult) {
+			case RpcSessionRegistrationResult.Success:
+				break;
+			
+			case RpcSessionRegistrationResult.AlreadyClosed:
+				wasRejectedDueToClosedSession = true;
+				logger.Fatal("Server rejected client session because it was already closed.");
+				return null;
+			
+			default:
+				logger.Error("Server rejected client session with unknown error code: {ErrorCode}", sessionRegistrationResult);
+				return null;
+		}
 		
 		var pingInterval = await ReadPingInterval(stream, cancellationToken);
 		if (pingInterval == null) {
@@ -183,12 +244,15 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 		await parameters.Handshake.Perform(stream, cancellationToken);
 		
 		var finalHandshakeResult = (RpcFinalHandshakeResult) await stream.ReadByte(cancellationToken);
-		if (finalHandshakeResult == RpcFinalHandshakeResult.Error) {
-			logger.Error("Server rejected client due to unknown error.");
-			return null;
+		switch (finalHandshakeResult) {
+			case RpcFinalHandshakeResult.NewSession:
+			case RpcFinalHandshakeResult.ReusedSession:
+				return new ConnectionResult(finalHandshakeResult == RpcFinalHandshakeResult.NewSession, pingInterval.Value, mappedMessageDefinitions);
+			
+			default:
+				logger.Error("Server rejected client handshake with unknown error code: {ErrorCode}", finalHandshakeResult);
+				return null;
 		}
-		
-		return new ConnectionResult(finalHandshakeResult == RpcFinalHandshakeResult.NewSession, pingInterval.Value, mappedMessageDefinitions);
 	}
 	
 	private async Task<TimeSpan?> ReadPingInterval(RpcStream stream, CancellationToken cancellationToken) {
@@ -223,30 +287,6 @@ sealed class RpcClientToServerConnector<TClientToServerMessage, TServerToClientM
 		}
 		
 		return result.TypeMapping;
-	}
-	
-	private bool ValidateServerCertificate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslPolicyErrors) {
-		if (certificate == null || sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable)) {
-			logger.Error("Could not establish a secure connection, server did not provide a certificate.");
-		}
-		else if (sslPolicyErrors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch)) {
-			logger.Error("Could not establish a secure connection, server certificate has the wrong name: {Name}", certificate.Subject);
-		}
-		else if (!parameters.CertificateThumbprint.Check(certificate)) {
-			logger.Error("Could not establish a secure connection, server certificate does not match.");
-		}
-		else if (TlsSupport.CheckAlgorithm((X509Certificate2) certificate) is {} error) {
-			logger.Error("Could not establish a secure connection, server certificate rejected because it uses {ActualAlgorithmName} instead of {ExpectedAlgorithmName}.", error.ActualAlgorithmName, error.ExpectedAlgorithmName);
-		}
-		else if ((sslPolicyErrors & ~SslPolicyErrors.RemoteCertificateChainErrors) != SslPolicyErrors.None) {
-			logger.Error("Could not establish a secure connection, server certificate validation failed.");
-		}
-		else {
-			return true;
-		}
-		
-		loggedCertificateValidationError = true;
-		return false;
 	}
 	
 	private static async Task DisconnectSocket(Socket socket, RpcStream? stream) {

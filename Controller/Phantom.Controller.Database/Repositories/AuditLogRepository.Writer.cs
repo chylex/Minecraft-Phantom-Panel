@@ -61,6 +61,14 @@ sealed partial class AuditLogRepository {
 			});
 		}
 		
+		public void AgentCreated(Guid agentGuid) {
+			AddItem(AuditLogEventType.AgentCreated, agentGuid.ToString());
+		}
+		
+		public void AgentEdited(Guid agentGuid) {
+			AddItem(AuditLogEventType.AgentEdited, agentGuid.ToString());
+		}
+		
 		public void InstanceCreated(Guid instanceGuid) {
 			AddItem(AuditLogEventType.InstanceCreated, instanceGuid.ToString());
 		}

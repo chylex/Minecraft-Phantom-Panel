@@ -1,12 +1,19 @@
 ﻿@page "/agents"
 @using System.Collections.Immutable
 @using Phantom.Common.Data.Web.Agent
+@using Phantom.Common.Data.Web.Users
 @using Phantom.Utils.Collections
+@using Phantom.Utils.Cryptography
 @using Phantom.Web.Services.Agents
-@inherits Phantom.Web.Components.PhantomComponent
+@using Phantom.Web.Services.Authorization
+@inherits PhantomComponent
 @inject AgentManager AgentManager
 
 <h1>Agents</h1>
+
+<PermissionView Permission="Permission.ManageAllAgents">
+  <a href="agents/create" class="btn btn-primary" role="button">New Agent</a>
+</PermissionView>
 
 <Table Items="agentTable">
   <HeaderRow>
@@ -16,32 +23,51 @@
     <Column>Version</Column>
     <Column Class="text-center">Status</Column>
     <Column Class="text-end" MinWidth="200px">Last Ping</Column>
+    <Column>Actions</Column>
   </HeaderRow>
   <ItemRow Context="agent">
     @{
-      var configuration = agent.Configuration;
+      var connectionKey = TokenGenerator.EncodeBytes(agent.ConnectionKey.AsSpan());
+      var runtimeInfo = agent.RuntimeInfo;
       var usedInstances = agent.Stats?.RunningInstanceCount;
       var usedMemory = agent.Stats?.RunningInstanceMemory.InMegabytes;
     }
     <Cell>
-      <p class="fw-semibold">@configuration.AgentName</p>
+      <p class="fw-semibold">@agent.Configuration.AgentName</p>
       <small class="font-monospace text-uppercase">@agent.AgentGuid.ToString()</small>
     </Cell>
     <Cell class="text-end">
-      <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@configuration.MaxInstances">
-        @(usedInstances?.ToString() ?? "?") / @configuration.MaxInstances.ToString()
+      <ProgressBar Value="@(usedInstances ?? 0)" Maximum="@(runtimeInfo.MaxInstances ?? 0)">
+        @if (runtimeInfo.MaxInstances is {} maxInstances) {
+          <text>@(usedInstances?.ToString() ?? "?") / @maxInstances.ToString()</text>
+        }
+        else {
+          @:N/A
+        }
       </ProgressBar>
     </Cell>
     <Cell class="text-end">
-      <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@configuration.MaxMemory.InMegabytes">
-        @(usedMemory?.ToString() ?? "?") / @configuration.MaxMemory.InMegabytes.ToString() MB
+      <ProgressBar Value="@(usedMemory ?? 0)" Maximum="@(runtimeInfo.MaxMemory?.InMegabytes ?? 0)">
+        @if (runtimeInfo.MaxMemory is {} maxMemory) {
+          <text>@(usedMemory?.ToString() ?? "?") / @maxMemory.InMegabytes MB</text>
+        }
+        else {
+          @:N/A
+        }
       </ProgressBar>
     </Cell>
-    <Cell class="text-condensed">
-      Build: <span class="font-monospace">@configuration.BuildVersion</span>
-      <br>
-      Protocol: <span class="font-monospace">v@(configuration.ProtocolVersion.ToString())</span>
-    </Cell>
+    @if (runtimeInfo.VersionInfo is {} versionInfo) {
+      <Cell class="text-condensed">
+        Build: <span class="font-monospace">@versionInfo.BuildVersion</span>
+        <br>
+        Protocol: <span class="font-monospace">v@(versionInfo.ProtocolVersion.ToString())</span>
+      </Cell>
+    }
+    else {
+      <Cell>
+        N/A
+      </Cell>
+    }
     @switch (agent.ConnectionStatus) {
       case AgentIsOnline:
         <Cell class="fw-semibold text-center text-success">Online</Cell>
@@ -64,6 +90,12 @@
         <Cell class="fw-semibold text-center">N/A</Cell>
         break;
     }
+    <Cell>
+      <PermissionView Permission="Permission.ManageAllAgents">
+        <a href="agents/@agent.AgentGuid/edit" type="button" class="btn btn-primary btn-sm">Edit Agent</a>
+        <button type="button" class="btn btn-warning btn-sm" data-clipboard="@connectionKey" onclick="copyToClipboard(this);">Copy Agent Key</button>
+      </PermissionView>
+    </Cell>
   </ItemRow>
   <NoItemsRow>
     No agents found.
@@ -81,7 +113,8 @@
     }
 
     AgentManager.AgentsChanged.Subscribe(this, agents => {
-      var sortedAgents = agents.Where(agent => authenticatedUser.Info.HasAccessToAgent(agent.AgentGuid))
+      var sortedAgents = agents.Values
+                               .Where(agent => authenticatedUser.Info.HasAccessToAgent(agent.AgentGuid))
                                .OrderBy(static agent => agent.Configuration.AgentName)
                                .ToImmutableArray();
 

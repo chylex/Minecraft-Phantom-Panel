@@ -1,7 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using Akka.Actor;
-using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages.Agent;
 using Phantom.Controller.Services.Agents;
 using Phantom.Controller.Services.Events;
@@ -12,20 +10,29 @@ using Phantom.Utils.Rpc.Runtime.Server;
 
 namespace Phantom.Controller.Services.Rpc;
 
-sealed class AgentClientRegistrar(
-	IActorRefFactory actorSystem,
-	AgentManager agentManager,
-	InstanceLogManager instanceLogManager,
-	EventLogManager eventLogManager
-) : IRpcServerClientRegistrar<IMessageToController, IMessageToAgent, AgentInfo> {
+sealed class AgentClientRegistrar : IRpcServerClientRegistrar<IMessageToController, IMessageToAgent> {
+	private readonly IActorRefFactory actorSystem;
+	private readonly AgentManager agentManager;
+	private readonly InstanceLogManager instanceLogManager;
+	private readonly EventLogManager eventLogManager;
+	
+	private readonly Func<Guid, Guid, Receiver> receiverFactory;
 	private readonly ConcurrentDictionary<Guid, Receiver> receiversBySessionGuid = new ();
 	
-	[SuppressMessage("ReSharper", "LambdaShouldNotCaptureContext")]
-	public IMessageReceiver<IMessageToController> Register(RpcServerToClientConnection<IMessageToController, IMessageToAgent> connection, AgentInfo handshakeResult) {
-		var agentGuid = handshakeResult.AgentGuid;
+	public AgentClientRegistrar(IActorRefFactory actorSystem, AgentManager agentManager, InstanceLogManager instanceLogManager, EventLogManager eventLogManager) {
+		this.actorSystem = actorSystem;
+		this.agentManager = agentManager;
+		this.instanceLogManager = instanceLogManager;
+		this.eventLogManager = eventLogManager;
+		this.receiverFactory = CreateReceiver;
+	}
+	
+	public IMessageReceiver<IMessageToController> Register(RpcServerToClientConnection<IMessageToController, IMessageToAgent> connection) {
+		Guid agentGuid = connection.ClientGuid;
+		
 		agentManager.TellAgent(agentGuid, new AgentActor.SetConnectionCommand(connection));
 		
-		var receiver = receiversBySessionGuid.GetOrAdd(connection.SessionId, CreateReceiver, agentGuid);
+		var receiver = receiversBySessionGuid.GetOrAdd(connection.SessionGuid, receiverFactory, agentGuid);
 		if (receiver.AgentGuid != agentGuid) {
 			throw new InvalidOperationException("Cannot register two agents to the same session!");
 		}
@@ -33,8 +40,8 @@ sealed class AgentClientRegistrar(
 		return receiver;
 	}
 	
-	private Receiver CreateReceiver(Guid sessionId, Guid agentGuid) {
-		var name = "AgentClient-" + sessionId;
+	private Receiver CreateReceiver(Guid sessionGuid, Guid agentGuid) {
+		var name = "AgentClient-" + sessionGuid;
 		var init = new AgentMessageHandlerActor.Init(agentGuid, agentManager, instanceLogManager, eventLogManager);
 		return new Receiver(agentGuid, agentManager, actorSystem.ActorOf(AgentMessageHandlerActor.Factory(init), name));
 	}

@@ -4,13 +4,14 @@ using Phantom.Common.Messages.Web;
 using Phantom.Controller;
 using Phantom.Controller.Database.Postgres;
 using Phantom.Controller.Services;
+using Phantom.Controller.Services.Rpc;
 using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Rpc.Runtime.Server;
 using Phantom.Utils.Runtime;
 using Phantom.Utils.Tasks;
-using RpcAgentServer = Phantom.Utils.Rpc.Runtime.Server.RpcServer<Phantom.Common.Messages.Agent.IMessageToController, Phantom.Common.Messages.Agent.IMessageToAgent, Phantom.Common.Data.Agent.AgentInfo>;
-using RpcWebServer = Phantom.Utils.Rpc.Runtime.Server.RpcServer<Phantom.Common.Messages.Web.IMessageToController, Phantom.Common.Messages.Web.IMessageToWeb, Phantom.Utils.Rpc.Runtime.Server.RpcServerClientHandshake.NoValue>;
+using RpcAgentServer = Phantom.Utils.Rpc.Runtime.Server.RpcServer<Phantom.Common.Messages.Agent.IMessageToController, Phantom.Common.Messages.Agent.IMessageToAgent>;
+using RpcWebServer = Phantom.Utils.Rpc.Runtime.Server.RpcServer<Phantom.Common.Messages.Web.IMessageToController, Phantom.Common.Messages.Web.IMessageToWeb>;
 
 var shutdownCancellationTokenSource = new CancellationTokenSource();
 var shutdownCancellationToken = shutdownCancellationTokenSource.Token;
@@ -43,12 +44,17 @@ try {
 	string secretsPath = Path.GetFullPath("./secrets");
 	CreateFolderOrStop(secretsPath, Chmod.URWX_GRX);
 	
-	var agentKeyDataResult = await new ConnectionKeyFiles.Agent().CreateOrLoad(secretsPath);
-	if (agentKeyDataResult is not {} agentKeyData) {
+	var agentCertificate = await new CertificateFile("agent").CreateOrLoad(secretsPath);
+	if (agentCertificate == null) {
 		return 1;
 	}
 	
-	var webKeyDataResult = await new ConnectionKeyFiles.Web().CreateOrLoad(secretsPath);
+	var webCertificate = await new CertificateFile("web").CreateOrLoad(secretsPath);
+	if (webCertificate == null) {
+		return 1;
+	}
+	
+	var webKeyDataResult = await new AuthTokenFile.Web("web", webCertificate).CreateOrLoad(secretsPath);
 	if (webKeyDataResult is not {} webKeyData) {
 		return 1;
 	}
@@ -57,13 +63,12 @@ try {
 	
 	var dbContextFactory = new ApplicationDbContextFactory(sqlConnectionString);
 	
-	using var controllerServices = new ControllerServices(dbContextFactory, shutdownCancellationToken);
+	using var controllerServices = new ControllerServices(dbContextFactory, agentCertificate.Thumbprint, shutdownCancellationToken);
 	await controllerServices.Initialize();
 	
 	var agentConnectionParameters = new RpcServerConnectionParameters(
 		EndPoint: agentRpcServerHost,
-		Certificate: agentKeyData.Certificate,
-		AuthToken: agentKeyData.AuthToken,
+		Certificate: agentCertificate,
 		PingIntervalSeconds: 10,
 		MessageQueueCapacity: 50,
 		FrameQueueCapacity: 100,
@@ -72,17 +77,18 @@ try {
 	
 	var webConnectionParameters = new RpcServerConnectionParameters(
 		EndPoint: webRpcServerHost,
-		Certificate: webKeyData.Certificate,
-		AuthToken: webKeyData.AuthToken,
+		Certificate: webCertificate,
 		PingIntervalSeconds: 60,
 		MessageQueueCapacity: 250,
 		FrameQueueCapacity: 500,
 		MaxConcurrentlyHandledMessages: 100
 	);
 	
+	var webClientAuthProvider = new WebClientAuthProvider(webKeyData.AuthToken);
+	
 	var rpcServerTasks = new LinkedTasks<bool>([
-		new RpcAgentServer("Agent", agentConnectionParameters, AgentMessageRegistries.Registries, controllerServices.AgentHandshake, controllerServices.AgentRegistrar).Run(shutdownCancellationToken),
-		new RpcWebServer("Web", webConnectionParameters, WebMessageRegistries.Registries, new RpcServerClientHandshake.NoOp(), controllerServices.WebRegistrar).Run(shutdownCancellationToken),
+		new RpcAgentServer("Agent", agentConnectionParameters, AgentMessageRegistries.Registries, controllerServices.AgentAuthProvider, controllerServices.AgentHandshake, controllerServices.AgentRegistrar).Run(shutdownCancellationToken),
+		new RpcWebServer("Web", webConnectionParameters, WebMessageRegistries.Registries, webClientAuthProvider, new IRpcServerClientHandshake.NoOp(), controllerServices.WebRegistrar).Run(shutdownCancellationToken),
 	]);
 	
 	// If either RPC server crashes, stop the whole process.

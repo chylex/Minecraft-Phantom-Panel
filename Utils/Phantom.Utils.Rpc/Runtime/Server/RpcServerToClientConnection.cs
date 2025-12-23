@@ -12,7 +12,8 @@ public sealed class RpcServerToClientConnection<TClientToServerMessage, TServerT
 	private readonly RpcServerClientSession<TServerToClientMessage> session;
 	private readonly RpcStream stream;
 	
-	public Guid SessionId => session.SessionId;
+	public Guid ClientGuid => session.ClientGuid;
+	public Guid SessionGuid => session.SessionGuid;
 	public MessageSender<TServerToClientMessage> MessageSender => session.MessageSender;
 	
 	internal RpcServerToClientConnection(

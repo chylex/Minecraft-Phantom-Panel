@@ -18,10 +18,10 @@
 @using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Rpc
 @inherits PhantomComponent
-@inject Navigation Navigation
-@inject ControllerConnection ControllerConnection
 @inject AgentManager AgentManager
+@inject ControllerConnection ControllerConnection
 @inject InstanceManager InstanceManager
+@inject Navigation Navigation
 
 <Form Model="form" OnSubmit="AddOrEditInstance">
   @{ var selectedAgent = form.SelectedAgent; }
@@ -29,21 +29,27 @@
     <div class="col-xl-7 mb-3">
       @{
         static RenderFragment GetAgentOption(Agent agent) {
-          var configuration = agent.Configuration;
+          var runtimeInfo = agent.RuntimeInfo;
           return
-            @<option value="@agent.AgentGuid">
-              @configuration.AgentName
-              &bullet;
-              @(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(configuration.MaxInstances) @(configuration.MaxInstances == 1 ? "Instance" : "Instances")
-              &bullet;
-              @(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(configuration.MaxMemory.InMegabytes) MB RAM
+            @<option value="@agent.AgentGuid" disabled="@(agent.ConnectionStatus is not AgentIsOnline)">
+              @agent.Configuration.AgentName
+              @if (agent.ConnectionStatus is not AgentIsOnline) {
+                <text> &bullet; </text>
+                <text>Offline</text>
+              }
+              else if (runtimeInfo.MaxInstances is not null && runtimeInfo.MaxMemory is not null) {
+                <text> &bullet; </text>
+                <text>@(agent.Stats?.RunningInstanceCount.ToString() ?? "?")/@(runtimeInfo.MaxInstances) @(runtimeInfo.MaxInstances == 1 ? "Instance" : "Instances")</text>
+                <text> &bullet; </text>
+                <text>@(agent.Stats?.RunningInstanceMemory.InMegabytes.ToString() ?? "?")/@(runtimeInfo.MaxMemory.Value.InMegabytes) MB RAM</text>
+              }
             </option>;
         }
       }
       @if (EditedInstance == null) {
         <FormSelectInput Id="instance-agent" Label="Agent" @bind-Value="form.SelectedAgentGuid">
           <option value="" selected>Select which agent will run the instance...</option>
-          @foreach (var agent in allAgentsByGuid.Values.Where(static agent => agent.ConnectionStatus is AgentIsOnline).OrderBy(static agent => agent.Configuration.AgentName)) {
+          @foreach (var agent in allAgentsByGuid.Values.OrderBy(static agent => agent.Configuration.AgentName)) {
             @GetAgentOption(agent)
           }
         </FormSelectInput>
@@ -101,8 +107,8 @@
     </div>
 
     @{
-      string? allowedServerPorts = selectedAgent?.Configuration.AllowedServerPorts?.ToString();
-      string? allowedRconPorts = selectedAgent?.Configuration.AllowedRconPorts?.ToString();
+      string? allowedServerPorts = selectedAgent?.RuntimeInfo.AllowedServerPorts?.ToString();
+      string? allowedRconPorts = selectedAgent?.RuntimeInfo.AllowedRconPorts?.ToString();
     }
     <div class="col-sm-6 col-xl-2 mb-3">
       <FormNumberInput Id="instance-server-port" @bind-Value="form.ServerPort" min="0" max="65535">
@@ -141,11 +147,11 @@
       }
       <FormNumberInput Id="instance-memory" Type="FormNumberInputType.Range" DebounceMillis="0" DisableTwoWayBinding="true" @bind-Value="form.MemoryUnits" min="@MinimumMemoryUnits" max="@maximumMemoryUnits" disabled="@(maximumMemoryUnits == 0)" class="form-range split-danger" style="@memoryInputSplitVar">
         <LabelFragment>
-          @if (maximumMemoryUnits == 0) {
+          @if (maximumMemoryUnits == 0 || selectedAgent?.RuntimeInfo.MaxMemory is not {} maxMemory) {
             <text>RAM</text>
           }
           else {
-            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(selectedAgent?.Configuration.MaxMemory.InMegabytes) MB</code></text>
+            <text>RAM &bullet; <code>@(form.MemoryAllocation?.InMegabytes ?? 0) / @(maxMemory.InMegabytes) MB</code></text>
           }
         </LabelFragment>
       </FormNumberInput>
@@ -209,7 +215,7 @@
 
     public ImmutableArray<TaggedJavaRuntime> JavaRuntimesForSelectedAgent => TryGet(page.allAgentJavaRuntimes, SelectedAgentGuid, out var javaRuntimes) ? javaRuntimes : ImmutableArray<TaggedJavaRuntime>.Empty;
 
-    public ushort MaximumMemoryUnits => SelectedAgent?.Configuration.MaxMemory.RawValue ?? 0;
+    public ushort MaximumMemoryUnits => SelectedAgent?.RuntimeInfo.MaxMemory?.RawValue ?? 0;
     public ushort AvailableMemoryUnits => Math.Min((SelectedAgent?.AvailableMemory + editedInstanceRamAllocation)?.RawValue ?? MaximumMemoryUnits, MaximumMemoryUnits);
     private ushort selectedMemoryUnits = 4;
 
@@ -250,12 +256,12 @@
 
     public sealed class ServerPortMustBeAllowedAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int> {
       protected override string FieldName => nameof(ServerPort);
-      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Configuration.AllowedServerPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.RuntimeInfo.AllowedServerPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustBeAllowedAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int> {
       protected override string FieldName => nameof(RconPort);
-      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.Configuration.AllowedRconPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.RuntimeInfo.AllowedRconPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustDifferFromServerPortAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int?> {

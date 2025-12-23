@@ -1,7 +1,7 @@
 ﻿<div>
   <div class="progress-label">@ChildContent</div>
   <div class="progress">
-    <div class="progress-bar" role="progressbar" style="width: @(100 * Value / Maximum)%;" aria-valuenow="@Value" aria-valuemin="0" aria-valuemax="@Maximum"></div>
+    <div class="progress-bar" role="progressbar" style="width: @(Maximum <= 0 ? 0 : 100 * Value / Maximum)%;" aria-valuenow="@Value" aria-valuemin="0" aria-valuemax="@Maximum"></div>
   </div>
 </div>
 

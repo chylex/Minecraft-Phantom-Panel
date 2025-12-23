@@ -1,8 +1,11 @@
 ﻿using Akka.Actor;
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Controller.Database;
+using Phantom.Controller.Database.Entities;
+using Phantom.Controller.Database.Repositories;
 using Phantom.Utils.Actor;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc;
 using Serilog;
 
 namespace Phantom.Controller.Services.Agents;
@@ -22,62 +25,105 @@ sealed class AgentDatabaseStorageActor : ReceiveActor<AgentDatabaseStorageActor.
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
-	private AgentConfiguration? configurationToStore;
-	private bool hasScheduledFlush;
+	private StoreAgentRuntimeInfoCommand? storeRuntimeInfoCommand;
 	
 	private AgentDatabaseStorageActor(Init init) {
 		this.agentGuid = init.AgentGuid;
 		this.dbProvider = init.DbProvider;
 		this.cancellationToken = init.CancellationToken;
 		
-		Receive<StoreAgentConfigurationCommand>(StoreAgentConfiguration);
-		ReceiveAsync<FlushChangesCommand>(FlushChanges);
+		Receive<StoreAgentRuntimeInfoCommand>(StoreAgentRuntimeInfo);
+		ReceiveAsync<StoreAgentConfigurationCommand>(StoreAgentConfiguration);
+		ReceiveAsync<FlushAgentRuntimeInfoCommand>(FlushAgentRuntimeInfo);
+	}
+	
+	private ValueTask<AgentEntity?> FindAgentEntity(ILazyDbContext db) {
+		return db.Ctx.Agents.FindAsync([agentGuid], cancellationToken);
 	}
 	
 	public interface ICommand;
 	
-	public sealed record StoreAgentConfigurationCommand(AgentConfiguration Configuration) : ICommand;
+	public sealed record StoreAgentConfigurationCommand(Guid AuditLogUserGuid, AgentConfiguration Configuration) : ICommand;
 	
-	private sealed record FlushChangesCommand : ICommand;
+	public sealed record StoreAgentRuntimeInfoCommand(AgentRuntimeInfo RuntimeInfo) : ICommand;
 	
-	private void StoreAgentConfiguration(StoreAgentConfigurationCommand command) {
-		configurationToStore = command.Configuration;
+	private sealed record FlushAgentRuntimeInfoCommand : ICommand;
+	
+	private async Task StoreAgentConfiguration(StoreAgentConfigurationCommand command) {
+		await FlushAgentRuntimeInfo();
+		
+		bool wasCreated;
+		
+		await using (var db = dbProvider.Lazy()) {
+			var entity = db.Ctx.AgentUpsert.Fetch(agentGuid, out wasCreated);
+			
+			if (wasCreated) {
+				entity.AuthSecret = AuthSecret.Generate();
+			}
+			
+			entity.Name = command.Configuration.AgentName;
+			
+			var auditLogWriter = new AuditLogRepository(db).Writer(command.AuditLogUserGuid);
+			if (wasCreated) {
+				auditLogWriter.AgentCreated(agentGuid);
+			}
+			else {
+				auditLogWriter.AgentEdited(agentGuid);
+			}
+			
+			await db.Ctx.SaveChangesAsync(cancellationToken);
+		}
+		
+		string action = wasCreated ? "Created" : "Edited";
+		Logger.Information(action + " agent \"{AgentName}\" (GUID {AgentGuid}) in database.", command.Configuration.AgentName, agentGuid);
+	}
+	
+	private void StoreAgentRuntimeInfo(StoreAgentRuntimeInfoCommand command) {
+		storeRuntimeInfoCommand = command;
 		ScheduleFlush(TimeSpan.FromSeconds(2));
 	}
 	
-	private async Task FlushChanges(FlushChangesCommand command) {
-		hasScheduledFlush = false;
-		
-		if (configurationToStore == null) {
-			return;
+	private void ScheduleFlush(TimeSpan delay) {
+		if (storeRuntimeInfoCommand != null) {
+			Timers.StartSingleTimer("FlushChanges", new FlushAgentRuntimeInfoCommand(), delay, Self);
 		}
-		
-		try {
-			await using var ctx = dbProvider.Eager();
-			var entity = ctx.AgentUpsert.Fetch(agentGuid);
-			
-			entity.Name = configurationToStore.AgentName;
-			entity.ProtocolVersion = configurationToStore.ProtocolVersion;
-			entity.BuildVersion = configurationToStore.BuildVersion;
-			entity.MaxInstances = configurationToStore.MaxInstances;
-			entity.MaxMemory = configurationToStore.MaxMemory;
-			
-			await ctx.SaveChangesAsync(cancellationToken);
-		} catch (Exception e) {
-			ScheduleFlush(TimeSpan.FromSeconds(10));
-			Logger.Error(e, "Could not store agent \"{AgentName}\" (GUID {AgentGuid}) in database.", configurationToStore.AgentName, agentGuid);
-			return;
-		}
-		
-		Logger.Information("Stored agent \"{AgentName}\" (GUID {AgentGuid}) in database.", configurationToStore.AgentName, agentGuid);
-		
-		configurationToStore = null;
 	}
 	
-	private void ScheduleFlush(TimeSpan delay) {
-		if (!hasScheduledFlush) {
-			hasScheduledFlush = true;
-			Timers.StartSingleTimer("FlushChanges", new FlushChangesCommand(), delay, Self);
+	private Task FlushAgentRuntimeInfo(FlushAgentRuntimeInfoCommand command) {
+		return FlushAgentRuntimeInfo();
+	}
+	
+	private async Task FlushAgentRuntimeInfo() {
+		if (storeRuntimeInfoCommand == null) {
+			return;
 		}
+		
+		string agentName;
+		
+		await using (var db = dbProvider.Lazy()) {
+			var entity = await FindAgentEntity(db);
+			if (entity == null) {
+				return;
+			}
+			
+			agentName = entity.Name;
+			
+			try {
+				entity.ProtocolVersion = storeRuntimeInfoCommand.RuntimeInfo.VersionInfo?.ProtocolVersion;
+				entity.BuildVersion = storeRuntimeInfoCommand.RuntimeInfo.VersionInfo?.BuildVersion;
+				entity.MaxInstances = storeRuntimeInfoCommand.RuntimeInfo.MaxInstances;
+				entity.MaxMemory = storeRuntimeInfoCommand.RuntimeInfo.MaxMemory;
+				
+				await db.Ctx.SaveChangesAsync(cancellationToken);
+			} catch (Exception e) {
+				ScheduleFlush(TimeSpan.FromSeconds(10));
+				Logger.Error(e, "Could not update agent \"{AgentName}\" (GUID {AgentGuid}) in database.", entity.Name, agentGuid);
+				return;
+			}
+		}
+		
+		Logger.Information("Updated agent \"{AgentName}\" (GUID {AgentGuid}) in database.", agentName, agentGuid);
+		
+		storeRuntimeInfoCommand = null;
 	}
 }

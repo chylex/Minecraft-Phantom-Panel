@@ -1,0 +1,73 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using Phantom.Common.Data.Web.Agent
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Utils.Result
+@using Phantom.Web.Services
+@using Phantom.Web.Services.Agents
+@inherits PhantomComponent
+@inject AgentManager AgentManager
+@inject Navigation Navigation
+
+<Form Model="form" OnSubmit="AddOrEditAgent">
+  <div class="row">
+    <div class="col-xl-12 mb-3">
+      <FormTextInput Id="agent-name" Label="Agent Name" @bind-Value="form.AgentName" />
+    </div>
+  </div>
+
+  <FormButtonSubmit Label="@(EditedAgent == null ? "Create Agent" : "Edit Agent")" class="btn btn-primary" />
+  <FormSubmitError />
+</Form>
+
+@code {
+
+  [Parameter, EditorRequired]
+  public Agent? EditedAgent { get; init; }
+
+  private ConfigureAgentFormModel form = null!;
+
+  private sealed class ConfigureAgentFormModel : FormModel {
+    [Required(ErrorMessage = "Agent name is required.")]
+    [StringLength(100, ErrorMessage = "Agent name must be at most 100 characters.")]
+    public string AgentName { get; set; } = string.Empty;
+  }
+
+  protected override void OnInitialized() {
+    form = new ConfigureAgentFormModel();
+
+    if (EditedAgent != null) {
+      var configuration = EditedAgent.Configuration;
+      form.AgentName = configuration.AgentName;
+    }
+  }
+
+  private async Task AddOrEditAgent(EditContext context) {
+    await form.SubmitModel.StartSubmitting();
+
+    var agentGuid = EditedAgent?.AgentGuid ?? Guid.NewGuid();
+    var agentConfiguration = new AgentConfiguration(
+      form.AgentName
+    );
+
+    var result = await AgentManager.CreateOrUpdateAgent(await GetAuthenticatedUser(), agentGuid, agentConfiguration, CancellationToken);
+
+    switch (result.Variant()) {
+      case Ok<CreateOrUpdateAgentResult>(CreateOrUpdateAgentResult.Success):
+        await Navigation.NavigateTo("agents");
+        break;
+
+      case Ok<CreateOrUpdateAgentResult>(var createOrUpdateAgentResult):
+        form.SubmitModel.StopSubmitting(createOrUpdateAgentResult.ToSentence());
+        break;
+
+      case Err<UserActionFailure>(UserActionFailure.NotAuthorized):
+        form.SubmitModel.StopSubmitting("You do not have permission to create or edit agents.");
+        break;
+
+      default:
+        form.SubmitModel.StopSubmitting("Unknown error.");
+        break;
+    }
+  }
+
+}

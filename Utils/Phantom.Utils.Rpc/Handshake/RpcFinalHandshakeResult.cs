@@ -1,4 +1,4 @@
-﻿namespace Phantom.Utils.Rpc.Runtime;
+﻿namespace Phantom.Utils.Rpc.Handshake;
 
 enum RpcFinalHandshakeResult : byte {
 	Error = 0,

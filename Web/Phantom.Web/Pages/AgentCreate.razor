@@ -1,0 +1,6 @@
+﻿@page "/agents/create"
+@using Phantom.Common.Data.Web.Users
+@attribute [Authorize(Permission.ManageAllAgentsPolicy)]
+
+<h1>New Agent</h1>
+<AgentAddOrEditForm EditedAgent="null" />

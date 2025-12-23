@@ -18,7 +18,7 @@ namespace Phantom.Controller.Database.Postgres.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "9.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -29,21 +29,25 @@ namespace Phantom.Controller.Database.Postgres.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("BuildVersion")
+                    b.Property<byte[]>("AuthSecret")
                         .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("BuildVersion")
                         .HasColumnType("text");
 
-                    b.Property<int>("MaxInstances")
+                    b.Property<int?>("MaxInstances")
                         .HasColumnType("integer");
 
-                    b.Property<ushort>("MaxMemory")
+                    b.Property<int?>("MaxMemory")
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("ProtocolVersion")
+                    b.Property<int?>("ProtocolVersion")
                         .HasColumnType("integer");
 
                     b.HasKey("AgentGuid");
@@ -142,7 +146,7 @@ namespace Phantom.Controller.Database.Postgres.Migrations
                     b.Property<bool>("LaunchAutomatically")
                         .HasColumnType("boolean");
 
-                    b.Property<ushort>("MemoryAllocation")
+                    b.Property<int>("MemoryAllocation")
                         .HasColumnType("integer");
 
                     b.Property<string>("MinecraftServerKind")
