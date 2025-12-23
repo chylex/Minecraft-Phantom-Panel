@@ -65,7 +65,7 @@
     var result = await EventLogManager.GetMostRecentItems(await GetAuthenticatedUser(), count: 50, CancellationToken);
     if (result) {
       logItems = result.Value;
-      agentNamesByGuid = AgentManager.GetAll().ToImmutableDictionary(static kvp => kvp.AgentGuid, static kvp => kvp.Configuration.AgentName);
+      agentNamesByGuid = AgentManager.GetAll().Values.ToImmutableDictionary(static kvp => kvp.AgentGuid, static kvp => kvp.Configuration.AgentName);
       instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.InstanceGuid, static instance => instance.Configuration.InstanceName);
     }
     else {

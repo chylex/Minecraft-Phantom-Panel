@@ -21,6 +21,7 @@ using Phantom.Utils.Actor.Mailbox;
 using Phantom.Utils.Actor.Tasks;
 using Phantom.Utils.Collections;
 using Phantom.Utils.Logging;
+using Phantom.Utils.Rpc;
 using Phantom.Utils.Rpc.Runtime.Server;
 using Serilog;
 
@@ -32,7 +33,18 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	private static readonly TimeSpan DisconnectionRecheckInterval = TimeSpan.FromSeconds(5);
 	private static readonly TimeSpan DisconnectionThreshold = TimeSpan.FromSeconds(12);
 	
-	public readonly record struct Init(Guid AgentGuid, AgentConfiguration AgentConfiguration, ControllerState ControllerState, MinecraftVersions MinecraftVersions, IDbContextProvider DbProvider, CancellationToken CancellationToken);
+	public readonly record struct Init(
+		Guid? LoggedInUserGuid,
+		Guid AgentGuid,
+		AgentConfiguration AgentConfiguration,
+		AuthSecret AuthSecret,
+		AgentRuntimeInfo AgentRuntimeInfo,
+		AgentConnectionKeys AgentConnectionKeys,
+		ControllerState ControllerState,
+		MinecraftVersions MinecraftVersions,
+		IDbContextProvider DbProvider,
+		CancellationToken CancellationToken
+	);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new AgentActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume, MailboxType = UnboundedJumpAheadMailbox.Name });
@@ -40,16 +52,21 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	
 	public ITimerScheduler Timers { get; set; } = null!;
 	
+	private readonly AgentConnectionKeys agentConnectionKeys;
 	private readonly ControllerState controllerState;
 	private readonly MinecraftVersions minecraftVersions;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
 	private readonly Guid agentGuid;
+	private readonly AuthInfo authInfo;
 	
 	private AgentConfiguration configuration;
+	private AgentRuntimeInfo runtimeInfo;
 	private AgentStats? stats;
 	private ImmutableArray<TaggedJavaRuntime> javaRuntimes = ImmutableArray<TaggedJavaRuntime>.Empty;
+	
+	private string AgentName => configuration.AgentName;
 	
 	private readonly AgentConnection connection;
 	
@@ -76,23 +93,33 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	private readonly Dictionary<Guid, Instance> instanceDataByGuid = new ();
 	
 	private AgentActor(Init init) {
+		this.agentConnectionKeys = init.AgentConnectionKeys;
 		this.controllerState = init.ControllerState;
 		this.minecraftVersions = init.MinecraftVersions;
 		this.dbProvider = init.DbProvider;
 		this.cancellationToken = init.CancellationToken;
 		
 		this.agentGuid = init.AgentGuid;
+		this.authInfo = new AuthInfo(this, init.AuthSecret);
+		
 		this.configuration = init.AgentConfiguration;
+		this.runtimeInfo = init.AgentRuntimeInfo;
 		this.connection = new AgentConnection(agentGuid, configuration.AgentName);
 		
 		this.databaseStorageActor = Context.ActorOf(AgentDatabaseStorageActor.Factory(new AgentDatabaseStorageActor.Init(agentGuid, init.DbProvider, init.CancellationToken)), "DatabaseStorage");
 		
+		if (init.LoggedInUserGuid is {} loggedInUserGuid) {
+			databaseStorageActor.Tell(new AgentDatabaseStorageActor.StoreAgentConfigurationCommand(loggedInUserGuid, configuration));
+		}
+		
 		NotifyAgentUpdated();
 		
 		ReceiveAsync<InitializeCommand>(Initialize);
+		Receive<ConfigureAgentCommand>(ConfigureAgent);
 		ReceiveAsyncAndReply<RegisterCommand, ImmutableArray<ConfigureInstanceMessage>>(Register);
 		Receive<SetConnectionCommand>(SetConnection);
 		Receive<UnregisterCommand>(Unregister);
+		ReceiveAndReply<GetAuthSecretCommand, AuthSecret>(GetAuthSecret);
 		Receive<RefreshConnectionStatusCommand>(RefreshConnectionStatus);
 		Receive<NotifyIsAliveCommand>(NotifyIsAlive);
 		Receive<UpdateStatsCommand>(UpdateStats);
@@ -106,7 +133,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	}
 	
 	private void NotifyAgentUpdated() {
-		controllerState.UpdateAgent(new Agent(agentGuid, configuration, stats, ConnectionStatus));
+		controllerState.UpdateAgent(new Agent(agentGuid, configuration, authInfo.ConnectionKey, runtimeInfo, stats, ConnectionStatus));
 	}
 	
 	protected override void PreStart() {
@@ -174,11 +201,15 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	
 	private sealed record InitializeCommand : ICommand;
 	
-	public sealed record RegisterCommand(AgentConfiguration Configuration, ImmutableArray<TaggedJavaRuntime> JavaRuntimes) : ICommand, ICanReply<ImmutableArray<ConfigureInstanceMessage>>;
+	public sealed record ConfigureAgentCommand(Guid LoggedInUserGuid, AgentConfiguration Configuration) : ICommand;
+	
+	public sealed record RegisterCommand(AgentRuntimeInfo RuntimeInfo, ImmutableArray<TaggedJavaRuntime> JavaRuntimes) : ICommand, ICanReply<ImmutableArray<ConfigureInstanceMessage>>;
 	
 	public sealed record SetConnectionCommand(RpcServerToClientConnection<IMessageToController, IMessageToAgent> Connection) : ICommand;
 	
 	public sealed record UnregisterCommand : ICommand;
+	
+	public sealed record GetAuthSecretCommand : ICommand, ICanReply<AuthSecret>;
 	
 	private sealed record RefreshConnectionStatusCommand : ICommand;
 	
@@ -227,19 +258,24 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		}
 	}
 	
+	private void ConfigureAgent(ConfigureAgentCommand message) {
+		configuration = message.Configuration;
+		NotifyAgentUpdated();
+		
+		databaseStorageActor.Tell(new AgentDatabaseStorageActor.StoreAgentConfigurationCommand(message.LoggedInUserGuid, configuration));
+	}
+	
 	private async Task<ImmutableArray<ConfigureInstanceMessage>> Register(RegisterCommand command) {
 		var configurationMessages = await PrepareInitialConfigurationMessages();
 		
-		configuration = command.Configuration;
-		connection.SetAgentName(configuration.AgentName);
-		
+		runtimeInfo = command.RuntimeInfo;
 		lastPingTime = DateTimeOffset.Now;
 		isOnline = true;
 		NotifyAgentUpdated();
 		
-		Logger.Information("Registered agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
+		Logger.Information("Registered agent \"{AgentName}\" (GUID {AgentGuid}).", AgentName, agentGuid);
 		
-		databaseStorageActor.Tell(new AgentDatabaseStorageActor.StoreAgentConfigurationCommand(configuration));
+		databaseStorageActor.Tell(new AgentDatabaseStorageActor.StoreAgentRuntimeInfoCommand(runtimeInfo));
 		
 		javaRuntimes = command.JavaRuntimes;
 		controllerState.UpdateAgentJavaRuntimes(agentGuid, javaRuntimes);
@@ -261,7 +297,11 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		
 		TellAllInstances(new InstanceActor.SetStatusCommand(InstanceStatus.Offline));
 		
-		Logger.Information("Unregistered agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
+		Logger.Information("Unregistered agent \"{AgentName}\" (GUID {AgentGuid}).", AgentName, agentGuid);
+	}
+	
+	private AuthSecret GetAuthSecret(GetAuthSecretCommand command) {
+		return authInfo.Secret;
 	}
 	
 	private void RefreshConnectionStatus(RefreshConnectionStatusCommand command) {
@@ -269,7 +309,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 			isOnline = false;
 			NotifyAgentUpdated();
 			
-			Logger.Warning("Lost connection to agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
+			Logger.Warning("Lost connection to agent \"{AgentName}\" (GUID {AgentGuid}).", AgentName, agentGuid);
 		}
 	}
 	
@@ -280,7 +320,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 			isOnline = true;
 			NotifyAgentUpdated();
 			
-			Logger.Warning("Restored connection to agent \"{Name}\" (GUID {Guid}).", configuration.AgentName, agentGuid);
+			Logger.Warning("Restored connection to agent \"{AgentName}\" (GUID {AgentGuid}).", AgentName, agentGuid);
 		}
 	}
 	
@@ -329,19 +369,15 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		var isCreating = command.IsCreatingInstance;
 		
 		if (result.Is(ConfigureInstanceResult.Success)) {
-			string action = isCreating ? "Added" : "Edited";
-			string relation = isCreating ? "to agent" : "in agent";
-			
-			Logger.Information(action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) " + relation + " \"{AgentName}\".", instanceName, instanceGuid, configuration.AgentName);
+			string action = isCreating ? "Created" : "Edited";
+			Logger.Information(action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) in agent \"{AgentName}\".", instanceName, instanceGuid, AgentName);
 			
 			return CreateOrUpdateInstanceResult.Success;
 		}
 		else {
-			string action = isCreating ? "adding" : "editing";
-			string relation = isCreating ? "to agent" : "in agent";
+			string action = isCreating ? "creating" : "editing";
 			string reason = result.Into(ConfigureInstanceResultExtensions.ToSentence, InstanceActionFailureExtensions.ToSentence);
-			
-			Logger.Information("Failed " + action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) " + relation + " \"{AgentName}\". {ErrorMessage}", instanceName, instanceGuid, configuration.AgentName, reason);
+			Logger.Information("Failed " + action + " instance \"{InstanceName}\" (GUID {InstanceGuid}) in agent \"{AgentName}\". {ErrorMessage}", instanceName, instanceGuid, AgentName, reason);
 			
 			return CreateOrUpdateInstanceResult.UnknownError;
 		}
@@ -369,5 +405,27 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	
 	private void ReceiveInstanceData(ReceiveInstanceDataCommand command) {
 		UpdateInstanceData(command.Instance);
+	}
+	
+	private sealed class AuthInfo {
+		private readonly AgentActor actor;
+		
+		public AuthSecret Secret { get; private set; }
+		public ImmutableArray<byte> ConnectionKey { get; private set; }
+		
+		public AuthInfo(AgentActor actor, AuthSecret authSecret) {
+			this.actor = actor;
+			this.Secret = authSecret;
+			this.ConnectionKey = CreateConnectionKey(authSecret);
+		}
+		
+		public void UpdateSecret(AuthSecret newSecret) {
+			this.Secret = newSecret;
+			this.ConnectionKey = CreateConnectionKey(newSecret);
+		}
+		
+		private ImmutableArray<byte> CreateConnectionKey(AuthSecret authSecret) {
+			return actor.agentConnectionKeys.Get(new AuthToken(actor.agentGuid, authSecret)).ToBytes();
+		}
 	}
 }

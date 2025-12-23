@@ -7,8 +7,6 @@ namespace Phantom.Utils.Rpc.Runtime;
 
 [SuppressMessage("ReSharper", "MemberCanBeInternal")]
 public sealed class RpcStream : IAsyncDisposable {
-	private const int GuidBytes = 16;
-	
 	private readonly SslStream stream;
 	
 	internal RpcStream(SslStream stream) {
@@ -76,25 +74,19 @@ public sealed class RpcStream : IAsyncDisposable {
 	}
 	
 	public ValueTask WriteGuid(Guid guid, CancellationToken cancellationToken) {
-		static void Write(Span<byte> span, Guid guid) {
-			if (!guid.TryWriteBytes(span)) {
-				throw new ArgumentException("Span is not large enough to write a GUID.", nameof(span));
-			}
-		}
-		
-		return WriteValue(guid, size: GuidBytes, Write, cancellationToken);
+		return WriteValue(guid, Serialization.GuidBytes, Serialization.WriteGuid, cancellationToken);
 	}
 	
 	public ValueTask<Guid> ReadGuid(CancellationToken cancellationToken) {
-		return ReadValue(static span => new Guid(span), size: GuidBytes, cancellationToken);
+		return ReadValue(static span => new Guid(span), Serialization.GuidBytes, cancellationToken);
 	}
 	
 	public ValueTask WriteAuthToken(AuthToken authToken, CancellationToken cancellationToken) {
-		return stream.WriteAsync(authToken.Bytes.AsMemory(), cancellationToken);
+		return WriteValue(authToken, AuthToken.Length, static (span, value) => value.ToBytes(span), cancellationToken);
 	}
 	
 	public ValueTask<AuthToken> ReadAuthToken(CancellationToken cancellationToken) {
-		return ReadValue(static span => new AuthToken([..span]), AuthToken.Length, cancellationToken);
+		return ReadValue(AuthToken.FromBytes, AuthToken.Length, cancellationToken);
 	}
 	
 	public ValueTask WriteBytes(ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken) {

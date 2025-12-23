@@ -3,9 +3,11 @@
 @using System.Collections.Immutable
 @using Phantom.Common.Data.Web.AuditLog
 @using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Agents
 @using Phantom.Web.Services.Instances
 @using Phantom.Web.Services.Users
 @inherits PhantomComponent
+@inject AgentManager AgentManager
 @inject AuditLogManager AuditLogManager
 @inject InstanceManager InstanceManager
 @inject UserManager UserManager
@@ -55,6 +57,7 @@
   private string? loadError;
 
   private ImmutableDictionary<Guid, string>? userNamesByGuid;
+  private ImmutableDictionary<Guid, string> agentNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
   private ImmutableDictionary<Guid, string> instanceNamesByGuid = ImmutableDictionary<Guid, string>.Empty;
 
   protected override async Task OnInitializedAsync() {
@@ -62,6 +65,7 @@
     if (result) {
       logItems = result.Value;
       userNamesByGuid = (await UserManager.GetAll(CancellationToken)).ToImmutableDictionary(static user => user.Guid, static user => user.Name);
+      agentNamesByGuid = AgentManager.GetAll().Values.ToImmutableDictionary(static agent => agent.AgentGuid, static agent => agent.Configuration.AgentName);
       instanceNamesByGuid = InstanceManager.GetAll().Values.ToImmutableDictionary(static instance => instance.InstanceGuid, static instance => instance.Configuration.InstanceName);
     }
     else {
@@ -75,8 +79,9 @@
 
   private string? GetSubjectName(AuditLogSubjectType type, string id) {
     return type switch {
-      AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
       AuditLogSubjectType.User     => userNamesByGuid != null && userNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
+      AuditLogSubjectType.Agent    => agentNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
+      AuditLogSubjectType.Instance => instanceNamesByGuid.TryGetValue(Guid.Parse(id), out var name) ? name : null,
       _                            => null,
     };
   }

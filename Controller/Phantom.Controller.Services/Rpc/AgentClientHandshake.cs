@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages.Agent.Handshake;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Services.Agents;
@@ -10,7 +9,7 @@ using Phantom.Utils.Rpc.Runtime.Server;
 
 namespace Phantom.Controller.Services.Rpc;
 
-public sealed class AgentClientHandshake : IRpcServerClientHandshake<AgentInfo> {
+sealed class AgentClientHandshake : IRpcServerClientHandshake {
 	private const int MaxRegistrationBytes = 1024 * 1024 * 8;
 	
 	private readonly AgentManager agentManager;
@@ -19,9 +18,9 @@ public sealed class AgentClientHandshake : IRpcServerClientHandshake<AgentInfo> 
 		this.agentManager = agentManager;
 	}
 	
-	public async Task<Either<AgentInfo, Exception>> Perform(bool isNewSession, RpcStream stream, CancellationToken cancellationToken) {
+	public async Task Perform(bool isNewSession, RpcStream stream, Guid agentGuid, CancellationToken cancellationToken) {
 		RegistrationResult registrationResult;
-		switch (await RegisterAgent(stream, cancellationToken)) {
+		switch (await RegisterAgent(stream, agentGuid, cancellationToken)) {
 			case Left<RegistrationResult, Exception>(var result):
 				await stream.WriteByte(value: 1, cancellationToken);
 				registrationResult = result;
@@ -29,11 +28,11 @@ public sealed class AgentClientHandshake : IRpcServerClientHandshake<AgentInfo> 
 			
 			case Right<RegistrationResult, Exception>(var exception):
 				await stream.WriteByte(value: 0, cancellationToken);
-				return Either.Right(exception);
+				throw exception;
 			
 			default:
 				await stream.WriteByte(value: 0, cancellationToken);
-				return Either.Right<Exception>(new InvalidOperationException("Invalid result type."));
+				throw new InvalidOperationException("Invalid result type.");
 		}
 		
 		if (isNewSession) {
@@ -50,11 +49,9 @@ public sealed class AgentClientHandshake : IRpcServerClientHandshake<AgentInfo> 
 		}
 		
 		await stream.Flush(cancellationToken);
-		
-		return Either.Left(registrationResult.AgentInfo);
 	}
 	
-	private async Task<Either<RegistrationResult, Exception>> RegisterAgent(RpcStream stream, CancellationToken cancellationToken) {
+	private async Task<Either<RegistrationResult, Exception>> RegisterAgent(RpcStream stream, Guid agentGuid, CancellationToken cancellationToken) {
 		int serializedRegistrationLength = await stream.ReadSignedInt(cancellationToken);
 		if (serializedRegistrationLength is < 0 or > MaxRegistrationBytes) {
 			return Either.Right<Exception>(new InvalidOperationException("Registration must be between 0 and " + MaxRegistrationBytes + " bytes."));
@@ -69,9 +66,13 @@ public sealed class AgentClientHandshake : IRpcServerClientHandshake<AgentInfo> 
 			return Either.Right<Exception>(new InvalidOperationException("Caught exception during deserialization.", e));
 		}
 		
-		var configureInstanceMessages = await agentManager.RegisterAgent(registration);
-		return Either.Left(new RegistrationResult(registration.AgentInfo, configureInstanceMessages));
+		var configureInstanceMessages = await agentManager.RegisterAgent(agentGuid, registration);
+		if (configureInstanceMessages == null) {
+			return Either.Right<Exception>(new InvalidOperationException("Could not register agent."));
+		}
+		
+		return Either.Left(new RegistrationResult(configureInstanceMessages.Value));
 	}
 	
-	private readonly record struct RegistrationResult(AgentInfo AgentInfo, ImmutableArray<ConfigureInstanceMessage> ConfigureInstanceMessages);
+	private readonly record struct RegistrationResult(ImmutableArray<ConfigureInstanceMessage> ConfigureInstanceMessages);
 }

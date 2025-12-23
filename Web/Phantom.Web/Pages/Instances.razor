@@ -76,7 +76,7 @@
 
   protected override void OnInitialized() {
     AgentManager.AgentsChanged.Subscribe(this, agents => {
-      this.agentNamesByGuid = agents.ToImmutableDictionary(static agent => agent.AgentGuid, static agent => agent.Configuration.AgentName);
+      this.agentNamesByGuid = agents.Select(static kvp => KeyValuePair.Create(kvp.Key, kvp.Value.Configuration.AgentName)).ToImmutableDictionary();
       InvokeAsync(StateHasChanged);
     });
   }

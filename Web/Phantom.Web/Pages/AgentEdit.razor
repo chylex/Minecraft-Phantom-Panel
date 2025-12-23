@@ -1,0 +1,37 @@
+﻿@page "/agents/{AgentGuid:guid}/edit"
+@attribute [Authorize(Permission.ManageAllAgentsPolicy)]
+@using Phantom.Common.Data.Web.Agent
+@using Phantom.Common.Data.Web.Users
+@using Phantom.Web.Services.Agents
+@inherits PhantomComponent
+@inject AgentManager AgentManager
+
+@if (isLoading) {
+  <h1>Edit Agent</h1>
+  <p>Loading...</p>
+  return;
+}
+
+@if (Agent == null) {
+  <h1>Agent Not Found</h1>
+  <p>Return to <a href="agents">all agents</a>.</p>
+  return;
+}
+
+<h1>Edit Agent: @Agent.Configuration.AgentName</h1>
+<AgentAddOrEditForm EditedAgent="Agent" />
+
+@code {
+
+  [Parameter]
+  public Guid AgentGuid { get; init; }
+
+  private Agent? Agent { get; set; }
+  private bool isLoading = true;
+
+  protected override async Task OnInitializedAsync() {
+    Agent = AgentManager.GetByGuid(await GetAuthenticatedUser(), AgentGuid);
+    isLoading = false;
+  }
+
+}

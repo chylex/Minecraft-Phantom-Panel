@@ -18,10 +18,10 @@ public static class AgentMessageRegistries {
 		ToAgent.Add<StopInstanceMessage, Result<StopInstanceResult, InstanceActionFailure>>();
 		ToAgent.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, InstanceActionFailure>>();
 		
-		ToController.Add<ReportInstanceStatusMessage>();
-		ToController.Add<InstanceOutputMessage>();
 		ToController.Add<ReportAgentStatusMessage>();
-		ToController.Add<ReportInstanceEventMessage>();
+		ToController.Add<ReportInstanceStatusMessage>();
 		ToController.Add<ReportInstancePlayerCountsMessage>();
+		ToController.Add<ReportInstanceEventMessage>();
+		ToController.Add<InstanceOutputMessage>();
 	}
 }

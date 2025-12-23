@@ -6,7 +6,6 @@ namespace Phantom.Utils.Rpc.Runtime.Server;
 public sealed record RpcServerConnectionParameters(
 	EndPoint EndPoint,
 	RpcServerCertificate Certificate,
-	AuthToken AuthToken,
 	ushort PingIntervalSeconds,
 	ushort MessageQueueCapacity,
 	ushort FrameQueueCapacity,

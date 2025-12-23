@@ -13,7 +13,8 @@ sealed class RpcServerClientSession<TServerToClientMessage> : IRpcConnectionProv
 	private readonly RpcServerClientSessions<TServerToClientMessage> sessions;
 	
 	public string LoggerName { get; }
-	public Guid SessionId { get; }
+	public Guid ClientGuid { get; }
+	public Guid SessionGuid { get; }
 	public MessageSender<TServerToClientMessage> MessageSender { get; }
 	public RpcFrameSender<TServerToClientMessage> FrameSender { get; }
 	
@@ -28,11 +29,13 @@ sealed class RpcServerClientSession<TServerToClientMessage> : IRpcConnectionProv
 	
 	public CancellationToken CloseCancellationToken => closeCancellationTokenSource.Token;
 	
-	public RpcServerClientSession(string loggerName, RpcServerConnectionParameters connectionParameters, MessageTypeMapping<TServerToClientMessage> messageTypeMapping, RpcServerClientSessions<TServerToClientMessage> sessions, Guid sessionId) {
+	public RpcServerClientSession(string loggerName, RpcServerConnectionParameters connectionParameters, MessageTypeMapping<TServerToClientMessage> messageTypeMapping, RpcServerClientSessions<TServerToClientMessage> sessions, Guid clientGuid, Guid sessionGuid) {
 		this.logger = PhantomLogger.Create<RpcServerClientSession<TServerToClientMessage>>(loggerName);
-		this.LoggerName = loggerName;
 		this.sessions = sessions;
-		this.SessionId = sessionId;
+		
+		this.LoggerName = loggerName;
+		this.ClientGuid = clientGuid;
+		this.SessionGuid = sessionGuid;
 		this.FrameSender = new RpcFrameSender<TServerToClientMessage>(loggerName, connectionParameters, this, messageTypeMapping, connectionParameters.PingInterval);
 		this.MessageSender = new MessageSender<TServerToClientMessage>(loggerName, connectionParameters, new IRpcFrameSenderProvider<TServerToClientMessage>.Constant(FrameSender));
 		
@@ -105,7 +108,7 @@ sealed class RpcServerClientSession<TServerToClientMessage> : IRpcConnectionProv
 		}
 		
 		try {
-			await MessageSender.Close();
+			await MessageSender.Close(TimeSpan.FromSeconds(15));
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception while closing message sender.");
 		}

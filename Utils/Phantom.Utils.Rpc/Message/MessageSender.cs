@@ -142,13 +142,16 @@ public sealed class MessageSender<TMessageBase> {
 		messageReplyTracker.FailReply(frame.ReplyingToMessageId, MessageErrorException.From(frame.Error));
 	}
 	
-	internal async Task Close() {
+	internal async Task Close(TimeSpan timeout) {
 		messageQueue.Writer.TryComplete();
 		
 		try {
-			await messageQueueTask.WaitAsync(TimeSpan.FromSeconds(15));
+			await messageQueueTask.WaitAsync(timeout);
 		} catch (TimeoutException) {
-			logger.Warning("Could not finish processing message queue before timeout, forcibly shutting it down.");
+			if (timeout != TimeSpan.Zero) {
+				logger.Warning("Could not finish processing message queue before timeout, forcibly shutting it down.");
+			}
+			
 			await shutdownCancellationTokenSource.CancelAsync();
 			await messageQueueTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 		} catch (Exception) {

@@ -25,30 +25,30 @@ sealed class AgentMessageHandlerActor : ReceiveActor<IMessageToController> {
 		this.instanceLogManager = init.InstanceLogManager;
 		this.eventLogManager = init.EventLogManager;
 		
-		Receive<ReportAgentStatusMessage>(HandleReportAgentStatus);
-		Receive<ReportInstanceStatusMessage>(HandleReportInstanceStatus);
-		Receive<ReportInstancePlayerCountsMessage>(HandleReportInstancePlayerCounts);
-		Receive<ReportInstanceEventMessage>(HandleReportInstanceEvent);
-		Receive<InstanceOutputMessage>(HandleInstanceOutput);
+		Receive<ReportAgentStatusMessage>(ReportAgentStatus);
+		Receive<ReportInstanceStatusMessage>(ReportInstanceStatus);
+		Receive<ReportInstancePlayerCountsMessage>(ReportInstancePlayerCounts);
+		Receive<ReportInstanceEventMessage>(ReportInstanceEvent);
+		Receive<InstanceOutputMessage>(InstanceOutput);
 	}
 	
-	private void HandleReportAgentStatus(ReportAgentStatusMessage message) {
+	private void ReportAgentStatus(ReportAgentStatusMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateStatsCommand(message.RunningInstanceCount, message.RunningInstanceMemory));
 	}
 	
-	private void HandleReportInstanceStatus(ReportInstanceStatusMessage message) {
+	private void ReportInstanceStatus(ReportInstanceStatusMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateInstanceStatusCommand(message.InstanceGuid, message.InstanceStatus));
 	}
 	
-	private void HandleReportInstancePlayerCounts(ReportInstancePlayerCountsMessage message) {
+	private void ReportInstancePlayerCounts(ReportInstancePlayerCountsMessage message) {
 		agentManager.TellAgent(agentGuid, new AgentActor.UpdateInstancePlayerCountsCommand(message.InstanceGuid, message.PlayerCounts));
 	}
 	
-	private void HandleReportInstanceEvent(ReportInstanceEventMessage message) {
+	private void ReportInstanceEvent(ReportInstanceEventMessage message) {
 		message.Event.Accept(eventLogManager.CreateInstanceEventVisitor(message.EventGuid, message.UtcTime, agentGuid, message.InstanceGuid));
 	}
 	
-	private void HandleInstanceOutput(InstanceOutputMessage message) {
+	private void InstanceOutput(InstanceOutputMessage message) {
 		instanceLogManager.ReceiveLines(message.InstanceGuid, message.Lines);
 	}
 }

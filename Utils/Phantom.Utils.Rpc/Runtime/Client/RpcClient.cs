@@ -133,7 +133,7 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 			}
 		} finally {
 			if (sessionState.HasValue) {
-				await sessionState.Value.TryShutdown(logger, sendSessionTermination: cancellationToken.IsCancellationRequested);
+				await ShutdownSessionState(sessionState.Value);
 			}
 			
 			if (connection != null) {
@@ -155,6 +155,15 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 		messageReceiver.OnSessionRestarted();
 		
 		return new SessionState(frameSender, frameReader);
+	}
+	
+	private async Task ShutdownSessionState(SessionState sessionState) {
+		if (connector.IsEnabled) {
+			await sessionState.TryShutdown(logger, sendSessionTermination: shutdownCancellationTokenSource.IsCancellationRequested);
+		}
+		else {
+			await sessionState.TryShutdownNow(logger);
+		}
 	}
 	
 	private readonly record struct SessionState(RpcFrameSender<TClientToServerMessage> FrameSender, RpcFrameReader<TClientToServerMessage, TServerToClientMessage> FrameReader) {
@@ -186,7 +195,7 @@ public sealed class RpcClient<TClientToServerMessage, TServerToClientMessage> : 
 		logger.Information("Shutting down client...");
 		
 		try {
-			await MessageSender.Close();
+			await MessageSender.Close(connector.IsEnabled ? TimeSpan.FromSeconds(15) : TimeSpan.Zero);
 		} catch (Exception e) {
 			logger.Error(e, "Caught exception while closing message sender.");
 		}

@@ -15,13 +15,8 @@ namespace Phantom.Web.Services.Instances;
 
 using InstanceDictionary = ImmutableDictionary<Guid, Instance>;
 
-public sealed class InstanceManager {
-	private readonly ControllerConnection controllerConnection;
+public sealed class InstanceManager(ControllerConnection controllerConnection) {
 	private readonly SimpleObservableState<InstanceDictionary> instances = new (PhantomLogger.Create<InstanceManager>("Instances"), InstanceDictionary.Empty);
-	
-	public InstanceManager(ControllerConnection controllerConnection) {
-		this.controllerConnection = controllerConnection;
-	}
 	
 	public EventSubscribers<InstanceDictionary> InstancesChanged => instances.Subs;
 	

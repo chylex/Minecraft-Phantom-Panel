@@ -3,6 +3,7 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
+using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.AuditLog;
 using Phantom.Common.Data.Web.EventLog;
 using Phantom.Common.Data.Web.Instance;
@@ -25,17 +26,18 @@ public static class WebMessageRegistries {
 		ToController.Add<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>();
 		ToController.Add<CreateOrUpdateAdministratorUserMessage, CreateOrUpdateAdministratorUserResult>();
 		ToController.Add<CreateUserMessage, Result<CreateUserResult, UserActionFailure>>();
-		ToController.Add<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>();
 		ToController.Add<GetUsersMessage, ImmutableArray<UserInfo>>();
 		ToController.Add<GetRolesMessage, ImmutableArray<RoleInfo>>();
 		ToController.Add<GetUserRolesMessage, ImmutableDictionary<Guid, ImmutableArray<Guid>>>();
 		ToController.Add<ChangeUserRolesMessage, Result<ChangeUserRolesResult, UserActionFailure>>();
+		ToController.Add<DeleteUserMessage, Result<DeleteUserResult, UserActionFailure>>();
+		ToController.Add<CreateOrUpdateAgentMessage, Result<CreateOrUpdateAgentResult, UserActionFailure>>();
+		ToController.Add<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>();
 		ToController.Add<CreateOrUpdateInstanceMessage, Result<CreateOrUpdateInstanceResult, UserInstanceActionFailure>>();
 		ToController.Add<LaunchInstanceMessage, Result<LaunchInstanceResult, UserInstanceActionFailure>>();
 		ToController.Add<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>();
 		ToController.Add<SendCommandToInstanceMessage, Result<SendCommandToInstanceResult, UserInstanceActionFailure>>();
 		ToController.Add<GetMinecraftVersionsMessage, ImmutableArray<MinecraftVersion>>();
-		ToController.Add<GetAgentJavaRuntimesMessage, ImmutableDictionary<Guid, ImmutableArray<TaggedJavaRuntime>>>();
 		ToController.Add<GetAuditLogMessage, Result<ImmutableArray<AuditLogItem>, UserActionFailure>>();
 		ToController.Add<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>();
 		

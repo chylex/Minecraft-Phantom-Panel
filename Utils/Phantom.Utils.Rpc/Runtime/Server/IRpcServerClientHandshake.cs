@@ -1,17 +1,11 @@
-﻿using Phantom.Utils.Monads;
+﻿namespace Phantom.Utils.Rpc.Runtime.Server;
 
-namespace Phantom.Utils.Rpc.Runtime.Server;
-
-public interface IRpcServerClientHandshake<T> {
-	Task<Either<T, Exception>> Perform(bool isNewSession, RpcStream stream, CancellationToken cancellationToken);
-}
-
-public static class RpcServerClientHandshake {
-	public readonly record struct NoValue;
+public interface IRpcServerClientHandshake {
+	Task Perform(bool isNewSession, RpcStream stream, Guid clientGuid, CancellationToken cancellationToken);
 	
-	public sealed record NoOp : IRpcServerClientHandshake<NoValue> {
-		public Task<Either<NoValue, Exception>> Perform(bool isNewSession, RpcStream stream, CancellationToken cancellationToken) {
-			return Task.FromResult<Either<NoValue, Exception>>(Either.Left(new NoValue()));
+	sealed record NoOp : IRpcServerClientHandshake {
+		public Task Perform(bool isNewSession, RpcStream stream, Guid clientGuid, CancellationToken cancellationToken) {
+			return Task.CompletedTask;
 		}
 	}
 }

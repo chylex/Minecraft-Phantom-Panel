@@ -28,7 +28,7 @@ static class WebKey {
 		}
 		
 		try {
-			Files.RequireMaximumFileSize(webKeyFilePath, maximumBytes: 64);
+			Files.RequireMaximumFileSize(webKeyFilePath, maximumBytes: 128);
 			return LoadFromBytes(await File.ReadAllBytesAsync(webKeyFilePath));
 		} catch (IOException e) {
 			Logger.Fatal("Error loading web key from file: {WebKeyFilePath}", webKeyFilePath);

@@ -24,9 +24,9 @@ sealed class WebClientRegistrar(
 	AgentManager agentManager,
 	MinecraftVersions minecraftVersions,
 	EventLogManager eventLogManager
-) : IRpcServerClientRegistrar<IMessageToController, IMessageToWeb, RpcServerClientHandshake.NoValue> {
-	public IMessageReceiver<IMessageToController> Register(RpcServerToClientConnection<IMessageToController, IMessageToWeb> connection, RpcServerClientHandshake.NoValue handshakeResult) {
-		var name = "WebClient-" + connection.SessionId;
+) : IRpcServerClientRegistrar<IMessageToController, IMessageToWeb> {
+	public IMessageReceiver<IMessageToController> Register(RpcServerToClientConnection<IMessageToController, IMessageToWeb> connection) {
+		var name = "WebClient-" + connection.SessionGuid;
 		var init = new WebMessageHandlerActor.Init(connection, controllerState, instanceLogManager, userManager, roleManager, userRoleManager, userLoginManager, auditLogManager, agentManager, minecraftVersions, eventLogManager);
 		return new IMessageReceiver<IMessageToController>.Actor(actorSystem.ActorOf(WebMessageHandlerActor.Factory(init), name));
 	}

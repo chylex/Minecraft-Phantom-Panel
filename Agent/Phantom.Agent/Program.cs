@@ -30,7 +30,7 @@ try {
 	PhantomLogger.Root.InformationHeading("Initializing Phantom Panel agent...");
 	PhantomLogger.Root.Information("Agent version: {Version}", fullVersion);
 	
-	var (controllerHost, controllerPort, javaSearchPath, agentKeyToken, agentKeyFilePath, agentName, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrStop();
+	var (controllerHost, controllerPort, javaSearchPath, agentKeyToken, agentKeyFilePath, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts, maxConcurrentBackupCompressionTasks) = Variables.LoadOrStop();
 	
 	var agentKey = await AgentKey.Load(agentKeyToken, agentKeyFilePath);
 	if (agentKey == null) {
@@ -42,12 +42,7 @@ try {
 		return 1;
 	}
 	
-	var agentGuid = await GuidFile.CreateOrLoad(folders.DataFolderPath);
-	if (agentGuid == null) {
-		return 1;
-	}
-	
-	var agentInfo = new AgentInfo(agentGuid.Value, agentName, ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
+	var agentInfo = new AgentInfo(ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
 	var javaRuntimeRepository = await JavaRuntimeDiscovery.Scan(folders.JavaSearchFolderPath, shutdownCancellationToken);
 	
 	var agentRegistrationHandler = new AgentRegistrationHandler();

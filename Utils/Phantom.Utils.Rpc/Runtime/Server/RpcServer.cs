@@ -3,20 +3,21 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Phantom.Utils.Logging;
-using Phantom.Utils.Monads;
+using Phantom.Utils.Rpc.Handshake;
 using Phantom.Utils.Rpc.Message;
 using Phantom.Utils.Rpc.Runtime.Tls;
 using Serilog;
 
 namespace Phantom.Utils.Rpc.Runtime.Server;
 
-public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult> {
+public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage> {
 	private readonly string loggerName;
 	private readonly ILogger logger;
 	private readonly RpcServerConnectionParameters connectionParameters;
 	private readonly MessageRegistries<TClientToServerMessage, TServerToClientMessage>.WithMapping messageRegistries;
-	private readonly IRpcServerClientHandshake<THandshakeResult> clientHandshake;
-	private readonly IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> clientRegistrar;
+	private readonly IRpcServerClientAuthProvider clientAuthProvider;
+	private readonly IRpcServerClientHandshake clientHandshake;
+	private readonly IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage> clientRegistrar;
 	
 	private readonly RpcServerClientSessions<TServerToClientMessage> clientSessions;
 	private readonly List<Client> clients = [];
@@ -25,13 +26,15 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 		string loggerName,
 		RpcServerConnectionParameters connectionParameters,
 		MessageRegistries<TClientToServerMessage, TServerToClientMessage> messageRegistries,
-		IRpcServerClientHandshake<THandshakeResult> clientHandshake,
-		IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> clientRegistrar
+		IRpcServerClientAuthProvider clientAuthProvider,
+		IRpcServerClientHandshake clientHandshake,
+		IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage> clientRegistrar
 	) {
 		this.loggerName = loggerName;
-		this.logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult>>(loggerName);
+		this.logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage>>(loggerName);
 		this.connectionParameters = connectionParameters;
 		this.messageRegistries = messageRegistries.CreateMapping();
+		this.clientAuthProvider = clientAuthProvider;
 		this.clientHandshake = clientHandshake;
 		this.clientRegistrar = clientRegistrar;
 		this.clientSessions = new RpcServerClientSessions<TServerToClientMessage>(loggerName, connectionParameters, this.messageRegistries.ToClient.Mapping);
@@ -53,6 +56,7 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 		var serverData = new SharedData(
 			connectionParameters,
 			messageRegistries,
+			clientAuthProvider,
 			clientHandshake,
 			clientRegistrar,
 			clientSessions
@@ -111,8 +115,9 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 	private readonly record struct SharedData(
 		RpcServerConnectionParameters ConnectionParameters,
 		MessageRegistries<TClientToServerMessage, TServerToClientMessage>.WithMapping MessageDefinitions,
-		IRpcServerClientHandshake<THandshakeResult> ClientHandshake,
-		IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage, THandshakeResult> ClientRegistrar,
+		IRpcServerClientAuthProvider ClientAuthProvider,
+		IRpcServerClientHandshake ClientHandshake,
+		IRpcServerClientRegistrar<TClientToServerMessage, TServerToClientMessage> ClientRegistrar,
 		RpcServerClientSessions<TServerToClientMessage> ClientSessions
 	);
 	
@@ -144,7 +149,7 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 			SslServerAuthenticationOptions sslOptions,
 			CancellationToken shutdownToken
 		) {
-			this.logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult>, Client>(PhantomLogger.ConcatNames(serverLoggerName, GetAddressDescriptor(socket)));
+			this.logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage>, Client>(PhantomLogger.ConcatNames(serverLoggerName, GetAddressDescriptor(socket)));
 			this.sharedData = sharedData;
 			this.socket = socket;
 			this.sslOptions = sslOptions;
@@ -229,16 +234,26 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 			}
 			
 			try {
-				var suppliedAuthToken = await stream.ReadAuthToken(cancellationToken);
-				if (!sharedData.ConnectionParameters.AuthToken.FixedTimeEquals(suppliedAuthToken)) {
-					logger.Warning("Rejected client, invalid authorization token.");
-					await stream.WriteByte(value: 0, cancellationToken);
-					await stream.Flush(cancellationToken);
+				var clientAuthToken = await stream.ReadAuthToken(cancellationToken);
+				
+				RpcAuthResult authResult = await CheckAuthorization(clientAuthToken);
+				await stream.WriteByte(value: (byte) authResult, cancellationToken);
+				await stream.Flush(cancellationToken);
+				
+				if (authResult != RpcAuthResult.Success) {
 					return null;
 				}
-				else {
-					await stream.WriteByte(value: 1, cancellationToken);
-					await stream.Flush(cancellationToken);
+				
+				var clientGuid = clientAuthToken.Guid;
+				var sessionGuid = await stream.ReadGuid(cancellationToken);
+				var session = await sharedData.ClientSessions.GetOrCreateSession(clientGuid, sessionGuid);
+				
+				RpcSessionRegistrationResult sessionRegistrationResult = session == null ? RpcSessionRegistrationResult.AlreadyClosed : RpcSessionRegistrationResult.Success;
+				await stream.WriteByte(value: (byte) sessionRegistrationResult, cancellationToken);
+				await stream.Flush(cancellationToken);
+				
+				if (session == null) {
+					return null;
 				}
 				
 				await stream.WriteUnsignedShort(sharedData.ConnectionParameters.PingIntervalSeconds, cancellationToken);
@@ -246,11 +261,9 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 				await sharedData.MessageDefinitions.ToServer.Write(stream, cancellationToken);
 				await stream.Flush(cancellationToken);
 				
-				var sessionId = await stream.ReadGuid(cancellationToken);
-				var session = sharedData.ClientSessions.GetOrCreateSession(sessionId);
-				
-				EstablishedConnection? establishedConnection = await FinalizeHandshake(stream, session, cancellationToken);
 				RpcFinalHandshakeResult finalHandshakeResult;
+				
+				var establishedConnection = await FinalizeHandshake(stream, clientGuid, session, cancellationToken);
 				if (establishedConnection == null) {
 					finalHandshakeResult = RpcFinalHandshakeResult.Error;
 				}
@@ -274,28 +287,42 @@ public sealed class RpcServer<TClientToServerMessage, TServerToClientMessage, TH
 			}
 		}
 		
-		private async Task<EstablishedConnection?> FinalizeHandshake(RpcStream stream, RpcServerClientSession<TServerToClientMessage> session, CancellationToken cancellationToken) {
-			logger.Information("Client connected with session {SessionId}, new logger name: {LoggerName}", session.SessionId, session.LoggerName);
-			logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage, THandshakeResult>, Client>(session.LoggerName);
+		private async Task<RpcAuthResult> CheckAuthorization(AuthToken clientAuthToken) {
+			var clientGuid = clientAuthToken.Guid;
 			
-			switch (await sharedData.ClientHandshake.Perform(session.IsNew, stream, cancellationToken)) {
-				case Left<THandshakeResult, Exception>(var handshakeResult):
-					try {
-						var connection = new RpcServerToClientConnection<TClientToServerMessage, TServerToClientMessage>(sharedData.ConnectionParameters, sharedData.MessageDefinitions.ToServer.Mapping, session, stream);
-						var messageReceiver = sharedData.ClientRegistrar.Register(connection, handshakeResult);
-						
-						return new EstablishedConnection(session, connection, messageReceiver);
-					} catch (Exception e) {
-						logger.Error(e, "Could not register client.");
-						return null;
-					}
+			var expectedAuthSecret = await sharedData.ClientAuthProvider.GetAuthSecret(clientGuid);
+			if (expectedAuthSecret == null) {
+				logger.Warning("Rejected client, unknown client: {ClientGuid}", clientGuid);
+				return RpcAuthResult.UnknownClient;
+			}
+			else if (!expectedAuthSecret.FixedTimeEquals(clientAuthToken.Secret)) {
+				logger.Warning("Rejected client, invalid authorization secret.");
+				return RpcAuthResult.InvalidSecret;
+			}
+			else {
+				return RpcAuthResult.Success;
+			}
+		}
+		
+		private async Task<EstablishedConnection?> FinalizeHandshake(RpcStream stream, Guid clientGuid, RpcServerClientSession<TServerToClientMessage> session, CancellationToken cancellationToken) {
+			logger.Information("Client {ClientGuid} connected with session {SessionGuid}, new logger name: {LoggerName}", clientGuid, session.SessionGuid, session.LoggerName);
+			logger = PhantomLogger.Create<RpcServer<TClientToServerMessage, TServerToClientMessage>, Client>(session.LoggerName);
+			
+			try {
+				await sharedData.ClientHandshake.Perform(session.IsNew, stream, clientGuid, cancellationToken);
+			} catch (Exception e) {
+				logger.Error(e, "Could not finish application handshake.");
+				return null;
+			}
+			
+			try {
+				var connection = new RpcServerToClientConnection<TClientToServerMessage, TServerToClientMessage>(sharedData.ConnectionParameters, sharedData.MessageDefinitions.ToServer.Mapping, session, stream);
+				var messageReceiver = sharedData.ClientRegistrar.Register(connection);
 				
-				case Right<THandshakeResult, Exception>(var exception):
-					logger.Error(exception, "Could not finish application handshake.");
-					return null;
-				
-				default:
-					return null;
+				return new EstablishedConnection(session, connection, messageReceiver);
+			} catch (Exception e) {
+				logger.Error(e, "Could not register client.");
+				return null;
 			}
 		}
 		

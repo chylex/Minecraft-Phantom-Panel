@@ -29,7 +29,7 @@ static class AgentKey {
 		}
 		
 		try {
-			Files.RequireMaximumFileSize(agentKeyFilePath, maximumBytes: 64);
+			Files.RequireMaximumFileSize(agentKeyFilePath, maximumBytes: 128);
 			string[] lines = await File.ReadAllLinesAsync(agentKeyFilePath, Encoding.UTF8);
 			return LoadFromToken(lines[0]);
 		} catch (IOException e) {

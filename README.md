@@ -45,11 +45,13 @@ The Controller comprises 3 key areas:
 
 The configuration for these is set via environment variables.
 
-### Agent & Web Keys
+### Secrets
 
-When the Controller starts for the first time, it will generate two certificate files (`agent.pfx` and `web.pfx`), which are used for TLS communication, and two authentication token files (`agent.auth` and `web.auth`). These files must only be accessible to the Controller itself.
+Each Agent requires its own **Agent Key**, and the Web server requires a **Web Key**. These must be passed to the services in an environment variable or a file.
 
-On every start, the Controller prints the **Agent Key** and **Web Key** to standard output. These keys contain the authentication token, which lets the Controller validate the identity of the connecting service, and a certificate signature, which lets the connecting service validate the identity of the Controller. The keys must be passed to the Agent and Web services using an environment variable or a file.
+When the Controller starts for the first time, it will generate two certificate files (`agent.pfx` and `web.pfx`), which are used for TLS communication, and a Web authentication token file (`web.auth`). These files must only be accessible to the Controller itself.
+
+Since there is only one Web server, there is only one **Web Key**, which is generated from the Web certificate and authentication token files. The Controller prints the **Web Key** to standard output on every start. Agents and their **Agent Keys** are managed through the Web interface, and their authentication tokens are stored in the database.
 
 ### Storage
 
@@ -86,9 +88,8 @@ Use volumes to persist either the whole `/data` folder, or just `/data/data` if 
 * **Controller Communication**
   - `CONTROLLER_HOST` is the hostname of the Controller.
   - `CONTROLLER_PORT` is the Agent RPC port of the Controller. Default: `9401`
-  - `AGENT_NAME` is the display name of the Agent. Emoji are allowed.
-  - `AGENT_KEY` is the [Agent Key](#agent--web-keys). Mutually exclusive with `AGENT_KEY_FILE`.
-  - `AGENT_KEY_FILE` is a path to a file containing the [Agent Key](#agent--web-keys). Mutually exclusive with `AGENT_KEY`.
+  - `AGENT_KEY` is the [Agent Key](#secrets). Mutually exclusive with `AGENT_KEY_FILE`.
+  - `AGENT_KEY_FILE` is a path to a file containing the [Agent Key](#secrets). Mutually exclusive with `AGENT_KEY`.
 * **Agent Configuration**
   - `MAX_INSTANCES` is the number of instances that can be created.
   - `MAX_MEMORY` is the maximum amount of RAM that can be distributed among all instances. Use a positive integer with an optional suffix 'M' for MB, or 'G' for GB. Examples: `4096M`, `16G`
@@ -109,8 +110,8 @@ Use volumes to persist the whole `/data` folder.
 * **Controller Communication**
   - `CONTROLLER_HOST` is the hostname of the Controller.
   - `CONTROLLER_PORT` is the Web RPC port of the Controller. Default: `9402`
-  - `WEB_KEY` is the [Web Key](#agent--web-keys). Mutually exclusive with `WEB_KEY_FILE`.
-  - `WEB_KEY_FILE` is a path to a file containing the [Web Key](#agent--web-keys). Mutually exclusive with `WEB_KEY`.
+  - `WEB_KEY` is the [Web Key](#secrets). Mutually exclusive with `WEB_KEY_FILE`.
+  - `WEB_KEY_FILE` is a path to a file containing the [Web Key](#secrets). Mutually exclusive with `WEB_KEY`.
 * **Web Server**
   - `WEB_SERVER_HOST` is the host. Default: `0.0.0.0`
   - `WEB_SERVER_PORT` is the port. Default: `9400`
@@ -130,7 +131,7 @@ If the environment variable is omitted, the log level is set to `VERBOSE` for De
 
 # Development
 
-The repository includes a [Rider](https://www.jetbrains.com/rider/) projects with several run configurations. The `.workdir` folder in the root of the repository is used for storage. Here's how to get started:
+The repository includes a [Rider](https://www.jetbrains.com/rider/) projects with several run configurations. The `.workdir` folder in the root of the repository is used for storage, including secret files intended for development use only. Here's how to get started:
 
 1. You will need a local PostgreSQL instance. If you have [Docker](https://www.docker.com/), you can enter the `Docker` folder in this repository, and run `docker compose up`. Otherwise, you will need to set it up manually with the following configuration:
    - Host: `localhost`
@@ -139,12 +140,11 @@ The repository includes a [Rider](https://www.jetbrains.com/rider/) projects wit
    - Password: `development`
    - Database: `postgres`
 2. Install one or more Java versions into the `~/.jdks` folder (`%USERPROFILE%\.jdks` on Windows).
-3. Open the project in [Rider](https://www.jetbrains.com/rider/) and use one of the provided run configurations:
-   - `Controller` starts the Controller.
-   - `Web` starts the Web server.
-   - `Agent 1`, `Agent 2`, `Agent 3` start one of the Agents.
-   - `Controller + Web + Agent` starts the Controller and Agent 1.
-   - `Controller + Web + Agent x3` starts the Controller and Agent 1, 2, and 3.
+3. Open the project in [Rider](https://www.jetbrains.com/rider/).
+4. Launch the `Controller` and `Web` run configurations.
+5. Open the website and create an account.
+6. Create 1-3 Agents on the website. For each, create a `.workdir/AgentX/key` file containing the respective Agent Key.
+7. Launch any of the `Agent 1`, `Agent 2`, `Agent 3` run configurations.
 
 ## Bootstrap
 
