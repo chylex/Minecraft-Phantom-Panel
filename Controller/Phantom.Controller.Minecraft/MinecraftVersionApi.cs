@@ -150,12 +150,12 @@ sealed class MinecraftVersionApi : IDisposable {
 	
 	private static JsonElement GetJsonPropertyOrThrow(JsonElement parentElement, string propertyKey, JsonValueKind expectedKind, string location) {
 		if (!parentElement.TryGetProperty(propertyKey, out var valueElement)) {
-			Logger.Error("Missing \"{Property}\" key in " + location + ".", propertyKey);
+			Logger.Error("Missing \"{Property}\" key in {Location}.", propertyKey, location);
 			throw StopProcedureException.Instance;
 		}
 		
 		if (valueElement.ValueKind != expectedKind) {
-			Logger.Error("The \"{Property}\" key in " + location + " does not contain a JSON {ExpectedType}. Actual type: {ActualType}", propertyKey, expectedKind, valueElement.ValueKind);
+			Logger.Error("The \"{Property}\" key in {Location} does not contain a JSON {ExpectedType}. Actual type: {ActualType}", propertyKey, location, expectedKind, valueElement.ValueKind);
 			throw StopProcedureException.Instance;
 		}
 		
