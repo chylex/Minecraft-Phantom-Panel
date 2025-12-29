@@ -1,15 +1,14 @@
 ﻿<Project>
   
   <ItemGroup>
-    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization" Version="9.0.9" />
-    <PackageReference Update="Microsoft.AspNetCore.Components.Web"           Version="9.0.9" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Authorization" Version="10.0.1" />
+    <PackageReference Update="Microsoft.AspNetCore.Components.Web"           Version="10.0.1" />
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="9.0.9" />
-    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"      Version="9.0.9" />
-    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL"    Version="9.0.4" />
-    <PackageReference Update="System.Linq.Async"                        Version="6.0.3" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools"      Version="10.0.1" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Relational" Version="10.0.1" />
+    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL"    Version="10.0.0" />
   </ItemGroup>
   
   <ItemGroup>
@@ -23,7 +22,7 @@
   
   <ItemGroup>
     <PackageReference Update="Serilog"               Version="4.3.0" />
-    <PackageReference Update="Serilog.AspNetCore"    Version="9.0.0" />
+    <PackageReference Update="Serilog.AspNetCore"    Version="10.0.0" />
     <PackageReference Update="Serilog.Sinks.Async"   Version="2.1.0" />
     <PackageReference Update="Serilog.Sinks.Console" Version="6.0.0" />
   </ItemGroup>
