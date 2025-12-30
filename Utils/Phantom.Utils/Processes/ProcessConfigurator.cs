@@ -31,6 +31,12 @@ public sealed class ProcessConfigurator {
 		set => startInfo.UseShellExecute = value;
 	}
 	
+	public ProcessConfigurator() {
+		if (OperatingSystem.IsWindows()) {
+			startInfo.CreateNewProcessGroup = true;
+		}
+	}
+	
 	public Process CreateProcess() {
 		return new Process(new System.Diagnostics.Process { StartInfo = startInfo });
 	}

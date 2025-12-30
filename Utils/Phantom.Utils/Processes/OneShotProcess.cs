@@ -2,16 +2,8 @@
 
 namespace Phantom.Utils.Processes;
 
-public sealed class OneShotProcess {
-	private readonly ILogger logger;
-	private readonly ProcessConfigurator configurator;
-	
+public sealed class OneShotProcess(ILogger logger, ProcessConfigurator configurator) {
 	public event EventHandler<Process.Output>? OutputReceived;
-	
-	public OneShotProcess(ILogger logger, ProcessConfigurator configurator) {
-		this.logger = logger;
-		this.configurator = configurator;
-	}
 	
 	public async Task<bool> Run(CancellationToken cancellationToken) {
 		using var process = configurator.CreateProcess();
