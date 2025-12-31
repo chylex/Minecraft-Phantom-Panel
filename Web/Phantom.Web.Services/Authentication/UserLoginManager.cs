@@ -19,9 +19,11 @@ public sealed class UserLoginManager(Navigation navigation, UserSessionBrowserSt
 			return false;
 		}
 		
-		if (result.Value is not var (userInfo, authToken)) {
+		if (!result.HasValue) {
 			return false;
 		}
+		
+		var (userInfo, authToken) = result.Value;
 		
 		Logger.Information("Successfully logged in {Username}.", username);
 		

@@ -87,12 +87,7 @@ public sealed class CustomAuthenticationStateProvider : ServerAuthenticationStat
 		}
 		
 		var session = await controllerConnection.Send<GetAuthenticatedUser, Optional<AuthenticatedUserInfo>>(new GetAuthenticatedUser(userGuid, authToken), TimeSpan.FromSeconds(30), cancellationToken);
-		if (session.Value is {} userInfo) {
-			return new AuthenticatedUser(userInfo, authToken);
-		}
-		else {
-			return null;
-		}
+		return session.HasValue ? new AuthenticatedUser(session.Value, authToken) : null;
 	}
 	
 	private void SetLoadedSession(AuthenticatedUser authenticatedUser) {

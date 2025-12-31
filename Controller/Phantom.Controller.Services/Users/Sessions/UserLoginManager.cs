@@ -77,8 +77,13 @@ sealed class UserLoginManager {
 		return userGuid != null && authenticatedUserCache.TryGet(userGuid.Value, out var userInfo) ? new LoggedInUser(userInfo) : default;
 	}
 	
-	public AuthenticatedUserInfo? GetAuthenticatedUser(Guid userGuid, ImmutableArray<byte> authToken) {
-		return authenticatedUserCache.TryGet(userGuid, out var userInfo) && GetSessionBucket(authToken).Contains(userGuid, authToken) ? userInfo : null;
+	public Optional<AuthenticatedUserInfo> GetAuthenticatedUser(Guid userGuid, ImmutableArray<byte> authToken) {
+		if (authenticatedUserCache.TryGet(userGuid, out var userInfo) && GetSessionBucket(authToken).Contains(userGuid, authToken)) {
+			return userInfo;
+		}
+		else {
+			return default;
+		}
 	}
 	
 	private sealed class UserSessionBucket {

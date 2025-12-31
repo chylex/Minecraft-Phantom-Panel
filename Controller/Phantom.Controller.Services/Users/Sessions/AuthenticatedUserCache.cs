@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
@@ -9,7 +10,7 @@ namespace Phantom.Controller.Services.Users.Sessions;
 sealed class AuthenticatedUserCache {
 	private readonly ConcurrentDictionary<Guid, AuthenticatedUserInfo> authenticatedUsersByGuid = new ();
 	
-	public bool TryGet(Guid userGuid, out AuthenticatedUserInfo? userInfo) {
+	public bool TryGet(Guid userGuid, [NotNullWhen(true)] out AuthenticatedUserInfo? userInfo) {
 		return authenticatedUsersByGuid.TryGetValue(userGuid, out userInfo);
 	}
 	
