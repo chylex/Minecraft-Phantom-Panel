@@ -42,6 +42,7 @@ public static class WebMessageRegistries {
 		ToController.Add<GetEventLogMessage, Result<ImmutableArray<EventLogItem>, UserActionFailure>>();
 		
 		ToWeb.Add<RefreshAgentsMessage>();
+		ToWeb.Add<RefreshAgentsMessage2>();
 		ToWeb.Add<RefreshInstancesMessage>();
 		ToWeb.Add<InstanceOutputMessage>();
 		ToWeb.Add<RefreshUserSessionMessage>();
