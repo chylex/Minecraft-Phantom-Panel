@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
-using Phantom.Common.Data.Agent;
 
 namespace Phantom.Common.Data.Web.Agent;
 

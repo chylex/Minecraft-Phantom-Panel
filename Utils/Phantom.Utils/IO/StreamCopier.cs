@@ -2,32 +2,24 @@
 
 namespace Phantom.Utils.IO;
 
-public sealed class StreamCopier : IDisposable {
+public sealed class StreamCopier(int bufferSize = StreamCopier.DefaultBufferSize) : IDisposable {
 	private const int DefaultBufferSize = 81920;
 	
 	public event EventHandler<BufferEventArgs>? BufferReady;
 	
-	private readonly int bufferSize;
-	
-	public StreamCopier(int bufferSize = DefaultBufferSize) {
-		this.bufferSize = bufferSize;
-	}
+	private readonly byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 	
 	public async Task Copy(Stream source, Stream destination, CancellationToken cancellationToken) {
-		byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
-		try {
-			int bytesRead;
-			while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) != 0) {
-				var dataRead = new ReadOnlyMemory<byte>(buffer, start: 0, bytesRead);
-				BufferReady?.Invoke(this, new BufferEventArgs(dataRead));
-				await destination.WriteAsync(dataRead, cancellationToken);
-			}
-		} finally {
-			ArrayPool<byte>.Shared.Return(buffer);
+		int bytesRead;
+		while ((bytesRead = await source.ReadAsync(buffer.AsMemory(), cancellationToken)) != 0) {
+			var dataRead = new ReadOnlyMemory<byte>(buffer, start: 0, bytesRead);
+			BufferReady?.Invoke(this, new BufferEventArgs(dataRead));
+			await destination.WriteAsync(dataRead, cancellationToken);
 		}
 	}
 	
 	public void Dispose() {
+		ArrayPool<byte>.Shared.Return(buffer);
 		BufferReady = null;
 	}
 	

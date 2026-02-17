@@ -6,7 +6,8 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\Phantom.Common.Data\Phantom.Common.Data.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Data.Agent\Phantom.Common.Data.Agent.csproj" />
+    <ProjectReference Include="..\..\Common\Phantom.Common.Data.Web\Phantom.Common.Data.Web.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils\Phantom.Utils.csproj" />
     <ProjectReference Include="..\..\Utils\Phantom.Utils.Logging\Phantom.Utils.Logging.csproj" />
   </ItemGroup>

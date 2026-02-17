@@ -52,27 +52,25 @@ static class Messages {
 	
 	public static string ToSentence(this LaunchInstanceResult reason) {
 		return reason switch {
-			LaunchInstanceResult.LaunchInitiated          => "Launch initiated.",
-			LaunchInstanceResult.InstanceAlreadyLaunching => "Instance is already launching.",
-			LaunchInstanceResult.InstanceAlreadyRunning   => "Instance is already running.",
-			LaunchInstanceResult.InstanceLimitExceeded    => "Agent does not have any more available instances.",
-			LaunchInstanceResult.MemoryLimitExceeded      => "Agent does not have enough available memory.",
-			LaunchInstanceResult.ServerPortNotAllowed     => "Server port not allowed.",
-			LaunchInstanceResult.ServerPortAlreadyInUse   => "Server port already in use.",
-			LaunchInstanceResult.RconPortNotAllowed       => "Rcon port not allowed.",
-			LaunchInstanceResult.RconPortAlreadyInUse     => "Rcon port already in use.",
-			_                                             => "Unknown error.",
+			LaunchInstanceResult.LaunchInitiated            => "Launch initiated.",
+			LaunchInstanceResult.InstanceAlreadyLaunching   => "Instance is already launching.",
+			LaunchInstanceResult.InstanceAlreadyRunning     => "Instance is already running.",
+			LaunchInstanceResult.InstanceLimitExceeded      => "Agent does not have any more available instances.",
+			LaunchInstanceResult.MemoryLimitExceeded        => "Agent does not have enough available memory.",
+			LaunchInstanceResult.ServerPortNotAllowed       => "Server port is not allowed.",
+			LaunchInstanceResult.ServerPortAlreadyInUse     => "Server port is already in use.",
+			LaunchInstanceResult.AdditionalPortNotAllowed   => "One of additional ports is not allowed.",
+			LaunchInstanceResult.AdditionalPortAlreadyInUse => "One of additional ports is already in use.",
+			_                                               => "Unknown error.",
 		};
 	}
 	
 	public static string ToSentence(this InstanceLaunchFailReason reason) {
 		return reason switch {
-			InstanceLaunchFailReason.JavaRuntimeNotFound                    => "Java runtime not found.",
-			InstanceLaunchFailReason.CouldNotDownloadMinecraftServer        => "Could not download Minecraft server.",
-			InstanceLaunchFailReason.CouldNotConfigureMinecraftServer       => "Could not configure Minecraft server.",
-			InstanceLaunchFailReason.CouldNotPrepareMinecraftServerLauncher => "Could not prepare Minecraft server launcher.",
-			InstanceLaunchFailReason.CouldNotStartMinecraftServer           => "Could not start Minecraft server.",
-			_                                                               => "Unknown error.",
+			InstanceLaunchFailReason.CouldNotPrepareServerInstance => "Could not prepare server instance.",
+			InstanceLaunchFailReason.CouldNotFindServerExecutable  => "Could not find server executable.",
+			InstanceLaunchFailReason.CouldNotStartServerExecutable => "Could not start server executable.",
+			_                                                      => "Unknown error.",
 		};
 	}
 	

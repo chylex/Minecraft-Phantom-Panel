@@ -1,10 +1,16 @@
 ﻿namespace Phantom.Agent.Minecraft.Java;
 
-sealed class JavaPropertiesFileEditor {
+public sealed class JavaPropertiesFileEditor {
 	private readonly Dictionary<string, string> overriddenProperties = new ();
 	
 	public void Set(string key, string value) {
 		overriddenProperties[key] = value;
+	}
+	
+	public void SetAll(IDictionary<string, string> values) {
+		foreach ((string key, string value) in values) {
+			Set(key, value);
+		}
 	}
 	
 	public async Task EditOrCreate(string filePath, string comment, CancellationToken cancellationToken) {

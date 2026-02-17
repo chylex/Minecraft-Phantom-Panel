@@ -1,7 +1,6 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Utils.Actor;

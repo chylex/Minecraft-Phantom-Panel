@@ -30,7 +30,7 @@ static class JavaPropertiesStream {
 		}
 		
 		public Reader(string path) {
-			this.reader = new StreamReader(path, Encoding, detectEncodingFromByteOrderMarks: false, CreateFileStreamOptions(FileMode.Open, FileAccess.Read));
+			this.reader = new StreamReader(path, Encoding, detectEncodingFromByteOrderMarks: true, CreateFileStreamOptions(FileMode.Open, FileAccess.Read));
 		}
 		
 		public async IAsyncEnumerable<KeyValuePair<string, string>> ReadProperties([EnumeratorCancellation] CancellationToken cancellationToken) {

@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Minecraft;
+using Phantom.Common.Data.Web.Minecraft;
 
 namespace Phantom.Controller.Database.Entities;
 

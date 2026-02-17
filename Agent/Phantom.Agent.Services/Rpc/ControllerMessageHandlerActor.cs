@@ -26,7 +26,7 @@ public sealed class ControllerMessageHandlerActor : ReceiveActor<IMessageToAgent
 	}
 	
 	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> HandleConfigureInstance(ConfigureInstanceMessage message) {
-		return await agent.InstanceManager.Request(new InstanceManagerActor.ConfigureInstanceCommand(message.InstanceGuid, message.Configuration, message.LaunchProperties, message.LaunchNow, AlwaysReportStatus: false));
+		return await agent.InstanceManager.Request(new InstanceManagerActor.ConfigureInstanceCommand(message.InstanceGuid, message.Info, message.LaunchRecipe, message.LaunchNow, AlwaysReportStatus: false));
 	}
 	
 	private async Task<Result<LaunchInstanceResult, InstanceActionFailure>> HandleLaunchInstance(LaunchInstanceMessage message) {

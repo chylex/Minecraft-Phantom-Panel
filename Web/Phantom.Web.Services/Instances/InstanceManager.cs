@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;

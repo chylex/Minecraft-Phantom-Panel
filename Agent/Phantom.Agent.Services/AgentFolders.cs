@@ -7,12 +7,12 @@ namespace Phantom.Agent.Services;
 public sealed class AgentFolders {
 	private static readonly ILogger Logger = PhantomLogger.Create<AgentFolders>();
 	
-	public string DataFolderPath { get; }
-	public string InstancesFolderPath { get; }
-	public string BackupsFolderPath { get; }
+	internal string DataFolderPath { get; }
+	internal string InstancesFolderPath { get; }
+	internal string BackupsFolderPath { get; }
 	
-	public string TemporaryFolderPath { get; }
-	public string ServerExecutableFolderPath { get; }
+	internal string TemporaryFolderPath { get; }
+	internal string ServerExecutableFolderPath { get; }
 	
 	public string JavaSearchFolderPath { get; }
 	

@@ -2,7 +2,7 @@
 using Akka.Actor;
 using Microsoft.EntityFrameworkCore;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Agent;
+using Phantom.Common.Data.Agent.Instance.Launch;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Minecraft;
@@ -41,7 +41,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		AgentRuntimeInfo AgentRuntimeInfo,
 		AgentConnectionKeys AgentConnectionKeys,
 		ControllerState ControllerState,
-		MinecraftVersions MinecraftVersions,
+		MinecraftLaunchRecipes LaunchRecipes,
 		IDbContextProvider DbProvider,
 		CancellationToken CancellationToken
 	);
@@ -54,7 +54,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	
 	private readonly AgentConnectionKeys agentConnectionKeys;
 	private readonly ControllerState controllerState;
-	private readonly MinecraftVersions minecraftVersions;
+	private readonly MinecraftLaunchRecipes launchRecipes;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
@@ -95,7 +95,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	private AgentActor(Init init) {
 		this.agentConnectionKeys = init.AgentConnectionKeys;
 		this.controllerState = init.ControllerState;
-		this.minecraftVersions = init.MinecraftVersions;
+		this.launchRecipes = init.LaunchRecipes;
 		this.dbProvider = init.DbProvider;
 		this.cancellationToken = init.CancellationToken;
 		
@@ -190,8 +190,9 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		var configurationMessages = ImmutableArray.CreateBuilder<ConfigureInstanceMessage>();
 		
 		foreach (var (instanceGuid, instanceConfiguration, _, _, launchAutomatically) in instanceDataByGuid.Values.ToImmutableArray()) {
-			var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(instanceConfiguration.MinecraftVersion, cancellationToken);
-			configurationMessages.Add(new ConfigureInstanceMessage(instanceGuid, instanceConfiguration, new InstanceLaunchProperties(serverExecutableInfo), launchAutomatically));
+			var launchRecipe = await launchRecipes.Create(instanceConfiguration, cancellationToken);
+			var configurationMessage = new ConfigureInstanceMessage(instanceGuid, instanceConfiguration.AsInfo, launchRecipe.OrElse(null), launchAutomatically);
+			configurationMessages.Add(configurationMessage);
 		}
 		
 		return configurationMessages.ToImmutable();
@@ -340,29 +341,34 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero);
 		}
 		
-		return minecraftVersions.GetServerExecutableInfo(instanceConfiguration.MinecraftVersion, cancellationToken)
-		                        .ContinueOnActor(CreateOrUpdateInstance1, command)
-		                        .Unwrap();
+		return launchRecipes.Create(instanceConfiguration, cancellationToken)
+		                    .ContinueOnActor(CreateOrUpdateInstance1, command)
+		                    .Unwrap();
 	}
 	
-	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance1(FileDownloadInfo? serverExecutableInfo, CreateOrUpdateInstanceCommand command) {
-		if (serverExecutableInfo == null) {
-			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.MinecraftVersionDownloadInfoNotFound);
+	private Task<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>> CreateOrUpdateInstance1(Result<InstanceLaunchRecipe, MinecraftLaunchRecipeCreationFailReason> launchRecipe, CreateOrUpdateInstanceCommand command) {
+		if (!launchRecipe) {
+			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(launchRecipe.Error switch {
+				MinecraftLaunchRecipeCreationFailReason.MinecraftVersionNotFound => CreateOrUpdateInstanceResult.MinecraftVersionNotFound,
+				_                                                                => CreateOrUpdateInstanceResult.UnknownError,
+			});
 		}
 		
+		var instanceGuid = command.InstanceGuid;
 		var instanceConfiguration = command.Configuration;
 		
-		bool isCreatingInstance = !instanceActorByGuid.TryGetValue(command.InstanceGuid, out var instanceActorRef);
+		bool isCreatingInstance = !instanceActorByGuid.TryGetValue(instanceGuid, out var instanceActorRef);
 		if (isCreatingInstance) {
-			instanceActorRef = CreateNewInstance(Instance.Offline(command.InstanceGuid, instanceConfiguration));
+			instanceActorRef = CreateNewInstance(Instance.Offline(instanceGuid, instanceConfiguration));
 		}
 		
-		var configureInstanceCommand = new InstanceActor.ConfigureInstanceCommand(command.LoggedInUserGuid, command.InstanceGuid, instanceConfiguration, new InstanceLaunchProperties(serverExecutableInfo), isCreatingInstance);
+		var configureInstanceCommand = new InstanceActor.ConfigureInstanceCommand(command.LoggedInUserGuid, instanceGuid, instanceConfiguration, launchRecipe.Value, isCreatingInstance);
 		
 		return instanceActorRef.Request(configureInstanceCommand, cancellationToken)
 		                       .ContinueOnActor(CreateOrUpdateInstance2, configureInstanceCommand);
 	}
 	
+	#pragma warning disable CA2254
 	private Result<CreateOrUpdateInstanceResult, InstanceActionFailure> CreateOrUpdateInstance2(Result<ConfigureInstanceResult, InstanceActionFailure> result, InstanceActor.ConfigureInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
 		var instanceName = command.Configuration.InstanceName;
@@ -382,6 +388,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 			return CreateOrUpdateInstanceResult.UnknownError;
 		}
 	}
+	#pragma warning restore CA2254
 	
 	private void UpdateInstanceStatus(UpdateInstanceStatusCommand command) {
 		TellInstance(command.InstanceGuid, new InstanceActor.SetStatusCommand(command.Status));

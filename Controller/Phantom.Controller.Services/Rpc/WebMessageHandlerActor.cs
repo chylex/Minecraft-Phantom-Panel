@@ -1,12 +1,12 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Java;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.AuditLog;
 using Phantom.Common.Data.Web.EventLog;
 using Phantom.Common.Data.Web.Instance;
+using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Common.Data.Web.Users;
 using Phantom.Common.Messages.Web;
 using Phantom.Common.Messages.Web.ToController;

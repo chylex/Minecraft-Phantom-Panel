@@ -2,9 +2,7 @@
 @using System.ComponentModel.DataAnnotations
 @using System.Diagnostics.CodeAnalysis
 @using Phantom.Common.Data
-@using Phantom.Common.Data.Instance
 @using Phantom.Common.Data.Java
-@using Phantom.Common.Data.Minecraft
 @using Phantom.Common.Data.Replies
 @using Phantom.Common.Data.Web.Agent
 @using Phantom.Common.Data.Web.Instance
@@ -108,7 +106,7 @@
 
     @{
       string? allowedServerPorts = selectedAgent?.RuntimeInfo.AllowedServerPorts?.ToString();
-      string? allowedRconPorts = selectedAgent?.RuntimeInfo.AllowedRconPorts?.ToString();
+      string? allowedRconPorts = selectedAgent?.RuntimeInfo.AllowedAdditionalPorts?.ToString();
     }
     <div class="col-sm-6 col-xl-2 mb-3">
       <FormNumberInput Id="instance-server-port" @bind-Value="form.ServerPort" min="0" max="65535">
@@ -261,7 +259,7 @@
 
     public sealed class RconPortMustBeAllowedAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int> {
       protected override string FieldName => nameof(RconPort);
-      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.RuntimeInfo.AllowedRconPorts?.Contains((ushort) value) == true;
+      protected override bool IsValid(ConfigureInstanceFormModel model, int value) => model.SelectedAgent is not {} agent || agent.RuntimeInfo.AllowedAdditionalPorts?.Contains((ushort) value) == true;
     }
 
     public sealed class RconPortMustDifferFromServerPortAttribute : FormValidationAttribute<ConfigureInstanceFormModel, int?> {

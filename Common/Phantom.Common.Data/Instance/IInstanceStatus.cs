@@ -25,7 +25,7 @@ public sealed partial record InstanceIsInvalid([property: MemoryPackOrder(0)] st
 public sealed partial record InstanceIsNotRunning : IInstanceStatus;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
-public sealed partial record InstanceIsDownloading([property: MemoryPackOrder(0)] byte Progress) : IInstanceStatus;
+public sealed partial record InstanceIsDownloading([property: MemoryPackOrder(0)] byte? Progress) : IInstanceStatus;
 
 [MemoryPackable(GenerateType.VersionTolerant)]
 public sealed partial record InstanceIsLaunching : IInstanceStatus;
@@ -55,7 +55,7 @@ public static class InstanceStatus {
 	public static readonly IInstanceStatus Stopping = new InstanceIsStopping();
 	
 	public static IInstanceStatus Invalid(string reason) => new InstanceIsInvalid(reason);
-	public static IInstanceStatus Downloading(byte progress) => new InstanceIsDownloading(progress);
+	public static IInstanceStatus Downloading(byte? progress) => new InstanceIsDownloading(progress);
 	public static IInstanceStatus Failed(InstanceLaunchFailReason reason) => new InstanceIsFailed(reason);
 	
 	public static bool IsLaunching(this IInstanceStatus status) {

@@ -25,7 +25,7 @@ public sealed class JavaRuntimeRepository {
 		                     .ToImmutableArray();
 	}
 	
-	internal bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
+	public bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
 		return runtimesByGuid.TryGetValue(guid, out runtime);
 	}
 	

@@ -33,7 +33,7 @@ public sealed class AgentRegistrationHandler {
 		foreach (var configureInstanceMessage in configureInstanceMessages) {
 			var configureInstanceResult = await agentServices.InstanceManager.Request(GetCommand(configureInstanceMessage), cancellationToken);
 			if (!configureInstanceResult.Is(ConfigureInstanceResult.Success)) {
-				logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", configureInstanceMessage.Configuration.InstanceName, configureInstanceMessage.InstanceGuid);
+				logger.Fatal("Unable to configure instance \"{Name}\" (GUID {Guid}), shutting down.", configureInstanceMessage.Info.InstanceName, configureInstanceMessage.InstanceGuid);
 				return false;
 			}
 		}
@@ -66,7 +66,7 @@ public sealed class AgentRegistrationHandler {
 		foreach (var configureInstanceMessage in configureInstanceMessages) {
 			var configureInstanceResult = await agentServices.InstanceManager.Request(GetCommand(configureInstanceMessage), cancellationToken);
 			if (!configureInstanceResult.Is(ConfigureInstanceResult.Success)) {
-				logger.Error("Unable to configure instance \"{Name}\" (GUID {Guid}).", configureInstanceMessage.Configuration.InstanceName, configureInstanceMessage.InstanceGuid);
+				logger.Error("Unable to configure instance \"{Name}\" (GUID {Guid}).", configureInstanceMessage.Info.InstanceName, configureInstanceMessage.InstanceGuid);
 			}
 		}
 		
@@ -76,8 +76,8 @@ public sealed class AgentRegistrationHandler {
 	private static InstanceManagerActor.ConfigureInstanceCommand GetCommand(ConfigureInstanceMessage configureInstanceMessage) {
 		return new InstanceManagerActor.ConfigureInstanceCommand(
 			configureInstanceMessage.InstanceGuid,
-			configureInstanceMessage.Configuration,
-			configureInstanceMessage.LaunchProperties,
+			configureInstanceMessage.Info,
+			configureInstanceMessage.LaunchRecipe,
 			configureInstanceMessage.LaunchNow,
 			AlwaysReportStatus: true
 		);

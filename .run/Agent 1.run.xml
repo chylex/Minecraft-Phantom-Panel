@@ -6,7 +6,7 @@
     <option name="PASS_PARENT_ENVS" value="1" />
     <envs>
       <env name="AGENT_KEY_FILE" value="./key" />
-      <env name="ALLOWED_RCON_PORTS" value="25575,27000,27001" />
+      <env name="ALLOWED_ADDITIONAL_PORTS" value="25575,27000,27001" />
       <env name="ALLOWED_SERVER_PORTS" value="25565,26000,26001" />
       <env name="CONTROLLER_HOST" value="localhost" />
       <env name="JAVA_SEARCH_PATH" value="~/.jdks" />
@@ -24,7 +24,7 @@
     <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
     <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="0" />
     <option name="PROJECT_KIND" value="DotNetCore" />
-    <option name="PROJECT_TFM" value="net9.0" />
+    <option name="PROJECT_TFM" value="net10.0" />
     <method v="2">
       <option name="Build" />
     </method>
