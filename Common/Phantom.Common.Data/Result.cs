@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using MemoryPack;
-using Phantom.Utils.Monads;
 using Phantom.Utils.Result;
 
 namespace Phantom.Common.Data;
@@ -25,9 +24,6 @@ public sealed partial class Result<TValue, TError> {
 	[MemoryPackIgnore]
 	public TError Error => !hasValue ? error! : throw new InvalidOperationException("Attempted to get error from a success result.");
 	
-	[MemoryPackIgnore]
-	public Either<TValue, TError> AsEither => hasValue ? Either.Left(value!) : Either.Right(error!);
-	
 	private Result(bool hasValue, TValue? value, TError? error) {
 		this.hasValue = hasValue;
 		this.value = value;
@@ -36,6 +32,11 @@ public sealed partial class Result<TValue, TError> {
 	
 	public bool Is(TValue expectedValue) {
 		return hasValue && EqualityComparer<TValue>.Default.Equals(value, expectedValue);
+	}
+	
+	[return: NotNullIfNotNull(nameof(valueIfError))]
+	public TValue? OrElse(TValue? valueIfError) {
+		return hasValue ? Value : valueIfError;
 	}
 	
 	public TOutput Into<TOutput>(Func<TValue, TOutput> valueConverter, Func<TError, TOutput> errorConverter) {

@@ -1,7 +1,8 @@
-﻿using Phantom.Agent.Services.Rpc;
+﻿using System.Collections.Immutable;
+using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent;
-using Phantom.Common.Data.Instance;
+using Phantom.Common.Data.Agent.Instance;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
@@ -18,17 +19,15 @@ sealed class InstanceTicketManager(AgentInfo agentInfo, ControllerConnection con
 	private readonly HashSet<ushort> usedPorts = [];
 	private RamAllocationUnits usedMemory = new ();
 	
-	public Result<Ticket, LaunchInstanceResult> Reserve(InstanceConfiguration configuration) {
-		var memoryAllocation = configuration.MemoryAllocation;
-		var serverPort = configuration.ServerPort;
-		var rconPort = configuration.RconPort;
+	public Result<Ticket, LaunchInstanceResult> Reserve(InstanceInfo info) {
+		var memoryAllocation = info.MemoryAllocation;
 		
-		if (!agentInfo.AllowedServerPorts.Contains(serverPort)) {
+		if (!agentInfo.AllowedServerPorts.Contains(info.ServerPort)) {
 			return LaunchInstanceResult.ServerPortNotAllowed;
 		}
 		
-		if (!agentInfo.AllowedRconPorts.Contains(rconPort)) {
-			return LaunchInstanceResult.RconPortNotAllowed;
+		if (info.AdditionalPorts.Any(port => !agentInfo.AllowedAdditionalPorts.Contains(port))) {
+			return LaunchInstanceResult.AdditionalPortNotAllowed;
 		}
 		
 		lock (this) {
@@ -40,23 +39,23 @@ sealed class InstanceTicketManager(AgentInfo agentInfo, ControllerConnection con
 				return LaunchInstanceResult.MemoryLimitExceeded;
 			}
 			
-			if (usedPorts.Contains(serverPort)) {
+			if (usedPorts.Contains(info.ServerPort)) {
 				return LaunchInstanceResult.ServerPortAlreadyInUse;
 			}
 			
-			if (usedPorts.Contains(rconPort)) {
-				return LaunchInstanceResult.RconPortAlreadyInUse;
+			if (info.AdditionalPorts.Any(port => usedPorts.Contains(port))) {
+				return LaunchInstanceResult.AdditionalPortAlreadyInUse;
 			}
 			
-			var ticket = new Ticket(Guid.NewGuid(), memoryAllocation, serverPort, rconPort);
+			var ticket = new Ticket(Guid.NewGuid(), memoryAllocation, info.ServerPort, info.AdditionalPorts);
 			
 			activeTicketGuids.Add(ticket.TicketGuid);
 			usedMemory += memoryAllocation;
-			usedPorts.Add(serverPort);
-			usedPorts.Add(rconPort);
+			usedPorts.Add(ticket.ServerPort);
+			usedPorts.UnionWith(ticket.AdditionalPorts);
 			
 			RefreshAgentStatus();
-			Logger.Debug("Reserved ticket {TicketGuid} (server port {ServerPort}, rcon port {RconPort}, memory allocation {MemoryAllocation} MB).", ticket.TicketGuid, ticket.ServerPort, ticket.RconPort, ticket.MemoryAllocation.InMegabytes);
+			Logger.Debug("Reserved ticket {TicketGuid} (server port {ServerPort}, additional ports [{AdditionalPorts}], memory allocation {MemoryAllocation} MB).", ticket.TicketGuid, ticket.ServerPort, string.Join(", ", ticket.AdditionalPorts), ticket.MemoryAllocation.InMegabytes);
 			
 			return ticket;
 		}
@@ -76,10 +75,10 @@ sealed class InstanceTicketManager(AgentInfo agentInfo, ControllerConnection con
 			
 			usedMemory -= ticket.MemoryAllocation;
 			usedPorts.Remove(ticket.ServerPort);
-			usedPorts.Remove(ticket.RconPort);
+			usedPorts.ExceptWith(ticket.AdditionalPorts);
 			
 			RefreshAgentStatus();
-			Logger.Debug("Released ticket {TicketGuid} (server port {ServerPort}, rcon port {RconPort}, memory allocation {MemoryAllocation} MB).", ticket.TicketGuid, ticket.ServerPort, ticket.RconPort, ticket.MemoryAllocation.InMegabytes);
+			Logger.Debug("Released ticket {TicketGuid} (server port {ServerPort}, additional ports [{AdditionalPorts}], memory allocation {MemoryAllocation} MB).", ticket.TicketGuid, ticket.ServerPort, string.Join(", ", ticket.AdditionalPorts), ticket.MemoryAllocation.InMegabytes);
 		}
 	}
 	
@@ -93,5 +92,5 @@ sealed class InstanceTicketManager(AgentInfo agentInfo, ControllerConnection con
 		await reportStatusQueue.Shutdown(TimeSpan.FromSeconds(5));
 	}
 	
-	public sealed record Ticket(Guid TicketGuid, RamAllocationUnits MemoryAllocation, ushort ServerPort, ushort RconPort);
+	public sealed record Ticket(Guid TicketGuid, RamAllocationUnits MemoryAllocation, ushort ServerPort, ImmutableSortedSet<ushort> AdditionalPorts);
 }

@@ -21,7 +21,7 @@ sealed class AgentManager(
 	IActorRefFactory actorSystem,
 	AgentConnectionKeys agentConnectionKeys,
 	ControllerState controllerState,
-	MinecraftVersions minecraftVersions,
+	MinecraftLaunchRecipes launchRecipes,
 	IDbContextProvider dbProvider,
 	CancellationToken cancellationToken
 ) {
@@ -42,7 +42,7 @@ sealed class AgentManager(
 	}
 	
 	private bool AddAgent(Guid? loggedInUserGuid, Guid agentGuid, AgentConfiguration configuration, AuthSecret authSecret, AgentRuntimeInfo runtimeInfo) {
-		var init = new AgentActor.Init(loggedInUserGuid, agentGuid, configuration, authSecret, runtimeInfo, agentConnectionKeys, controllerState, minecraftVersions, dbProvider, cancellationToken);
+		var init = new AgentActor.Init(loggedInUserGuid, agentGuid, configuration, authSecret, runtimeInfo, agentConnectionKeys, controllerState, launchRecipes, dbProvider, cancellationToken);
 		var name = "Agent:" + agentGuid;
 		return agentsByAgentGuid.TryAdd(agentGuid, actorSystem.ActorOf(AgentActor.Factory(init), name));
 	}
@@ -52,8 +52,11 @@ sealed class AgentManager(
 			return null;
 		}
 		
-		var runtimeInfo = AgentRuntimeInfo.From(registration.AgentInfo);
-		return await agentActor.Request(new AgentActor.RegisterCommand(runtimeInfo, registration.JavaRuntimes), cancellationToken);
+		var agentInfo = registration.AgentInfo;
+		var agentVersionInfo = new AgentVersionInfo(agentInfo.ProtocolVersion, agentInfo.BuildVersion);
+		var agentRuntimeInfo = new AgentRuntimeInfo(agentVersionInfo, agentInfo.MaxInstances, agentInfo.MaxMemory, agentInfo.AllowedServerPorts, agentInfo.AllowedAdditionalPorts);
+		
+		return await agentActor.Request(new AgentActor.RegisterCommand(agentRuntimeInfo, registration.JavaRuntimes), cancellationToken);
 	}
 	
 	public async Task<AuthSecret?> GetAgentAuthSecret(Guid agentGuid) {

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 using MemoryPack;
-using Phantom.Common.Data.Minecraft;
+using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Utils.Actor;
 
 namespace Phantom.Common.Messages.Web.ToController;

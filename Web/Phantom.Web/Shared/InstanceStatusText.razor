@@ -14,9 +14,15 @@
       break;
 
     case InstanceIsDownloading downloading:
-      <ProgressBar Value="@downloading.Progress" Maximum="100">
-        <span class="fw-semibold">Downloading Server</span> (@downloading.Progress%)
-      </ProgressBar>
+      if (downloading.Progress is {} progress) {
+        <ProgressBar Value="@progress" Maximum="100">
+          <span class="fw-semibold">Downloading</span> (@downloading.Progress%)
+        </ProgressBar>
+      }
+      else {
+        <span class="fw-semibold">Downloading</span>
+      }
+
       break;
 
     case InstanceIsLaunching:

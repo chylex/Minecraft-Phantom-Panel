@@ -1,7 +1,8 @@
-﻿using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Services.Backups;
+﻿using Phantom.Agent.Services.Backups;
+using Phantom.Agent.Services.Instances.Launch;
 using Phantom.Agent.Services.Instances.State;
 using Phantom.Agent.Services.Rpc;
+using Phantom.Common.Data.Agent.Instance;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
@@ -82,7 +83,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	public sealed record ReportInstanceStatusCommand : ICommand;
 	
-	public sealed record LaunchInstanceCommand(InstanceConfiguration Configuration, IServerLauncher Launcher, InstanceTicketManager.Ticket Ticket, bool IsRestarting) : ICommand;
+	public sealed record LaunchInstanceCommand(InstanceInfo Info, InstanceLauncher Launcher, InstanceTicketManager.Ticket Ticket, bool IsRestarting) : ICommand;
 	
 	public sealed record StopInstanceCommand(MinecraftStopStrategy StopStrategy) : ICommand;
 	
@@ -100,9 +101,14 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	private async Task LaunchInstance(LaunchInstanceCommand command) {
 		if (command.IsRestarting || runningState is null) {
-			SetAndReportStatus(command.IsRestarting ? InstanceStatus.Restarting : InstanceStatus.Launching);
+			var defaultLaunchStatus = command.IsRestarting ? InstanceStatus.Restarting : InstanceStatus.Launching;
+			SetAndReportStatus(defaultLaunchStatus);
 			
-			var newState = await InstanceLaunchProcedure.Run(context, command.Configuration, command.Launcher, instanceTicketManager, command.Ticket, SetAndReportStatus, shutdownCancellationToken);
+			void UpdateStatus(IInstanceStatus? newStatus) {
+				SetAndReportStatus(newStatus ?? defaultLaunchStatus);
+			}
+			
+			var newState = await InstanceLaunchProcedure.Run(context, command.Info, command.Launcher, instanceTicketManager, command.Ticket, UpdateStatus, shutdownCancellationToken);
 			if (newState is null) {
 				instanceTicketManager.Release(command.Ticket);
 			}

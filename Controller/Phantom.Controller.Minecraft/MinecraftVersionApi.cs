@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Phantom.Common.Data.Minecraft;
+using Phantom.Common.Data.Agent;
+using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Utils.Cryptography;
-using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;
 using Serilog;
@@ -127,15 +127,6 @@ sealed class MinecraftVersionApi : IDisposable {
 			throw StopProcedureException.Instance;
 		}
 		
-		JsonElement sizeElement = GetJsonPropertyOrThrow(serverElement, "size", JsonValueKind.Number, "downloads.server object in version metadata");
-		ulong size;
-		try {
-			size = sizeElement.GetUInt64();
-		} catch (FormatException) {
-			Logger.Error("The \"size\" key in downloads.server object in version metadata contains an invalid file size: {Size}", sizeElement);
-			throw StopProcedureException.Instance;
-		}
-		
 		JsonElement sha1Element = GetJsonPropertyOrThrow(serverElement, "sha1", JsonValueKind.String, "downloads.server object in version metadata");
 		Sha1String hash;
 		try {
@@ -145,7 +136,7 @@ sealed class MinecraftVersionApi : IDisposable {
 			throw StopProcedureException.Instance;
 		}
 		
-		return new FileDownloadInfo(url, hash, new FileSize(size));
+		return new FileDownloadInfo(url, hash);
 	}
 	
 	private static JsonElement GetJsonPropertyOrThrow(JsonElement parentElement, string propertyKey, JsonValueKind expectedKind, string location) {

@@ -2,9 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Web.AuditLog;
 using Phantom.Common.Data.Web.EventLog;
+using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Controller.Database.Converters;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Database.Factories;

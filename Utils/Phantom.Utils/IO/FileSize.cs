@@ -8,13 +8,17 @@ public readonly record struct FileSize(ulong Bytes) {
 	];
 	
 	public string ToHumanReadable(int decimalPlaces) {
-		int power = Bytes == 0L ? 0 : (int) Math.Log(Bytes, Scale);
+		return ToHumanReadable(Bytes, decimalPlaces);
+	}
+	
+	public static string ToHumanReadable(ulong bytes, int decimalPlaces) {
+		int power = bytes == 0L ? 0 : (int) Math.Log(bytes, Scale);
 		int unit = power >= Units.Length ? Units.Length - 1 : power;
 		if (unit == 0) {
-			return Bytes + " B";
+			return bytes + " B";
 		}
 		
 		string format = "{0:n" + decimalPlaces + "} {1}";
-		return string.Format(format, Bytes / Math.Pow(Scale, unit), Units[unit]);
+		return string.Format(format, bytes / Math.Pow(Scale, unit), Units[unit]);
 	}
 }

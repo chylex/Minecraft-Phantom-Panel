@@ -14,7 +14,7 @@ sealed record Variables(
 	ushort MaxInstances,
 	RamAllocationUnits MaxMemory,
 	AllowedPorts AllowedServerPorts,
-	AllowedPorts AllowedRconPorts,
+	AllowedPorts AllowedAdditionalPorts,
 	ushort MaxConcurrentBackupCompressionTasks
 ) {
 	private static Variables LoadOrThrow() {
@@ -30,7 +30,7 @@ sealed record Variables(
 			(ushort) EnvironmentVariables.GetInteger("MAX_INSTANCES", min: 1, max: 10000).Require,
 			EnvironmentVariables.GetString("MAX_MEMORY").MapParse(RamAllocationUnits.FromString).Require,
 			EnvironmentVariables.GetString("ALLOWED_SERVER_PORTS").MapParse(AllowedPorts.FromString).Require,
-			EnvironmentVariables.GetString("ALLOWED_RCON_PORTS").MapParse(AllowedPorts.FromString).Require,
+			EnvironmentVariables.GetString("ALLOWED_ADDITIONAL_PORTS").MapParse(AllowedPorts.FromString).Require,
 			(ushort) EnvironmentVariables.GetInteger("MAX_CONCURRENT_BACKUP_COMPRESSION_TASKS", min: 1, max: 10000).WithDefault(1)
 		);
 	}

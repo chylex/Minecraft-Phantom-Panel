@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Diagnostics;
-using Phantom.Common.Data.Minecraft;
+using Phantom.Common.Data.Agent;
+using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Utils.Logging;
 using Serilog;
 
@@ -34,7 +35,7 @@ public sealed class MinecraftVersions : IDisposable {
 		return versions;
 	}
 	
-	public async Task<FileDownloadInfo?> GetServerExecutableInfo(string version, CancellationToken cancellationToken) {
+	internal async Task<FileDownloadInfo?> GetServerExecutableInfo(string version, CancellationToken cancellationToken) {
 		var versions = await GetVersions(cancellationToken);
 		return await GetCachedObject(() => cachedServerExecutables.ContainsKey(version), () => cachedServerExecutables[version], v => cachedServerExecutables[version] = v, ct => LoadServerExecutableInfo(versions, version, ct), cancellationToken);
 	}
@@ -46,7 +47,7 @@ public sealed class MinecraftVersions : IDisposable {
 			Logger.Information("Refreshed Minecraft {Version} server executable cache, no file found.", version);
 		}
 		else {
-			Logger.Information("Refreshed Minecraft {Version} server executable cache, found file: {Url}.", version, info.DownloadUrl);
+			Logger.Information("Refreshed Minecraft {Version} server executable cache, found file: {Url}.", version, info.Url);
 		}
 		
 		return info;

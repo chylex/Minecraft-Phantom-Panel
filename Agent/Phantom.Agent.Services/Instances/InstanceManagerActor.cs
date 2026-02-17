@@ -1,12 +1,11 @@
-﻿using Phantom.Agent.Minecraft.Instance;
-using Phantom.Agent.Minecraft.Java;
-using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Minecraft.Launcher.Types;
-using Phantom.Agent.Minecraft.Properties;
-using Phantom.Agent.Minecraft.Server;
+﻿using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Services.Backups;
+using Phantom.Agent.Services.Downloads;
+using Phantom.Agent.Services.Instances.Launch;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
+using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Launch;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
@@ -27,11 +26,11 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 	}
 	
 	private readonly AgentState agentState;
-	private readonly string basePath;
+	private readonly AgentFolders agentFolders;
 	
 	private readonly InstanceServices instanceServices;
 	private readonly InstanceTicketManager instanceTicketManager;
-	private readonly Dictionary<Guid, InstanceInfo> instances = new ();
+	private readonly Dictionary<Guid, Instance> instances = new ();
 	
 	private readonly CancellationTokenSource shutdownCancellationTokenSource = new ();
 	private readonly CancellationToken shutdownCancellationToken;
@@ -40,14 +39,11 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 	
 	private InstanceManagerActor(Init init) {
 		this.agentState = init.AgentState;
-		this.basePath = init.AgentFolders.InstancesFolderPath;
+		this.agentFolders = init.AgentFolders;
+		
+		this.instanceServices = new InstanceServices(init.ControllerConnection, init.BackupManager, new FileDownloadManager(), init.JavaRuntimeRepository);
 		this.instanceTicketManager = init.InstanceTicketManager;
 		this.shutdownCancellationToken = shutdownCancellationTokenSource.Token;
-		
-		var minecraftServerExecutables = new MinecraftServerExecutables(init.AgentFolders.ServerExecutableFolderPath);
-		var launchServices = new LaunchServices(minecraftServerExecutables, init.JavaRuntimeRepository);
-		
-		this.instanceServices = new InstanceServices(init.ControllerConnection, init.BackupManager, launchServices);
 		
 		ReceiveAndReply<ConfigureInstanceCommand, Result<ConfigureInstanceResult, InstanceActionFailure>>(ConfigureInstance);
 		ReceiveAndReply<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
@@ -56,11 +52,11 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		ReceiveAsync<ShutdownCommand>(Shutdown);
 	}
 	
-	private sealed record InstanceInfo(ActorRef<InstanceActor.ICommand> Actor, InstanceConfiguration Configuration, IServerLauncher Launcher);
+	private sealed record Instance(ActorRef<InstanceActor.ICommand> Actor, InstanceInfo Info, InstanceProperties Properties, InstanceLaunchRecipe? LaunchRecipe);
 	
 	public interface ICommand;
 	
-	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchProperties LaunchProperties, bool LaunchNow, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
+	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceInfo InstanceInfo, InstanceLaunchRecipe? LaunchRecipe, bool LaunchNow, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record LaunchInstanceCommand(Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
@@ -72,41 +68,16 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 	
 	private Result<ConfigureInstanceResult, InstanceActionFailure> ConfigureInstance(ConfigureInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
-		var configuration = command.Configuration;
-		
-		var instanceFolder = Path.Combine(basePath, instanceGuid.ToString());
-		Directories.Create(instanceFolder, Chmod.URWX_GRX);
-		
-		var heapMegabytes = configuration.MemoryAllocation.InMegabytes;
-		var jvmProperties = new JvmProperties(
-			InitialHeapMegabytes: heapMegabytes / 2,
-			MaximumHeapMegabytes: heapMegabytes
-		);
-		
-		var properties = new InstanceProperties(
-			instanceGuid,
-			configuration.JavaRuntimeGuid,
-			jvmProperties,
-			configuration.JvmArguments,
-			instanceFolder,
-			configuration.MinecraftVersion,
-			new ServerProperties(configuration.ServerPort, configuration.RconPort),
-			command.LaunchProperties
-		);
-		
-		IServerLauncher launcher = configuration.MinecraftServerKind switch {
-			MinecraftServerKind.Vanilla => new VanillaLauncher(properties),
-			MinecraftServerKind.Fabric  => new FabricLauncher(properties),
-			_                           => InvalidLauncher.Instance,
-		};
+		var instanceInfo = command.InstanceInfo;
+		var launchRecipe = command.LaunchRecipe;
 		
 		if (instances.TryGetValue(instanceGuid, out var instance)) {
 			instances[instanceGuid] = instance with {
-				Configuration = configuration,
-				Launcher = launcher,
+				Info = instanceInfo,
+				LaunchRecipe = launchRecipe,
 			};
 			
-			Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, instanceGuid);
+			Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceGuid);
 			
 			if (command.AlwaysReportStatus) {
 				instance.Actor.Tell(new InstanceActor.ReportInstanceStatusCommand());
@@ -114,12 +85,21 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		}
 		else {
 			var instanceLoggerName = PhantomLogger.ShortenGuid(instanceGuid) + "/" + Interlocked.Increment(ref instanceLoggerSequenceId);
+			var instanceFolder = Path.Combine(agentFolders.InstancesFolderPath, instanceGuid.ToString());
+			var instanceProperties = new InstanceProperties(instanceGuid, instanceFolder);
 			var instanceInit = new InstanceActor.Init(agentState, instanceGuid, instanceLoggerName, instanceServices, instanceTicketManager, shutdownCancellationToken);
-			instances[instanceGuid] = instance = new InstanceInfo(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), configuration, launcher);
+			instances[instanceGuid] = instance = new Instance(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), instanceInfo, instanceProperties, launchRecipe);
 			
-			Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", configuration.InstanceName, instanceGuid);
+			Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceGuid);
 			
 			instance.Actor.Tell(new InstanceActor.ReportInstanceStatusCommand());
+		}
+		
+		try {
+			Directories.Create(instance.Properties.InstanceFolder, Chmod.URWX_GRX);
+		} catch (Exception e) {
+			Logger.Error(e, "Could not create instance folder: {Path}", instance.Properties.InstanceFolder);
+			return ConfigureInstanceResult.CouldNotCreateInstanceFolder;
 		}
 		
 		if (command.LaunchNow) {
@@ -131,17 +111,21 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 	
 	private Result<LaunchInstanceResult, InstanceActionFailure> LaunchInstance(LaunchInstanceCommand command) {
 		var instanceGuid = command.InstanceGuid;
-		if (!instances.TryGetValue(instanceGuid, out var instanceInfo)) {
+		if (!instances.TryGetValue(instanceGuid, out var instance)) {
 			return InstanceActionFailure.InstanceDoesNotExist;
 		}
 		
-		var ticket = instanceTicketManager.Reserve(instanceInfo.Configuration);
+		if (instance.LaunchRecipe is not {} launchRecipe) {
+			return LaunchInstanceResult.InvalidConfiguration;
+		}
+		
+		var ticket = instanceTicketManager.Reserve(instance.Info);
 		if (!ticket) {
 			return ticket.Error;
 		}
 		
-		if (agentState.InstancesByGuid.TryGetValue(instanceGuid, out var instance)) {
-			var status = instance.Status;
+		if (agentState.InstancesByGuid.TryGetValue(instanceGuid, out var agentInstance)) {
+			var status = agentInstance.Status;
 			if (status.IsRunning()) {
 				return LaunchInstanceResult.InstanceAlreadyRunning;
 			}
@@ -150,7 +134,12 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			}
 		}
 		
-		instanceInfo.Actor.Tell(new InstanceActor.LaunchInstanceCommand(instanceInfo.Configuration, instanceInfo.Launcher, ticket.Value, IsRestarting: false));
+		var pathResolver = new InstancePathResolver(agentFolders, instanceServices.JavaRuntimeRepository, instance.Properties);
+		var valueResolver = new InstanceValueResolver(pathResolver);
+		var launcher = new InstanceLauncher(instanceServices.DownloadManager, pathResolver, valueResolver, instance.Properties, launchRecipe);
+		
+		instance.Actor.Tell(new InstanceActor.LaunchInstanceCommand(instance.Info, launcher, ticket.Value, IsRestarting: false));
+		
 		return LaunchInstanceResult.LaunchInitiated;
 	}
 	

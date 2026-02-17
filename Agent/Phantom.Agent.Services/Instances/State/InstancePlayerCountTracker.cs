@@ -1,5 +1,4 @@
 ﻿using System.Net.Sockets;
-using Phantom.Agent.Minecraft.Instance;
 using Phantom.Agent.Minecraft.Server;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Instance;

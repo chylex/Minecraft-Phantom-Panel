@@ -1,6 +1,6 @@
-﻿using Phantom.Agent.Minecraft.Instance;
-using Phantom.Agent.Minecraft.Launcher;
-using Phantom.Agent.Services.Backups;
+﻿using Phantom.Agent.Services.Backups;
+using Phantom.Agent.Services.Instances.Launch;
+using Phantom.Common.Data.Agent.Instance;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
@@ -14,8 +14,8 @@ sealed class InstanceRunningState : IDisposable {
 	internal bool IsStopping { get; set; }
 	
 	private readonly InstanceContext context;
-	private readonly InstanceConfiguration configuration;
-	private readonly IServerLauncher launcher;
+	private readonly InstanceInfo info;
+	private readonly InstanceLauncher launcher;
 	private readonly CancellationToken cancellationToken;
 	
 	private readonly InstanceLogSender logSender;
@@ -24,16 +24,16 @@ sealed class InstanceRunningState : IDisposable {
 	
 	private bool isDisposed;
 	
-	public InstanceRunningState(InstanceContext context, InstanceConfiguration configuration, IServerLauncher launcher, InstanceTicketManager.Ticket ticket, InstanceProcess process, CancellationToken cancellationToken) {
+	public InstanceRunningState(InstanceContext context, InstanceInfo info, InstanceLauncher launcher, InstanceTicketManager.Ticket ticket, InstanceProcess process, CancellationToken cancellationToken) {
 		this.context = context;
-		this.configuration = configuration;
+		this.info = info;
 		this.launcher = launcher;
 		this.Ticket = ticket;
 		this.Process = process;
 		this.cancellationToken = cancellationToken;
 		
 		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.InstanceGuid, context.ShortName);
-		this.playerCountTracker = new InstancePlayerCountTracker(context, process, configuration.ServerPort);
+		this.playerCountTracker = new InstancePlayerCountTracker(context, process, info.ServerPort);
 		
 		this.backupScheduler = new BackupScheduler(context, playerCountTracker);
 		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
@@ -74,7 +74,7 @@ sealed class InstanceRunningState : IDisposable {
 		else {
 			context.Logger.Information("Session ended unexpectedly, restarting...");
 			context.ReportEvent(InstanceEvent.Crashed);
-			context.Actor.Tell(new InstanceActor.LaunchInstanceCommand(configuration, launcher, Ticket, IsRestarting: true));
+			context.Actor.Tell(new InstanceActor.LaunchInstanceCommand(info, launcher, Ticket, IsRestarting: true));
 		}
 	}
 	
