@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
-using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Services.Downloads;
 using Phantom.Agent.Services.Instances.State;
+using Phantom.Agent.Services.Java;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Data.Agent.Instance;
 using Phantom.Common.Data.Agent.Instance.Launch;

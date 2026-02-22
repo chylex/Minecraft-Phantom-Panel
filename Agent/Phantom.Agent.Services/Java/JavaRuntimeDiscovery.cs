@@ -6,7 +6,7 @@ using Phantom.Utils.IO;
 using Phantom.Utils.Logging;
 using Serilog;
 
-namespace Phantom.Agent.Minecraft.Java;
+namespace Phantom.Agent.Services.Java;
 
 public sealed class JavaRuntimeDiscovery {
 	private static readonly ILogger Logger = PhantomLogger.Create(nameof(JavaRuntimeDiscovery));

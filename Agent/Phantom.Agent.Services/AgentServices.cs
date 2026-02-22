@@ -1,7 +1,7 @@
 ﻿using Akka.Actor;
-using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Instances;
+using Phantom.Agent.Services.Java;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent;
 using Phantom.Utils.Actor;

@@ -8,7 +8,7 @@ using Phantom.Common.Data.Java;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.Instance;
-using Phantom.Common.Data.Web.Minecraft;
+using Phantom.Common.Data.Web.Java;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;

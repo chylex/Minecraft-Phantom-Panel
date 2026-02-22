@@ -1,6 +1,6 @@
 ﻿using System.Buffers;
 using System.Collections.Immutable;
-using Phantom.Agent.Minecraft.Java;
+using Phantom.Agent.Services.Java;
 using Phantom.Common.Data.Agent.Instance;
 
 namespace Phantom.Agent.Services.Instances.Launch;

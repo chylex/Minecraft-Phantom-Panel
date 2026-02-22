@@ -1,5 +1,5 @@
 ﻿using Phantom.Common.Data.Web.Instance;
-using Phantom.Common.Data.Web.Minecraft;
+using Phantom.Common.Data.Web.Java;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
 using Phantom.Controller.Database.Repositories;

@@ -6,8 +6,11 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <InternalsVisibleTo Include="Phantom.Agent.Services.Tests" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="..\..\Common\Phantom.Common.Messages.Agent\Phantom.Common.Messages.Agent.csproj" />
-    <ProjectReference Include="..\Phantom.Agent.Minecraft\Phantom.Agent.Minecraft.csproj" />
   </ItemGroup>
 
 </Project>

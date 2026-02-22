@@ -1,6 +1,6 @@
 ﻿using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
-using Phantom.Common.Data.Web.Minecraft;
+using Phantom.Common.Data.Web.Java;
 using Phantom.Common.Data.Web.Users;
 
 namespace Phantom.Web.Utils;

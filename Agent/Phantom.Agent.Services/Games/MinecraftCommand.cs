@@ -1,6 +1,6 @@
-﻿namespace Phantom.Agent.Minecraft.Command;
+﻿namespace Phantom.Agent.Services.Games;
 
-public static class MinecraftCommand {
+static class MinecraftCommand {
 	public const string SaveOn = "save-on";
 	public const string SaveOff = "save-off";
 	

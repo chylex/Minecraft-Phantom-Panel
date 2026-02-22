@@ -1,4 +1,4 @@
-﻿using Phantom.Agent.Minecraft.Java;
+﻿using Phantom.Agent.Services.Java;
 using Phantom.Common.Data;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Runtime;

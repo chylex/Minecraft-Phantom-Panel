@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
 using NUnit.Framework;
-using Phantom.Agent.Minecraft.Java;
+using Phantom.Agent.Services.Java;
 using Phantom.Utils.Collections;
 
-namespace Phantom.Agent.Minecraft.Tests.Java;
+namespace Phantom.Agent.Services.Tests.Java;
 
 [TestFixture]
 public sealed class JavaPropertiesStreamTests {

@@ -1,7 +1,7 @@
-﻿using Phantom.Agent.Minecraft.Java;
-using Phantom.Agent.Services.Backups;
+﻿using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Downloads;
 using Phantom.Agent.Services.Instances.Launch;
+using Phantom.Agent.Services.Java;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance;
