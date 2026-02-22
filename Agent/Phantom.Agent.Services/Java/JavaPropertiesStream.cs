@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Phantom.Utils.Collections;
 
-namespace Phantom.Agent.Minecraft.Java;
+namespace Phantom.Agent.Services.Java;
 
 static class JavaPropertiesStream {
 	internal static readonly Encoding Encoding = Encoding.GetEncoding("ISO-8859-1");

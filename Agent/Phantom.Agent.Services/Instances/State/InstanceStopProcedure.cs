@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using Phantom.Agent.Minecraft.Command;
+using Phantom.Agent.Services.Games;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Minecraft;
 

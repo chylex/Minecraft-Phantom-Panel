@@ -1,6 +1,6 @@
-﻿namespace Phantom.Agent.Minecraft.Java;
+﻿namespace Phantom.Agent.Services.Java;
 
-public sealed class JavaPropertiesFileEditor {
+sealed class JavaPropertiesFileEditor {
 	private readonly Dictionary<string, string> overriddenProperties = new ();
 	
 	public void Set(string key, string value) {

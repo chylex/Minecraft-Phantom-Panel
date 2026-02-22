@@ -1,5 +1,5 @@
 ﻿using System.Net.Sockets;
-using Phantom.Agent.Minecraft.Server;
+using Phantom.Agent.Services.Games;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Messages.Agent.ToController;
@@ -59,8 +59,8 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	
 	private async Task<InstancePlayerCounts?> TryGetPlayerCounts() {
 		try {
-			return await ServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
-		} catch (ServerStatusProtocol.ProtocolException e) {
+			return await MinecraftServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
+		} catch (MinecraftServerStatusProtocol.ProtocolException e) {
 			Logger.Error("{Message}", e.Message);
 			return null;
 		} catch (SocketException e) {

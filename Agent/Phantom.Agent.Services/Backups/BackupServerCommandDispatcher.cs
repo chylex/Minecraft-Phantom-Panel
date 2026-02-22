@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 using System.Text.RegularExpressions;
-using Phantom.Agent.Minecraft.Command;
+using Phantom.Agent.Services.Games;
 using Phantom.Agent.Services.Instances.State;
 using Phantom.Utils.Tasks;
 using Serilog;

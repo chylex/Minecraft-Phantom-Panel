@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using Phantom.Agent;
-using Phantom.Agent.Minecraft.Java;
 using Phantom.Agent.Services;
+using Phantom.Agent.Services.Java;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent;
 using Phantom.Common.Messages.Agent;

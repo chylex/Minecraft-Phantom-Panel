@@ -5,9 +5,9 @@ using System.Net.Sockets;
 using System.Text;
 using Phantom.Common.Data.Instance;
 
-namespace Phantom.Agent.Minecraft.Server;
+namespace Phantom.Agent.Services.Games;
 
-public static class ServerStatusProtocol {
+static class MinecraftServerStatusProtocol {
 	public static async Task<InstancePlayerCounts> GetPlayerCounts(ushort serverPort, CancellationToken cancellationToken) {
 		using var tcpClient = new TcpClient();
 		await tcpClient.ConnectAsync(IPAddress.Loopback, serverPort, cancellationToken);

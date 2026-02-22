@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Phantom.Common.Data.Java;
 using Phantom.Utils.Cryptography;
 
-namespace Phantom.Agent.Minecraft.Java;
+namespace Phantom.Agent.Services.Java;
 
 public sealed class JavaRuntimeRepository {
 	private readonly ImmutableDictionary<Guid, JavaRuntimeExecutable> runtimesByGuid;
@@ -25,7 +25,7 @@ public sealed class JavaRuntimeRepository {
 		                     .ToImmutableArray();
 	}
 	
-	public bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
+	internal bool TryGetByGuid(Guid guid, [MaybeNullWhen(false)] out JavaRuntimeExecutable runtime) {
 		return runtimesByGuid.TryGetValue(guid, out runtime);
 	}
 	
