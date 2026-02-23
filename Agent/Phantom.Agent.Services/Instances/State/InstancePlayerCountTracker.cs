@@ -61,7 +61,7 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 		try {
 			return await MinecraftServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
 		} catch (MinecraftServerStatusProtocol.ProtocolException e) {
-			Logger.Error("{Message}", e.Message);
+			Logger.Error("Could not check online player count due to protocol error: {Message}", e.Message);
 			return null;
 		} catch (SocketException e) {
 			bool waitingForServerStart = e.SocketErrorCode == SocketError.ConnectionRefused && WaitingForFirstDetection;
