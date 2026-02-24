@@ -27,6 +27,15 @@ sealed class InstanceProcess : IDisposable {
 		await process.StandardInput.WriteLineAsync(command.AsMemory(), cancellationToken);
 	}
 	
+	public async Task<bool> TrySendCommand(string command, TimeSpan timeout, CancellationToken cancellationToken) {
+		try {
+			await SendCommand(command, cancellationToken).WaitAsync(timeout, cancellationToken);
+			return true;
+		} catch (TimeoutException) {
+			return false;
+		}
+	}
+	
 	public void AddOutputListener(EventHandler<string> listener, uint maxLinesToReadFromHistory = uint.MaxValue) {
 		OutputEvent += listener;
 		

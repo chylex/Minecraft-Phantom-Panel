@@ -6,8 +6,8 @@ using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance;
 using Phantom.Common.Data.Agent.Instance.Launch;
+using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Instance;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Utils.Actor;
 using Phantom.Utils.IO;
@@ -52,15 +52,15 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		ReceiveAsync<ShutdownCommand>(Shutdown);
 	}
 	
-	private sealed record Instance(ActorRef<InstanceActor.ICommand> Actor, InstanceInfo Info, InstanceProperties Properties, InstanceLaunchRecipe? LaunchRecipe);
+	private sealed record Instance(ActorRef<InstanceActor.ICommand> Actor, InstanceInfo Info, InstanceProperties Properties, InstanceLaunchRecipe? LaunchRecipe, InstanceStopRecipe StopRecipe);
 	
 	public interface ICommand;
 	
-	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceInfo InstanceInfo, InstanceLaunchRecipe? LaunchRecipe, bool LaunchNow, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
+	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceInfo InstanceInfo, InstanceLaunchRecipe? LaunchRecipe, bool LaunchNow, InstanceStopRecipe StopRecipe, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record LaunchInstanceCommand(Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
+	public sealed record StopInstanceCommand(Guid InstanceGuid, InstanceStopRecipe StopRecipe) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record SendCommandToInstanceCommand(Guid InstanceGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
@@ -70,11 +70,13 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		var instanceGuid = command.InstanceGuid;
 		var instanceInfo = command.InstanceInfo;
 		var launchRecipe = command.LaunchRecipe;
+		var stopRecipe = command.StopRecipe;
 		
 		if (instances.TryGetValue(instanceGuid, out var instance)) {
 			instances[instanceGuid] = instance with {
 				Info = instanceInfo,
 				LaunchRecipe = launchRecipe,
+				StopRecipe = stopRecipe,
 			};
 			
 			Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceGuid);
@@ -88,7 +90,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			var instanceFolder = Path.Combine(agentFolders.InstancesFolderPath, instanceGuid.ToString());
 			var instanceProperties = new InstanceProperties(instanceGuid, instanceFolder);
 			var instanceInit = new InstanceActor.Init(agentState, instanceGuid, instanceLoggerName, instanceServices, instanceTicketManager, shutdownCancellationToken);
-			instances[instanceGuid] = instance = new Instance(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), instanceInfo, instanceProperties, launchRecipe);
+			instances[instanceGuid] = instance = new Instance(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), instanceInfo, instanceProperties, launchRecipe, stopRecipe);
 			
 			Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceGuid);
 			
@@ -159,7 +161,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			}
 		}
 		
-		instanceInfo.Actor.Tell(new InstanceActor.StopInstanceCommand(command.StopStrategy));
+		instanceInfo.Actor.Tell(new InstanceActor.StopInstanceCommand(command.StopRecipe));
 		return StopInstanceResult.StopInitiated;
 	}
 	
@@ -181,7 +183,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		
 		await shutdownCancellationTokenSource.CancelAsync();
 		
-		await Task.WhenAll(instances.Values.Select(static instance => instance.Actor.Stop(new InstanceActor.ShutdownCommand())));
+		await Task.WhenAll(instances.Values.Select(static instance => instance.Actor.Stop(new InstanceActor.ShutdownCommand(instance.StopRecipe))));
 		instances.Clear();
 		
 		shutdownCancellationTokenSource.Dispose();

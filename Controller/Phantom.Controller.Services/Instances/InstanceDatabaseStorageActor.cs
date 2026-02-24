@@ -1,5 +1,4 @@
-﻿using Phantom.Common.Data.Minecraft;
-using Phantom.Common.Data.Web.Instance;
+﻿using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Data.Web.Minecraft;
 using Phantom.Controller.Database;
 using Phantom.Controller.Database.Entities;
@@ -44,7 +43,7 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 	
 	public sealed record StoreInstanceLaunchedCommand(Guid AuditLogUserGuid) : ICommand;
 	
-	public sealed record StoreInstanceStoppedCommand(Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand;
+	public sealed record StoreInstanceStoppedCommand(Guid AuditLogUserGuid) : ICommand;
 	
 	public sealed record StoreInstanceCommandSentCommand(Guid AuditLogUserGuid, string Command) : ICommand;
 	
@@ -100,7 +99,7 @@ sealed class InstanceDatabaseStorageActor : ReceiveActor<InstanceDatabaseStorage
 		}
 		
 		var auditLogWriter = new AuditLogRepository(db).Writer(command.AuditLogUserGuid);
-		auditLogWriter.InstanceStopped(instanceGuid, command.StopStrategy.Seconds);
+		auditLogWriter.InstanceStopped(instanceGuid);
 		
 		await db.Ctx.SaveChangesAsync(cancellationToken);
 	}

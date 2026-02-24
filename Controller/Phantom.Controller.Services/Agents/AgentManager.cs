@@ -21,7 +21,7 @@ sealed class AgentManager(
 	IActorRefFactory actorSystem,
 	AgentConnectionKeys agentConnectionKeys,
 	ControllerState controllerState,
-	MinecraftLaunchRecipes launchRecipes,
+	MinecraftInstanceRecipes minecraftInstanceRecipes,
 	IDbContextProvider dbProvider,
 	CancellationToken cancellationToken
 ) {
@@ -42,7 +42,7 @@ sealed class AgentManager(
 	}
 	
 	private bool AddAgent(Guid? loggedInUserGuid, Guid agentGuid, AgentConfiguration configuration, AuthSecret authSecret, AgentRuntimeInfo runtimeInfo) {
-		var init = new AgentActor.Init(loggedInUserGuid, agentGuid, configuration, authSecret, runtimeInfo, agentConnectionKeys, controllerState, launchRecipes, dbProvider, cancellationToken);
+		var init = new AgentActor.Init(loggedInUserGuid, agentGuid, configuration, authSecret, runtimeInfo, agentConnectionKeys, controllerState, minecraftInstanceRecipes, dbProvider, cancellationToken);
 		var name = "Agent:" + agentGuid;
 		return agentsByAgentGuid.TryAdd(agentGuid, actorSystem.ActorOf(AgentActor.Factory(init), name));
 	}

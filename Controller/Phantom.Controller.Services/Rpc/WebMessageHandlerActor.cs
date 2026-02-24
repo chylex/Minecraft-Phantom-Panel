@@ -156,7 +156,7 @@ sealed class WebMessageHandlerActor : ReceiveActor<IMessageToController> {
 			userLoginManager.GetLoggedInUser(message.AuthToken),
 			Permission.ControlInstances,
 			message.AgentGuid,
-			loggedInUserGuid => new AgentActor.StopInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.StopStrategy)
+			loggedInUserGuid => new AgentActor.StopInstanceCommand(loggedInUserGuid, message.InstanceGuid, message.AfterSeconds)
 		);
 	}
 	

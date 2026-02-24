@@ -10,8 +10,8 @@ using Phantom.Utils.Collections;
 
 namespace Phantom.Controller.Minecraft;
 
-public sealed partial class MinecraftLaunchRecipes(MinecraftVersions minecraftVersions) {
-	public async Task<Result<InstanceLaunchRecipe, MinecraftLaunchRecipeCreationFailReason>> Create(InstanceConfiguration configuration, CancellationToken cancellationToken) {
+public sealed partial class MinecraftInstanceRecipes(MinecraftVersions minecraftVersions) {
+	public async Task<Result<InstanceLaunchRecipe, MinecraftLaunchRecipeCreationFailReason>> Launch(InstanceConfiguration configuration, CancellationToken cancellationToken) {
 		string minecraftVersion = configuration.MinecraftVersion;
 		
 		var serverExecutableInfo = await minecraftVersions.GetServerExecutableInfo(minecraftVersion, cancellationToken);

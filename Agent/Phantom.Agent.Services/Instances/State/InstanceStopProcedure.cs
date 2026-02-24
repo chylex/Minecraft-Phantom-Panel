@@ -1,37 +1,50 @@
 ﻿using System.Diagnostics;
-using Phantom.Agent.Minecraft.Command;
+using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Instance;
-using Phantom.Common.Data.Minecraft;
+using Serilog;
 
 namespace Phantom.Agent.Services.Instances.State;
 
 static class InstanceStopProcedure {
-	private static readonly ushort[] Stops = [60, 30, 10, 5, 4, 3, 2, 1, 0];
-	
-	public static async Task<bool> Run(InstanceContext context, MinecraftStopStrategy stopStrategy, InstanceRunningState runningState, Action<IInstanceStatus> reportStatus, CancellationToken cancellationToken) {
-		var process = runningState.Process;
+	public static async Task<bool> Run(InstanceContext context, InstanceStopRecipe stopRecipe, InstanceRunningState runningState, Action<IInstanceStatus> reportStatus, CancellationToken cancellationToken) {
+		var logger = context.Logger;
+		
+		var stopCommand = stopRecipe.StopCommand.Resolve(runningState.ValueResolver);
+		if (stopCommand == null) {
+			logger.Error("Could not resolve stop command");
+			return false;
+		}
+		
 		runningState.IsStopping = true;
 		
-		var seconds = stopStrategy.Seconds;
-		if (seconds > 0) {
-			try {
-				await CountDownWithAnnouncements(context, process, seconds, cancellationToken);
-			} catch (OperationCanceledException) {
+		bool continueStopping = false;
+		try {
+			var stepExecutor = new StepExecutor(logger, runningState.ValueResolver, runningState.Process, cancellationToken);
+			continueStopping = await RunPreparationSteps(context, stopRecipe, stepExecutor);
+		} finally {
+			if (!continueStopping) {
 				runningState.IsStopping = false;
-				return false;
 			}
+		}
+		
+		if (!continueStopping) {
+			return false;
 		}
 		
 		try {
 			// Too late to cancel the stop procedure now.
 			runningState.OnStopInitiated();
 			
-			if (!process.HasEnded) {
-				context.Logger.Information("Session stopping now.");
-				await DoStop(context, process);
+			if (!runningState.Process.HasEnded) {
+				logger.Information("Sending stop command...");
+				await TrySendStopCommand(context, runningState.Process, stopCommand);
+				
+				logger.Information("Waiting for session to end...");
+				await WaitForSessionToEnd(context, runningState.Process);
 			}
 		} finally {
-			context.Logger.Information("Session stopped.");
+			logger.Information("Session stopped.");
 			reportStatus(InstanceStatus.NotRunning);
 			context.ReportEvent(InstanceEvent.Stopped);
 		}
@@ -39,39 +52,51 @@ static class InstanceStopProcedure {
 		return true;
 	}
 	
-	private static async Task CountDownWithAnnouncements(InstanceContext context, InstanceProcess process, ushort seconds, CancellationToken cancellationToken) {
-		context.Logger.Information("Session stopping in {Seconds} seconds.", seconds);
+	private static async Task<bool> RunPreparationSteps(InstanceContext context, InstanceStopRecipe stopRecipe, StepExecutor executor) {
+		var steps = stopRecipe.Preparation;
 		
-		foreach (var stop in Stops) {
-			// TODO change to event-based cancellation
-			if (process.HasEnded) {
-				return;
+		for (int stepIndex = 0; stepIndex < steps.Length; stepIndex++) {
+			var step = steps[stepIndex];
+			try {
+				if (await step.Run(executor)) {
+					continue;
+				}
+			} catch (OperationCanceledException) {
+				throw;
+			} catch (Exception e) {
+				context.Logger.Error(e, "Failed preparation step {StepIndex} out of {StepCount}: {StepName}", stepIndex, steps.Length, step.GetType().Name);
 			}
 			
-			if (seconds > stop) {
-				await process.SendCommand(GetCountDownAnnouncementCommand(seconds), cancellationToken);
-				await Task.Delay(TimeSpan.FromSeconds(seconds - stop), cancellationToken);
-				seconds = stop;
+			return false;
+		}
+		
+		return true;
+	}
+	
+	private sealed class StepExecutor(ILogger logger, IInstanceValueResolver valueResolver, InstanceProcess process, CancellationToken cancellationToken) : IInstanceStopStepExecutor<bool> {
+		public async Task<bool> Wait(TimeSpan duration) {
+			await Task.Delay(duration, cancellationToken);
+			return true;
+		}
+		
+		public async Task<bool> SendToStandardInput(IInstanceValue line) {
+			string? command = line.Resolve(valueResolver);
+			if (command == null) {
+				logger.Error("Could not resolve standard input line: {Value}", line);
+				return false;
 			}
+			
+			// If the process can't process standard input, wait a bit but don't block or fail the whole stop procedure.
+			await process.TrySendCommand(command, TimeSpan.FromMilliseconds(500), cancellationToken);
+			
+			return true;
 		}
 	}
 	
-	private static string GetCountDownAnnouncementCommand(ushort seconds) {
-		return MinecraftCommand.Say("Server shutting down in " + seconds + (seconds == 1 ? " second." : " seconds."));
-	}
-	
-	private static async Task DoStop(InstanceContext context, InstanceProcess process) {
-		context.Logger.Information("Sending stop command...");
-		await TrySendStopCommand(context, process);
-		
-		context.Logger.Information("Waiting for session to end...");
-		await WaitForSessionToEnd(context, process);
-	}
-	
-	private static async Task TrySendStopCommand(InstanceContext context, InstanceProcess process) {
+	private static async Task TrySendStopCommand(InstanceContext context, InstanceProcess process, string command) {
 		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 		try {
-			await process.SendCommand(MinecraftCommand.Stop, timeout.Token);
+			await process.SendCommand(command, timeout.Token);
 		} catch (OperationCanceledException) {
 			// Ignore.
 		} catch (ObjectDisposedException e) when (e.ObjectName == typeof(Process).FullName && process.HasEnded) {

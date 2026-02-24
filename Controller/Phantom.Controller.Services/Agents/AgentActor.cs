@@ -5,7 +5,6 @@ using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance.Launch;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Java;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Agent;
 using Phantom.Common.Data.Web.Instance;
@@ -41,7 +40,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		AgentRuntimeInfo AgentRuntimeInfo,
 		AgentConnectionKeys AgentConnectionKeys,
 		ControllerState ControllerState,
-		MinecraftLaunchRecipes LaunchRecipes,
+		MinecraftInstanceRecipes MinecraftInstanceRecipes,
 		IDbContextProvider DbProvider,
 		CancellationToken CancellationToken
 	);
@@ -54,7 +53,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	
 	private readonly AgentConnectionKeys agentConnectionKeys;
 	private readonly ControllerState controllerState;
-	private readonly MinecraftLaunchRecipes launchRecipes;
+	private readonly MinecraftInstanceRecipes minecraftInstanceRecipes;
 	private readonly IDbContextProvider dbProvider;
 	private readonly CancellationToken cancellationToken;
 	
@@ -95,7 +94,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	private AgentActor(Init init) {
 		this.agentConnectionKeys = init.AgentConnectionKeys;
 		this.controllerState = init.ControllerState;
-		this.launchRecipes = init.LaunchRecipes;
+		this.minecraftInstanceRecipes = init.MinecraftInstanceRecipes;
 		this.dbProvider = init.DbProvider;
 		this.cancellationToken = init.CancellationToken;
 		
@@ -190,8 +189,9 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 		var configurationMessages = ImmutableArray.CreateBuilder<ConfigureInstanceMessage>();
 		
 		foreach (var (instanceGuid, instanceConfiguration, _, _, launchAutomatically) in instanceDataByGuid.Values.ToImmutableArray()) {
-			var launchRecipe = await launchRecipes.Create(instanceConfiguration, cancellationToken);
-			var configurationMessage = new ConfigureInstanceMessage(instanceGuid, instanceConfiguration.AsInfo, launchRecipe.OrElse(null), launchAutomatically);
+			var launchRecipe = await minecraftInstanceRecipes.Launch(instanceConfiguration, cancellationToken);
+			var stopRecipe = minecraftInstanceRecipes.Stop(0);
+			var configurationMessage = new ConfigureInstanceMessage(instanceGuid, instanceConfiguration.AsInfo, launchRecipe.OrElse(null), launchAutomatically, stopRecipe);
 			configurationMessages.Add(configurationMessage);
 		}
 		
@@ -226,7 +226,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	
 	public sealed record LaunchInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
+	public sealed record StopInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, ushort AfterSeconds) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record SendCommandToInstanceCommand(Guid LoggedInUserGuid, Guid InstanceGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
@@ -341,7 +341,7 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 			return Task.FromResult<Result<CreateOrUpdateInstanceResult, InstanceActionFailure>>(CreateOrUpdateInstanceResult.InstanceMemoryMustNotBeZero);
 		}
 		
-		return launchRecipes.Create(instanceConfiguration, cancellationToken)
+		return minecraftInstanceRecipes.Launch(instanceConfiguration, cancellationToken)
 		                    .ContinueOnActor(CreateOrUpdateInstance1, command)
 		                    .Unwrap();
 	}
@@ -362,7 +362,8 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 			instanceActorRef = CreateNewInstance(Instance.Offline(instanceGuid, instanceConfiguration));
 		}
 		
-		var configureInstanceCommand = new InstanceActor.ConfigureInstanceCommand(command.LoggedInUserGuid, instanceGuid, instanceConfiguration, launchRecipe.Value, isCreatingInstance);
+		var stopRecipe = minecraftInstanceRecipes.Stop(afterSeconds: 0);
+		var configureInstanceCommand = new InstanceActor.ConfigureInstanceCommand(command.LoggedInUserGuid, instanceGuid, instanceConfiguration, launchRecipe.Value, stopRecipe, isCreatingInstance);
 		
 		return instanceActorRef.Request(configureInstanceCommand, cancellationToken)
 		                       .ContinueOnActor(CreateOrUpdateInstance2, configureInstanceCommand);
@@ -403,7 +404,8 @@ sealed class AgentActor : ReceiveActor<AgentActor.ICommand>, IWithTimers {
 	}
 	
 	private Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
-		return RequestInstance<InstanceActor.StopInstanceCommand, StopInstanceResult>(command.InstanceGuid, new InstanceActor.StopInstanceCommand(command.LoggedInUserGuid, command.StopStrategy));
+		var stopRecipe = minecraftInstanceRecipes.Stop(command.AfterSeconds);
+		return RequestInstance<InstanceActor.StopInstanceCommand, StopInstanceResult>(command.InstanceGuid, new InstanceActor.StopInstanceCommand(command.LoggedInUserGuid, stopRecipe));
 	}
 	
 	private Task<Result<SendCommandToInstanceResult, InstanceActionFailure>> SendMinecraftCommand(SendCommandToInstanceCommand command) {

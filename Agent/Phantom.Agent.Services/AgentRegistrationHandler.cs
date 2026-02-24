@@ -79,6 +79,7 @@ public sealed class AgentRegistrationHandler {
 			configureInstanceMessage.Info,
 			configureInstanceMessage.LaunchRecipe,
 			configureInstanceMessage.LaunchNow,
+			configureInstanceMessage.StopRecipe,
 			AlwaysReportStatus: true
 		);
 	}

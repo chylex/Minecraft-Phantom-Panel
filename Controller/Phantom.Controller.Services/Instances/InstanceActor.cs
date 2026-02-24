@@ -1,7 +1,7 @@
 ﻿using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance.Launch;
+using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Instance;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Messages.Agent;
@@ -71,11 +71,11 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	public sealed record SetPlayerCountsCommand(InstancePlayerCounts? PlayerCounts) : ICommand;
 	
-	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchRecipe LaunchRecipe, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
+	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchRecipe LaunchRecipe, InstanceStopRecipe StopRecipe, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record LaunchInstanceCommand(Guid AuditLogUserGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
-	public sealed record StopInstanceCommand(Guid AuditLogUserGuid, MinecraftStopStrategy StopStrategy) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
+	public sealed record StopInstanceCommand(Guid AuditLogUserGuid, InstanceStopRecipe StopRecipe) : ICommand, ICanReply<Result<StopInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record SendCommandToInstanceCommand(Guid AuditLogUserGuid, string Command) : ICommand, ICanReply<Result<SendCommandToInstanceResult, InstanceActionFailure>>;
 	
@@ -95,7 +95,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	}
 	
 	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> ConfigureInstance(ConfigureInstanceCommand command) {
-		var message = new ConfigureInstanceMessage(command.InstanceGuid, command.Configuration.AsInfo, command.LaunchRecipe);
+		var message = new ConfigureInstanceMessage(command.InstanceGuid, command.Configuration.AsInfo, command.LaunchRecipe, LaunchNow: false, command.StopRecipe);
 		var result = await SendInstanceActionMessage<ConfigureInstanceMessage, ConfigureInstanceResult>(message);
 		
 		if (result.Is(ConfigureInstanceResult.Success)) {
@@ -127,12 +127,12 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	}
 	
 	private async Task<Result<StopInstanceResult, InstanceActionFailure>> StopInstance(StopInstanceCommand command) {
-		var message = new StopInstanceMessage(instanceGuid, command.StopStrategy);
+		var message = new StopInstanceMessage(instanceGuid, command.StopRecipe);
 		var result = await SendInstanceActionMessage<StopInstanceMessage, StopInstanceResult>(message);
 		
 		if (result.Is(StopInstanceResult.StopInitiated)) {
 			SetLaunchAutomatically(false);
-			databaseStorageActor.Tell(new InstanceDatabaseStorageActor.StoreInstanceStoppedCommand(command.AuditLogUserGuid, command.StopStrategy));
+			databaseStorageActor.Tell(new InstanceDatabaseStorageActor.StoreInstanceStoppedCommand(command.AuditLogUserGuid));
 		}
 		
 		return result;

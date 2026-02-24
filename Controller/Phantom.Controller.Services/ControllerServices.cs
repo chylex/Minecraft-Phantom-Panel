@@ -20,7 +20,7 @@ public sealed class ControllerServices : IDisposable {
 	
 	private ControllerState ControllerState { get; }
 	private MinecraftVersions MinecraftVersions { get; }
-	private MinecraftLaunchRecipes LaunchRecipes { get; }
+	private MinecraftInstanceRecipes MinecraftInstanceRecipes { get; }
 	
 	private AuthenticatedUserCache AuthenticatedUserCache { get; }
 	private UserManager UserManager { get; }
@@ -51,7 +51,7 @@ public sealed class ControllerServices : IDisposable {
 		
 		this.ControllerState = new ControllerState();
 		this.MinecraftVersions = new MinecraftVersions();
-		this.LaunchRecipes = new MinecraftLaunchRecipes(MinecraftVersions);
+		this.MinecraftInstanceRecipes = new MinecraftInstanceRecipes(MinecraftVersions);
 		
 		this.AuthenticatedUserCache = new AuthenticatedUserCache();
 		this.UserManager = new UserManager(AuthenticatedUserCache, ControllerState, dbProvider);
@@ -60,7 +60,7 @@ public sealed class ControllerServices : IDisposable {
 		this.UserLoginManager = new UserLoginManager(AuthenticatedUserCache, dbProvider);
 		this.PermissionManager = new PermissionManager(dbProvider);
 		
-		this.AgentManager = new AgentManager(ActorSystem, new AgentConnectionKeys(agentCertificateThumbprint), ControllerState, LaunchRecipes, dbProvider, cancellationToken);
+		this.AgentManager = new AgentManager(ActorSystem, new AgentConnectionKeys(agentCertificateThumbprint), ControllerState, MinecraftInstanceRecipes, dbProvider, cancellationToken);
 		this.InstanceLogManager = new InstanceLogManager();
 		
 		this.AuditLogManager = new AuditLogManager(dbProvider);

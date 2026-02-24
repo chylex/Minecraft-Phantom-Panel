@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
 using Phantom.Common.Data;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Data.Web.Users;
@@ -56,9 +55,9 @@ public sealed class InstanceManager(ControllerConnection controllerConnection) {
 		}
 	}
 	
-	public async Task<Result<StopInstanceResult, UserInstanceActionFailure>> StopInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, MinecraftStopStrategy stopStrategy, CancellationToken cancellationToken) {
+	public async Task<Result<StopInstanceResult, UserInstanceActionFailure>> StopInstance(AuthenticatedUser? authenticatedUser, Guid agentGuid, Guid instanceGuid, ushort afterSeconds, CancellationToken cancellationToken) {
 		if (authenticatedUser != null && authenticatedUser.Info.CheckPermission(Permission.ControlInstances)) {
-			var message = new StopInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid, stopStrategy);
+			var message = new StopInstanceMessage(authenticatedUser.Token, agentGuid, instanceGuid, afterSeconds);
 			return await controllerConnection.Send<StopInstanceMessage, Result<StopInstanceResult, UserInstanceActionFailure>>(message, cancellationToken);
 		}
 		else {

@@ -18,6 +18,8 @@ sealed class InstanceLauncher(
 	InstanceProperties instanceProperties,
 	InstanceLaunchRecipe launchRecipe
 ) {
+	public IInstanceValueResolver ValueResolver => valueResolver;
+	
 	public async Task<InstanceLaunchResult> Launch(ILogger logger, Action<IInstanceStatus?> reportStatus, CancellationToken cancellationToken) {
 		string? executablePath = launchRecipe.Executable.Resolve(pathResolver);
 		if (executablePath == null) {

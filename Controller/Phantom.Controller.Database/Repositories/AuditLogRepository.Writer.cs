@@ -87,10 +87,8 @@ sealed partial class AuditLogRepository {
 			});
 		}
 		
-		public void InstanceStopped(Guid instanceGuid, int stopInSeconds) {
-			AddItem(AuditLogEventType.InstanceStopped, instanceGuid.ToString(), new Dictionary<string, object?> {
-				{ "stop_in_seconds", stopInSeconds.ToString() },
-			});
+		public void InstanceStopped(Guid instanceGuid) {
+			AddItem(AuditLogEventType.InstanceStopped, instanceGuid.ToString());
 		}
 	}
 }

@@ -3,9 +3,9 @@ using Phantom.Agent.Services.Instances.Launch;
 using Phantom.Agent.Services.Instances.State;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
-using Phantom.Common.Data.Minecraft;
 using Phantom.Common.Data.Replies;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Actor;
@@ -85,7 +85,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	public sealed record LaunchInstanceCommand(InstanceInfo Info, InstanceLauncher Launcher, InstanceTicketManager.Ticket Ticket, bool IsRestarting) : ICommand;
 	
-	public sealed record StopInstanceCommand(MinecraftStopStrategy StopStrategy) : ICommand;
+	public sealed record StopInstanceCommand(InstanceStopRecipe StopRecipe) : ICommand;
 	
 	public sealed record SendCommandToInstanceCommand(string Command) : ICommand, ICanReply<SendCommandToInstanceResult>;
 	
@@ -93,7 +93,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	public sealed record HandleProcessEndedCommand(IInstanceStatus Status) : ICommand, IJumpAhead;
 	
-	public sealed record ShutdownCommand : ICommand;
+	public sealed record ShutdownCommand(InstanceStopRecipe StopRecipe) : ICommand;
 	
 	private void ReportInstanceStatus(ReportInstanceStatusCommand command) {
 		ReportCurrentStatus();
@@ -125,7 +125,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		IInstanceStatus oldStatus = currentStatus;
 		SetAndReportStatus(InstanceStatus.Stopping);
 		
-		if (await InstanceStopProcedure.Run(context, command.StopStrategy, runningState, SetAndReportStatus, shutdownCancellationToken)) {
+		if (await InstanceStopProcedure.Run(context, command.StopRecipe, runningState, SetAndReportStatus, shutdownCancellationToken)) {
 			instanceTicketManager.Release(runningState.Ticket);
 			TransitionState(null);
 		}
@@ -167,7 +167,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	}
 	
 	private async Task Shutdown(ShutdownCommand command) {
-		await StopInstance(new StopInstanceCommand(MinecraftStopStrategy.Instant));
+		await StopInstance(new StopInstanceCommand(command.StopRecipe));
 		await actorCancellationTokenSource.CancelAsync();
 		
 		await Task.WhenAll(

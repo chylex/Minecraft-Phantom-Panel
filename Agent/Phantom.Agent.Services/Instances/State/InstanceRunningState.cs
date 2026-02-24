@@ -11,6 +11,7 @@ sealed class InstanceRunningState : IDisposable {
 	public InstanceTicketManager.Ticket Ticket { get; }
 	public InstanceProcess Process { get; }
 	
+	internal IInstanceValueResolver ValueResolver => launcher.ValueResolver;
 	internal bool IsStopping { get; set; }
 	
 	private readonly InstanceContext context;
