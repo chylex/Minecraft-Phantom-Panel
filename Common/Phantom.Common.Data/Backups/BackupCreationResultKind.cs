@@ -8,9 +8,9 @@ public enum BackupCreationResultKind : byte {
 	BackupCancelled = 4,
 	BackupAlreadyRunning = 5,
 	BackupFileAlreadyExists = 6,
-	CouldNotCreateBackupFolder = 7,
-	CouldNotCopyWorldToTemporaryFolder = 8,
-	CouldNotCreateWorldArchive = 9,
+	CouldNotCreateBackupDirectory = 7,
+	CouldNotCopyInstanceIntoTemporaryDirectory = 8,
+	CouldNotCreateBackupArchive = 9,
 }
 
 public static class BackupCreationResultSummaryExtensions {

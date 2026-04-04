@@ -34,7 +34,7 @@ sealed class InstanceLauncher(
 		
 		var processConfigurator = new ProcessConfigurator {
 			FileName = executablePath,
-			WorkingDirectory = instanceProperties.InstanceFolder,
+			WorkingDirectory = instanceProperties.InstanceDirectoryPath,
 			RedirectInput = true,
 			UseShellExecute = false,
 		};

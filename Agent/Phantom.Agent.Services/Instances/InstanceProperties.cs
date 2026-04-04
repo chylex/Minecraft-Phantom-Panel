@@ -2,5 +2,5 @@
 
 sealed record InstanceProperties(
 	Guid InstanceGuid,
-	string InstanceFolder
+	string InstanceDirectoryPath
 );

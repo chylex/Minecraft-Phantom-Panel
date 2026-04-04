@@ -22,12 +22,12 @@ PosixSignals.RegisterCancellation(shutdownCancellationTokenSource, static () => 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel controller...");
 });
 
-static void CreateFolderOrStop(string path, UnixFileMode chmod) {
+static void CreateDirectoryOrStop(string path, UnixFileMode chmod) {
 	if (!Directory.Exists(path)) {
 		try {
 			Directories.Create(path, chmod);
 		} catch (Exception e) {
-			PhantomLogger.Root.Fatal(e, "Error creating folder: {FolderName}", path);
+			PhantomLogger.Root.Fatal(e, "Error creating directory: {DirectoryName}", path);
 			throw StopProcedureException.Instance;
 		}
 	}
@@ -42,7 +42,7 @@ try {
 	var (agentRpcServerHost, webRpcServerHost, sqlConnectionString) = Variables.LoadOrStop();
 	
 	string secretsPath = Path.GetFullPath("./secrets");
-	CreateFolderOrStop(secretsPath, Chmod.URWX_GRX);
+	CreateDirectoryOrStop(secretsPath, Chmod.URWX_GRX);
 	
 	var agentCertificate = await new CertificateFile("agent").CreateOrLoad(secretsPath);
 	if (agentCertificate == null) {

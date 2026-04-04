@@ -19,14 +19,14 @@ namespace Phantom.Agent.Services.Instances;
 sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> {
 	private static readonly ILogger Logger = PhantomLogger.Create<InstanceManagerActor>();
 	
-	public readonly record struct Init(ControllerConnection ControllerConnection, AgentFolders AgentFolders, AgentState AgentState, JavaRuntimeRepository JavaRuntimeRepository, InstanceTicketManager InstanceTicketManager, BackupManager BackupManager);
+	public readonly record struct Init(ControllerConnection ControllerConnection, AgentDirectories AgentDirectories, AgentState AgentState, JavaRuntimeRepository JavaRuntimeRepository, InstanceTicketManager InstanceTicketManager, BackupManager BackupManager);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceManagerActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
 	}
 	
 	private readonly AgentState agentState;
-	private readonly AgentFolders agentFolders;
+	private readonly AgentDirectories agentDirectories;
 	
 	private readonly InstanceServices instanceServices;
 	private readonly InstanceTicketManager instanceTicketManager;
@@ -39,7 +39,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 	
 	private InstanceManagerActor(Init init) {
 		this.agentState = init.AgentState;
-		this.agentFolders = init.AgentFolders;
+		this.agentDirectories = init.AgentDirectories;
 		
 		this.instanceServices = new InstanceServices(init.ControllerConnection, init.BackupManager, new FileDownloadManager(), init.JavaRuntimeRepository);
 		this.instanceTicketManager = init.InstanceTicketManager;
@@ -87,8 +87,8 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		}
 		else {
 			var instanceLoggerName = PhantomLogger.ShortenGuid(instanceGuid) + "/" + Interlocked.Increment(ref instanceLoggerSequenceId);
-			var instanceFolder = Path.Combine(agentFolders.InstancesFolderPath, instanceGuid.ToString());
-			var instanceProperties = new InstanceProperties(instanceGuid, instanceFolder);
+			var instanceDirectoryPath = Path.Combine(agentDirectories.InstancesDirectoryPath, instanceGuid.ToString());
+			var instanceProperties = new InstanceProperties(instanceGuid, instanceDirectoryPath);
 			var instanceInit = new InstanceActor.Init(agentState, instanceGuid, instanceLoggerName, instanceServices, instanceTicketManager, shutdownCancellationToken);
 			instances[instanceGuid] = instance = new Instance(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), instanceInfo, instanceProperties, launchRecipe, stopRecipe);
 			
@@ -98,10 +98,10 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		}
 		
 		try {
-			Directories.Create(instance.Properties.InstanceFolder, Chmod.URWX_GRX);
+			Directories.Create(instance.Properties.InstanceDirectoryPath, Chmod.URWX_GRX);
 		} catch (Exception e) {
-			Logger.Error(e, "Could not create instance folder: {Path}", instance.Properties.InstanceFolder);
-			return ConfigureInstanceResult.CouldNotCreateInstanceFolder;
+			Logger.Error(e, "Could not create instance directory: {Path}", instance.Properties.InstanceDirectoryPath);
+			return ConfigureInstanceResult.CouldNotCreateInstanceDirectory;
 		}
 		
 		if (command.LaunchNow) {
@@ -136,7 +136,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			}
 		}
 		
-		var pathResolver = new InstancePathResolver(agentFolders, instanceServices.JavaRuntimeRepository, instance.Properties);
+		var pathResolver = new InstancePathResolver(agentDirectories, instanceServices.JavaRuntimeRepository, instance.Properties);
 		var valueResolver = new InstanceValueResolver(pathResolver);
 		var launcher = new InstanceLauncher(instanceServices.DownloadManager, pathResolver, valueResolver, instance.Properties, launchRecipe);
 		

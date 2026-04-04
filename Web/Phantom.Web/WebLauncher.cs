@@ -8,7 +8,7 @@ using ILogger = Serilog.ILogger;
 namespace Phantom.Web;
 
 static class WebLauncher {
-	internal sealed record Configuration(ILogger Logger, string Host, ushort Port, string BasePath, string DataProtectionKeyFolderPath, CancellationToken CancellationToken) {
+	internal sealed record Configuration(ILogger Logger, string Host, ushort Port, string BasePath, string DataProtectionKeyDirectoryPath, CancellationToken CancellationToken) {
 		public string HttpUrl => "http://" + Host + ":" + Port;
 	}
 	
@@ -35,7 +35,7 @@ static class WebLauncher {
 		builder.Services.AddSingleton<IHostLifetime>(new NullLifetime());
 		builder.Services.AddScoped(Navigation.Create(config.BasePath));
 		
-		builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(config.DataProtectionKeyFolderPath));
+		builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(config.DataProtectionKeyDirectoryPath));
 		
 		builder.Services.AddRazorPages(static options => options.RootDirectory = "/Layout");
 		builder.Services.AddServerSideBlazor();

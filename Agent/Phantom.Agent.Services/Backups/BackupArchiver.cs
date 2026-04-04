@@ -9,22 +9,16 @@ using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
 
-sealed class BackupArchiver {
-	private readonly string destinationBasePath;
-	private readonly string temporaryBasePath;
-	private readonly ILogger logger;
-	private readonly InstanceProperties instanceProperties;
-	private readonly CancellationToken cancellationToken;
+sealed class BackupArchiver(
+	string destinationBasePath,
+	string temporaryBasePath,
+	string loggerName,
+	InstanceProperties instanceProperties,
+	CancellationToken cancellationToken
+) {
+	private readonly ILogger logger = PhantomLogger.Create<BackupArchiver>(loggerName);
 	
-	public BackupArchiver(string destinationBasePath, string temporaryBasePath, string loggerName, InstanceProperties instanceProperties, CancellationToken cancellationToken) {
-		this.destinationBasePath = destinationBasePath;
-		this.temporaryBasePath = temporaryBasePath;
-		this.logger = PhantomLogger.Create<BackupArchiver>(loggerName);
-		this.instanceProperties = instanceProperties;
-		this.cancellationToken = cancellationToken;
-	}
-	
-	private bool IsFolderSkipped(ImmutableList<string> relativePath) {
+	private bool IsDirectorySkipped(ImmutableList<string> relativePath) {
 		return relativePath is ["cache" or "crash-reports" or "debug" or "libraries" or "logs" or "mods" or "versions"];
 	}
 	
@@ -44,71 +38,127 @@ sealed class BackupArchiver {
 		return false;
 	}
 	
-	public async Task<string?> ArchiveWorld(BackupCreationResult.Builder resultBuilder) {
+	public async Task<string?> CreateBackup(BackupCreationResult.Builder resultBuilder) {
 		string guid = instanceProperties.InstanceGuid.ToString();
 		string currentDateTime = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-		string backupFolderPath = Path.Combine(destinationBasePath, guid);
-		string backupFilePath = Path.Combine(backupFolderPath, currentDateTime + ".tar");
+		string backupDirectoryPath = Path.Combine(destinationBasePath, guid);
+		string backupFilePath = Path.Combine(backupDirectoryPath, currentDateTime + ".tar");
 		
 		if (File.Exists(backupFilePath)) {
 			resultBuilder.Kind = BackupCreationResultKind.BackupFileAlreadyExists;
-			logger.Warning("Skipping backup, file already exists: {File}", backupFilePath);
+			logger.Warning("Skipping backup, file already exists: {FilePath}", backupFilePath);
 			return null;
 		}
 		
 		try {
-			Directories.Create(backupFolderPath, Chmod.URWX_GRX);
+			Directories.Create(backupDirectoryPath, Chmod.URWX_GRX);
 		} catch (Exception e) {
-			resultBuilder.Kind = BackupCreationResultKind.CouldNotCreateBackupFolder;
-			logger.Error(e, "Could not create backup folder: {Folder}", backupFolderPath);
+			resultBuilder.Kind = BackupCreationResultKind.CouldNotCreateBackupDirectory;
+			logger.Error(e, "Could not create backup directory: {DirectoryPath}", backupDirectoryPath);
 			return null;
 		}
 		
-		string temporaryFolderPath = Path.Combine(temporaryBasePath, guid + "_" + currentDateTime);
-		if (!await CopyWorldAndCreateTarArchive(temporaryFolderPath, backupFilePath, resultBuilder)) {
+		string temporaryDirectoryPath = Path.Combine(temporaryBasePath, guid + "_" + currentDateTime);
+		if (!await CopyInstanceDirectoryAndCreateTarArchive(temporaryDirectoryPath, backupFilePath, resultBuilder)) {
 			return null;
 		}
 		
-		logger.Debug("Created world backup: {FilePath}", backupFilePath);
+		logger.Information("Created backup: {FilePath}", backupFilePath);
 		return backupFilePath;
 	}
 	
-	private async Task<bool> CopyWorldAndCreateTarArchive(string temporaryFolderPath, string backupFilePath, BackupCreationResult.Builder resultBuilder) {
+	private async Task<bool> CopyInstanceDirectoryAndCreateTarArchive(string temporaryDirectoryPath, string backupFilePath, BackupCreationResult.Builder resultBuilder) {
 		try {
-			if (!await CopyWorldToTemporaryFolder(temporaryFolderPath)) {
-				resultBuilder.Kind = BackupCreationResultKind.CouldNotCopyWorldToTemporaryFolder;
+			if (!await CopyInstanceDirectoryIntoTemporaryDirectory(temporaryDirectoryPath)) {
+				resultBuilder.Kind = BackupCreationResultKind.CouldNotCopyInstanceIntoTemporaryDirectory;
 				return false;
 			}
 			
-			if (!await CreateTarArchive(temporaryFolderPath, backupFilePath)) {
-				resultBuilder.Kind = BackupCreationResultKind.CouldNotCreateWorldArchive;
+			if (!await CreateTarArchive(temporaryDirectoryPath, backupFilePath)) {
+				resultBuilder.Kind = BackupCreationResultKind.CouldNotCreateBackupArchive;
 				return false;
 			}
 			
 			return true;
 		} finally {
 			try {
-				Directory.Delete(temporaryFolderPath, recursive: true);
+				Directory.Delete(temporaryDirectoryPath, recursive: true);
 			} catch (Exception e) {
-				resultBuilder.Warnings |= BackupCreationWarnings.CouldNotDeleteTemporaryFolder;
-				logger.Error(e, "Could not delete temporary world folder: {Folder}", temporaryFolderPath);
+				resultBuilder.Warnings |= BackupCreationWarnings.CouldNotDeleteTemporaryDirectory;
+				logger.Error(e, "Could not delete temporary directory: {DirectoryPath}", temporaryDirectoryPath);
 			}
 		}
 	}
 	
-	private async Task<bool> CopyWorldToTemporaryFolder(string temporaryFolderPath) {
+	private async Task<bool> CopyInstanceDirectoryIntoTemporaryDirectory(string temporaryDirectoryPath) {
 		try {
-			await CopyDirectory(new DirectoryInfo(instanceProperties.InstanceFolder), temporaryFolderPath, ImmutableList<string>.Empty);
+			await CopyDirectory(new DirectoryInfo(instanceProperties.InstanceDirectoryPath), temporaryDirectoryPath, ImmutableList<string>.Empty);
 			return true;
 		} catch (Exception e) {
-			logger.Error(e, "Could not copy world to temporary folder.");
+			logger.Error(e, "Could not copy instance directory into temporary directory: {DirectoryPath}", temporaryDirectoryPath);
 			return false;
 		}
 	}
 	
-	private async Task<bool> CreateTarArchive(string sourceFolderPath, string backupFilePath) {
+	private async Task CopyDirectory(DirectoryInfo sourceDirectory, string destinationDirectoryPath, ImmutableList<string> relativePath) {
+		cancellationToken.ThrowIfCancellationRequested();
+		
+		bool needsToCreateDirectory = true;
+		
+		foreach (FileInfo file in sourceDirectory.EnumerateFiles()) {
+			var filePath = relativePath.Add(file.Name);
+			if (IsFileSkipped(filePath)) {
+				logger.Debug("Skipping file: {FilePath}", PathString(filePath));
+				continue;
+			}
+			
+			if (needsToCreateDirectory) {
+				needsToCreateDirectory = false;
+				Directories.Create(destinationDirectoryPath, Chmod.URWX);
+			}
+			
+			await CopyFileWithRetries(file, Path.Combine(destinationDirectoryPath, file.Name));
+		}
+		
+		foreach (DirectoryInfo directory in sourceDirectory.EnumerateDirectories()) {
+			var directoryPath = relativePath.Add(directory.Name);
+			if (IsDirectorySkipped(directoryPath)) {
+				logger.Debug("Skipping directory: {DirectoryPath}", PathString(directoryPath));
+				continue;
+			}
+			
+			await CopyDirectory(directory, Path.Join(destinationDirectoryPath, directory.Name), directoryPath);
+		}
+		
+		return;
+		
+		static string PathString(ImmutableList<string> filePath) {
+			return string.Join(separator: '/', filePath);
+		}
+	}
+	
+	private async Task CopyFileWithRetries(FileInfo sourceFile, string destinationFilePath) {
+		const int TotalAttempts = 10;
+		for (int attempt = 1; attempt <= TotalAttempts; attempt++) {
+			try {
+				sourceFile.CopyTo(destinationFilePath);
+				return;
+			} catch (IOException) {
+				if (attempt == TotalAttempts) {
+					throw;
+				}
+				else {
+					logger.Warning("Failed copying file {FilePath}, retrying...", sourceFile.FullName);
+				}
+			}
+			
+			await Task.Delay(millisecondsDelay: 200, cancellationToken);
+		}
+	}
+	
+	private async Task<bool> CreateTarArchive(string sourceDirectoryPath, string backupFilePath) {
 		try {
-			await TarFile.CreateFromDirectoryAsync(sourceFolderPath, backupFilePath, includeBaseDirectory: false, cancellationToken);
+			await TarFile.CreateFromDirectoryAsync(sourceDirectoryPath, backupFilePath, includeBaseDirectory: false, cancellationToken);
 			return true;
 		} catch (Exception e) {
 			logger.Error(e, "Could not create archive.");
@@ -122,58 +172,7 @@ sealed class BackupArchiver {
 			try {
 				File.Delete(filePath);
 			} catch (Exception e) {
-				logger.Error(e, "Could not delete broken archive: {File}", filePath);
-			}
-		}
-	}
-	
-	private async Task CopyDirectory(DirectoryInfo sourceFolder, string destinationFolderPath, ImmutableList<string> relativePath) {
-		cancellationToken.ThrowIfCancellationRequested();
-		
-		bool needsToCreateFolder = true;
-		
-		foreach (FileInfo file in sourceFolder.EnumerateFiles()) {
-			var filePath = relativePath.Add(file.Name);
-			if (IsFileSkipped(filePath)) {
-				logger.Debug("Skipping file: {File}", string.Join(separator: '/', filePath));
-				continue;
-			}
-			
-			if (needsToCreateFolder) {
-				needsToCreateFolder = false;
-				Directories.Create(destinationFolderPath, Chmod.URWX);
-			}
-			
-			await CopyFileWithRetries(file, destinationFolderPath);
-		}
-		
-		foreach (DirectoryInfo directory in sourceFolder.EnumerateDirectories()) {
-			var folderPath = relativePath.Add(directory.Name);
-			if (IsFolderSkipped(folderPath)) {
-				logger.Debug("Skipping folder: {Folder}", string.Join(separator: '/', folderPath));
-				continue;
-			}
-			
-			await CopyDirectory(directory, Path.Join(destinationFolderPath, directory.Name), folderPath);
-		}
-	}
-	
-	private async Task CopyFileWithRetries(FileInfo sourceFile, string destinationFolderPath) {
-		var destinationFilePath = Path.Combine(destinationFolderPath, sourceFile.Name);
-		
-		const int TotalAttempts = 10;
-		for (int attempt = 1; attempt <= TotalAttempts; attempt++) {
-			try {
-				sourceFile.CopyTo(destinationFilePath);
-				return;
-			} catch (IOException) {
-				if (attempt == TotalAttempts) {
-					throw;
-				}
-				else {
-					logger.Warning("Failed copying file {File}, retrying...", sourceFile.FullName);
-					await Task.Delay(millisecondsDelay: 200, cancellationToken);
-				}
+				logger.Error(e, "Could not delete broken archive: {FilePath}", filePath);
 			}
 		}
 	}

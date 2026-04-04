@@ -21,12 +21,12 @@ PosixSignals.RegisterCancellation(shutdownCancellationTokenSource, static () => 
 	PhantomLogger.Root.InformationHeading("Stopping Phantom Panel web...");
 });
 
-static void CreateFolderOrStop(string path, UnixFileMode chmod) {
+static void CreateDirectoryOrStop(string path, UnixFileMode chmod) {
 	if (!Directory.Exists(path)) {
 		try {
 			Directories.Create(path, chmod);
 		} catch (Exception e) {
-			PhantomLogger.Root.Fatal(e, "Error creating folder: {FolderName}", path);
+			PhantomLogger.Root.Fatal(e, "Error creating directory: {DirectoryName}", path);
 			throw StopProcedureException.Instance;
 		}
 	}
@@ -46,7 +46,7 @@ try {
 	}
 	
 	string dataProtectionKeysPath = Path.GetFullPath("./keys");
-	CreateFolderOrStop(dataProtectionKeysPath, Chmod.URWX);
+	CreateDirectoryOrStop(dataProtectionKeysPath, Chmod.URWX);
 	
 	var administratorToken = TokenGenerator.Create(60);
 	var applicationProperties = new ApplicationProperties(fullVersion, TokenGenerator.GetBytesOrThrow(administratorToken));

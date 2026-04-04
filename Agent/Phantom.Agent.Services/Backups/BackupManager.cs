@@ -5,16 +5,10 @@ using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
 
-sealed class BackupManager : IDisposable {
-	private readonly string destinationBasePath;
-	private readonly string temporaryBasePath;
-	private readonly SemaphoreSlim compressionSemaphore;
-	
-	public BackupManager(AgentFolders agentFolders, int maxConcurrentCompressionTasks) {
-		this.destinationBasePath = agentFolders.BackupsFolderPath;
-		this.temporaryBasePath = Path.Combine(agentFolders.TemporaryFolderPath, "backups");
-		this.compressionSemaphore = new SemaphoreSlim(maxConcurrentCompressionTasks, maxConcurrentCompressionTasks);
-	}
+sealed class BackupManager(AgentDirectories agentDirectories, int maxConcurrentCompressionTasks) : IDisposable {
+	private readonly string destinationBasePath = agentDirectories.BackupsDirectoryPath;
+	private readonly string temporaryBasePath = Path.Combine(agentDirectories.TemporaryDirectoryPath, "backups");
+	private readonly SemaphoreSlim compressionSemaphore = new (maxConcurrentCompressionTasks, maxConcurrentCompressionTasks);
 	
 	public Task<BackupCreationResult> CreateBackup(string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
 		return new BackupCreator(this, loggerName, process, cancellationToken).CreateBackup();
@@ -24,20 +18,8 @@ sealed class BackupManager : IDisposable {
 		compressionSemaphore.Dispose();
 	}
 	
-	private sealed class BackupCreator {
-		private readonly BackupManager manager;
-		private readonly string loggerName;
-		private readonly ILogger logger;
-		private readonly InstanceProcess process;
-		private readonly CancellationToken cancellationToken;
-		
-		public BackupCreator(BackupManager manager, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
-			this.manager = manager;
-			this.loggerName = loggerName;
-			this.logger = PhantomLogger.Create<BackupManager>(loggerName);
-			this.process = process;
-			this.cancellationToken = cancellationToken;
-		}
+	private sealed class BackupCreator(BackupManager manager, string loggerName, InstanceProcess process, CancellationToken cancellationToken) {
+		private readonly ILogger logger = PhantomLogger.Create<BackupManager>(loggerName);
 		
 		public async Task<BackupCreationResult> CreateBackup() {
 			logger.Information("Backup started.");
@@ -62,7 +44,7 @@ sealed class BackupManager : IDisposable {
 			try {
 				await dispatcher.DisableAutomaticSaving();
 				await dispatcher.SaveAllChunks();
-				return await new BackupArchiver(manager.destinationBasePath, manager.temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).ArchiveWorld(resultBuilder);
+				return await new BackupArchiver(manager.destinationBasePath, manager.temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).CreateBackup(resultBuilder);
 			} catch (OperationCanceledException) {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
@@ -100,7 +82,7 @@ sealed class BackupManager : IDisposable {
 			try {
 				var compressedFilePath = await BackupCompressor.Compress(filePath, cancellationToken);
 				if (compressedFilePath == null) {
-					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotCompressWorldArchive;
+					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotCompressBackupArchive;
 				}
 			} finally {
 				manager.compressionSemaphore.Release();
@@ -124,16 +106,16 @@ sealed class BackupManager : IDisposable {
 		
 		private static string DescribeResult(BackupCreationResultKind kind) {
 			return kind switch {
-				BackupCreationResultKind.Success                            => "Backup created successfully.",
-				BackupCreationResultKind.InstanceNotRunning                 => "Instance is not running.",
-				BackupCreationResultKind.BackupCancelled                    => "Backup cancelled.",
-				BackupCreationResultKind.BackupTimedOut                     => "Backup timed out.",
-				BackupCreationResultKind.BackupAlreadyRunning               => "A backup is already being created.",
-				BackupCreationResultKind.BackupFileAlreadyExists            => "Backup with the same name already exists.",
-				BackupCreationResultKind.CouldNotCreateBackupFolder         => "Could not create backup folder.",
-				BackupCreationResultKind.CouldNotCopyWorldToTemporaryFolder => "Could not copy world to temporary folder.",
-				BackupCreationResultKind.CouldNotCreateWorldArchive         => "Could not create world archive.",
-				_                                                           => "Unknown error.",
+				BackupCreationResultKind.Success                                    => "Backup created successfully.",
+				BackupCreationResultKind.InstanceNotRunning                         => "Instance is not running.",
+				BackupCreationResultKind.BackupCancelled                            => "Backup cancelled.",
+				BackupCreationResultKind.BackupTimedOut                             => "Backup timed out.",
+				BackupCreationResultKind.BackupAlreadyRunning                       => "A backup is already being created.",
+				BackupCreationResultKind.BackupFileAlreadyExists                    => "Backup with the same name already exists.",
+				BackupCreationResultKind.CouldNotCreateBackupDirectory              => "Could not create backup directory.",
+				BackupCreationResultKind.CouldNotCopyInstanceIntoTemporaryDirectory => "Could not copy instance into temporary directory.",
+				BackupCreationResultKind.CouldNotCreateBackupArchive                => "Could not create backup archive.",
+				_                                                                   => "Unknown error.",
 			};
 		}
 	}

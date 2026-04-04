@@ -19,8 +19,8 @@ abstract class AuthTokenFile {
 		this.certificate = certificate;
 	}
 	
-	public async Task<ConnectionKey?> CreateOrLoad(string folderPath) {
-		string filePath = Path.Combine(folderPath, fileName);
+	public async Task<ConnectionKey?> CreateOrLoad(string directoryPath) {
+		string filePath = Path.Combine(directoryPath, fileName);
 		
 		if (File.Exists(filePath)) {
 			try {

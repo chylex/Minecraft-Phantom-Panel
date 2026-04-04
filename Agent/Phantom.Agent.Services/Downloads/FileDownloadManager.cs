@@ -22,7 +22,7 @@ sealed class FileDownloadManager {
 			try {
 				Directories.Create(parentPath.FullName, Chmod.URWX_GRX);
 			} catch (Exception e) {
-				Logger.Error(e, "Unable to create folder: {FolderName}", parentPath.FullName);
+				Logger.Error(e, "Unable to create directory: {DirectoryName}", parentPath.FullName);
 				return null;
 			}
 		}

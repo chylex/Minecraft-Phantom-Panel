@@ -37,13 +37,13 @@ try {
 		return 1;
 	}
 	
-	var folders = new AgentFolders("./data", "./temp", javaSearchPath);
-	if (!folders.TryCreate()) {
+	var agentDirectories = new AgentDirectories("./data", "./temp", javaSearchPath);
+	if (!agentDirectories.TryCreate()) {
 		return 1;
 	}
 	
 	var agentInfo = new AgentInfo(ProtocolVersion, fullVersion, maxInstances, maxMemory, allowedServerPorts, allowedRconPorts);
-	var javaRuntimeRepository = await JavaRuntimeDiscovery.Scan(folders.JavaSearchFolderPath, shutdownCancellationToken);
+	var javaRuntimeRepository = await JavaRuntimeDiscovery.Scan(agentDirectories.JavaSearchDirectoryPath, shutdownCancellationToken);
 	
 	var agentRegistrationHandler = new AgentRegistrationHandler();
 	var controllerHandshake = new ControllerHandshake(new AgentRegistration(agentInfo, javaRuntimeRepository.All), agentRegistrationHandler);
@@ -69,7 +69,7 @@ try {
 	try {
 		PhantomLogger.Root.InformationHeading("Launching Phantom Panel agent...");
 		
-		var agentServices = new AgentServices(agentInfo, folders, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcClient.MessageSender), javaRuntimeRepository);
+		var agentServices = new AgentServices(agentInfo, agentDirectories, new AgentServiceConfiguration(maxConcurrentBackupCompressionTasks), new ControllerConnection(rpcClient.MessageSender), javaRuntimeRepository);
 		
 		var rpcMessageHandlerInit = new ControllerMessageHandlerActor.Init(agentServices);
 		var rpcMessageHandlerActor = agentServices.ActorSystem.ActorOf(ControllerMessageHandlerActor.Factory(rpcMessageHandlerInit), "ControllerMessageHandler");

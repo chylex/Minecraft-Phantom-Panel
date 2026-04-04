@@ -36,7 +36,7 @@ sealed record Variables(
 	}
 	
 	private static string GetDefaultJavaSearchPath() {
-		return JavaRuntimeDiscovery.GetSystemSearchPath() ?? throw new Exception("Could not automatically determine the path to Java installations on this system. Please set the JAVA_SEARCH_PATH environment variable to the folder containing Java installations.");
+		return JavaRuntimeDiscovery.GetSystemSearchPath() ?? throw new Exception("Could not automatically determine the path to Java installations on this system. Please set the JAVA_SEARCH_PATH environment variable to the directory containing Java installations.");
 	}
 	
 	public static Variables LoadOrStop() {

@@ -22,16 +22,16 @@ public sealed class AgentServices {
 	internal InstanceTicketManager InstanceTicketManager { get; }
 	internal ActorRef<InstanceManagerActor.ICommand> InstanceManager { get; }
 	
-	public AgentServices(AgentInfo agentInfo, AgentFolders agentFolders, AgentServiceConfiguration serviceConfiguration, ControllerConnection controllerConnection, JavaRuntimeRepository javaRuntimeRepository) {
+	public AgentServices(AgentInfo agentInfo, AgentDirectories agentDirectories, AgentServiceConfiguration serviceConfiguration, ControllerConnection controllerConnection, JavaRuntimeRepository javaRuntimeRepository) {
 		this.ActorSystem = ActorSystemFactory.Create("Agent");
 		
 		this.AgentState = new AgentState();
-		this.BackupManager = new BackupManager(agentFolders, serviceConfiguration.MaxConcurrentCompressionTasks);
+		this.BackupManager = new BackupManager(agentDirectories, serviceConfiguration.MaxConcurrentCompressionTasks);
 		
 		this.JavaRuntimeRepository = javaRuntimeRepository;
 		this.InstanceTicketManager = new InstanceTicketManager(agentInfo, controllerConnection);
 		
-		var instanceManagerInit = new InstanceManagerActor.Init(controllerConnection, agentFolders, AgentState, JavaRuntimeRepository, InstanceTicketManager, BackupManager);
+		var instanceManagerInit = new InstanceManagerActor.Init(controllerConnection, agentDirectories, AgentState, JavaRuntimeRepository, InstanceTicketManager, BackupManager);
 		this.InstanceManager = ActorSystem.ActorOf(InstanceManagerActor.Factory(instanceManagerInit), "InstanceManager");
 	}
 	

@@ -21,19 +21,19 @@ public sealed class JavaRuntimeDiscovery {
 		return null;
 	}
 	
-	public static async Task<JavaRuntimeRepository> Scan(string folderPath, CancellationToken cancellationToken) {
-		var runtimes = await new JavaRuntimeDiscovery().ScanInternal(folderPath, cancellationToken).ToImmutableArrayAsync(cancellationToken);
+	public static async Task<JavaRuntimeRepository> Scan(string directoryPath, CancellationToken cancellationToken) {
+		var runtimes = await new JavaRuntimeDiscovery().ScanInternal(directoryPath, cancellationToken).ToImmutableArrayAsync(cancellationToken);
 		return new JavaRuntimeRepository(runtimes);
 	}
 	
 	private readonly Dictionary<string, int> duplicateDisplayNames = new ();
 	
-	private async IAsyncEnumerable<JavaRuntimeExecutable> ScanInternal(string folderPath, [EnumeratorCancellation] CancellationToken cancellationToken) {
-		Logger.Information("Starting Java runtime scan in: {FolderPath}", folderPath);
+	private async IAsyncEnumerable<JavaRuntimeExecutable> ScanInternal(string directoryPath, [EnumeratorCancellation] CancellationToken cancellationToken) {
+		Logger.Information("Starting Java runtime scan in: {DirectoryPath}", directoryPath);
 		
 		string javaExecutableName = OperatingSystem.IsWindows() ? "java.exe" : "java";
 		
-		foreach (var binFolderPath in Directory.EnumerateDirectories(Paths.ExpandTilde(folderPath), "bin", new EnumerationOptions {
+		foreach (var binDirectoryPath in Directory.EnumerateDirectories(Paths.ExpandTilde(directoryPath), "bin", new EnumerationOptions {
 			MatchType = MatchType.Simple,
 			RecurseSubdirectories = true,
 			ReturnSpecialDirectories = false,
@@ -42,7 +42,7 @@ public sealed class JavaRuntimeDiscovery {
 		}).Order()) {
 			cancellationToken.ThrowIfCancellationRequested();
 			
-			var javaExecutablePath = Paths.NormalizeSlashes(Path.Combine(binFolderPath, javaExecutableName));
+			var javaExecutablePath = Paths.NormalizeSlashes(Path.Combine(binDirectoryPath, javaExecutableName));
 			
 			FileAttributes javaExecutableAttributes;
 			try {

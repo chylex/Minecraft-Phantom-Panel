@@ -5,13 +5,13 @@ using Phantom.Common.Data.Agent.Instance;
 
 namespace Phantom.Agent.Services.Instances.Launch;
 
-sealed class InstancePathResolver(AgentFolders agentFolders, JavaRuntimeRepository javaRuntimeRepository, InstanceProperties instanceProperties) : IInstancePathResolver {
+sealed class InstancePathResolver(AgentDirectories agentDirectories, JavaRuntimeRepository javaRuntimeRepository, InstanceProperties instanceProperties) : IInstancePathResolver {
 	public string? Global(ImmutableArray<string> segments) {
-		return ValidateAndCombinePath(agentFolders.ServerExecutableFolderPath, segments);
+		return ValidateAndCombinePath(agentDirectories.ServerExecutableDirectoryPath, segments);
 	}
 	
 	public string? Local(ImmutableArray<string> segments) {
-		return ValidateAndCombinePath(instanceProperties.InstanceFolder, segments);
+		return ValidateAndCombinePath(instanceProperties.InstanceDirectoryPath, segments);
 	}
 	
 	public string? Runtime(Guid guid) {

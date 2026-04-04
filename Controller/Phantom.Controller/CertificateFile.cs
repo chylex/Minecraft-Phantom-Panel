@@ -11,8 +11,8 @@ sealed class CertificateFile(string name) {
 	
 	private readonly string fileName = name + ".pfx";
 	
-	public async Task<RpcServerCertificate?> CreateOrLoad(string folderPath) {
-		string filePath = Path.Combine(folderPath, fileName);
+	public async Task<RpcServerCertificate?> CreateOrLoad(string directoryPath) {
+		string filePath = Path.Combine(directoryPath, fileName);
 		
 		if (File.Exists(filePath)) {
 			try {
