@@ -3,7 +3,7 @@
 namespace Phantom.Utils.IO;
 
 public sealed class StreamCopier(int bufferSize = StreamCopier.DefaultBufferSize) : IDisposable {
-	private const int DefaultBufferSize = 81920;
+	private const int DefaultBufferSize = 65536;
 	
 	public event EventHandler<BufferEventArgs>? BufferReady;
 	

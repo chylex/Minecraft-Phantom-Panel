@@ -4,10 +4,10 @@ namespace Phantom.Common.Data.Backups;
 
 [Flags]
 public enum BackupCreationWarnings : byte {
-	None = 0,
+	None                             = 0,
 	CouldNotDeleteTemporaryDirectory = 1 << 0,
-	CouldNotCompressBackupArchive = 1 << 1,
-	CouldNotRestoreAutomaticSaving = 1 << 2,
+	CouldNotCompressBackupArchive    = 1 << 1,
+	SomeFilesChangedDuringBackup     = 1 << 2,
 }
 
 public static class BackupCreationWarningsExtensions {

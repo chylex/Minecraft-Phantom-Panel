@@ -25,14 +25,10 @@ sealed class BackupManager(AgentDirectories agentDirectories, int maxConcurrentC
 			logger.Information("Backup started.");
 			
 			var resultBuilder = new BackupCreationResult.Builder();
-			string? backupFilePath;
-			
-			using (var dispatcher = new BackupServerCommandDispatcher(logger, process, cancellationToken)) {
-				backupFilePath = await CreateWorldArchive(dispatcher, resultBuilder);
-			}
+			string? backupFilePath = await CreateBackupArchive(resultBuilder);
 			
 			if (backupFilePath != null) {
-				await CompressWorldArchive(backupFilePath, resultBuilder);
+				await CompressBackupArchive(backupFilePath, resultBuilder);
 			}
 			
 			var result = resultBuilder.Build();
@@ -40,11 +36,9 @@ sealed class BackupManager(AgentDirectories agentDirectories, int maxConcurrentC
 			return result;
 		}
 		
-		private async Task<string?> CreateWorldArchive(BackupServerCommandDispatcher dispatcher, BackupCreationResult.Builder resultBuilder) {
+		private async Task<string?> CreateBackupArchive(BackupCreationResult.Builder resultBuilder) {
 			try {
-				await dispatcher.DisableAutomaticSaving();
-				await dispatcher.SaveAllChunks();
-				return await new BackupArchiver(manager.destinationBasePath, manager.temporaryBasePath, loggerName, process.InstanceProperties, cancellationToken).CreateBackup(resultBuilder);
+				return await BackupArchiver.Run(loggerName, manager.destinationBasePath, manager.temporaryBasePath, process.InstanceProperties, resultBuilder, cancellationToken);
 			} catch (OperationCanceledException) {
 				resultBuilder.Kind = BackupCreationResultKind.BackupCancelled;
 				logger.Warning("Backup creation was cancelled.");
@@ -57,22 +51,10 @@ sealed class BackupManager(AgentDirectories agentDirectories, int maxConcurrentC
 				resultBuilder.Kind = BackupCreationResultKind.UnknownError;
 				logger.Error(e, "Caught exception while creating an instance backup.");
 				return null;
-			} finally {
-				try {
-					await dispatcher.EnableAutomaticSaving();
-				} catch (OperationCanceledException) {
-					// Ignore.
-				} catch (TimeoutException) {
-					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotRestoreAutomaticSaving;
-					logger.Warning("Timed out waiting for automatic saving to be re-enabled.");
-				} catch (Exception e) {
-					resultBuilder.Warnings |= BackupCreationWarnings.CouldNotRestoreAutomaticSaving;
-					logger.Error(e, "Caught exception while enabling automatic saving after creating an instance backup.");
-				}
 			}
 		}
 		
-		private async Task CompressWorldArchive(string filePath, BackupCreationResult.Builder resultBuilder) {
+		private async Task CompressBackupArchive(string filePath, BackupCreationResult.Builder resultBuilder) {
 			if (!await manager.compressionSemaphore.WaitAsync(TimeSpan.FromSeconds(1), cancellationToken)) {
 				logger.Information("Too many compression tasks running, waiting for one of them to complete...");
 				await manager.compressionSemaphore.WaitAsync(cancellationToken);

@@ -72,8 +72,6 @@ public sealed partial class MinecraftInstanceRecipes(MinecraftVersions minecraft
 		return ImmutableDictionary.From([
 			("server-port", configuration.ServerPort.ToString()),
 			("rcon.port", configuration.RconPort.ToString()),
-			("enable-rcon", "true"),
-			("sync-chunk-writes", "false"),
 		]);
 	}
 	
