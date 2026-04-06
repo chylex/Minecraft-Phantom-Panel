@@ -1,4 +1,5 @@
 ﻿using Phantom.Common.Data;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Agent.Instance.Launch;
 using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Instance;
@@ -7,13 +8,21 @@ using Phantom.Common.Data.Web.Instance;
 using Phantom.Common.Messages.Agent;
 using Phantom.Common.Messages.Agent.ToAgent;
 using Phantom.Controller.Database;
+using Phantom.Controller.Minecraft;
 using Phantom.Controller.Services.Agents;
 using Phantom.Utils.Actor;
 
 namespace Phantom.Controller.Services.Instances;
 
 sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
-	public readonly record struct Init(Instance Instance, ActorRef<AgentActor.ICommand> AgentActor, AgentConnection AgentConnection, IDbContextProvider DbProvider, CancellationToken CancellationToken);
+	public readonly record struct Init(
+		Instance Instance,
+		ActorRef<AgentActor.ICommand> AgentActor,
+		AgentConnection AgentConnection,
+		MinecraftInstanceRecipes MinecraftInstanceRecipes,
+		IDbContextProvider DbProvider,
+		CancellationToken CancellationToken
+	);
 	
 	public static Props<ICommand> Factory(Init init) {
 		return Props<ICommand>.Create(() => new InstanceActor(init), new ActorConfiguration { SupervisorStrategy = SupervisorStrategies.Resume });
@@ -21,6 +30,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	private readonly ActorRef<AgentActor.ICommand> agentActor;
 	private readonly AgentConnection agentConnection;
+	private readonly MinecraftInstanceRecipes minecraftInstanceRecipes;
 	private readonly CancellationToken cancellationToken;
 	
 	private readonly Guid instanceGuid;
@@ -35,6 +45,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	private InstanceActor(Init init) {
 		this.agentActor = init.AgentActor;
 		this.agentConnection = init.AgentConnection;
+		this.minecraftInstanceRecipes = init.MinecraftInstanceRecipes;
 		this.cancellationToken = init.CancellationToken;
 		
 		(this.instanceGuid, this.configuration, this.status, this.playerCounts, this.launchAutomatically) = init.Instance;
@@ -43,6 +54,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		
 		Receive<SetStatusCommand>(SetStatus);
 		Receive<SetPlayerCountsCommand>(SetPlayerCounts);
+		ReceiveAsyncAndReply<GetInitialInstanceConfigurationCommand, ConfigureInstanceMessage>(GetInitialInstanceConfiguration);
 		ReceiveAsyncAndReply<ConfigureInstanceCommand, Result<ConfigureInstanceResult, InstanceActionFailure>>(ConfigureInstance);
 		ReceiveAsyncAndReply<LaunchInstanceCommand, Result<LaunchInstanceResult, InstanceActionFailure>>(LaunchInstance);
 		ReceiveAsyncAndReply<StopInstanceCommand, Result<StopInstanceResult, InstanceActionFailure>>(StopInstance);
@@ -71,7 +83,9 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	public sealed record SetPlayerCountsCommand(InstancePlayerCounts? PlayerCounts) : ICommand;
 	
-	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, Guid InstanceGuid, InstanceConfiguration Configuration, InstanceLaunchRecipe LaunchRecipe, InstanceStopRecipe StopRecipe, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
+	public sealed record GetInitialInstanceConfigurationCommand : ICommand, ICanReply<ConfigureInstanceMessage>;
+	
+	public sealed record ConfigureInstanceCommand(Guid AuditLogUserGuid, InstanceConfiguration Configuration, bool IsCreatingInstance) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record LaunchInstanceCommand(Guid AuditLogUserGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
@@ -94,8 +108,21 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		NotifyInstanceUpdated();
 	}
 	
+	private async Task<ConfigureInstanceMessage> GetInitialInstanceConfiguration(GetInitialInstanceConfigurationCommand command) {
+		var launchRecipe = await minecraftInstanceRecipes.Launch(configuration, cancellationToken);
+		return CreateConfigureInstanceMessage(configuration, launchRecipe.OrElse(null), launchAutomatically);
+	}
+	
 	private async Task<Result<ConfigureInstanceResult, InstanceActionFailure>> ConfigureInstance(ConfigureInstanceCommand command) {
-		var message = new ConfigureInstanceMessage(command.InstanceGuid, command.Configuration.AsInfo, command.LaunchRecipe, LaunchNow: false, command.StopRecipe);
+		var launchRecipe = await minecraftInstanceRecipes.Launch(command.Configuration, cancellationToken);
+		if (!launchRecipe) {
+			return launchRecipe.Error switch {
+				MinecraftLaunchRecipeCreationFailReason.MinecraftVersionNotFound => ConfigureInstanceResult.MinecraftVersionNotFound,
+				_                                                                => ConfigureInstanceResult.UnknownError,
+			};
+		}
+		
+		var message = CreateConfigureInstanceMessage(command.Configuration, launchRecipe.Value, launchNow: false);
 		var result = await SendInstanceActionMessage<ConfigureInstanceMessage, ConfigureInstanceResult>(message);
 		
 		if (result.Is(ConfigureInstanceResult.Success)) {
@@ -112,6 +139,20 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 		}
 		
 		return result;
+	}
+	
+	private ConfigureInstanceMessage CreateConfigureInstanceMessage(InstanceConfiguration configuration, InstanceLaunchRecipe? launchRecipe, bool launchNow) {
+		var stopRecipe = minecraftInstanceRecipes.Stop(afterSeconds: 0);
+		
+		var backupSchedule = new InstanceBackupSchedule(
+			InitialDelayInMinutes: 2,
+			BackupIntervalInMinutes: 30,
+			BackupFailureRetryDelayInMinutes: 5,
+			PlayerCountDetectionStrategy: new InstancePlayerCountDetectionStrategy.MinecraftStatusProtocol(configuration.ServerPort)
+		);
+		
+		var backupConfiguration = new InstanceBackupConfiguration(backupSchedule);
+		return new ConfigureInstanceMessage(instanceGuid, configuration.AsInfo, launchRecipe, launchNow, stopRecipe, backupConfiguration);
 	}
 	
 	private async Task<Result<LaunchInstanceResult, InstanceActionFailure>> LaunchInstance(LaunchInstanceCommand command) {

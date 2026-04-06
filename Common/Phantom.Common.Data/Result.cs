@@ -43,6 +43,10 @@ public sealed partial class Result<TValue, TError> {
 		return hasValue ? valueConverter(value!) : errorConverter(error!);
 	}
 	
+	public Result<TNewValue, TError> MapValue<TNewValue>(Func<TValue, TNewValue> valueConverter) {
+		return hasValue ? valueConverter(value!) : error!;
+	}
+	
 	public Result<TValue, TNewError> MapError<TNewError>(Func<TError, TNewError> errorConverter) {
 		return hasValue ? value! : errorConverter(error!);
 	}

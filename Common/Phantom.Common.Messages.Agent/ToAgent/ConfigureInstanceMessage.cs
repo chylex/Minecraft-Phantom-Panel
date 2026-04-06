@@ -1,6 +1,7 @@
 ﻿using MemoryPack;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Agent.Instance.Launch;
 using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Replies;
@@ -12,7 +13,8 @@ namespace Phantom.Common.Messages.Agent.ToAgent;
 public sealed partial record ConfigureInstanceMessage(
 	[property: MemoryPackOrder(0)] Guid InstanceGuid,
 	[property: MemoryPackOrder(1)] InstanceInfo Info,
-	[property: MemoryPackOrder(2)] InstanceLaunchRecipe? LaunchRecipe,
+	[property: MemoryPackOrder(2)] Optional<InstanceLaunchRecipe> LaunchRecipe,
 	[property: MemoryPackOrder(3)] bool LaunchNow,
-	[property: MemoryPackOrder(4)] InstanceStopRecipe StopRecipe
+	[property: MemoryPackOrder(4)] InstanceStopRecipe StopRecipe,
+	[property: MemoryPackOrder(5)] Optional<InstanceBackupConfiguration> BackupConfiguration
 ) : IMessageToAgent, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;

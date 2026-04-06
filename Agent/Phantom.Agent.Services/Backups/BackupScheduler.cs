@@ -1,5 +1,7 @@
-﻿using Phantom.Agent.Services.Instances;
+﻿using System.Diagnostics.CodeAnalysis;
+using Phantom.Agent.Services.Instances;
 using Phantom.Agent.Services.Instances.State;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Backups;
 using Phantom.Utils.Logging;
 using Phantom.Utils.Tasks;
@@ -7,28 +9,39 @@ using Phantom.Utils.Tasks;
 namespace Phantom.Agent.Services.Backups;
 
 sealed class BackupScheduler : CancellableBackgroundTask {
-	// TODO make configurable
-	private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(2);
-	private static readonly TimeSpan BackupInterval = TimeSpan.FromMinutes(30);
-	private static readonly TimeSpan BackupFailureRetryDelay = TimeSpan.FromMinutes(5);
-	
-	private readonly BackupManager backupManager;
 	private readonly InstanceContext context;
 	private readonly SemaphoreSlim backupSemaphore = new (initialCount: 1, maxCount: 1);
+	
+	private readonly TimeSpan initialDelay;
+	private readonly TimeSpan backupInterval;
+	private readonly TimeSpan failureRetryDelay;
+	
 	private readonly ManualResetEventSlim serverOutputWhileWaitingForOnlinePlayers = new ();
-	private readonly InstancePlayerCountTracker playerCountTracker;
+	private readonly InstancePlayerCountTracker? playerCountTracker;
 	
 	public event EventHandler<BackupCreationResult>? BackupCompleted;
 	
-	public BackupScheduler(InstanceContext context, InstancePlayerCountTracker playerCountTracker) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName)) {
-		this.backupManager = context.Services.BackupManager;
+	[SuppressMessage("ReSharper", "ConvertIfStatementToConditionalTernaryExpression")]
+	public BackupScheduler(InstanceContext context, InstanceProcess process, InstanceBackupSchedule schedule) : base(PhantomLogger.Create<BackupScheduler>(context.ShortName)) {
 		this.context = context;
-		this.playerCountTracker = playerCountTracker;
+		
+		this.initialDelay = schedule.InitialDelay;
+		this.backupInterval = schedule.BackupInterval;
+		this.failureRetryDelay = schedule.BackupFailureRetryDelay;
+		
+		var playerCountDetectionStrategy = schedule.PlayerCountDetectionStrategy.Value;
+		if (playerCountDetectionStrategy == null) {
+			this.playerCountTracker = null;
+		}
+		else {
+			this.playerCountTracker = new InstancePlayerCountTracker(context, process, playerCountDetectionStrategy.CreateDetector(new InstancePlayerCountDetectorFactory(context)));
+		}
+		
 		Start();
 	}
 	
 	protected override async Task RunTask() {
-		await Task.Delay(InitialDelay, CancellationToken);
+		await Task.Delay(initialDelay, CancellationToken);
 		Logger.Information("Starting a new backup after server launched.");
 		
 		while (!CancellationToken.IsCancellationRequested) {
@@ -36,13 +49,16 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 			BackupCompleted?.Invoke(this, result);
 			
 			if (result.Kind.ShouldRetry()) {
-				Logger.Warning("Scheduled backup failed, retrying in {Minutes} minutes.", BackupFailureRetryDelay.TotalMinutes);
-				await Task.Delay(BackupFailureRetryDelay, CancellationToken);
+				Logger.Warning("Scheduled backup failed, retrying in {Minutes} minutes.", failureRetryDelay.TotalMinutes);
+				await Task.Delay(failureRetryDelay, CancellationToken);
 			}
 			else {
-				Logger.Information("Scheduling next backup in {Minutes} minutes.", BackupInterval.TotalMinutes);
-				await Task.Delay(BackupInterval, CancellationToken);
-				await WaitForOnlinePlayers();
+				Logger.Information("Scheduling next backup in {Minutes} minutes.", backupInterval.TotalMinutes);
+				await Task.Delay(backupInterval, CancellationToken);
+				
+				if (playerCountTracker != null) {
+					await WaitForOnlinePlayers(playerCountTracker);
+				}
 			}
 		}
 	}
@@ -54,7 +70,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 		
 		try {
 			context.ActorCancellationToken.ThrowIfCancellationRequested();
-			return await context.Actor.Request(new InstanceActor.BackupInstanceCommand(backupManager), context.ActorCancellationToken);
+			return await context.Actor.Request(new InstanceActor.BackupInstanceCommand(context.Services.BackupManager), context.ActorCancellationToken);
 		} catch (OperationCanceledException) {
 			return new BackupCreationResult(BackupCreationResultKind.InstanceNotRunning);
 		} finally {
@@ -62,7 +78,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 		}
 	}
 	
-	private async Task WaitForOnlinePlayers() {
+	private async Task WaitForOnlinePlayers(InstancePlayerCountTracker playerCountTracker) {
 		var task = playerCountTracker.WaitForOnlinePlayers(CancellationToken);
 		if (!task.IsCompleted) {
 			Logger.Information("Waiting for someone to join before starting a new backup.");
@@ -79,6 +95,7 @@ sealed class BackupScheduler : CancellableBackgroundTask {
 	}
 	
 	protected override void Dispose() {
+		playerCountTracker?.Stop();
 		backupSemaphore.Dispose();
 		serverOutputWhileWaitingForOnlinePlayers.Dispose();
 	}

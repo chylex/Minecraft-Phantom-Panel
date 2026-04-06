@@ -3,6 +3,7 @@ using Phantom.Agent.Services.Instances.Launch;
 using Phantom.Agent.Services.Instances.State;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
@@ -83,7 +84,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 	
 	public sealed record ReportInstanceStatusCommand : ICommand;
 	
-	public sealed record LaunchInstanceCommand(InstanceInfo Info, InstanceLauncher Launcher, InstanceTicketManager.Ticket Ticket, bool IsRestarting) : ICommand;
+	public sealed record LaunchInstanceCommand(InstanceInfo Info, InstanceLauncher Launcher, InstanceBackupConfiguration? BackupConfiguration, InstanceTicketManager.Ticket Ticket, bool IsRestarting) : ICommand;
 	
 	public sealed record StopInstanceCommand(InstanceStopRecipe StopRecipe) : ICommand;
 	
@@ -108,7 +109,7 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 				SetAndReportStatus(newStatus ?? defaultLaunchStatus);
 			}
 			
-			var newState = await InstanceLaunchProcedure.Run(context, command.Info, command.Launcher, instanceTicketManager, command.Ticket, UpdateStatus, shutdownCancellationToken);
+			var newState = await InstanceLaunchProcedure.Run(context, command.Info, command.Launcher, command.BackupConfiguration, instanceTicketManager, command.Ticket, UpdateStatus, shutdownCancellationToken);
 			if (newState is null) {
 				instanceTicketManager.Release(command.Ticket);
 			}
