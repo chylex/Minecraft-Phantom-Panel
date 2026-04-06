@@ -108,7 +108,10 @@ sealed class InstanceActor : ReceiveActor<InstanceActor.ICommand> {
 			void UpdateStatus(IInstanceStatus? newStatus) {
 				SetAndReportStatus(newStatus ?? defaultLaunchStatus);
 			}
-			
+
+			if (command.IsRestarting) {
+				await Task.Delay(TimeSpan.FromSeconds(1), shutdownCancellationToken);
+			}
 			var newState = await InstanceLaunchProcedure.Run(context, command.Info, command.Launcher, command.BackupConfiguration, instanceTicketManager, command.Ticket, UpdateStatus, shutdownCancellationToken);
 			if (newState is null) {
 				instanceTicketManager.Release(command.Ticket);
