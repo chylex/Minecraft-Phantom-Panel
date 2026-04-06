@@ -77,9 +77,10 @@ public sealed class AgentRegistrationHandler {
 		return new InstanceManagerActor.ConfigureInstanceCommand(
 			configureInstanceMessage.InstanceGuid,
 			configureInstanceMessage.Info,
-			configureInstanceMessage.LaunchRecipe,
+			configureInstanceMessage.LaunchRecipe.Value,
 			configureInstanceMessage.LaunchNow,
 			configureInstanceMessage.StopRecipe,
+			configureInstanceMessage.BackupConfiguration.Value,
 			AlwaysReportStatus: true
 		);
 	}

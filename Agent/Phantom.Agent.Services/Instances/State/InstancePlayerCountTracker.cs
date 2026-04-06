@@ -1,6 +1,5 @@
-﻿using System.Net.Sockets;
-using Phantom.Agent.Services.Games;
-using Phantom.Agent.Services.Rpc;
+﻿using Phantom.Agent.Services.Rpc;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Messages.Agent.ToController;
 using Phantom.Utils.Logging;
@@ -12,8 +11,8 @@ namespace Phantom.Agent.Services.Instances.State;
 sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	private readonly ControllerConnection controllerConnection;
 	private readonly Guid instanceGuid;
-	private readonly ushort serverPort;
 	private readonly InstanceProcess process;
+	private readonly IInstancePlayerCountDetector playerCountDetector;
 	
 	private readonly TaskCompletionSource firstDetection = AsyncTasks.CreateCompletionSource();
 	private readonly ManualResetEventSlim serverOutputEvent = new ();
@@ -25,11 +24,11 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	
 	private bool isDisposed = false;
 	
-	public InstancePlayerCountTracker(InstanceContext context, InstanceProcess process, ushort serverPort) : base(PhantomLogger.Create<InstancePlayerCountTracker>(context.ShortName)) {
+	public InstancePlayerCountTracker(InstanceContext context, InstanceProcess process, IInstancePlayerCountDetector playerCountDetector) : base(PhantomLogger.Create<InstancePlayerCountTracker>(context.ShortName)) {
 		this.controllerConnection = context.Services.ControllerConnection;
 		this.instanceGuid = context.InstanceGuid;
 		this.process = process;
-		this.serverPort = serverPort;
+		this.playerCountDetector = playerCountDetector;
 		Start();
 	}
 	
@@ -59,17 +58,7 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	
 	private async Task<InstancePlayerCounts?> TryGetPlayerCounts() {
 		try {
-			return await MinecraftServerStatusProtocol.GetPlayerCounts(serverPort, CancellationToken);
-		} catch (MinecraftServerStatusProtocol.ProtocolException e) {
-			Logger.Error("{Message}", e.Message);
-			return null;
-		} catch (SocketException e) {
-			bool waitingForServerStart = e.SocketErrorCode == SocketError.ConnectionRefused && WaitingForFirstDetection;
-			if (!waitingForServerStart) {
-				Logger.Warning("Could not check online player count. Socket error {ErrorCode} ({ErrorCodeName}), reason: {ErrorMessage}", e.ErrorCode, e.SocketErrorCode, e.Message);
-			}
-			
-			return null;
+			return await playerCountDetector.TryGetPlayerCounts(CancellationToken);
 		} catch (Exception e) {
 			Logger.Error(e, "Caught exception while checking online player count.");
 			return null;
@@ -77,8 +66,8 @@ sealed class InstancePlayerCountTracker : CancellableBackgroundTask {
 	}
 	
 	private void UpdatePlayerCounts(InstancePlayerCounts? newPlayerCounts) {
-		if (newPlayerCounts is {} value) {
-			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", value.Online, value.Maximum);
+		if (newPlayerCounts != null) {
+			Logger.Debug("Detected {OnlinePlayerCount} / {MaximumPlayerCount} online player(s).", newPlayerCounts.Online, newPlayerCounts.Maximum);
 			firstDetection.TrySetResult();
 		}
 		

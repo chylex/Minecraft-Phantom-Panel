@@ -13,7 +13,7 @@ static class MinecraftServerStatusProtocol {
 		await tcpClient.ConnectAsync(IPAddress.Loopback, serverPort, cancellationToken);
 		var tcpStream = tcpClient.GetStream();
 		
-		// https://wiki.vg/Server_List_Ping
+		// https://minecraft.wiki/w/Java_Edition_protocol/Server_List_Ping
 		tcpStream.WriteByte(0xFE);
 		await tcpStream.FlushAsync(cancellationToken);
 		

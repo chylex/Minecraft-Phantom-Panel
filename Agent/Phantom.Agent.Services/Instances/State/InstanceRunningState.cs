@@ -1,6 +1,7 @@
 ﻿using Phantom.Agent.Services.Backups;
 using Phantom.Agent.Services.Instances.Launch;
 using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Backups;
 using Phantom.Common.Data.Instance;
 using Phantom.Common.Data.Replies;
@@ -17,27 +18,32 @@ sealed class InstanceRunningState : IDisposable {
 	private readonly InstanceContext context;
 	private readonly InstanceInfo info;
 	private readonly InstanceLauncher launcher;
+	private readonly InstanceBackupConfiguration? backupConfiguration;
 	private readonly CancellationToken cancellationToken;
 	
 	private readonly InstanceLogSender logSender;
-	private readonly InstancePlayerCountTracker playerCountTracker;
-	private readonly BackupScheduler backupScheduler;
+	private readonly BackupScheduler? backupScheduler;
 	
 	private bool isDisposed;
 	
-	public InstanceRunningState(InstanceContext context, InstanceInfo info, InstanceLauncher launcher, InstanceTicketManager.Ticket ticket, InstanceProcess process, CancellationToken cancellationToken) {
+	public InstanceRunningState(InstanceContext context, InstanceInfo info, InstanceLauncher launcher, InstanceBackupConfiguration? backupConfiguration, InstanceTicketManager.Ticket ticket, InstanceProcess process, CancellationToken cancellationToken) {
 		this.context = context;
 		this.info = info;
 		this.launcher = launcher;
+		this.backupConfiguration = backupConfiguration;
 		this.Ticket = ticket;
 		this.Process = process;
 		this.cancellationToken = cancellationToken;
 		
 		this.logSender = new InstanceLogSender(context.Services.ControllerConnection, context.InstanceGuid, context.ShortName);
-		this.playerCountTracker = new InstancePlayerCountTracker(context, process, info.ServerPort);
 		
-		this.backupScheduler = new BackupScheduler(context, playerCountTracker);
-		this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
+		if (backupConfiguration == null) {
+			this.backupScheduler = null;
+		}
+		else {
+			this.backupScheduler = new BackupScheduler(context, process, backupConfiguration.Schedule);
+			this.backupScheduler.BackupCompleted += OnScheduledBackupCompleted;
+		}
 	}
 	
 	public void Initialize() {
@@ -75,7 +81,7 @@ sealed class InstanceRunningState : IDisposable {
 		else {
 			context.Logger.Information("Session ended unexpectedly, restarting...");
 			context.ReportEvent(InstanceEvent.Crashed);
-			context.Actor.Tell(new InstanceActor.LaunchInstanceCommand(info, launcher, Ticket, IsRestarting: true));
+			context.Actor.Tell(new InstanceActor.LaunchInstanceCommand(info, launcher, backupConfiguration, Ticket, IsRestarting: true));
 		}
 	}
 	
@@ -97,8 +103,7 @@ sealed class InstanceRunningState : IDisposable {
 	}
 	
 	public void OnStopInitiated() {
-		backupScheduler.Stop();
-		playerCountTracker.Stop();
+		backupScheduler?.Stop();
 	}
 	
 	private bool TryDispose() {

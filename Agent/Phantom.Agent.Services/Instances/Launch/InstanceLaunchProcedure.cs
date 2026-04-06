@@ -1,12 +1,22 @@
 ﻿using Phantom.Agent.Services.Instances.State;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Instance;
 
 namespace Phantom.Agent.Services.Instances.Launch;
 
 static class InstanceLaunchProcedure {
-	public static async Task<InstanceRunningState?> Run(InstanceContext context, InstanceInfo info, InstanceLauncher launcher, InstanceTicketManager ticketManager, InstanceTicketManager.Ticket ticket, Action<IInstanceStatus?> reportStatus, CancellationToken cancellationToken) {
+	public static async Task<InstanceRunningState?> Run(
+		InstanceContext context,
+		InstanceInfo info,
+		InstanceLauncher launcher,
+		InstanceBackupConfiguration? backupConfiguration,
+		InstanceTicketManager ticketManager,
+		InstanceTicketManager.Ticket ticket,
+		Action<IInstanceStatus?> reportStatus,
+		CancellationToken cancellationToken
+	) {
 		context.Logger.Information("Session starting...");
 		
 		Result<InstanceProcess, InstanceLaunchFailReason> result;
@@ -30,7 +40,7 @@ static class InstanceLaunchProcedure {
 		if (result) {
 			reportStatus(InstanceStatus.Running);
 			context.ReportEvent(InstanceEvent.LaunchSucceeded);
-			return new InstanceRunningState(context, info, launcher, ticket, result.Value, cancellationToken);
+			return new InstanceRunningState(context, info, launcher, backupConfiguration, ticket, result.Value, cancellationToken);
 		}
 		else {
 			reportStatus(InstanceStatus.Failed(result.Error));

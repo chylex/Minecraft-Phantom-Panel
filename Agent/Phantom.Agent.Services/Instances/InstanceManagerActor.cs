@@ -5,6 +5,7 @@ using Phantom.Agent.Services.Java;
 using Phantom.Agent.Services.Rpc;
 using Phantom.Common.Data;
 using Phantom.Common.Data.Agent.Instance;
+using Phantom.Common.Data.Agent.Instance.Backups;
 using Phantom.Common.Data.Agent.Instance.Launch;
 using Phantom.Common.Data.Agent.Instance.Stop;
 using Phantom.Common.Data.Instance;
@@ -52,11 +53,18 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		ReceiveAsync<ShutdownCommand>(Shutdown);
 	}
 	
-	private sealed record Instance(ActorRef<InstanceActor.ICommand> Actor, InstanceInfo Info, InstanceProperties Properties, InstanceLaunchRecipe? LaunchRecipe, InstanceStopRecipe StopRecipe);
+	private sealed record Instance(
+		ActorRef<InstanceActor.ICommand> Actor,
+		InstanceInfo Info,
+		InstanceProperties Properties,
+		InstanceLaunchRecipe? LaunchRecipe,
+		InstanceStopRecipe StopRecipe,
+		InstanceBackupConfiguration? BackupConfiguration
+	);
 	
 	public interface ICommand;
 	
-	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceInfo InstanceInfo, InstanceLaunchRecipe? LaunchRecipe, bool LaunchNow, InstanceStopRecipe StopRecipe, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
+	public sealed record ConfigureInstanceCommand(Guid InstanceGuid, InstanceInfo InstanceInfo, InstanceLaunchRecipe? LaunchRecipe, bool LaunchNow, InstanceStopRecipe StopRecipe, InstanceBackupConfiguration? BackupConfiguration, bool AlwaysReportStatus) : ICommand, ICanReply<Result<ConfigureInstanceResult, InstanceActionFailure>>;
 	
 	public sealed record LaunchInstanceCommand(Guid InstanceGuid) : ICommand, ICanReply<Result<LaunchInstanceResult, InstanceActionFailure>>;
 	
@@ -71,12 +79,14 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		var instanceInfo = command.InstanceInfo;
 		var launchRecipe = command.LaunchRecipe;
 		var stopRecipe = command.StopRecipe;
+		var backupConfiguration = command.BackupConfiguration;
 		
 		if (instances.TryGetValue(instanceGuid, out var instance)) {
 			instances[instanceGuid] = instance with {
 				Info = instanceInfo,
 				LaunchRecipe = launchRecipe,
 				StopRecipe = stopRecipe,
+				BackupConfiguration = backupConfiguration,
 			};
 			
 			Logger.Information("Reconfigured instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceGuid);
@@ -90,7 +100,9 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 			var instanceDirectoryPath = Path.Combine(agentDirectories.InstancesDirectoryPath, instanceGuid.ToString());
 			var instanceProperties = new InstanceProperties(instanceGuid, instanceDirectoryPath);
 			var instanceInit = new InstanceActor.Init(agentState, instanceGuid, instanceLoggerName, instanceServices, instanceTicketManager, shutdownCancellationToken);
-			instances[instanceGuid] = instance = new Instance(Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid), instanceInfo, instanceProperties, launchRecipe, stopRecipe);
+			var instanceActor = Context.ActorOf(InstanceActor.Factory(instanceInit), "Instance-" + instanceGuid);
+			
+			instances[instanceGuid] = instance = new Instance(instanceActor, instanceInfo, instanceProperties, launchRecipe, stopRecipe, backupConfiguration);
 			
 			Logger.Information("Created instance \"{Name}\" (GUID {Guid}).", instanceInfo.InstanceName, instanceGuid);
 			
@@ -140,7 +152,7 @@ sealed class InstanceManagerActor : ReceiveActor<InstanceManagerActor.ICommand> 
 		var valueResolver = new InstanceValueResolver(pathResolver);
 		var launcher = new InstanceLauncher(instanceServices.DownloadManager, pathResolver, valueResolver, instance.Properties, launchRecipe);
 		
-		instance.Actor.Tell(new InstanceActor.LaunchInstanceCommand(instance.Info, launcher, ticket.Value, IsRestarting: false));
+		instance.Actor.Tell(new InstanceActor.LaunchInstanceCommand(instance.Info, launcher, instance.BackupConfiguration, ticket.Value, IsRestarting: false));
 		
 		return LaunchInstanceResult.LaunchInitiated;
 	}
