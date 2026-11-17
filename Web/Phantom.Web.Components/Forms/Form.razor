@@ -22,7 +22,8 @@
 
   private async Task Submit(EditContext obj) {
     BeforeSubmit?.Invoke(this, EventArgs.Empty);
-    if (obj.Validate()) {
+    
+    if (await obj.ValidateAsync()) {
       await OnSubmit.InvokeAsync(obj);
     }
   }

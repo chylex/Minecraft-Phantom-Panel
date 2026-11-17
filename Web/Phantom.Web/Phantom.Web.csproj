@@ -24,5 +24,12 @@
     <ProjectReference Include="..\Phantom.Web.Components\Phantom.Web.Components.csproj" />
     <ProjectReference Include="..\Phantom.Web.Services\Phantom.Web.Services.csproj" />
   </ItemGroup>
+  
+  <!-- Workaround for https://github.com/dotnet/aspnetcore/issues/70014 -->
+  <Target Name="DisableHotReloadBrowserTools" BeforeTargets="ResolveWebAssemblyProjectReferences">
+    <PropertyGroup>
+      <HotReloadBrowserToolsAssetPrefix />
+    </PropertyGroup>
+  </Target>
 
 </Project>
