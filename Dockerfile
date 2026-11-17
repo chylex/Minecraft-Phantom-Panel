@@ -29,15 +29,6 @@ COPY --from=eclipse-temurin:16-jdk /opt/java/openjdk /opt/java/16
 COPY --from=eclipse-temurin:17-jre /opt/java/openjdk /opt/java/17
 COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/21
 
-ARG DEBIAN_FRONTEND=noninteractive
-
-RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
-    --mount=target=/var/cache/apt,type=cache,sharing=locked     \
-    rm -f /etc/apt/apt.conf.d/docker-clean                   && \
-    apt-get update                                           && \
-    apt-get install -y                                          \
-    zstd
-
 COPY --from=phantom-builder --chmod=755 /app/.artifacts/publish/Phantom.Agent/release /app
 
 ENTRYPOINT ["dotnet", "/app/Phantom.Agent.dll"]

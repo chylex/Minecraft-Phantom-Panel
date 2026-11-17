@@ -1,16 +1,12 @@
-﻿using Phantom.Utils.Logging;
-using Phantom.Utils.Processes;
+﻿using System.IO.Compression;
+using Phantom.Utils.IO;
+using Phantom.Utils.Logging;
 using Serilog;
 
 namespace Phantom.Agent.Services.Backups;
 
 static class BackupCompressor {
 	private static ILogger Logger { get; } = PhantomLogger.Create(nameof(BackupCompressor));
-	private static ILogger ZstdLogger { get; } = PhantomLogger.Create(nameof(BackupCompressor), "Zstd");
-	
-	private const string Quality = "-10";
-	private const string Memory = "--long=26";
-	private const string Threads = "-T3";
 	
 	public static async Task<string?> Compress(string sourceFilePath, CancellationToken cancellationToken) {
 		if (sourceFilePath.Contains('"')) {
@@ -40,28 +36,20 @@ static class BackupCompressor {
 			return false;
 		}
 		
-		var launcher = new ProcessConfigurator {
-			FileName = "zstd",
-			WorkingDirectory = workingDirectory,
-			ArgumentList = {
-				Quality,
-				Memory,
-				Threads,
-				"--rm",
-				"--no-progress",
-				"-o", destinationFilePath,
-				"--", sourceFilePath,
-			},
-		};
-		
-		static void OnZstdOutput(object? sender, Process.Output output) {
-			if (!string.IsNullOrWhiteSpace(output.Line)) {
-				ZstdLogger.Debug("[Output] {Line}", output.Line);
-			}
+		try {
+			await using var sourceFileStream = File.OpenRead(sourceFilePath);
+			await using var destinationFileStream = Files.OpenForWriting(destinationFilePath, FileMode.Create, Chmod.URW_GR);
+			
+			await using var zstdStream = new ZstandardStream(destinationFileStream, new ZstandardCompressionOptions {
+				Quality = 10,
+				WindowLog2 = 26,
+			});
+			
+			await sourceFileStream.CopyToAsync(zstdStream, cancellationToken);
+			return true;
+		} catch (Exception e) {
+			Logger.Error(e, "Could not compress backup");
+			return false;
 		}
-		
-		var process = new OneShotProcess(ZstdLogger, launcher);
-		process.OutputReceived += OnZstdOutput;
-		return await process.Run(cancellationToken);
 	}
 }

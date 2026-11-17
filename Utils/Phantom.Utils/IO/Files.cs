@@ -1,7 +1,7 @@
 ﻿namespace Phantom.Utils.IO;
 
 public static class Files {
-	public static async Task WriteBytesAsync(string path, ReadOnlyMemory<byte> bytes, FileMode mode, UnixFileMode chmod) {
+	public static FileStream OpenForWriting(string path, FileMode mode, UnixFileMode chmod) {
 		var options = new FileStreamOptions {
 			Mode = mode,
 			Access = FileAccess.Write,
@@ -13,7 +13,11 @@ public static class Files {
 			options.UnixCreateMode = chmod;
 		}
 		
-		await using var stream = new FileStream(path, options);
+		return new FileStream(path, options);
+	}
+	
+	public static async Task WriteBytesAsync(string path, ReadOnlyMemory<byte> bytes, FileMode mode, UnixFileMode chmod) {
+		await using var stream = OpenForWriting(path, mode, chmod);
 		await stream.WriteAsync(bytes);
 	}
 	
