@@ -60,19 +60,19 @@ public class EnvironmentVariablesTests {
 		
 		[Test]
 		public void RequireWithExistingReturnsActualValue() {
-			Assume.That(ExampleValue, Is.Not.EqualTo(default));
+			Assume.That(ExampleValue, Is.Not.EqualTo(default(T)));
 			Assert.That(GetValue(CreateVariable(ExampleValueString)).Require, Is.EqualTo(ExampleValue));
 		}
 		
 		[Test]
 		public void ExistingWithDefaultReturnsActualValue() {
-			Assume.That(ExampleValue, Is.Not.EqualTo(default));
+			Assume.That(ExampleValue, Is.Not.EqualTo(default(T)));
 			Assert.That(GetValue(CreateVariable(ExampleValueString)).WithDefault(default!), Is.EqualTo(ExampleValue));
 		}
 		
 		[Test]
 		public void ExistingWithDefaultGetterReturnsActualValue() {
-			Assume.That(ExampleValue, Is.Not.EqualTo(default));
+			Assume.That(ExampleValue, Is.Not.EqualTo(default(T)));
 			Assert.That(GetValue(CreateVariable(ExampleValueString)).WithDefaultGetter(static () => default!), Is.EqualTo(ExampleValue));
 		}
 		
