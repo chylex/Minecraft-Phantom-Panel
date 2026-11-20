@@ -4,58 +4,88 @@ Phantom Panel is a **work-in-progress** web interface for managing Minecraft ser
 
 # Architecture
 
+```mermaid
+block
+    columns 5
+    
+    Web space Controller space Agent["Agent(s)"]
+    space:5
+    space:2 Database[("Database")]
+    
+    Web --- Controller
+    Controller --- Agent
+    Controller --- Agent
+    Controller --- Database
+```
+
 Phantom Panel has 3 types of services:
 
-* The **Web** provides a web interface for the **Controller**.
-* The **Controller** manages all state and persists it in a database, and communicates with **Agents**.
-* One or more **Agents** receive commands from the **Controller**, manage the Minecraft server processes, and report on their status.
+1. The **Controller** service manages state and persists it to a PostgreSQL database.
+2. The **Web** service provides a web user interface.
+3. One or more **Agent** services run the actual game servers.
 
-This architecture has several goals and benefits:
+This architecture allows deploying Agents on many physical servers in different geographical locations, and managing all of their game servers from one place.
 
-1. The services can run on separate computers, in separate containers, or a mixture of both.
-2. The services can be updated independently.
-   - The Controller or Web can receive updates without the need to shut down every Minecraft server.
-   - Agent updates can be staggered or delayed. For example, if the Agents are in different geographical locations, each can be updated at a time when people are unlikely to be online.
-3. Agents are lightweight processes which should have minimal impact on the performance of Minecraft servers.
+The Web requires an active connection to the Controller to work. The Controller and Web should always be updated at the same time, to the same version of Phantom Panel.
 
-When an official Controller update is released, it will work with older versions of Agents. There is no guarantee it will also work in reverse (updated Agents and an older Controller), but if there is an Agent update that is compatible with an older Controller, it will be mentioned in the release notes.
+Agents require a connection to the Controller during startup, and to continue receiving configuration changes and send back status information and game server logs, but they will continue to work when the Controller is offline.
 
-Note that compatibility is only guaranteed when using official releases. If you build the project from a version of the source between two official releases, you have to understand which changes break compatibility.
+> [!NOTE]
+> To avoid using too much memory, Agents may discard game server logs during Controller downtime.
+
+When a new Phantom Panel version is released, the new Controller will, at minimum, be compatible with Agents that are one version behind it.
+
+This means the Controller can be updated without also having to update and restart all connected Agents. After updating the Controller and Web, Agent updates can wait until off-peak hours to reduce game interruptions.
+
+> [!CAUTION]
+> Compatibility between different versions of Controller and Agents is not guaranteed for development builds of Phantom Panel.
 
 # Usage
 
-This project is **work-in-progress**, and currently has no official releases. Feel free to try it and experiment, but there will be missing features, bugs, and breaking changes.
+This project is **work-in-progress**, and currently has no official releases. Feel free to build it from source to try it, but expect bugs and breaking changes that will require knowledge of the source code to resolve.
 
-For a quick start, I recommend using [Docker](https://www.docker.com/) or another containerization platform. The `Dockerfile` in the root of the repository can build three target images: `phantom-web`, `phantom-controller`, and `phantom-agent`.
+For a quick start, I recommend using [Docker](https://www.docker.com/) or a compatible containerization platform. The `Dockerfile` in the root of the repository can be used to build an image for each of the 3 Phantom Panel services:
 
-All images put the built application into the `/app` folder. The Agent image includes Java 8, 16, 17, and 21.
+```bash
+docker build --pull --tag phantom-agent      --target phantom-agent      .
+docker build --pull --tag phantom-controller --target phantom-controller .
+docker build --pull --tag phantom-web        --target phantom-web        .
+```
 
-Files are stored relative to the working directory. In the provided images, the working directory is set to `/data`.
+All images put the built application into the `/app` directory, and set the working directory to the `/data`. The Agent image includes Java 8, 16, 17, and 21.
+
+Files are stored relative to the working directory. Read the **Storage** section under each service for more information.
+
+Services are configured primarily using environment variables.
 
 > [!IMPORTANT]
-> The 3 services communicate with each other using TLS. Due to inconsistent TLS support and implementation quirks between operating systems, Phantom Panel is intended to run only on Linux with up-to-date OpenSSL libraries. Support for other operating systems only exists for the purposes of local development, and components running on different operating systems may not be able to communicate with each other.
+> Due to .NET having inconsistent TLS support across operating systems, Phantom Panel is **intended to run on Linux with up-to-date OpenSSL libraries**. Support for other operating systems only exists for local development. Services running on different operating systems may not be able to communicate with each other.
+
+### Logging
+
+All services support an optional `LOG_LEVEL` environment variable to set the minimum log level. Possible values:
+
+* `VERBOSE` (Default for Debug builds)
+* `DEBUG`
+* `INFORMATION` (Default for Release builds)
+* `WARNING`
+* `ERROR`
 
 ## Controller
 
-The Controller comprises 3 key areas:
-
-* **Agent RPC server** that Agents connect to.
-* **Web RPC server** that the Web connects to.
-* **PostgreSQL database connection** to persist data.
-
-The configuration for these is set via environment variables.
+The Controller runs two RPC servers for communication with the Web and Agents, and a PostgreSQL database client.
 
 ### Secrets
 
-Each Agent requires its own **Agent Key**, and the Web server requires a **Web Key**. These must be passed to the services in an environment variable or a file.
+In order for the Web and Agents to connect to the Controller, they must be configured with their own **Key**, which combines a TLS certificate's public key thumbprint and an authentication token.
 
-When the Controller starts for the first time, it will generate two certificate files (`agent.pfx` and `web.pfx`), which are used for TLS communication, and a Web authentication token file (`web.auth`). These files must only be accessible to the Controller itself.
+When the Controller starts for the first time, it generates two TLS certificate files (`agent.pfx` and `web.pfx`), and a Web authentication token file (`web.auth`). These files must only be accessible to the Controller itself.
 
-Since there is only one Web server, there is only one **Web Key**, which is generated from the Web certificate and authentication token files. The Controller prints the **Web Key** to standard output on every start. Agents and their **Agent Keys** are managed through the Web interface, and their authentication tokens are stored in the database.
+As there is only one Web service, the Controller generates only one Web authentication token, and prints the **Web Key** to standard output on every start. Once you set up the Web service, you can obtain **Agent Keys** through the web interface.
 
 ### Storage
 
-Use volumes to persist the whole `/data` folder.
+The entire working directory must be persisted.
 
 ### Environment variables
 
@@ -72,42 +102,15 @@ Use volumes to persist the whole `/data` folder.
   - `PG_PASS` is the password.
   - `PG_DATABASE` is the database name.
 
-## Agent
-
-### Storage
-
-The `/data` folder will contain two folders:
-
-* `/data/data` for persistent files
-* `/data/temp` for volatile files (such as downloaded Minecraft `.jar` files)
-
-Use volumes to persist either the whole `/data` folder, or just `/data/data` if you don't want to persist the volatile files.
-
-### Environment Variables
-
-* **Controller Communication**
-  - `CONTROLLER_HOST` is the hostname of the Controller.
-  - `CONTROLLER_PORT` is the Agent RPC port of the Controller. Default: `9401`
-  - `AGENT_KEY` is the [Agent Key](#secrets). Mutually exclusive with `AGENT_KEY_FILE`.
-  - `AGENT_KEY_FILE` is a path to a file containing the [Agent Key](#secrets). Mutually exclusive with `AGENT_KEY`.
-* **Agent Configuration**
-  - `MAX_INSTANCES` is the number of instances that can be created.
-  - `MAX_MEMORY` is the maximum amount of RAM that can be distributed among all instances. Use a positive integer with an optional suffix 'M' for MB, or 'G' for GB. Examples: `4096M`, `16G`
-  - `MAX_CONCURRENT_BACKUP_COMPRESSION_TASKS` is how many backup compression tasks can run at the same time. Limiting concurrent compression tasks limits memory usage of compression, but it increases time between backups because the next backup is only scheduled once the current one completes. Default: `1`
-* **Minecraft Configuration**
-  - `JAVA_SEARCH_PATH` is a path to a folder which will be searched for Java runtime installations. Linux default: `/usr/lib/jvm`
-  - `ALLOWED_SERVER_PORTS` is a comma-separated list of ports and port ranges that can be used as Minecraft Server ports. Example: `25565,25900,26000-27000`
-  - `ALLOWED_RCON_PORTS` is a comma-separated list of ports and port ranges that can be used as Minecraft RCON ports. Example: `25575,25901,36000-37000`
-
 ## Web
 
 ### Storage
 
-Use volumes to persist the whole `/data` folder.
+The entire working directory must be persisted.
 
 ### Environment Variables
 
-* **Controller Communication**
+* **Controller RPC Client**
   - `CONTROLLER_HOST` is the hostname of the Controller.
   - `CONTROLLER_PORT` is the Web RPC port of the Controller. Default: `9402`
   - `WEB_KEY` is the [Web Key](#secrets). Mutually exclusive with `WEB_KEY_FILE`.
@@ -117,37 +120,83 @@ Use volumes to persist the whole `/data` folder.
   - `WEB_SERVER_PORT` is the port. Default: `9400`
   - `WEB_BASE_PATH` is the base path of every URL. Must begin with a slash. Default: `/`
 
-## Logging
+## Agent
 
-All services support a `LOG_LEVEL` environment variable to set the minimum log level. Possible values:
+### Storage
 
-* `VERBOSE`
-* `DEBUG`
-* `INFORMATION`
-* `WARNING`
-* `ERROR`
+Two folders will be created in the working directory:
 
-If the environment variable is omitted, the log level is set to `VERBOSE` for Debug builds and `INFORMATION` for Release builds.
+* `data` for persistent files
+* `temp` for volatile files, such as downloaded Minecraft `.jar` files
+
+Only the `data` folder must be persisted, but you may choose to persist the entire working directory.
+
+### Environment Variables
+
+* **Controller RPC Client**
+  - `CONTROLLER_HOST` is the hostname of the Controller.
+  - `CONTROLLER_PORT` is the Agent RPC port of the Controller. Default: `9401`
+  - `AGENT_KEY` is the [Agent Key](#secrets). Mutually exclusive with `AGENT_KEY_FILE`.
+  - `AGENT_KEY_FILE` is a path to a file containing the [Agent Key](#secrets). Mutually exclusive with `AGENT_KEY`.
+* **Agent Configuration**
+  - `MAX_INSTANCES` is the number of instances (game servers) that can be created.
+  - `MAX_MEMORY` is the maximum amount of RAM that can be distributed among all instances. Use a positive integer with an optional suffix 'M' for MB, or 'G' for GB. Examples: `4096M`, `16G`
+  - `MAX_CONCURRENT_BACKUP_COMPRESSION_TASKS` is how many backup compression tasks can run at the same time. Smaller numbers limit memory usage, but increase time between backups, because the next backup is only scheduled once the current one completes. Default: `1`
+* **Minecraft Configuration**
+  - `JAVA_SEARCH_PATH` is a path to a directory containing Java runtimes. Linux default: `/usr/lib/jvm`
+  - `ALLOWED_SERVER_PORTS` is a comma-separated list of ports and port ranges that can be used as Minecraft Server ports. Example: `25565,25900,26000-27000`
+  - `ALLOWED_RCON_PORTS` is a comma-separated list of ports and port ranges that can be used as Minecraft RCON ports. Example: `25575,25901,36000-37000`
 
 # Development
 
-The repository includes a [Rider](https://www.jetbrains.com/rider/) projects with several run configurations. The `.workdir` folder in the root of the repository is used for storage, including secret files intended for development use only. Here's how to get started:
+The repository includes a [Rider](https://www.jetbrains.com/rider/) project. The `.workdir` folder in the root of the repository is used for storage, including pre-generated secret files **for development only**.
 
-1. You will need a local PostgreSQL instance. If you have [Docker](https://www.docker.com/), you can enter the `Docker` folder in this repository, and run `docker compose up`. Otherwise, you will need to set it up manually with the following configuration:
-   - Host: `localhost`
-   - Port: `9403`
-   - User: `postgres`
-   - Password: `development`
-   - Database: `postgres`
-2. Install one or more Java versions into the `~/.jdks` folder (`%USERPROFILE%\.jdks` on Windows).
-3. Open the project in [Rider](https://www.jetbrains.com/rider/).
-4. Launch the `Controller` and `Web` run configurations.
-5. Open the website and create an account.
-6. Create 1-3 Agents on the website. For each, create a `.workdir/AgentX/key` file containing the respective Agent Key.
-7. Launch any of the `Agent 1`, `Agent 2`, `Agent 3` run configurations.
+## Prerequisites
+
+You will need a PostgreSQL database with the following configuration:
+
+* Host: `localhost`
+* Port: `9403`
+* User: `postgres`
+* Password: `development`
+* Database: `postgres`
+
+> [!TIP]
+> If you have [Docker](https://www.docker.com/) configured in Rider, you can use the `PostgreSQL` run configuration to launch a pre-configured PostgreSQL server. Alternatively, you can enter the `Docker` folder and run `docker compose up`.
+
+You will also need to install at least one Java runtime (for example, [Eclipse Temurin](https://adoptium.net/temurin/releases)) into the `~/.jdks` folder (`%USERPROFILE%\.jdks` on Windows).
+
+## Initial Setup
+
+1. Launch the `Controller` and `Web` run configurations.
+2. Visit [localhost:9400](http://localhost:9400/) and create an account.
+3. Visit [localhost:9400/agents](http://localhost:9400/agents), create 1-3 Agents, and save each Agent's key into its respective file:
+   - `.workdir/Agent1/key`
+   - `.workdir/Agent2/key`
+   - `.workdir/Agent3/key`
+
+After the initial setup, you can launch any of the Agent run configurations:
+
+* `Agent 1`
+* `Agent 2`
+* `Agent 3`
+
+You can also use these run configurations to launch multiple services at the same time:
+
+* `Controller + Web + Agent`
+* `Controller + Web + Agent x3`
+
+## Database
+
+The project includes the [dotnet-ef](https://www.nuget.org/packages/dotnet-ef/) tool, which can be installed or updated using the `dotnet tool restore` command.
+
+After making a change to the database schema, run the `AddMigration` script to generate an EF migration:
+
+* `AddMigration.bat <migration-name>`
+* `AddMigration.sh <migration-name>`
 
 ## Bootstrap
 
 The project uses [Bootstrap 5](https://getbootstrap.com/docs/5.2) with a custom theme and several other customizations. The sources are in the `Phantom.Server.Web.Bootstrap` project.
 
-If you make any changes to the sources, you will need to use the `Compile Bootstrap` run configuration, then restart the Server to load the new version. This is not done automatically, and it requires [Node](https://nodejs.org/en/) and [npm](https://www.npmjs.com/).
+After making a change to the sources, run the `Compile Bootstrap` run configuration and restart the Web service. Compiling Bootstrap requires [Node](https://nodejs.org/en/) and [npm](https://www.npmjs.com/).
